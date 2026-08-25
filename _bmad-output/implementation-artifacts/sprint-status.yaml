@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 08-22-2026 00:00
-last_updated: 08-25-2026 12:45
+last_updated: 08-25-2026 19:30
 project: agent-system
 project_key: NOKEY
 tracking_system: file-system
@@ -66,7 +66,7 @@ development_status:
   epic-4-retrospective: done
 
   epic-5: in-progress
-  5-1-修复-claude-fresh-启动的登录态丢失: ready-for-dev
+  5-1-修复-claude-fresh-启动的登录态丢失: review
   5-2-本仓自我开发场景的供给库根自动识别: backlog
   5-3-configs-tui-补齐-establish-revise-supply-入口: backlog
   5-4-configs-的-id-参数消歧: backlog

@@ -37,6 +37,7 @@ import { BunClaudeCapabilityProbe } from '../adapters/clients/claude/capability-
 import { compileClaudeAssemblyManifest } from '../adapters/clients/claude/assembly-manifest';
 import { FsClaudeInvocationDirPort } from '../adapters/system/claude-invocation-dir';
 import { FsClaudeContentMaterializer } from '../adapters/clients/claude/content-materializer';
+import { FsClaudeCredentialsPort } from '../adapters/clients/claude/credentials';
 import type {
   ConfigRevisionRepository,
   LaunchPlanRepository,
@@ -45,6 +46,7 @@ import type {
   LaunchContextWriter,
   ClaudeCapabilityProbePort,
   ClaudeContentMaterializerPort,
+  ClaudeCredentialsPort,
   ClaudeInvocationDirPort,
   ClaudeLaunchContextWriter,
   ClaudeProcessPort,
@@ -580,6 +582,8 @@ export interface CliOverrides {
   readonly claudeLaunchContextWriter?: ClaudeLaunchContextWriter;
   readonly claudeInvocationDirPort?: ClaudeInvocationDirPort;
   readonly claudeContentMaterializer?: ClaudeContentMaterializerPort;
+  /** `[Story 5.1]` AD-23 credentials continuity port override. */
+  readonly claudeCredentialsPort?: ClaudeCredentialsPort;
 }
 
 /**
@@ -610,6 +614,8 @@ export interface FullDeps extends LaunchDeps, LaunchClaudeFreshDeps {
   readonly claudeLaunchContextWriter: ClaudeLaunchContextWriter;
   readonly claudeInvocationDirPort: ClaudeInvocationDirPort;
   readonly claudeContentMaterializer: ClaudeContentMaterializerPort;
+  /** `[Story 5.1]` Constructed the same way as the other Claude ports above -- no I/O in the constructor itself. */
+  readonly claudeCredentialsPort: ClaudeCredentialsPort;
 }
 
 /**
@@ -654,6 +660,7 @@ export async function openDeps(overrides: CliOverrides): Promise<FullDeps | null
     claudeLaunchContextWriter: overrides.claudeLaunchContextWriter ?? new FsClaudeLaunchContextWriter(),
     claudeInvocationDirPort: overrides.claudeInvocationDirPort ?? new FsClaudeInvocationDirPort(),
     claudeContentMaterializer: overrides.claudeContentMaterializer ?? new FsClaudeContentMaterializer(),
+    claudeCredentialsPort: overrides.claudeCredentialsPort ?? new FsClaudeCredentialsPort(),
   };
 }
 

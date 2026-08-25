@@ -1,5 +1,9 @@
+import { access } from 'node:fs/promises';
+import { constants as fsConstants } from 'node:fs';
+
 import { type Fact, isKnown } from '../../../domain/facts';
 import type { ClaudeCapabilityProbePort, ClaudeCapabilityProbeResult, ClaudeProcessPort } from '../../../application/ports';
+import { CLAUDE_CREDENTIALS_CONTINUITY_CAPABILITY_ID, resolveClaudeCredentialsSourcePath } from './credentials';
 
 /**
  * The six `permission_mode` tokens `claude --help`'s `--permission-mode`
@@ -125,6 +129,7 @@ export class BunClaudeCapabilityProbe implements ClaudeCapabilityProbePort {
       this.probeHookDenyEffect(mainHelp),
       this.probePluginDirDelivery(mainHelp),
       this.probeAppendSystemPromptDelivery(mainHelp),
+      await this.probeCredentialsContinuity(),
     ];
   }
 
@@ -378,5 +383,58 @@ export class BunClaudeCapabilityProbe implements ClaudeCapabilityProbePort {
         : 'claude --help 输出未出现 --append-system-prompt 选项，Instructions 内容物化无可用交付通道',
       observedAt,
     };
+  }
+
+  /**
+   * `[Story 5.1]` AD-23 的凭据延续性探测——与上面五个方法都不同，这不是对
+   * `claude --help` 静态文本的解析，而是对宿主文件系统的真实存在性/可读性
+   * 检查：fresh 启动能否把当前真实登录凭据（`.credentials.json`）延续进新
+   * spawn 的隔离目录，取决于这份凭据源文件此刻是否存在且可读。路径解析规则
+   * 复用 `adapters/clients/claude/credentials.ts` 的
+   * `resolveClaudeCredentialsSourcePath`（不重新发明，两处解析规则永远不会
+   * 漂移开）。`evidenceRef` 只描述"文件是否存在于该路径"，绝不读取或转述文件
+   * 内容（AD-6）。
+   *
+   * 这个检查本身就是真实证据（对磁盘的真实探测，不是一个硬编码假设），因此
+   * 天然满足"无证据时不默认 supported"的边界：找不到真实凭据文件时如实报告
+   * `unsupported`，从不因为平台不同就默认它一定存在。
+   *
+   * `[Story 5.1][review fix]` `resolveClaudeCredentialsSourcePath()` 的调用
+   * 挪进了 try 边界内：它自己的文档承诺"从不抛异常"，但这里不依赖那份承诺
+   * 永远成立——万一未来它开始抛异常（例如 `os.homedir()` 在某些沙箱环境下
+   * 抛出），必须优雅降级为一个具体的探测结果，而不是让整个
+   * `probeHardControlCapabilities()` 崩溃。
+   */
+  private async probeCredentialsContinuity(): Promise<ClaudeCapabilityProbeResult> {
+    const capabilityId = CLAUDE_CREDENTIALS_CONTINUITY_CAPABILITY_ID;
+    const subject = 'fresh 启动的新进程延续当前真实登录凭据（.credentials.json）的能力';
+    const required = true;
+    const observedAt = new Date().toISOString();
+
+    let sourcePath: string | null = null;
+    try {
+      sourcePath = resolveClaudeCredentialsSourcePath();
+      await access(sourcePath, fsConstants.R_OK);
+      return {
+        capabilityId,
+        subject,
+        required,
+        status: 'supported',
+        validationMethod: 'mechanical',
+        evidenceRef: `凭据源文件存在且可读：${sourcePath}`,
+        observedAt,
+      };
+    } catch (error) {
+      const sourceDescription = sourcePath ?? '（无法解析凭据源路径）';
+      return {
+        capabilityId,
+        subject,
+        required,
+        status: 'unsupported',
+        validationMethod: 'mechanical',
+        evidenceRef: `凭据源文件不存在或不可读：${sourceDescription}（${error instanceof Error ? error.message : String(error)}）`,
+        observedAt,
+      };
+    }
   }
 }

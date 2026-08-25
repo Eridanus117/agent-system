@@ -16,6 +16,8 @@ import type {
   CapabilityProbeResult,
   ClaudeCapabilityProbePort,
   ClaudeCapabilityProbeResult,
+  ClaudeCredentialsMaterializationResult,
+  ClaudeCredentialsPort,
   ClaudeInvocationDirPort,
   ClaudeLaunchContext,
   ClaudeLaunchContextWriter,
@@ -222,6 +224,13 @@ class FakeClaudeInvocationDirPort implements ClaudeInvocationDirPort {
   }
 }
 
+/** `[Story 5.1]` Same "minimal no-op fake, never called by anything under test here" rationale as the other Claude ports above. */
+class FakeClaudeCredentialsPort implements ClaudeCredentialsPort {
+  async materialize(): Promise<ClaudeCredentialsMaterializationResult> {
+    return { status: 'materialized', reason: null };
+  }
+}
+
 /** Builds a full, in-memory `FullDeps` bag for `runTuiWithDeps()` tests. */
 function fakeFullDeps(): {
   readonly deps: FullDeps;
@@ -241,6 +250,7 @@ function fakeFullDeps(): {
   const claudeLaunchContextWriter = new FakeClaudeLaunchContextWriter();
   const claudeInvocationDirPort = new FakeClaudeInvocationDirPort();
   const claudeContentMaterializer = new FsClaudeContentMaterializer();
+  const claudeCredentialsPort = new FakeClaudeCredentialsPort();
   return {
     deps: {
       configRepository,
@@ -253,6 +263,7 @@ function fakeFullDeps(): {
       claudeLaunchContextWriter,
       claudeInvocationDirPort,
       claudeContentMaterializer,
+      claudeCredentialsPort,
     },
     configRepository,
     launchPlanRepository,

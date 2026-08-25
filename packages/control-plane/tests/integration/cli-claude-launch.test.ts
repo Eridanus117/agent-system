@@ -13,12 +13,15 @@ import path from 'node:path';
 import { main } from '../../src/cli/index';
 import { SqliteConfigRevisionRepository } from '../../src/adapters/sqlite/repository';
 import { SUPPLY_REF_REJECTION_MARKER } from '../../src/cli/supply-root';
+import { CLAUDE_CREDENTIALS_CONTINUITY_CAPABILITY_ID } from '../../src/adapters/clients/claude/credentials';
 import { known } from '../../src/domain/facts';
 import type { Fact } from '../../src/domain/facts';
 import type { CapabilityReference, SourceCategory, StableConfigRevision } from '../../src/domain/config';
 import type {
   ClaudeCapabilityProbePort,
   ClaudeCapabilityProbeResult,
+  ClaudeCredentialsMaterializationResult,
+  ClaudeCredentialsPort,
   ClaudeInvocationDirPort,
   ClaudeLaunchContext,
   ClaudeLaunchContextWriter,
@@ -81,6 +84,8 @@ function allSupportedProbeResults(): ClaudeCapabilityProbeResult[] {
     probeResult({ capabilityId: 'claude.hook-deny-return-value', required: false, status: 'unknown' }),
     probeResult({ capabilityId: 'claude.plugin-dir-delivery', required: true, status: 'supported' }),
     probeResult({ capabilityId: 'claude.append-system-prompt-delivery', required: true, status: 'supported' }),
+    // `[Story 5.1]` AD-23's credentials continuity gate.
+    probeResult({ capabilityId: CLAUDE_CREDENTIALS_CONTINUITY_CAPABILITY_ID, required: true, status: 'supported' }),
   ];
 }
 
@@ -143,6 +148,23 @@ class FakeClaudeInvocationDirPort implements ClaudeInvocationDirPort {
   }
 }
 
+/**
+ * `[Story 5.1]` Defaults to `'materialized'` (never blocks) -- this
+ * integration suite runs `main()` against a real `FsClaudeContentMaterializer`
+ * (never overridden) but must not also depend on this specific machine's
+ * real `~/.claude/.credentials.json` existing, which would make every
+ * pre-existing test in this file environment-dependent/flaky. Real end-to-end
+ * credentials-continuity verification against a real `claude` binary is
+ * covered manually (see this Story's Completion Notes), not by this suite.
+ */
+class FakeClaudeCredentialsPort implements ClaudeCredentialsPort {
+  result: ClaudeCredentialsMaterializationResult = { status: 'materialized', reason: null };
+
+  async materialize(): Promise<ClaudeCredentialsMaterializationResult> {
+    return this.result;
+  }
+}
+
 let tmpDir: string;
 let invocationBaseDir: string;
 let dbPath: string;
@@ -154,6 +176,7 @@ let claudeProcessPort: FakeClaudeProcessPort;
 let claudeCapabilityProbe: FakeClaudeCapabilityProbe;
 let claudeLaunchContextWriter: FakeClaudeLaunchContextWriter;
 let claudeInvocationDirPort: FakeClaudeInvocationDirPort;
+let claudeCredentialsPort: FakeClaudeCredentialsPort;
 /**
  * `[Story 3.4]` 每个测试前后保存并恢复（不是只 `delete`）：自我开发本仓的人
  * 完全可能在环境里正当地导出了 `CONTROL_PLANE_SUPPLY_ROOT`，本套件不得把它
@@ -187,6 +210,7 @@ beforeEach(() => {
   claudeCapabilityProbe = new FakeClaudeCapabilityProbe();
   claudeLaunchContextWriter = new FakeClaudeLaunchContextWriter();
   claudeInvocationDirPort = new FakeClaudeInvocationDirPort(invocationBaseDir);
+  claudeCredentialsPort = new FakeClaudeCredentialsPort();
 });
 
 afterEach(() => {
@@ -212,7 +236,7 @@ function seed(revisions: readonly StableConfigRevision[]): void {
 }
 
 function overrides() {
-  return { claudeProcessPort, claudeCapabilityProbe, claudeLaunchContextWriter, claudeInvocationDirPort };
+  return { claudeProcessPort, claudeCapabilityProbe, claudeLaunchContextWriter, claudeInvocationDirPort, claudeCredentialsPort };
 }
 
 /**
@@ -388,6 +412,21 @@ describe('configs use --client claude-code', () => {
     expect(claudeProcessPort.lastSpawnParams).toBeNull();
     expect(output).toContain('Affected capabilities: claude.plugin-dir-delivery');
     expect(output).toContain('Claude recovery:');
+  });
+
+  test('[Story 5.1] 凭据源文件不可读/不存在: credentials-continuity fail-closed before spawn, exit code 1', async () => {
+    seed([sampleRevision({ configName: 'general', revisionId: 'rev-1' })]);
+    claudeCredentialsPort.result = { status: 'failed', reason: '凭据源文件不存在或不可读：/fake/home/.claude/.credentials.json' };
+
+    const code = await main(['use', 'rev-1', '--client', 'claude-code', '--yes'], overrides());
+    expect(code).toBe(1);
+    const output = logs.join('\n');
+    expect(output).toContain('failed');
+    expect(output).toContain('credentials-continuity-blocked');
+    expect(output).toContain(CLAUDE_CREDENTIALS_CONTINUITY_CAPABILITY_ID);
+    expect(output).toContain(`Affected capabilities: ${CLAUDE_CREDENTIALS_CONTINUITY_CAPABILITY_ID}`);
+    expect(output).toContain('Claude recovery:');
+    expect(claudeProcessPort.lastSpawnParams).toBeNull();
   });
 
   test('[Story 3.4] 非法 sourceRef 的诊断必须抵达用户可见输出：同时含非法值与当时生效的供给根', async () => {

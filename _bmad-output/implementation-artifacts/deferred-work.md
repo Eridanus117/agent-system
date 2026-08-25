@@ -220,3 +220,19 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-5-configs-supply.md`
   summary: `SupplyCandidate` 是 `CandidateConfigRevision` 可接受字段集的**手工副本**，无编译期关联；`parseSupply` 是 `parseEstablish`／`parseRevise` 之后同一套手写 flag 循环的第三份近乎逐字副本（各约 60 行）。
   evidence: Story 3.5 的 blind-hunter 报出。前者若 `parseCandidateRevision` 新增必填字段或改名，`tsc` 仍绿、只有集成测试会发现；后者三份副本各自带相同的 repeated／missing-value 分支，注释自己都在担心漂移。两者都是纯结构性清理，抽共享 helper 即可，但会同时触及三个既有子命令的解析路径。
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-1-claude-fresh-launch-credentials.md`
+  summary: AC4（真实 `claude` 二进制端到端验证：fresh 启动的新进程实际带着复制进去的 `.credentials.json` 保持登录态）目前没有任何自动化测试，只有本机手工验证一条路径。
+  evidence: verification-gap 与 blind-hunter 两个审查层独立发现并各自核实：`tests/integration/cli-claude-launch.test.ts` 全程用 `FakeClaudeProcessPort`，仓内唯一的真实二进制 smoke 测试先例是 `tests/omp/real-omp-smoke.test.ts`（针对 `omp`，缺席时跳过），Claude 侧没有等价物。本 Story 的 spec 本身在 Task 5 明确允许"若无真实二进制端到端用例则如实记为手工验证待办"这一结果，因此不构成对 spec 的偏离，只是把该风险正式登记为待跟踪项，供后续参照 `real-omp-smoke.test.ts` 的模式（`Bun.which('claude') === null` 时跳过）补一个真实端到端 smoke。
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-1-claude-fresh-launch-credentials.md`
+  summary: 凭据源路径解析（`$CLAUDE_CONFIG_DIR` 优先，否则 `$HOME/.claude`，文件名固定 `.credentials.json`）与新探测方法只在本机 Windows 环境验证过；macOS 是否改用系统 keychain 而非纯文件、其余平台的目录布局是否相同，均未核实。
+  evidence: spec 自身的 Never 约束与 `credentials.ts`/Story 文档的 Design Notes 已如实披露这条残留风险（"不假设非 Windows 平台凭据形态相同——无证据时 probe 返回 unknown，不默认 supported"）；探测机制本身是对磁盘的真实检查，不会在无证据时默认 `supported`，因此不构成静默错误，但目前没有任何非 Windows 平台的真实运行证据来确认这套假设在那些平台上是否成立。
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-1-claude-fresh-launch-credentials.md`
+  summary: fresh 启动的隔离 invocation 目录（`FsClaudeInvocationDirPort.prepare` 用 `mkdirSync(dir, { recursive: true })` 创建）及其内容（包括本 Story 新增的 `.credentials.json` 副本、AD-21 的 `materialized/` 内容）从未做过显式权限加固（如限制为仅当前用户可读），依赖操作系统默认权限与目录随进程退出即被删除的生命周期来限制暴露窗口。
+  evidence: blind-hunter 审查层发现，经核实为 Story 4.3 就存在的既有模式（`claude-invocation-dir.ts` 的 `prepare` 从未设置过限制性 mode），不是本 Story 新引入的缺口——本 Story 只是让这个既有目录第一次承载真正的 secret（此前只承载非敏感的物化 Skill/Instructions/MCP 内容），使潜在影响从"低"变为"值得加固"，值得后续对 `FsClaudeInvocationDirPort` 统一补一次权限加固而不是只给凭据单独打补丁。
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-5-1-claude-fresh-launch-credentials.md`
+  summary: `probeCredentialsContinuity`（`capability-probe.ts`）用 `access(sourcePath, fsConstants.R_OK)` 判定"可用"，但该调用对一个同名目录（而非文件）同样会成功，理论上会把一个目录误报为 `supported` 的凭据源。
+  evidence: edge-case-hunter 审查层发现。真实触发条件极不可能出现（`.credentials.json` 路径为何会是目录没有合理场景），且即使误报，下游 `materializeClaudeCredentials` 的 `cp()` 遇到目录源仍会按既有 fail-closed 路径报告失败，不会产生"看起来成功但实际未登录"的静默错误，只是 probe 阶段的证据会短暂不准确；值得后续用 `stat().isFile()` 收紧，但优先级低。

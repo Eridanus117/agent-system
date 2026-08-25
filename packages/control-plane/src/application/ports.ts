@@ -595,6 +595,33 @@ export interface ClaudeContentMaterializerPort {
 }
 
 /**
+ * `[Story 5.1]` AD-23 的凭据物化结果——`materialize` 从不抛异常，失败时把原因
+ * 装进 `reason`（人类可读，绝不包含凭据内容本身），与
+ * `ClaudeContentMaterializationResult` 每个 group 报告失败的纪律一致；成功
+ * 时 `reason` 为 `null`。
+ */
+export interface ClaudeCredentialsMaterializationResult {
+  readonly status: 'materialized' | 'failed';
+  readonly reason: string | null;
+}
+
+/**
+ * `[Story 5.1]` AD-23：fresh 启动时把宿主当前真实登录凭据（`.credentials.json`）
+ * 只读、字节级复制进本次 launch 的隔离 `invocationDir` **根**（Claude Code
+ * 原生从 `CLAUDE_CONFIG_DIR` 根读取该文件——这与 AD-21 `materialized/` 子目录
+ * 规则是两条不同约束，互不冲突，见 `application/claude-launch.ts` 与
+ * `adapters/clients/claude/credentials.ts` 的 Design Notes）。凭据内容只在
+ * 调用作用域存在，从不进 SQLite/投影/manifest/plan/receipt（AD-6/AD-19）；
+ * 源路径不可读/不存在时按 AD-10 fail-closed，`materialize` 报告失败而不是
+ * 抛异常，与本文件其余真实 IO 协作者端口（`ClaudeContentMaterializerPort` 等）
+ * 同一纪律，让 `application/claude-launch.ts` 依赖的是端口接口，从不直接调用
+ * `adapters/` 里的自由函数。
+ */
+export interface ClaudeCredentialsPort {
+  materialize(invocationDir: string): Promise<ClaudeCredentialsMaterializationResult>;
+}
+
+/**
  * Startup, best-effort self-update for the compiled `configs` binary
  * (Story 2.2 / AD-15's narrow self-update exception). Like every other
  * port in this file, the interface makes no product decisions -- in

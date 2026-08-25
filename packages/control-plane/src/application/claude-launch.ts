@@ -56,11 +56,13 @@ import type { ClaudeAdapterPlan } from '../adapters/clients/claude/adapter-plan'
 import { compileClaudeAssemblyManifest } from '../adapters/clients/claude/assembly-manifest';
 import type { ClaudeAssemblyManifest } from '../adapters/clients/claude/assembly-manifest';
 import type { ClaudeContentMaterializationResult, ClaudeMaterializationFailure } from '../adapters/clients/claude/content-materializer';
+import { CLAUDE_CREDENTIALS_CONTINUITY_CAPABILITY_ID } from '../adapters/clients/claude/credentials';
 import { InvalidTransitionError, LaunchPlanNotFoundError, type LaunchDeps } from './launch';
 import { ConfigNotFoundError, ConfigUnsupportedError, getConfigRevisionDetail } from './queries';
 import type {
   ClaudeCapabilityProbePort,
   ClaudeContentMaterializerPort,
+  ClaudeCredentialsPort,
   ClaudeInvocationDirPort,
   ClaudeLaunchContextWriter,
   ClaudeProcessPort,
@@ -78,6 +80,8 @@ export interface LaunchClaudeFreshDeps extends LaunchDeps {
   readonly claudeInvocationDirPort: ClaudeInvocationDirPort;
   /** `[Epic 4 retro fix]` AD-21 content materialization, now behind the same kind of port every other real-IO collaborator here already uses. */
   readonly claudeContentMaterializer: ClaudeContentMaterializerPort;
+  /** `[Story 5.1]` AD-23 credentials continuity -- copies the host's real login credentials into the isolated invocation directory before `claude` is spawned. */
+  readonly claudeCredentialsPort: ClaudeCredentialsPort;
 }
 
 function generateId(prefix: string): string {
@@ -265,6 +269,34 @@ function outcomeFor(
   recoveryAction: string | null,
 ): ClaudeLaunchOutcome {
   return { plan, observationStage, manifest, adapterPlan, affectedCapabilities, recoveryAction };
+}
+
+/**
+ * `[Story 5.1][review fix]` Shared fail-closed path for AD-23 credentials
+ * continuity failures inside `launchClaudeFresh` -- the "port threw" and
+ * "port reported `{ status: 'failed' }`" call sites reduce to the exact
+ * same `applyFailure` + persist + `outcomeFor` shape, differing only in the
+ * failure reason text handed in. Extracted once so the two call sites can
+ * never silently drift apart (e.g. one gaining a differently-worded
+ * recovery action while the other doesn't).
+ */
+async function failCredentialsContinuity(
+  deps: LaunchClaudeFreshDeps,
+  plan: LaunchPlan,
+  manifest: ClaudeAssemblyManifest,
+  adapterPlan: ClaudeAdapterPlan,
+  reason: string,
+): Promise<ClaudeLaunchOutcome> {
+  const failedPlan = applyFailure(plan, `credentials-continuity-blocked: ${reason}`);
+  await deps.launchPlanRepository.save(failedPlan);
+  return outcomeFor(
+    failedPlan,
+    'planned',
+    manifest,
+    adapterPlan,
+    [CLAUDE_CREDENTIALS_CONTINUITY_CAPABILITY_ID],
+    '确认当前 Claude Code 登录凭据文件存在且可读（$CLAUDE_CONFIG_DIR/.credentials.json 或 $HOME/.claude/.credentials.json）后重试',
+  );
 }
 
 /**
@@ -472,6 +504,31 @@ export async function launchClaudeFresh(
   // `ClaudeInvocationDirPort`'s Design Notes), so it never masks whichever
   // outcome the `try` block actually produced.
   try {
+    // `[Story 5.1]` AD-23: copy the host's current real login credentials
+    // (`.credentials.json`) into `invocationDir`'s root before anything else
+    // in this block -- this is the actual root-cause fix (Issue #9): without
+    // it, `CLAUDE_CONFIG_DIR` below points at a brand-new, empty directory
+    // and the newly-spawned process has no login state at all. Independent
+    // of (and ordered arbitrarily relative to) AD-21's content
+    // materialization immediately below -- both only require the invocation
+    // directory to already exist and both must complete before `claude` is
+    // spawned. `materialize` never throws by contract (same discipline as
+    // `claudeContentMaterializer.materialize`), but this call site is still
+    // guarded the same way, defense in depth against any future/unforeseen
+    // throw. A failure here fails the whole launch closed (AD-10) -- never a
+    // "looks succeeded but not actually logged in" partial state. Both the
+    // "port threw" and "port reported failure" cases share the exact same
+    // fail-closed shape -- see `failCredentialsContinuity`.
+    let credentialsResult: Awaited<ReturnType<typeof deps.claudeCredentialsPort.materialize>>;
+    try {
+      credentialsResult = await deps.claudeCredentialsPort.materialize(invocationDir);
+    } catch (error) {
+      return failCredentialsContinuity(deps, plan, manifest, adapterPlan, (error as Error).message);
+    }
+    if (credentialsResult.status === 'failed') {
+      return failCredentialsContinuity(deps, plan, manifest, adapterPlan, credentialsResult.reason ?? '未知原因');
+    }
+
     // `[Story 4.5b]` AD-21: read `sourceRef`-resolved real content and write it
     // under `invocationDir/materialized/` -- must happen after the invocation
     // directory exists, before the launch context is written or `claude` is

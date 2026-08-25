@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -11,6 +11,7 @@ import {
   type LaunchClaudeFreshDeps,
 } from '../../src/application/claude-launch';
 import { FsClaudeContentMaterializer } from '../../src/adapters/clients/claude/content-materializer';
+import { CLAUDE_CREDENTIALS_CONTINUITY_CAPABILITY_ID, CLAUDE_CREDENTIALS_FILE_NAME } from '../../src/adapters/clients/claude/credentials';
 import { InvalidTransitionError, LaunchPlanNotFoundError, confirmLaunchPlan, rejectLaunchPlan } from '../../src/application/launch';
 import { transitionLaunchPlan } from '../../src/domain/activation';
 import type { ClientId } from '../../src/domain/client';
@@ -20,6 +21,8 @@ import type { CapabilityReference, StableConfigRevision } from '../../src/domain
 import type {
   ClaudeCapabilityProbePort,
   ClaudeCapabilityProbeResult,
+  ClaudeCredentialsMaterializationResult,
+  ClaudeCredentialsPort,
   ClaudeInvocationDirPort,
   ClaudeLaunchContext,
   ClaudeLaunchContextWriter,
@@ -122,6 +125,8 @@ function allSupportedProbeResults(overrides: Partial<Record<string, Partial<Clau
     // `[Story 4.5b]` AD-21's content-materialization delivery gates.
     probeResult({ capabilityId: 'claude.plugin-dir-delivery', required: true, status: 'supported' }),
     probeResult({ capabilityId: 'claude.append-system-prompt-delivery', required: true, status: 'supported' }),
+    // `[Story 5.1]` AD-23's credentials continuity gate.
+    probeResult({ capabilityId: CLAUDE_CREDENTIALS_CONTINUITY_CAPABILITY_ID, required: true, status: 'supported' }),
   ];
   return base.map((result) => ({ ...result, ...(overrides[result.capabilityId] ?? {}) }));
 }
@@ -221,6 +226,16 @@ class FakeClaudeInvocationDirPort implements ClaudeInvocationDirPort {
    */
   readonly cleanedUp: string[] = [];
 
+  /**
+   * `[Story 5.1][review fix]` Records, for each real `cleanup` call, whether
+   * `<invocationDir>/.credentials.json` existed on disk *right before*
+   * `rmSync` ran -- lets a test assert the real "existed pre-cleanup, gone
+   * post-cleanup" behavior instead of only comparing recorded path strings
+   * (which never actually proves the file itself was ever created or
+   * removed). Only meaningful when `realBaseDir` is set.
+   */
+  readonly credentialsFileExistedBeforeCleanup: boolean[] = [];
+
   constructor(private readonly realBaseDir: string | null = null) {}
 
   async prepare(operationId: string): Promise<string> {
@@ -239,8 +254,42 @@ class FakeClaudeInvocationDirPort implements ClaudeInvocationDirPort {
   async cleanup(invocationDir: string): Promise<void> {
     this.cleanedUp.push(invocationDir);
     if (this.realBaseDir !== null) {
+      this.credentialsFileExistedBeforeCleanup.push(existsSync(path.join(invocationDir, CLAUDE_CREDENTIALS_FILE_NAME)));
       rmSync(invocationDir, { recursive: true, force: true });
     }
+  }
+}
+
+/**
+ * `[Story 5.1]` Fake `ClaudeCredentialsPort` -- defaults to `'materialized'`
+ * (never blocks) so every pre-existing test in this file (none of which are
+ * about credentials continuity) keeps behaving exactly as before this
+ * Story. `materialize`'s calls are recorded so tests can assert it was
+ * actually invoked with the real `invocationDir`.
+ */
+class FakeClaudeCredentialsPort implements ClaudeCredentialsPort {
+  result: ClaudeCredentialsMaterializationResult = { status: 'materialized', reason: null };
+  throwError: Error | null = null;
+  readonly calledWith: string[] = [];
+  /**
+   * `[Story 5.1][review fix]` When `true`, actually writes a real
+   * `.credentials.json` file into `invocationDir` on the real filesystem
+   * (only meaningful when `invocationDir` is itself real, i.e. `buildDeps`
+   * was given `realInvocationBaseDir`) -- lets a test assert real
+   * pre-cleanup existence / post-cleanup removal instead of only comparing
+   * recorded path strings.
+   */
+  writeRealFile = false;
+
+  async materialize(invocationDir: string): Promise<ClaudeCredentialsMaterializationResult> {
+    this.calledWith.push(invocationDir);
+    if (this.throwError !== null) {
+      throw this.throwError;
+    }
+    if (this.writeRealFile && this.result.status === 'materialized') {
+      writeFileSync(path.join(invocationDir, CLAUDE_CREDENTIALS_FILE_NAME), '{"fake":"credentials"}', 'utf8');
+    }
+    return this.result;
   }
 }
 
@@ -252,6 +301,7 @@ function buildDeps(options: { readonly realInvocationBaseDir?: string } = {}) {
   const claudeLaunchContextWriter = new FakeClaudeLaunchContextWriter();
   const claudeInvocationDirPort = new FakeClaudeInvocationDirPort(options.realInvocationBaseDir ?? null);
   const claudeContentMaterializer = new FsClaudeContentMaterializer();
+  const claudeCredentialsPort = new FakeClaudeCredentialsPort();
   const deps: LaunchClaudeFreshDeps = {
     configRepository,
     launchPlanRepository,
@@ -260,8 +310,18 @@ function buildDeps(options: { readonly realInvocationBaseDir?: string } = {}) {
     claudeLaunchContextWriter,
     claudeInvocationDirPort,
     claudeContentMaterializer,
+    claudeCredentialsPort,
   };
-  return { deps, configRepository, launchPlanRepository, claudeProcessPort, claudeCapabilityProbe, claudeLaunchContextWriter, claudeInvocationDirPort };
+  return {
+    deps,
+    configRepository,
+    launchPlanRepository,
+    claudeProcessPort,
+    claudeCapabilityProbe,
+    claudeLaunchContextWriter,
+    claudeInvocationDirPort,
+    claudeCredentialsPort,
+  };
 }
 
 describe('prepareClaudeFreshLaunchPlan', () => {
@@ -311,6 +371,67 @@ describe('launchClaudeFresh', () => {
     expect(claudeProcessPort.lastSpawnParams!.cwd).toBe(`/fake/claude-invocations/${confirmed.operationId}`);
     expect(claudeProcessPort.lastSpawnParams!.env.CLAUDE_CONFIG_DIR).toBe(`/fake/claude-invocations/${confirmed.operationId}`);
     expect(claudeProcessPort.lastSpawnParams!.argv).toEqual(['--permission-mode', 'manual']);
+  });
+
+  test('[Story 5.1] AC1 凭据物化成功: claudeCredentialsPort.materialize 被调用且携带真实 invocationDir, spawn 正常进行', async () => {
+    const { deps, configRepository, claudeCredentialsPort } = buildDeps();
+    const confirmed = await preparedAndConfirmed(deps, configRepository, revision({ configName: 'general', revisionId: 'rev-1' }));
+
+    const outcome = await launchClaudeFresh(deps, { planId: confirmed.planId });
+
+    expect(outcome.plan.phase).toBe('succeeded');
+    expect(claudeCredentialsPort.calledWith).toEqual([`/fake/claude-invocations/${confirmed.operationId}`]);
+  });
+
+  test('[Story 5.1] AC3 凭据物化失败（源文件不可读/不存在）: fail-closed, applyFailure, affectedCapabilities 含 claude.credentials-continuity, 从不 spawn', async () => {
+    const { deps, configRepository, claudeCredentialsPort, claudeProcessPort } = buildDeps();
+    claudeCredentialsPort.result = { status: 'failed', reason: '凭据源文件不存在或不可读：/fake/home/.claude/.credentials.json' };
+    const confirmed = await preparedAndConfirmed(deps, configRepository, revision({ configName: 'general', revisionId: 'rev-1' }));
+
+    const outcome = await launchClaudeFresh(deps, { planId: confirmed.planId });
+
+    expect(outcome.plan.phase).toBe('failed');
+    expect(isKnown(outcome.plan.failureReason) && outcome.plan.failureReason.value).toContain('credentials-continuity-blocked');
+    expect(isKnown(outcome.plan.failureReason) && outcome.plan.failureReason.value).toContain('凭据源文件不存在或不可读');
+    expect(outcome.affectedCapabilities).toEqual([CLAUDE_CREDENTIALS_CONTINUITY_CAPABILITY_ID]);
+    expect(outcome.recoveryAction).not.toBeNull();
+    expect(outcome.observationStage).toBe('planned');
+    // Never a partial "looks succeeded but not actually logged in" state --
+    // credentials failure blocks before content materialization and before spawn.
+    expect(claudeProcessPort.lastSpawnParams).toBeNull();
+  });
+
+  test('[Story 5.1] AC3 凭据物化端口抛出异常（防御性）: 同样按 credentials-continuity-blocked fail-closed，不让异常逃逸', async () => {
+    const { deps, configRepository, claudeCredentialsPort, claudeProcessPort } = buildDeps();
+    claudeCredentialsPort.throwError = new Error('unexpected-io-error');
+    const confirmed = await preparedAndConfirmed(deps, configRepository, revision({ configName: 'general', revisionId: 'rev-1' }));
+
+    const outcome = await launchClaudeFresh(deps, { planId: confirmed.planId });
+
+    expect(outcome.plan.phase).toBe('failed');
+    expect(isKnown(outcome.plan.failureReason) && outcome.plan.failureReason.value).toContain('credentials-continuity-blocked');
+    expect(isKnown(outcome.plan.failureReason) && outcome.plan.failureReason.value).toContain('unexpected-io-error');
+    expect(outcome.affectedCapabilities).toEqual([CLAUDE_CREDENTIALS_CONTINUITY_CAPABILITY_ID]);
+    expect(claudeProcessPort.lastSpawnParams).toBeNull();
+  });
+
+  test('[Story 5.1] AC2 启动达终态后凭据副本随 invocationDir 一并清理: cleanup 覆盖凭据物化调用过的同一个 invocationDir, 且凭据文件本身真的从磁盘消失', async () => {
+    const invocationBaseDir = makeTmpDir('control-plane-claude-launch-credentials-cleanup-inv-');
+    const { deps, configRepository, claudeInvocationDirPort, claudeCredentialsPort } = buildDeps({ realInvocationBaseDir: invocationBaseDir });
+    claudeCredentialsPort.writeRealFile = true;
+    const confirmed = await preparedAndConfirmed(deps, configRepository, revision({ configName: 'general', revisionId: 'rev-1' }));
+
+    await launchClaudeFresh(deps, { planId: confirmed.planId });
+
+    expect(claudeCredentialsPort.calledWith).toEqual(claudeInvocationDirPort.cleanedUp);
+    const invocationDir = claudeCredentialsPort.calledWith[0]!;
+    const credentialsPath = path.join(invocationDir, CLAUDE_CREDENTIALS_FILE_NAME);
+    // The real `.credentials.json` copy genuinely existed right before
+    // `cleanup` ran (not just a recorded path string)...
+    expect(claudeInvocationDirPort.credentialsFileExistedBeforeCleanup).toEqual([true]);
+    // ...and is genuinely gone from disk afterward (cleanup's real `rmSync`
+    // already ran by the time `launchClaudeFresh`'s `finally` resolved).
+    expect(existsSync(credentialsPath)).toBe(false);
   });
 
   test('AC1 中间态断言: right after process-started, the persisted plan is already "observing" (launched) before exit is captured', async () => {

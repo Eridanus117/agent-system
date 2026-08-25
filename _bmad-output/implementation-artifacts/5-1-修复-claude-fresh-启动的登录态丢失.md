@@ -1,6 +1,6 @@
 # Story 5.1: 修复 Claude fresh 启动的登录态丢失
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -34,26 +34,26 @@ so that 我不必每次用 `configs use --client claude-code` 都重新登录。
 
 ## Tasks / Subtasks
 
-- [ ] Task 1：Probe 扩展——新增 `claude.credentials-continuity` capability（AC 3）
-  - [ ] 在 `packages/control-plane/src/adapters/clients/claude/capability-probe.ts` 的 `BunClaudeCapabilityProbe.probeHardControlCapabilities()` 里新增一个私有探测方法，风格参照 `probePluginDirDelivery`/`probeAppendSystemPromptDelivery`（`hasFlag` 式的二元判定，而非枚举比对）——但这条**不是** `--help` 文本探测，是**真实文件系统探测**：检查凭据源文件（见 Task 2 的路径解析规则）是否存在且可读。`required: true`。
-  - [ ] `evidenceRef` 只描述"文件是否存在于该路径"，绝不读取或转述文件内容（AD-6）。
-- [ ] Task 2：实现凭据源路径解析（AC 1, 4）
-  - [ ] 新建 `packages/control-plane/src/adapters/clients/claude/credentials.ts`（或并入 `content-materializer.ts`，由实现者决定，但建议独立文件，因为它读取的是宿主环境状态，不是 `sourceRef`，语义上与 `materializeClaudeContent` 不同源）。
-  - [ ] 解析规则：`process.env.CLAUDE_CONFIG_DIR ?? path.join(os.homedir(), '.claude')`，凭据文件名固定为 `.credentials.json`（已在本机 `~/.claude/.credentials.json` 实测确认存在，509 字节，顶层字段：`claudeAiOauth`、`accessToken`、`refreshToken`、`expiresAt`、`refreshTokenExpiresAt`、`scopes`、`subscriptionType`——只需要按字节整体复制，不需要解析/理解这些字段）。
-  - [ ] **不要重新发明凭据发现逻辑**——如果发现 `claude --help`/文档暴露了官方的凭据路径解析方式（例如 `CLAUDE_HOME` 或类似环境变量），优先复用官方语义而不是硬编码 `os.homedir()`。
-- [ ] Task 3：实现凭据物化（AC 1, 2, 4）
-  - [ ] 复用 `content-materializer.ts` 里已有的 `writeFileAtomic`（或其底层 `writeToSameDirTempFile`，见 `adapters/system/atomic-write.ts`）做同目录临时文件原子替换；复制目标写入 `<invocationDir>/.credentials.json`（**invocation 目录根**，因为该目录本身就是新进程的 `CLAUDE_CONFIG_DIR`，Claude Code 需要在其根下找到 `.credentials.json`——注意这与 AD-21 的 `materialized/` 子目录规则不同：AD-21 的物化内容不能写根，是因为根同时是 `cwd`；但凭据文件必须写根，因为 Claude Code 就是从 `CLAUDE_CONFIG_DIR` 根下读 `.credentials.json`，这是两条不同的约束，不要混淆）。
-  - [ ] 用 `cp`（`node:fs/promises`）做字节级复制，不解析/重新序列化 JSON——避免任何格式漂移风险。
-  - [ ] 新增一个端口接口，参照 `ClaudeContentMaterializerPort`（`application/ports.ts:593`）的既有模式（`Epic 4 retro fix` 引入的教训：真实 IO 协作者必须走注入端口，不能被 `claude-launch.ts` 直接调用自由函数）——建议 `ClaudeCredentialsPort`，方法签名类似 `materialize(invocationDir: string): Promise<ClaudeCredentialsMaterializationResult>`。
-- [ ] Task 4：接入 `launchClaudeFresh`（AC 1, 2, 3）
-  - [ ] 在 `packages/control-plane/src/application/claude-launch.ts` 里，`LaunchClaudeFreshDeps` 接口（第 74-81 行）新增 `readonly claudeCredentialsPort: ClaudeCredentialsPort;`。
-  - [ ] 在 `launchClaudeFresh` 函数内，**invocation 目录已创建之后、`claudeContentMaterializer.materialize` 调用之前或之后均可**（与 AD-21 内容物化并列，不依赖顺序），插入凭据物化调用；失败时走与既有 `content-materialization-blocked` 分支同样的 `applyFailure` + `outcomeFor` 模式（第 543-560 行是现成的参照写法），但用一个新的失败前缀（例如 `credentials-continuity-blocked`），不要复用 `content-materialization-blocked` 这个字符串（那个专指 AD-21 的 Instructions/Skills/MCP 物化，混用会让 `affectedCapabilities`/日志语义变得不可区分）。
-  - [ ] `adapter-plan.ts` 的 `compileClaudeAdapterPlan`（第 206-228 行）里 `generatedFiles` 数组可以新增一个 `purpose: 'credentials'` 的声明性条目（`ClaudeAdapterPlanGeneratedFile.purpose` 联合类型需要相应扩展，第 126 行），保持"只声明意图、不带路径/内容"的既有纪律（AD-19）——是否做这一步由实现者判断，AC 里没有强制要求 plan 层面暴露这个声明，只要求实际行为正确；如果不加，需要在 Dev Notes 里如实说明"为什么这次没有和其他三种内容物化一样在 plan 里声明"。
-- [ ] Task 5：测试（覆盖全部 4 条 AC）
-  - [ ] `tests/adapters/`（新建 `claude-credentials.test.ts`，参照 `claude-content-materializer.test.ts` 的写法）：单测凭据源路径解析规则、复制成功、源文件不存在/不可读时的失败上报。
-  - [ ] `tests/application/claude-launch.test.ts`：新增/扩展用例覆盖 AC 1-3（fake `ClaudeCredentialsPort` 场景：成功、失败阻断整个启动、失败原因正确进入 `applyFailure`）。
-  - [ ] `tests/integration/cli-claude-launch.test.ts`：如果该文件已有真实 `claude` 二进制的端到端用例，扩展它验证 AC 4（隔离目录下确实出现 `.credentials.json` 且内容与源一致）；如果目前只有 fake port 覆盖，在 Dev Notes/Completion Notes 里如实说明"AC 4 的真实二进制验证尚未自动化，是手工验证的"，不要假装自动化覆盖了它。
-  - [ ] `tests/adapters/claude-capability-probe.test.ts`：新增 `claude.credentials-continuity` 探测方法的单测（存在/不存在两种真实文件系统场景，用临时目录，不依赖 `~/.claude` 真实内容）。
+- [x] Task 1：Probe 扩展——新增 `claude.credentials-continuity` capability（AC 3）
+  - [x] 在 `packages/control-plane/src/adapters/clients/claude/capability-probe.ts` 的 `BunClaudeCapabilityProbe.probeHardControlCapabilities()` 里新增一个私有探测方法，风格参照 `probePluginDirDelivery`/`probeAppendSystemPromptDelivery`（`hasFlag` 式的二元判定，而非枚举比对）——但这条**不是** `--help` 文本探测，是**真实文件系统探测**：检查凭据源文件（见 Task 2 的路径解析规则）是否存在且可读。`required: true`。
+  - [x] `evidenceRef` 只描述"文件是否存在于该路径"，绝不读取或转述文件内容（AD-6）。
+- [x] Task 2：实现凭据源路径解析（AC 1, 4）
+  - [x] 新建 `packages/control-plane/src/adapters/clients/claude/credentials.ts`（或并入 `content-materializer.ts`，由实现者决定，但建议独立文件，因为它读取的是宿主环境状态，不是 `sourceRef`，语义上与 `materializeClaudeContent` 不同源）。
+  - [x] 解析规则：`process.env.CLAUDE_CONFIG_DIR ?? path.join(os.homedir(), '.claude')`，凭据文件名固定为 `.credentials.json`（已在本机 `~/.claude/.credentials.json` 实测确认存在，509 字节，顶层字段：`claudeAiOauth`、`accessToken`、`refreshToken`、`expiresAt`、`refreshTokenExpiresAt`、`scopes`、`subscriptionType`——只需要按字节整体复制，不需要解析/理解这些字段）。
+  - [x] **不要重新发明凭据发现逻辑**——如果发现 `claude --help`/文档暴露了官方的凭据路径解析方式（例如 `CLAUDE_HOME` 或类似环境变量），优先复用官方语义而不是硬编码 `os.homedir()`。
+- [x] Task 3：实现凭据物化（AC 1, 2, 4）
+  - [x] 复用 `content-materializer.ts` 里已有的 `writeFileAtomic`（或其底层 `writeToSameDirTempFile`，见 `adapters/system/atomic-write.ts`）做同目录临时文件原子替换；复制目标写入 `<invocationDir>/.credentials.json`（**invocation 目录根**，因为该目录本身就是新进程的 `CLAUDE_CONFIG_DIR`，Claude Code 需要在其根下找到 `.credentials.json`——注意这与 AD-21 的 `materialized/` 子目录规则不同：AD-21 的物化内容不能写根，是因为根同时是 `cwd`；但凭据文件必须写根，因为 Claude Code 就是从 `CLAUDE_CONFIG_DIR` 根下读 `.credentials.json`，这是两条不同的约束，不要混淆）。
+  - [x] 用 `cp`（`node:fs/promises`）做字节级复制，不解析/重新序列化 JSON——避免任何格式漂移风险。
+  - [x] 新增一个端口接口，参照 `ClaudeContentMaterializerPort`（`application/ports.ts:593`）的既有模式（`Epic 4 retro fix` 引入的教训：真实 IO 协作者必须走注入端口，不能被 `claude-launch.ts` 直接调用自由函数）——建议 `ClaudeCredentialsPort`，方法签名类似 `materialize(invocationDir: string): Promise<ClaudeCredentialsMaterializationResult>`。
+- [x] Task 4：接入 `launchClaudeFresh`（AC 1, 2, 3）
+  - [x] 在 `packages/control-plane/src/application/claude-launch.ts` 里，`LaunchClaudeFreshDeps` 接口（第 74-81 行）新增 `readonly claudeCredentialsPort: ClaudeCredentialsPort;`。
+  - [x] 在 `launchClaudeFresh` 函数内，**invocation 目录已创建之后、`claudeContentMaterializer.materialize` 调用之前或之后均可**（与 AD-21 内容物化并列，不依赖顺序），插入凭据物化调用；失败时走与既有 `content-materialization-blocked` 分支同样的 `applyFailure` + `outcomeFor` 模式（第 543-560 行是现成的参照写法），但用一个新的失败前缀（例如 `credentials-continuity-blocked`），不要复用 `content-materialization-blocked` 这个字符串（那个专指 AD-21 的 Instructions/Skills/MCP 物化，混用会让 `affectedCapabilities`/日志语义变得不可区分）。
+  - [x] `adapter-plan.ts` 的 `compileClaudeAdapterPlan`（第 206-228 行）里 `generatedFiles` 数组可以新增一个 `purpose: 'credentials'` 的声明性条目（`ClaudeAdapterPlanGeneratedFile.purpose` 联合类型需要相应扩展，第 126 行），保持"只声明意图、不带路径/内容"的既有纪律（AD-19）——是否做这一步由实现者判断，AC 里没有强制要求 plan 层面暴露这个声明，只要求实际行为正确；如果不加，需要在 Dev Notes 里如实说明"为什么这次没有和其他三种内容物化一样在 plan 里声明"。
+- [x] Task 5：测试（覆盖全部 4 条 AC）
+  - [x] `tests/adapters/`（新建 `claude-credentials.test.ts`，参照 `claude-content-materializer.test.ts` 的写法）：单测凭据源路径解析规则、复制成功、源文件不存在/不可读时的失败上报。
+  - [x] `tests/application/claude-launch.test.ts`：新增/扩展用例覆盖 AC 1-3（fake `ClaudeCredentialsPort` 场景：成功、失败阻断整个启动、失败原因正确进入 `applyFailure`）。
+  - [x] `tests/integration/cli-claude-launch.test.ts`：如果该文件已有真实 `claude` 二进制的端到端用例，扩展它验证 AC 4（隔离目录下确实出现 `.credentials.json` 且内容与源一致）；如果目前只有 fake port 覆盖，在 Dev Notes/Completion Notes 里如实说明"AC 4 的真实二进制验证尚未自动化，是手工验证的"，不要假装自动化覆盖了它。
+  - [x] `tests/adapters/claude-capability-probe.test.ts`：新增 `claude.credentials-continuity` 探测方法的单测（存在/不存在两种真实文件系统场景，用临时目录，不依赖 `~/.claude` 真实内容）。
 
 ## Dev Notes
 
@@ -102,4 +102,25 @@ Claude Sonnet 5
 
 ### Completion Notes List
 
+- 实现遵循 `_bmad-output/implementation-artifacts/spec-5-1-claude-fresh-launch-credentials.md`（本 Story 的权威合同）；本节只做交叉引用，权威记录以该 spec 文件的 Spec Change Log/Tasks & Acceptance 为准。
+- AC1-3 有自动化单测/集成测试覆盖（`tests/adapters/claude-credentials.test.ts`、`tests/adapters/claude-capability-probe.test.ts`、`tests/application/claude-launch.test.ts`、`tests/integration/cli-claude-launch.test.ts`）。
+- AC4（真实 `claude` 二进制启动后，隔离目录下 `.credentials.json` 与源文件内容一致）**未自动化**——`tests/integration/cli-claude-launch.test.ts` 全程使用 fake `ClaudeProcessPort`，没有真实二进制端到端用例可扩展；如实记录为手工验证待办，未假装已覆盖。
+- `adapter-plan.ts` 的 `generatedFiles` 未新增 `'credentials'` 声明性条目——已按 frontmatter"Ask First"事项判断为不必要（凭据不经过 manifest/assembly 编译阶段，与 AD-21 的三类内容物化产物语义不同），理由见 spec 的 Spec Change Log。
+- 已知残留风险：凭据源路径解析与新探测方法只在本机 Windows 环境验证过；macOS/Linux 上 `.credentials.json` 是否同样是纯文件（而非系统 keychain）未核实。探测机制本身是对磁盘的真实检查，不会在无证据时默认 `supported`，但缺少非 Windows 平台的真实运行证据。
+- 2026-08-25 三路审查（blind-hunter/edge-case-hunter/verification-gap）后的修复轮：10 条机械可修 patch 全部修复（孤儿临时文件清理、`resolveClaudeCredentialsSourcePath` 调用点纳入 try 边界、`launchClaudeFresh` 两处重复失败分支合并为共享 helper、`claude.credentials-continuity` capabilityId 收敛成单一导出常量、`cp` 加 `dereference: true`、`CLAUDE_CONFIG_DIR` 先 `trim()` 再判空、两处测试断言收紧为真实文件系统验证/隔离环境后的确定值、本文件 `Status:` 字段改为受控词表值）。详见 spec 文件 Spec Change Log 的完整清单。修复后重跑 `bunx tsc --noEmit`（0 错误）与 `bun test`（576 pass / 2 skip / 0 fail）。
+
 ### File List
+
+**新增：**
+- `packages/control-plane/src/adapters/clients/claude/credentials.ts`
+- `packages/control-plane/tests/adapters/claude-credentials.test.ts`
+
+**修改：**
+- `packages/control-plane/src/application/ports.ts`（新增 `ClaudeCredentialsMaterializationResult`/`ClaudeCredentialsPort`）
+- `packages/control-plane/src/application/claude-launch.ts`（`LaunchClaudeFreshDeps` 新增字段；`launchClaudeFresh` 接入凭据物化 + fail-closed 分支）
+- `packages/control-plane/src/adapters/clients/claude/capability-probe.ts`（新增 `probeCredentialsContinuity` 私有方法及其调用）
+- `packages/control-plane/src/cli/index.ts`（`CliOverrides`/`FullDeps`/`openDeps` 接入 `claudeCredentialsPort` 默认注入 `FsClaudeCredentialsPort`）
+- `packages/control-plane/tests/application/claude-launch.test.ts`
+- `packages/control-plane/tests/adapters/claude-capability-probe.test.ts`
+- `packages/control-plane/tests/cli/tui.test.tsx`
+- `packages/control-plane/tests/integration/cli-claude-launch.test.ts`
