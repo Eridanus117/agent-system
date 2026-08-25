@@ -135,6 +135,14 @@ MVP-FR10：Epic 1 / Story 1.2 — OMP-only 与未来 adapter 边界。
 
 **2026-08-24 范围补全：** Story 4.5 的 AC2（本仓自身切换）经调查证明其前置对象不存在——本仓自身交互式 Claude Code session 的装配与 `.cap` 无渲染管线关联，"切换"这个动作没有真实对象。真正阻挡"退役 `.cap`"的是两个此前未被识别的能力缺口：新 adapter 的 fresh 启动尚不具备真实内容物化能力（只传硬控制 flag，不交付 Instructions/Skills/MCP 内容），且 `configs` CLI 没有任何入口能调用新 adapter 的 Claude 相关代码。因此新增 Story 4.5b（内容物化能力）与 Story 4.6（CLI 入口），原 Story 4.6（退役 `.cap/` 本体）顺延为 Story 4.7，验收前提相应改写。详见下方对应 Story 正文与 `sprint-change-proposal-2026-08-24-cap-retirement-redesign.md`。
 
+### Epic 5：修复 Epic 4 交付后真实使用中暴露的缺陷
+
+Epic 4 完成并跑完 retrospective 后，2026-08-25 真实使用 `configs use --client claude-code` 端到端流程时发现 4 个此前未被任何验收标准覆盖的缺陷（#6/#7/#8/#9）。本 Epic 不重开 Epic 4，作为独立后续处理。
+
+**覆盖：** GitHub Issue #6、#7、#8、#9；PRD FR-8 在 Claude Code 客户端侧的真实达标状态。
+
+（2026-08-25 新增，见 `sprint-change-proposal-2026-08-25-epic-4-post-delivery-fixes.md`）
+
 ## Epic 1：查看、选择并使用 OMP 配置
 
 用户可以看清一个配置包含什么，必要时并列比较多个配置，然后亲自选择一个具体修订，经一次确认 fresh 启动 OMP；进入 OMP 后使用原生 resume，并只查看配置应用与客户端启动状态。
@@ -543,3 +551,87 @@ MVP-FR10：Epic 1 / Story 1.2 — OMP-only 与未来 adapter 边界。
 **When** 核实退役范围
 **Then** 确认 `configs` CLI（`packages/control-plane/src/cli/index.ts`）与产品运行时代码路径不依赖 `.cap/` 目录内容（已知现状：`resolveClientSupport` 之外没有任何 `claude` 相关引用，`.cap/` 只被开发期 `scripts/seed-from-cap.ts` 与其测试读取，不在产品运行时路径上）；`scripts/seed-from-cap.ts` 及依赖 `src/adapters/sources/cap-fs.ts` 读取真实 `.cap/` 文件的测试（`cap-fs.test.ts`、`claude-cap-parity-verification.test.ts`、`claude-assembly-manifest.test.ts` 等）随 `.cap/` 一并退役或改写为不依赖真实 `.cap/` 文件
 **And** 若发现未预期的产品运行时依赖，先记录为阻塞项并停止退役，不强行删除。
+
+## Epic 5：修复 Epic 4 交付后真实使用中暴露的缺陷
+
+Epic 4 完成并跑完 retrospective 后，2026-08-25 真实使用 `configs use --client claude-code` 端到端流程时发现 4 个此前未被任何验收标准覆盖的缺陷（#6/#7/#8/#9）。本 Epic 不重开 Epic 4，作为独立后续处理。
+
+**覆盖：** GitHub Issue #6、#7、#8、#9；PRD FR-8 在 Claude Code 客户端侧的真实达标状态。
+
+**实现与交互约束：** 四条 Story 彼此独立、可分别验收；排序为 5.1 → 5.2 → {5.3, 5.4 并行，优先级低}。不重开 Epic 4 的任何已完成 Story，不修改其历史验收记录。
+
+（2026-08-25 新增，见 `sprint-change-proposal-2026-08-25-epic-4-post-delivery-fixes.md`）
+
+### Story 5.1：修复 Claude fresh 启动的登录态丢失
+
+作为使用 Claude Code 的个人实践者，
+我希望 fresh 启动的新会话保留登录态，
+以便不必每次都重新登录。
+
+**覆盖：** [#9](https://github.com/Eridanus117/agent-system/issues/9)；PRD FR-8"最多一次确认，不含产品制造的额外认证负担"；Architecture Spine AD-23（新增，`[PROPOSED]`）。
+
+**Acceptance Criteria:**
+
+**Given** 用户执行 `configs use <revisionId> --client claude-code` 并完成唯一一次确认
+**When** 新 Claude Code 进程 fresh 启动
+**Then** 该进程保留用户当前真实的登录态，不要求用户重新登录
+**And** 登录凭据只在调用作用域的隔离目录内只读复制，不写入 SQLite、投影、manifest、plan 或 receipt。
+
+**Given** 调用作用域内的凭据副本
+**When** 本次启动达到任一终态（`succeeded | degraded | failed | incomplete`）
+**Then** 凭据副本随 invocation 目录一并清理，清理时机不早于 Claude 进程及其显式 spawn 的子进程已知不再读取该目录期间
+**And** 不产生可被读者观察到的半写或残留状态。
+
+**Given** 当前登录凭据文件不可读或格式无法识别
+**When** launch 阶段尝试复制凭据
+**Then** 按 AD-10 fail-closed，将该次 fresh 启动记为 `unsupported`/`degraded` 并说明原因
+**And** 不产生"看起来成功、实际未登录"的部分状态。
+
+### Story 5.2：本仓自我开发场景的供给库根自动识别
+
+作为维护本仓的负责人，
+我希望 `CONTROL_PLANE_SUPPLY_ROOT` 在本仓内可以被自动推导，
+以便不必每次手动设置且不会因漏设导致 `sourceRef` 解析失败。
+
+**覆盖：** [#8](https://github.com/Eridanus117/agent-system/issues/8)；Architecture Spine AD-22 追加段（供给库根自动识别）。
+
+**Acceptance Criteria:**
+
+**Given** 当前工作目录或可执行文件位于一个带 `vendor/bmad` 与 `plugins/` 目录的 agent-system 仓内，且 `CONTROL_PLANE_SUPPLY_ROOT` 未被显式设置
+**When** `defaultSupplyRoot()` 解析供给库根
+**Then** 自动推导为该仓库根，不要求用户手动设置环境变量
+**And** 该自动推导值仍遵守既有约束——不进入任何修订、只在本机生效、不改变发行版用户场景的既有默认值逻辑。
+
+**Given** `CONTROL_PLANE_SUPPLY_ROOT` 已被显式设置
+**When** `defaultSupplyRoot()` 解析供给库根
+**Then** 显式设置值优先于自动推导，行为与当前一致。
+
+### Story 5.3：`configs tui` 补齐 establish/revise/supply 入口
+
+作为习惯用 TUI 的用户，
+我希望能在 `configs tui` 里发现并使用 Epic 3 新增的写路径能力，
+以便不必知道裸 CLI 命令才能建立/修订配置。
+
+**覆盖：** [#7](https://github.com/Eridanus117/agent-system/issues/7)。
+
+**Acceptance Criteria:**
+
+**Given** 用户在 `configs tui` 中浏览
+**When** 用户寻找"建立/修订配置"或"从供给库产出候选"的入口
+**Then** TUI 提供可发现的入口（可以是直接交互式表单，也可以是"生成对应命令供用户在终端执行"的轻量形式，具体形式由实现时决定）
+**And** 不静默缺失——用户不需要额外了解裸 CLI 命令才能发现这些能力存在。
+
+### Story 5.4：`configs` 的 `<id>` 参数消歧
+
+作为 `configs` 用户，
+我希望 `show`/`use`/`switch` 能区分我传入的是配置名还是修订 id，或至少在报错时明确指出这一点，
+以便不会被"未找到"这类提示误导。
+
+**覆盖：** [#6](https://github.com/Eridanus117/agent-system/issues/6)。
+
+**Acceptance Criteria:**
+
+**Given** 用户对 `show`/`use`/`switch` 传入一个实际是配置名（而非修订 id）的值
+**When** 命令尝试解析该值
+**Then** 明确提示"你传入的是配置名，该配置下有 N 条修订，请用 `configs list` 查看修订 id"（或等价的消歧提示），而不是笼统的"未找到"
+**And** 用法字符串（`usageLine()`）把 `<id>` 改为更明确的 `<revisionId>`。

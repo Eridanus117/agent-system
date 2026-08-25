@@ -64,6 +64,13 @@ development_status:
   4-6-configs-cli-的-claude-入口: done
   4-7-退役-cap-本体: done
   epic-4-retrospective: done
+
+  epic-5: in-progress
+  5-1-修复-claude-fresh-启动的登录态丢失: ready-for-dev
+  5-2-本仓自我开发场景的供给库根自动识别: backlog
+  5-3-configs-tui-补齐-establish-revise-supply-入口: backlog
+  5-4-configs-的-id-参数消歧: backlog
+  epic-5-retrospective: optional
 action_items:
   - id: "epic-1-retro-item-1-launchomp-packages-control-plane-src-app"
     epic: 1
