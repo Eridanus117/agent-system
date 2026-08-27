@@ -1,0 +1,256 @@
+{
+  "skills": [
+    {
+      "name": "adaptive-problem-solving",
+      "target": "plugins/adaptive-problem-solving/skills/adaptive-problem-solving"
+    },
+    {
+      "name": "bmad-advanced-elicitation",
+      "target": "vendor/bmad/skills/bmad-advanced-elicitation"
+    },
+    {
+      "name": "bmad-agent-analyst",
+      "target": "vendor/bmad/skills/bmad-agent-analyst"
+    },
+    {
+      "name": "bmad-agent-architect",
+      "target": "vendor/bmad/skills/bmad-agent-architect"
+    },
+    {
+      "name": "bmad-agent-dev",
+      "target": "vendor/bmad/skills/bmad-agent-dev"
+    },
+    {
+      "name": "bmad-agent-pm",
+      "target": "vendor/bmad/skills/bmad-agent-pm"
+    },
+    {
+      "name": "bmad-agent-ux-designer",
+      "target": "vendor/bmad/skills/bmad-agent-ux-designer"
+    },
+    {
+      "name": "bmad-architecture",
+      "target": "vendor/bmad/skills/bmad-architecture"
+    },
+    {
+      "name": "bmad-brainstorming",
+      "target": "vendor/bmad/skills/bmad-brainstorming"
+    },
+    {
+      "name": "bmad-build",
+      "target": "vendor/bmad/skills/bmad-build"
+    },
+    {
+      "name": "bmad-build-auto",
+      "target": "vendor/bmad/skills/bmad-build-auto"
+    },
+    {
+      "name": "bmad-checkpoint-preview",
+      "target": "vendor/bmad/skills/bmad-checkpoint-preview"
+    },
+    {
+      "name": "bmad-code-review",
+      "target": "vendor/bmad/skills/bmad-code-review"
+    },
+    {
+      "name": "bmad-correct-course",
+      "target": "vendor/bmad/skills/bmad-correct-course"
+    },
+    {
+      "name": "bmad-create-architecture",
+      "target": "vendor/bmad/skills/bmad-create-architecture"
+    },
+    {
+      "name": "bmad-create-epics-and-stories",
+      "target": "vendor/bmad/skills/bmad-create-epics-and-stories"
+    },
+    {
+      "name": "bmad-create-prd",
+      "target": "vendor/bmad/skills/bmad-create-prd"
+    },
+    {
+      "name": "bmad-create-story",
+      "target": "vendor/bmad/skills/bmad-create-story"
+    },
+    {
+      "name": "bmad-customize",
+      "target": "vendor/bmad/skills/bmad-customize"
+    },
+    {
+      "name": "bmad-deep-recon",
+      "target": "vendor/bmad/skills/bmad-deep-recon"
+    },
+    {
+      "name": "bmad-dev-auto",
+      "target": "vendor/bmad/skills/bmad-dev-auto"
+    },
+    {
+      "name": "bmad-dev-story",
+      "target": "vendor/bmad/skills/bmad-dev-story"
+    },
+    {
+      "name": "bmad-document-project",
+      "target": "vendor/bmad/skills/bmad-document-project"
+    },
+    {
+      "name": "bmad-domain-research",
+      "target": "vendor/bmad/skills/bmad-domain-research"
+    },
+    {
+      "name": "bmad-edit-prd",
+      "target": "vendor/bmad/skills/bmad-edit-prd"
+    },
+    {
+      "name": "bmad-editorial-review",
+      "target": "vendor/bmad/skills/bmad-editorial-review"
+    },
+    {
+      "name": "bmad-editorial-review-prose",
+      "target": "vendor/bmad/skills/bmad-editorial-review-prose"
+    },
+    {
+      "name": "bmad-editorial-review-structure",
+      "target": "vendor/bmad/skills/bmad-editorial-review-structure"
+    },
+    {
+      "name": "bmad-forge-idea",
+      "target": "vendor/bmad/skills/bmad-forge-idea"
+    },
+    {
+      "name": "bmad-generate-project-context",
+      "target": "vendor/bmad/skills/bmad-generate-project-context"
+    },
+    {
+      "name": "bmad-help",
+      "target": "vendor/bmad/skills/bmad-help"
+    },
+    {
+      "name": "bmad-market-research",
+      "target": "vendor/bmad/skills/bmad-market-research"
+    },
+    {
+      "name": "bmad-party-mode",
+      "target": "vendor/bmad/skills/bmad-party-mode"
+    },
+    {
+      "name": "bmad-prd",
+      "target": "vendor/bmad/skills/bmad-prd"
+    },
+    {
+      "name": "bmad-prfaq",
+      "target": "vendor/bmad/skills/bmad-prfaq"
+    },
+    {
+      "name": "bmad-product-brief",
+      "target": "vendor/bmad/skills/bmad-product-brief"
+    },
+    {
+      "name": "bmad-project-context",
+      "target": "vendor/bmad/skills/bmad-project-context"
+    },
+    {
+      "name": "bmad-qa-generate-e2e-tests",
+      "target": "vendor/bmad/skills/bmad-qa-generate-e2e-tests"
+    },
+    {
+      "name": "bmad-quick-dev",
+      "target": "vendor/bmad/skills/bmad-quick-dev"
+    },
+    {
+      "name": "bmad-retrospective",
+      "target": "vendor/bmad/skills/bmad-retrospective"
+    },
+    {
+      "name": "bmad-review",
+      "target": "vendor/bmad/skills/bmad-review"
+    },
+    {
+      "name": "bmad-review-adversarial-general",
+      "target": "vendor/bmad/skills/bmad-review-adversarial-general"
+    },
+    {
+      "name": "bmad-review-edge-case-hunter",
+      "target": "vendor/bmad/skills/bmad-review-edge-case-hunter"
+    },
+    {
+      "name": "bmad-review-verification-gap",
+      "target": "vendor/bmad/skills/bmad-review-verification-gap"
+    },
+    {
+      "name": "bmad-spec",
+      "target": "vendor/bmad/skills/bmad-spec"
+    },
+    {
+      "name": "bmad-sprint-planning",
+      "target": "vendor/bmad/skills/bmad-sprint-planning"
+    },
+    {
+      "name": "bmad-sprint-status",
+      "target": "vendor/bmad/skills/bmad-sprint-status"
+    },
+    {
+      "name": "bmad-technical-research",
+      "target": "vendor/bmad/skills/bmad-technical-research"
+    },
+    {
+      "name": "bmad-ux",
+      "target": "vendor/bmad/skills/bmad-ux"
+    },
+    {
+      "name": "bmad-validate-prd",
+      "target": "vendor/bmad/skills/bmad-validate-prd"
+    },
+    {
+      "name": "grilling",
+      "target": "plugins/grilling/skills/grilling"
+    },
+    {
+      "name": "issue-contract-compaction",
+      "target": "plugins/github-collaboration/skills/issue-contract-compaction"
+    },
+    {
+      "name": "issue-delivery",
+      "target": "plugins/github-collaboration/skills/issue-delivery"
+    },
+    {
+      "name": "issue-workflow",
+      "target": "plugins/github-collaboration/skills/issue-workflow"
+    },
+    {
+      "name": "knowledge-maintenance",
+      "target": "plugins/knowledge-maintenance/skills/knowledge-maintenance"
+    },
+    {
+      "name": "objective-to-issues",
+      "target": "plugins/github-collaboration/skills/objective-to-issues"
+    },
+    {
+      "name": "operating-ledger-maintenance",
+      "target": "plugins/github-collaboration/skills/operating-ledger-maintenance"
+    },
+    {
+      "name": "orchestrated-collaboration",
+      "target": "plugins/orchestrated-collaboration/skills/orchestrated-collaboration"
+    },
+    {
+      "name": "pr-integration",
+      "target": "plugins/github-collaboration/skills/pr-integration"
+    },
+    {
+      "name": "resource-observability",
+      "target": "plugins/resource-observability/skills/resource-observability"
+    },
+    {
+      "name": "self-improvement",
+      "target": "plugins/self-improvement/skills/self-improvement"
+    },
+    {
+      "name": "skill-appraisal",
+      "target": "plugins/skill-appraisal/skills/skill-appraisal"
+    },
+    {
+      "name": "skill-maintenance",
+      "target": "plugins/skill-maintenance/skills/skill-maintenance"
+    }
+  ]
+}

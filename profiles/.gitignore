@@ -1,0 +1,3 @@
+# junction 与机器相关派生物不入 git；manifest.json + plugin.json 入 git，clone 后 sk restore 重建
+*/skills/
+*/overlay.yml
