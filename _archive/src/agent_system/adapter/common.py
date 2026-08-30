@@ -9,7 +9,6 @@ stays in that client's module.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
 import hashlib
 import json
 import os
@@ -18,6 +17,7 @@ import stat
 import subprocess
 import sys
 import time
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
 

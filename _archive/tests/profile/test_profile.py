@@ -1,23 +1,19 @@
 from __future__ import annotations
 
 import json
-from io import StringIO
 import os
 import shutil
-import sys
-import tempfile
 import subprocess
+import tempfile
 import threading
-import tomllib
-from contextlib import redirect_stderr
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
+import tomllib
 from agent_system.profile import cli as profile
-
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "multi-profile"
 
@@ -427,11 +423,12 @@ class MaterializationTests(ProfileTestCase):
                 swapped = True
             original_mkdir(path, mode, dir_fd=dir_fd)
 
-        with mock.patch.object(profile.os, "mkdir", side_effect=swapping_mkdir):
-            with self.assertRaisesRegex(
-                profile.ProfileError, "stable directory changed"
-            ):
-                self.materialize_profile(self.project, "codex", "review", output)
+        with mock.patch.object(
+            profile.os, "mkdir", side_effect=swapping_mkdir
+        ), self.assertRaisesRegex(
+            profile.ProfileError, "stable directory changed"
+        ):
+            self.materialize_profile(self.project, "codex", "review", output)
         self.assertEqual(list(redirect.iterdir()), [])
 
 
@@ -776,9 +773,10 @@ class GateAndLockTests(ProfileTestCase):
                     stream.write(addition)
                 with self.assertRaisesRegex(profile.ProfileError, "lock drift"):
                     self.verify_project(project)
-        with mock.patch.object(profile, "RENDERER_VERSION", "profile-renderer-v4"):
-            with self.assertRaisesRegex(profile.ProfileError, "lock drift"):
-                self.verify_project(self.project)
+        with mock.patch.object(
+            profile, "RENDERER_VERSION", "profile-renderer-v4"
+        ), self.assertRaisesRegex(profile.ProfileError, "lock drift"):
+            self.verify_project(self.project)
 
     def test_list_and_explain_reject_stale_lock(self) -> None:
         with (self.project / ".cap" / "prompts" / "review.md").open(
@@ -789,9 +787,10 @@ class GateAndLockTests(ProfileTestCase):
             lambda: profile.list_profiles(self.project),
             lambda: profile.explain_profile(self.project, "review"),
         ):
-            with self.subTest(operation=operation):
-                with self.assertRaisesRegex(profile.ProfileError, "lock drift"):
-                    operation()
+            with self.subTest(operation=operation), self.assertRaisesRegex(
+                profile.ProfileError, "lock drift"
+            ):
+                operation()
 
     def test_lock_file_matches_current_fixture(self) -> None:
         current = self.verify_project(self.project)
@@ -1018,7 +1017,15 @@ class LaunchTests(ProfileTestCase):
         ) in expectations.items():
             receipt = self.root / f"{client}-receipt.json"
 
-            def fake_runner(command: list[str], **kwargs: object) -> SimpleNamespace:
+            def fake_runner(
+                command: list[str],
+                *,
+                client: str = client,
+                executable: str = executable,
+                environment_name: str = environment_name,
+                required_flags: tuple[str, ...] = required_flags,
+                **kwargs: object,
+            ) -> SimpleNamespace:
                 runtime_root = Path(str(kwargs["env"][environment_name]))  # type: ignore[index]
                 runtime_roots.append(runtime_root)
                 environment = kwargs["env"]  # type: ignore[assignment]
@@ -1185,7 +1192,10 @@ class LaunchTests(ProfileTestCase):
                 shutil.copytree(self.auth_root, isolated_auth)
 
                 def updating_runner(
-                    command: list[str], **kwargs: object
+                    command: list[str],
+                    *,
+                    client: str = client,
+                    **kwargs: object,
                 ) -> SimpleNamespace:
                     environment = kwargs["env"]  # type: ignore[assignment]
                     if client == "codex":
@@ -1259,6 +1269,8 @@ class LaunchTests(ProfileTestCase):
                     directory: profile.StableDirectory,
                     name: str,
                     context: str,
+                    *,
+                    target: str = target,
                     **kwargs: object,
                 ) -> bytes:
                     nonlocal transient_reads
@@ -1313,7 +1325,10 @@ class LaunchTests(ProfileTestCase):
             ):
 
                 def checking_runner(
-                    command: list[str], **kwargs: object
+                    command: list[str],
+                    *,
+                    client: str = client,
+                    **kwargs: object,
                 ) -> SimpleNamespace:
                     environment = kwargs["env"]  # type: ignore[assignment]
                     self.assertNotIn("CODEX_ACCESS_TOKEN", environment)
@@ -1543,14 +1558,15 @@ class LaunchTests(ProfileTestCase):
             ("omp", ("--trusted-extension", "/tmp/unsafe.ts")),
         )
         for client, arguments in overrides:
-            with self.subTest(client=client, arguments=arguments):
-                with self.assertRaisesRegex(profile.ProfileError, "may override"):
-                    self.run_client(self.project,
-                    client,
-                    "review",
-                    arguments,
-                    runner=runner,
-                    auth_root=self.auth_root,)
+            with self.subTest(
+                client=client, arguments=arguments
+            ), self.assertRaisesRegex(profile.ProfileError, "may override"):
+                self.run_client(self.project,
+                client,
+                "review",
+                arguments,
+                runner=runner,
+                auth_root=self.auth_root,)
         runner.assert_not_called()
 
     def test_nested_project_root_never_invokes_client(self) -> None:
@@ -1583,15 +1599,16 @@ class LaunchTests(ProfileTestCase):
                 skill.read_text(encoding="utf-8") + "\ndrift\n", encoding="utf-8"
             )
 
-        with mock.patch.object(profile, "_verify_lock", side_effect=verify_then_mutate):
-            with self.assertRaisesRegex(
-                profile.ProfileError, "drifted after lock verification"
-            ):
-                self.run_client(self.project,
-                "codex",
-                "review",
-                runner=runner,
-                auth_root=self.auth_root,)
+        with mock.patch.object(
+            profile, "_verify_lock", side_effect=verify_then_mutate
+        ), self.assertRaisesRegex(
+            profile.ProfileError, "drifted after lock verification"
+        ):
+            self.run_client(self.project,
+            "codex",
+            "review",
+            runner=runner,
+            auth_root=self.auth_root,)
         runner.assert_not_called()
 
     def test_final_input_and_project_bypass_gates_never_invoke_client(self) -> None:
@@ -1624,7 +1641,10 @@ class LaunchTests(ProfileTestCase):
                 runner = mock.Mock()
 
                 def build_then_mutate(
-                    *args: object, **kwargs: object
+                    *args: object,
+                    mutate=mutate,
+                    project=project,
+                    **kwargs: object,
                 ) -> profile.LaunchSpec:
                     spec = original_build(*args, **kwargs)  # type: ignore[arg-type]
                     mutate(project)
@@ -1634,14 +1654,13 @@ class LaunchTests(ProfileTestCase):
                     profile,
                     "build_launch",
                     side_effect=build_then_mutate,
-                ):
-                    with self.assertRaisesRegex(profile.ProfileError, message):
-                        self.run_client(project,
-                        "codex",
-                        "review",
-                        receipt_path=receipt,
-                        runner=runner,
-                        auth_root=self.auth_root,)
+                ), self.assertRaisesRegex(profile.ProfileError, message):
+                    self.run_client(project,
+                    "codex",
+                    "review",
+                    receipt_path=receipt,
+                    runner=runner,
+                    auth_root=self.auth_root,)
                 runner.assert_not_called()
                 self.assertFalse(receipt.exists())
 
@@ -2194,7 +2213,7 @@ class DeclaredSkillsAreRenderedTests(ProfileTestCase):
 
     def test_declared_skill_with_no_files_fails_closed(self) -> None:
         project = profile.load_project(self.project)
-        name = sorted(project.profiles)[0]
+        name = min(project.profiles)
         selected = profile._select_profile(project, name)
         if not selected.skills:
             self.skipTest("fixture profile declares no skills")
@@ -2274,6 +2293,7 @@ class PortableDirectoryTests(ProfileTestCase):
         completed = subprocess.run(
             ["cmd", "/c", "mklink", "/J", str(link), str(real)],
             capture_output=True,
+            check=False,
         )
         if completed.returncode != 0:
             self.skipTest("this host cannot create junctions")
@@ -2299,11 +2319,12 @@ class PortableDirectoryTests(ProfileTestCase):
         # enough to redirect it here.
         project = profile.load_project(self.project)
         directory = profile._open_stable_directory(self.home, "render output")
-        with mock.patch.object(profile.Path, "home", return_value=self.home):
-            with self.assertRaisesRegex(
-                profile.ProfileError, "outside global capability roots"
-            ):
-                profile._require_external_directory(project, directory, "render output")
+        with mock.patch.object(
+            profile.Path, "home", return_value=self.home
+        ), self.assertRaisesRegex(
+            profile.ProfileError, "outside global capability roots"
+        ):
+            profile._require_external_directory(project, directory, "render output")
 
     def test_target_paths_beyond_the_host_limit_fail_legibly(self) -> None:
         # knowledge/windows-agent-ops.md fixes the policy: keep paths within what
@@ -2316,11 +2337,10 @@ class PortableDirectoryTests(ProfileTestCase):
         tree = {"config.yml": profile.RenderedFile(b"{}\n")}
         with mock.patch.object(
             profile, "_publish_staged_entry", side_effect=OSError("path too long")
+        ), self.assertRaisesRegex(
+            profile.ProfileError, "could not materialize tree"
         ):
-            with self.assertRaisesRegex(
-                profile.ProfileError, "could not materialize tree"
-            ):
-                profile._materialize_tree(directory, tree)
+            profile._materialize_tree(directory, tree)
 
     def test_credential_privacy_conclusion_follows_host_expressiveness(self) -> None:
         with mock.patch.object(
@@ -2363,9 +2383,8 @@ class PortableDirectoryTests(ProfileTestCase):
         }
         with mock.patch.object(
             profile, "_publish_staged_entry", side_effect=OSError("publish failed")
-        ):
-            with self.assertRaisesRegex(profile.ProfileError, "materialize"):
-                profile._materialize_tree(directory, tree)
+        ), self.assertRaisesRegex(profile.ProfileError, "materialize"):
+            profile._materialize_tree(directory, tree)
         self.assertEqual(list(target.iterdir()), [])
 
 
@@ -2396,7 +2415,7 @@ class RegisteredClientMustHaveAdapterTests(ProfileTestCase):
 
     def test_render_tree_has_no_renderer(self) -> None:
         project = profile.load_project(self.project)
-        selected = profile._select_profile(project, sorted(project.profiles)[0])
+        selected = profile._select_profile(project, min(project.profiles))
         with self.assertRaisesRegex(profile.ProfileError, "has no renderer"):
             profile._render_tree(project, self.CLIENT, selected)
 
@@ -2409,17 +2428,16 @@ class RegisteredClientMustHaveAdapterTests(ProfileTestCase):
     def test_forwarded_args_prefix_policy_is_required(self) -> None:
         forbidden = dict(profile.FORBIDDEN_CLIENT_ARGUMENTS)
         forbidden[self.CLIENT] = frozenset()
-        with mock.patch.object(profile, "FORBIDDEN_CLIENT_ARGUMENTS", forbidden):
-            # The forbidden set alone is not enough: a client without declared
-            # compact prefixes must not silently accept every short flag.
-            with self.assertRaisesRegex(
-                profile.ProfileError, "has no forwarded-argument policy"
-            ):
-                profile._validate_forwarded_args(self.CLIENT, ())
+        with mock.patch.object(
+            profile, "FORBIDDEN_CLIENT_ARGUMENTS", forbidden
+        ), self.assertRaisesRegex(
+            profile.ProfileError, "has no forwarded-argument policy"
+        ):
+            profile._validate_forwarded_args(self.CLIENT, ())
 
     def test_build_launch_has_no_launch_adapter(self) -> None:
         project = profile.load_project(self.project)
-        selected = profile._select_profile(project, sorted(project.profiles)[0])
+        selected = profile._select_profile(project, min(project.profiles))
         tree = profile._render_tree(project, "omp", selected)
         forbidden = dict(profile.FORBIDDEN_CLIENT_ARGUMENTS)
         forbidden[self.CLIENT] = frozenset()
@@ -2430,15 +2448,13 @@ class RegisteredClientMustHaveAdapterTests(ProfileTestCase):
             mock.patch.object(
                 profile, "FORBIDDEN_CLIENT_ARGUMENT_PREFIXES", prefixes
             ),
+            self.assertRaisesRegex(profile.ProfileError, "has no launch adapter"),
         ):
-            with self.assertRaisesRegex(
-                profile.ProfileError, "has no launch adapter"
-            ):
-                profile.build_launch(self.CLIENT, self.root / "runtime", tree)
+            profile.build_launch(self.CLIENT, self.root / "runtime", tree)
 
     def test_configured_mcp_names_has_no_reader(self) -> None:
         project = profile.load_project(self.project)
-        selected = profile._select_profile(project, sorted(project.profiles)[0])
+        selected = profile._select_profile(project, min(project.profiles))
         tree = profile._render_tree(project, "omp", selected)
         with self.assertRaisesRegex(profile.ProfileError, "has no MCP reader"):
             profile._configured_mcp_names(tree, self.CLIENT)
@@ -2641,9 +2657,10 @@ class ClaudeClientRegistrationTests(ProfileTestCase):
             "--bare",
             "--safe-mode",
         ):
-            with self.subTest(argument=argument):
-                with self.assertRaises(profile.ProfileError):
-                    profile._validate_forwarded_args("claude", (argument,))
+            with self.subTest(argument=argument), self.assertRaises(
+                profile.ProfileError
+            ):
+                profile._validate_forwarded_args("claude", (argument,))
 
     def test_claude_allows_ordinary_arguments(self) -> None:
         profile._validate_forwarded_args("claude", ("-p", "hello"))
@@ -2695,11 +2712,12 @@ class EphemeralRuntimeRootTests(ProfileTestCase):
             pass
 
         captured = None
-        with self.assertRaises(Boom):
-            with profile._ephemeral_runtime_root("omp", "review") as root:
-                captured = root
-                (root / "partial.txt").write_text("x", encoding="utf-8")
-                raise Boom
+        with self.assertRaises(Boom), profile._ephemeral_runtime_root(
+            "omp", "review"
+        ) as root:
+            captured = root
+            (root / "partial.txt").write_text("x", encoding="utf-8")
+            raise Boom
         self.assertIsNotNone(captured)
         self.assertFalse(captured.exists())
 
@@ -2720,13 +2738,14 @@ class EphemeralRuntimeRootTests(ProfileTestCase):
 
     def test_root_is_accepted_by_the_directory_gate(self) -> None:
         project = profile.load_project(self.project)
-        with profile._ephemeral_runtime_root("omp", "review") as root:
-            with profile._stable_directory(root, "runtime root") as directory:
-                # Only the home itself, the project, and native capability
-                # roots are rejected; locations under the home are fine.
-                profile._require_external_directory(
-                    project, directory, "runtime root"
-                )
+        with profile._ephemeral_runtime_root(
+            "omp", "review"
+        ) as root, profile._stable_directory(root, "runtime root") as directory:
+            # Only the home itself, the project, and native capability
+            # roots are rejected; locations under the home are fine.
+            profile._require_external_directory(
+                project, directory, "runtime root"
+            )
 
     def test_location_choice_has_no_platform_branch(self) -> None:
         import inspect

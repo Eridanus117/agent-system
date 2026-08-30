@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
 import contextlib
 import io
 import json
@@ -8,14 +7,13 @@ import os
 import subprocess
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-
 from agent_system.cap import cli as cap
 from agent_system.omp import runtime as omp_runtime
-
 
 
 class ClientStdinTest(unittest.TestCase):
@@ -139,16 +137,21 @@ class CapEntryTest(unittest.TestCase):
         )
 
     def test_help_remains_explicit_and_old_aliases_fail(self) -> None:
-        with contextlib.redirect_stdout(io.StringIO()):
-            with self.assertRaises(SystemExit) as help_exit:
-                cap.main(["--help"])
+        with (
+            contextlib.redirect_stdout(io.StringIO()),
+            self.assertRaises(SystemExit) as help_exit,
+        ):
+            cap.main(["--help"])
         self.assertEqual(help_exit.exception.code, 0)
 
         for alias in ("i", "interactive"):
             stderr = io.StringIO()
-            with self.subTest(alias=alias), contextlib.redirect_stderr(stderr):
-                with self.assertRaises(SystemExit) as alias_exit:
-                    cap.main([alias])
+            with (
+                self.subTest(alias=alias),
+                contextlib.redirect_stderr(stderr),
+                self.assertRaises(SystemExit) as alias_exit,
+            ):
+                cap.main([alias])
             self.assertNotEqual(alias_exit.exception.code, 0)
             self.assertIn("请使用裸 cap", stderr.getvalue())
 
@@ -534,9 +537,11 @@ class ClaudeCliDispatchTests(unittest.TestCase):
             return SimpleNamespace(returncode=0)
 
         args = cap.argparse.Namespace(profile_tool_command="lock", fresh=False)
-        with patch.object(cap.subprocess, "run", side_effect=fake_run):
-            with patch.object(cap, "_profile_args", return_value=["profile", "lock"]):
-                self.assertEqual(cap._run_selected(args, {}), 0)
+        with (
+            patch.object(cap.subprocess, "run", side_effect=fake_run),
+            patch.object(cap, "_profile_args", return_value=["profile", "lock"]),
+        ):
+            self.assertEqual(cap._run_selected(args, {}), 0)
         self.assertEqual(calls, [["profile", "lock"]])
 
     def test_fresh_bypasses_the_effective_adapter(self) -> None:
@@ -548,9 +553,11 @@ class ClaudeCliDispatchTests(unittest.TestCase):
         args = cap.argparse.Namespace(
             profile_tool_command="run", cli="claude", fresh=True
         )
-        with patch.object(cap.subprocess, "run", side_effect=fake_run):
-            with patch.object(cap, "_profile_args", return_value=["profile", "run"]):
-                self.assertEqual(cap._run_selected(args, {}), 0)
+        with (
+            patch.object(cap.subprocess, "run", side_effect=fake_run),
+            patch.object(cap, "_profile_args", return_value=["profile", "run"]),
+        ):
+            self.assertEqual(cap._run_selected(args, {}), 0)
 
     def test_forwarded_gate_reopening_flags_are_rejected(self) -> None:
         from agent_system.profile.cli import ProfileError
@@ -587,19 +594,16 @@ class ClaudeGenerationTest(unittest.TestCase):
         cap_dir = self.root / "project" / ".cap"
         (cap_dir / "runtime").mkdir(parents=True)
         (cap_dir / "runtime" / "claude.toml").write_text(
-            "\n".join(
-                [
-                    "version = 1",
-                    'client = "claude"',
-                    "",
-                    "[policy]",
-                    'login_mode = "subscription"',
-                    'permission_mode = "manual"',
-                    "enable_project_mcp = false",
-                    "enable_user_assets = false",
-                    "auto_memory = false",
-                    "",
-                ]
+            (
+                "version = 1\n"
+                'client = "claude"\n'
+                "\n"
+                "[policy]\n"
+                'login_mode = "subscription"\n'
+                'permission_mode = "manual"\n'
+                "enable_project_mcp = false\n"
+                "enable_user_assets = false\n"
+                "auto_memory = false\n"
             ),
             encoding="utf-8",
         )
@@ -785,9 +789,11 @@ class ClaudeGenerationTest(unittest.TestCase):
             (target / "reference.md").write_text("x", encoding="utf-8")
             return result
 
-        with patch.object(common.subprocess, "run", side_effect=deep_render):
-            with self.assertRaisesRegex(ClaudeError, "portable path budget"):
-                generation.materialize_claude_generation(self.args(), {})
+        with (
+            patch.object(common.subprocess, "run", side_effect=deep_render),
+            self.assertRaisesRegex(ClaudeError, "portable path budget"),
+        ):
+            generation.materialize_claude_generation(self.args(), {})
 
     def test_path_budget_failure_leaves_no_stage_behind(self) -> None:
         from agent_system.adapter import common
@@ -806,9 +812,11 @@ class ClaudeGenerationTest(unittest.TestCase):
             (target / "reference.md").write_text("x", encoding="utf-8")
             return result
 
-        with patch.object(common.subprocess, "run", side_effect=deep_render):
-            with self.assertRaises(ClaudeError):
-                generation.materialize_claude_generation(self.args(), {})
+        with (
+            patch.object(common.subprocess, "run", side_effect=deep_render),
+            self.assertRaises(ClaudeError),
+        ):
+            generation.materialize_claude_generation(self.args(), {})
         render_root = generation.claude_render_root(self.args())
         stages = (
             [path.name for path in render_root.iterdir() if path.name.startswith(".stage-")]
@@ -1205,13 +1213,12 @@ class ClaudeRuntimePolicyTests(unittest.TestCase):
         self._write("")
         policy = self._read()
         for kind in ("hooks", "plugins"):
-            with self.subTest(kind=kind):
-                with self.assertRaisesRegex(
-                    claude_runtime.ClaudeError, "does not project"
-                ):
-                    claude_runtime.effective_claude_config(
-                        (), {}, policy, {}, {kind: ("something",)}
-                    )
+            with self.subTest(kind=kind), self.assertRaisesRegex(
+                claude_runtime.ClaudeError, "does not project"
+            ):
+                claude_runtime.effective_claude_config(
+                    (), {}, policy, {}, {kind: ("something",)}
+                )
 
 
 class SharedAdapterPrimitiveTests(unittest.TestCase):
@@ -1355,9 +1362,11 @@ class PrivateRuntimeValidationTest(unittest.TestCase):
     def test_private_root_is_required(self) -> None:
         from agent_system.omp import runtime
 
-        with tempfile.TemporaryDirectory() as temporary:
-            with self.assertRaises(TypeError):
-                runtime._validate_private_runtime(Path(temporary), "test runtime")
+        with (
+            tempfile.TemporaryDirectory() as temporary,
+            self.assertRaises(TypeError),
+        ):
+            runtime._validate_private_runtime(Path(temporary), "test runtime")
 
 
 class _HiddenAttr:
@@ -1772,9 +1781,11 @@ class ProfileGenerationTest(unittest.TestCase):
                 self.args(profile), {}
             )
 
-        with patch.object(cap.subprocess, "run", side_effect=self.render):
-            with ThreadPoolExecutor(max_workers=4) as executor:
-                results = list(
+        with (
+            patch.object(cap.subprocess, "run", side_effect=self.render),
+            ThreadPoolExecutor(max_workers=4) as executor,
+        ):
+            results = list(
                     executor.map(
                         materialize,
                         [

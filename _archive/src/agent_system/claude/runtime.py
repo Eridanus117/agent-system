@@ -12,9 +12,10 @@ from __future__ import annotations
 
 import argparse
 import json
-import tomllib
 from collections.abc import Mapping
 from pathlib import Path
+
+import tomllib
 
 from agent_system.adapter.common import AdapterError
 

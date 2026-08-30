@@ -8,6 +8,7 @@ from pathlib import Path
 
 from agent_system.profile import cli as profile_cli
 
+
 def _is_project_root(path: Path) -> bool:
     return (path / ".cap" / "manifest.toml").is_file() and (path / "AGENTS.md").is_file()
 

@@ -7,7 +7,7 @@ import json
 import os
 import re
 import shutil
-import sqlite3
+import sqlite3  # noqa: F401
 import subprocess
 import sys
 import tempfile
@@ -32,31 +32,38 @@ from agent_system.cap.config import (
     RUNNABLE_PROFILES,
     SKILL_NAME_PATTERN,
 )
-
-from agent_system.cap.support import _base_args, _binding_args, _passthrough, _run_path, _workdir
-from agent_system.profile import cli as profile_cli
-from agent_system.omp.runtime import (
-    _MigrationError,
+from agent_system.cap.support import (
+    _base_args,
+    _binding_args,
+    _passthrough,
+    _run_path,
+    _workdir,
+)
+from agent_system.omp.runtime import (  # noqa: F401
     _agent_home_dir,
     _agent_home_env,
-    _omp_config_dir_value,
     _apply_omp_runtime_migration,
     _cleanup_legacy_omp_runtime,
-    _rollback_omp_runtime,
     _materialize_profile_generation,
     _migrate_omp_runtime,
     _migration_backup_root,
     _migration_plan,
+    _MigrationError,
     _omp_command,
+    _omp_config_dir_value,
     _omp_runtime_id,
     _project_shared_omp_home,
     _require_shared_runtime_ready,
+    _rollback_omp_runtime,
     _run_omp_agent_home,
     _safe_remove_tree,
     _verify_profile_generation,
     _write_receipt,
     _write_shared_mcp_policy,
 )
+from agent_system.profile import cli as profile_cli
+
+
 def _omp_effective_preview(args, env):
     (
         generation,
@@ -119,8 +126,8 @@ def _run_omp(args, env):
 
 
 def _run_claude(args, env):
-    from agent_system.profile.cli import _validate_forwarded_args
     from agent_system.claude.launch import run_claude
+    from agent_system.profile.cli import _validate_forwarded_args
 
     # The fixed gates are only fixed if a forwarded flag cannot reopen them.
     _validate_forwarded_args("claude", _passthrough(args.client_args))
@@ -398,7 +405,7 @@ def _build_parser() -> argparse.ArgumentParser:
         description="裸 cap 进入 TUI 选择 profile 并启动默认 OMP；子命令用于查看、校验和自动化。",
     )
 
-    skills_validate = subparsers.add_parser(
+    subparsers.add_parser(
         "skills-validate",
         help="校验 Agent Skills 元数据",
         description="校验项目内 SKILL.md 的必需 frontmatter、名称和描述。",

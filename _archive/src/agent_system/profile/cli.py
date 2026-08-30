@@ -15,14 +15,15 @@ import subprocess
 import sys
 import tempfile
 import time
-import tomllib
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
-from typing import Any, Callable, Iterator, Mapping, Sequence
+from typing import Any
 from urllib.parse import urlsplit
 
+import tomllib
 
 RENDERER_VERSION = "profile-renderer-v3"
 LOCK_VERSION = 3
@@ -1376,7 +1377,7 @@ def _validate_broker_url(value: Any) -> str:
     if parsed.hostname is None:
         raise ProfileError("OMP auth broker url must include a host")
     try:
-        parsed.port
+        _ = parsed.port
     except ValueError as error:
         raise ProfileError("OMP auth broker url has an invalid port") from error
     return value.rstrip("/")
@@ -2035,7 +2036,7 @@ def _open_stable_directory(path: Path, context: str) -> StableDirectory:
 def _close_stable_directory(directory: StableDirectory) -> None:
     """Release one directory binding; identities hold no operating-system resource."""
 
-    return None
+
 
 
 @contextmanager
@@ -2045,9 +2046,6 @@ def _stable_directory(path: Path, context: str) -> Iterator[StableDirectory]:
     directory = _open_stable_directory(path, context)
     try:
         yield directory
-    except BaseException:
-        raise
-    else:
         _validate_stable_directory(directory)
     finally:
         _close_stable_directory(directory)
@@ -2262,7 +2260,7 @@ def probe_profile(
             "client": client,
             "profile": profile.name,
             "plane": "configured",
-            "probed_at": datetime.now(timezone.utc).isoformat(),
+            "probed_at": datetime.now(UTC).isoformat(),
             "observed": {
                 "skills": skills,
                 "mcps": mcps,
@@ -2338,7 +2336,7 @@ def run_observed(
             state,
             {"declared.json": RenderedFile(_canonical_json(declared))},
         )
-        started = datetime.now(timezone.utc)
+        started = datetime.now(UTC)
         return_code, stdout, stderr = _execute_runtime(
             project,
             client,
@@ -2353,7 +2351,7 @@ def run_observed(
             base_pin=base_pin,
             binding_dir=binding_dir,
         )
-        ended = datetime.now(timezone.utc)
+        ended = datetime.now(UTC)
         text = stdout + "\n" + stderr
         reported = {
             dimension: parse_reported(text, REPORT_MARKERS[dimension])
@@ -4121,7 +4119,7 @@ def approve_base_manifest(
         "version": BASE_PIN_VERSION,
         "context": MACHINE_CONTEXT_NAME,
         "approved_digest": manifest["effective_digest"],
-        "approved_at": datetime.now(timezone.utc).isoformat(),
+        "approved_at": datetime.now(UTC).isoformat(),
         "tool_version": RENDERER_VERSION,
         "policy": "tiered-gate",
     }

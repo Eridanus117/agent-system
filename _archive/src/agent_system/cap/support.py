@@ -8,6 +8,7 @@ import sys
 import time
 from pathlib import Path
 
+
 def _base_args(args: argparse.Namespace) -> list[str]:
     base = [
         sys.executable,

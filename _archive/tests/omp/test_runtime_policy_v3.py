@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from agent_system.omp import runtime
 from agent_system.profile import cli as profile_cli
 

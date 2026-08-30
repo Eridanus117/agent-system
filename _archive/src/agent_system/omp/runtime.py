@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import argparse
-from collections.abc import Mapping
-from dataclasses import dataclass
 import json
 import os
 import shutil
@@ -14,12 +12,30 @@ import subprocess
 import sys
 import tempfile
 import time
-import tomllib
+from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
 
+import tomllib
 import yaml
 
+from agent_system.adapter.common import (
+    AdapterError,
+    _assert_managed_path,
+    _deep_overlay,
+    _digest_bytes,
+    _digest_json,
+    _reject_unsafe_tree,
+    _replace_generation_placeholder,
+    _safe_remove_tree,
+    _tree_digest,  # noqa: F401
+    _validate_private_runtime,
+    generation_source_context,
+    materialize_generation,
+    render_portable_tree,
+    verify_generation,
+)
 from agent_system.cap.config import (
     AMBIENT_CONFIG_ENV,
     DEFAULT_OMP_RUNTIME_ID,
@@ -30,23 +46,14 @@ from agent_system.cap.config import (
     SKILL_NAME_PATTERN,
     _is_ambient_credential_name,
 )
-from agent_system.adapter.common import (
-    generation_source_context,
-    materialize_generation,
-    render_portable_tree,
-    verify_generation,
-    AdapterError,
-    _assert_managed_path,
-    _deep_overlay,
-    _digest_bytes,
-    _digest_json,
-    _reject_unsafe_tree,
-    _replace_generation_placeholder,
-    _safe_remove_tree,
-    _tree_digest,
-    _validate_private_runtime,
+from agent_system.cap.support import (
+    _base_args,
+    _binding_args,
+    _passthrough,
+    _run_path,
+    _workdir,
 )
-from agent_system.cap.support import _base_args, _binding_args, _passthrough, _run_path, _workdir
+
 
 def _agent_home_root(args: argparse.Namespace) -> Path:
     return Path(args.agent_home_root).expanduser().absolute()
