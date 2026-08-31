@@ -135,7 +135,7 @@ export function projectAgent(descriptor: AgentDescriptor, snapshot: AgentCapabil
 }
 
 function hasControlledInventoryEvidence(value: unknown): value is string {
-  return matches(value, /^evidence:\/\/[A-Za-z0-9._~/-]+$/);
+  return matches(value, /^(?:evidence:\/\/[A-Za-z0-9._~/-]+|orca:[A-Za-z0-9._~:/-]+)$/);
 }
 
 export function renderAgentListJson(items: readonly { readonly descriptor: AgentDescriptor; readonly snapshot: AgentCapabilitySnapshot }[]): string {

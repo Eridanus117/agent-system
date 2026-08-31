@@ -125,8 +125,8 @@ afterEach(async () => {
 describe('agent scheduling CLI', () => {
   test('agents list distinguishes known, unknown and unsupported without upgrading unknown inventory', async () => {
     const registry = new FakeRegistry(
-      [descriptor('omp', 'evidence://inventory/omp'), descriptor('hermes', 'unknown:inventory'), descriptor('claude-code', 'evidence://inventory/claude')],
-      new Map([['omp', snapshot('omp', 'supported')], ['hermes', snapshot('hermes', 'supported')], ['claude-code', snapshot('claude-code', 'unsupported')]]),
+      [descriptor('omp', 'evidence://inventory/omp'), descriptor('hermes', 'unknown:inventory'), descriptor('claude-code', 'evidence://inventory/claude'), descriptor('orca-agent', 'orca:agent-context/omp')],
+      new Map([['omp', snapshot('omp', 'supported')], ['hermes', snapshot('hermes', 'supported')], ['claude-code', snapshot('claude-code', 'unsupported')], ['orca-agent', snapshot('orca-agent', 'supported')]]),
     );
     const result = await run(['agents', 'list'], makeOverrides(registry, new FakeScheduler(), new FakeSchedules(), new FakeOperations()));
     expect(result.code).toBe(0);
@@ -134,6 +134,7 @@ describe('agent scheduling CLI', () => {
       expect.objectContaining({ id: 'omp', level: 'supported' }),
       expect.objectContaining({ id: 'hermes', level: 'unknown' }),
       expect.objectContaining({ id: 'claude-code', level: 'unsupported' }),
+      expect.objectContaining({ id: 'orca-agent', level: 'supported' }),
     ]) }));
     expect(existsSync(path.join(tempRoot!, 'control-plane.sqlite3'))).toBe(false);
   });
