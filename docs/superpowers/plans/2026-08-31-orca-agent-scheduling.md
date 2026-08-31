@@ -249,7 +249,7 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
 
 - [ ] **Step 4: Wire the production composition root**
 
-  `createProductionHarnessControlPlaneFacade` must construct one Agent registry and pass it to activation and scheduling use cases. Unknown IDs must produce typed unsupported/unknown results, not an unhandled exception.
+  `createProductionHarnessControlPlaneFacade` must construct one Agent registry and inject it into the existing activation boundary. Expose the registry dependency/factory shape for Task 7 to consume when it adds scheduling use cases; Task 3 runs before `scheduling.ts` exists and must not create a scheduling stub. Unknown IDs must produce typed unsupported/unknown results, not an unhandled exception.
 
 - [ ] **Step 5: Run focused registry tests**
 

@@ -4,7 +4,9 @@ import { SqliteStore } from '../adapters/sqlite/store';
 import { SqliteConfigRevisionRepository } from '../adapters/sqlite/repository';
 import { SqliteActivationOperationRepository } from '../adapters/sqlite/activation-operation-repository';
 import { SqliteLaunchObservationRepository } from '../adapters/sqlite/launch-observation-repository';
-import { OmpAgentAdapter, ClaudeAgentAdapter, InMemoryAgentAdapterRegistry } from '../adapters/clients/client-adapters';
+import { OmpAgentAdapter, ClaudeAgentAdapter, InMemoryAgentAdapterRegistry } from '../adapters/clients/agent-adapters';
+import { OrcaAgentProvider } from '../adapters/orca/agent-provider';
+import { createAgentRegistry } from './agent-registry';
 import { prepareActivation } from './activation';
 import { agentId as toAgentId } from '../domain/agent';
 import type { ExistingPublicApplicationPorts, HarnessControlPlanePort } from './ports/harness';
@@ -19,6 +21,7 @@ export async function createProductionHarnessControlPlaneFacade(): Promise<Harne
   const operations = new SqliteActivationOperationRepository(store);
   const observations = new SqliteLaunchObservationRepository(store);
   const adapters = new InMemoryAgentAdapterRegistry([new OmpAgentAdapter(), new ClaudeAgentAdapter()]);
+  const registry = createAgentRegistry({ provider: new OrcaAgentProvider(), adapters });
   const sourceVersion = '1';
   const publicPorts: ExistingPublicApplicationPorts = {
     readRevision: async (revisionId, agentId) => {
@@ -29,14 +32,14 @@ export async function createProductionHarnessControlPlaneFacade(): Promise<Harne
     },
     probe: async (requestedAgentId) => {
       try {
-        const adapter = requestedAgentId === 'claude' ? adapters.get(toAgentId('claude-code')) : requestedAgentId === 'omp' ? adapters.get(toAgentId('omp')) : null;
+        const adapter = requestedAgentId === 'claude' ? registry.adapter(toAgentId('claude-code')) : requestedAgentId === 'omp' ? registry.adapter(toAgentId('omp')) : null;
         if (adapter === null) return { agentId: requestedAgentId, agentVersion: 'unknown', status: 'unsupported', source: 'control-plane', sourceVersion, reasonCode: 'control-plane.agent.unsupported', observedAt: new Date().toISOString() };
         const capability = await adapter.probe();
         return { agentId: requestedAgentId, agentVersion: capability.version.kind === 'known' ? capability.version.value : 'unknown', status: capability.level, source: 'control-plane', sourceVersion, reasonCode: capability.level === 'supported' ? undefined : capability.evidenceRef, observedAt: new Date().toISOString() };
       } catch { return unavailable('control-plane.capability.unavailable'); }
     },
     planLaunch: async (revisionId, requestedAgentId) => {
-      try { const operation = await prepareActivation({ configurations, operations, observations, adapters }, { revisionId, agentId: requestedAgentId === 'claude' ? 'claude-code' : 'omp' }); return { revisionId, agentId: requestedAgentId, planDigest: operation.planHash, launchBoundary: 'invocation-scoped', source: 'control-plane', sourceVersion, observedAt: new Date().toISOString() }; } catch { return unavailable('control-plane.launch.unavailable'); }
+      try { const operation = await prepareActivation({ configurations, operations, observations, adapters: registry }, { revisionId, agentId: requestedAgentId === 'claude' ? 'claude-code' : 'omp' }); return { revisionId, agentId: requestedAgentId, planDigest: operation.planHash, launchBoundary: 'invocation-scoped', source: 'control-plane', sourceVersion, observedAt: new Date().toISOString() }; } catch { return unavailable('control-plane.launch.unavailable'); }
     },
   };
   return createHarnessControlPlaneFacade(publicPorts);

@@ -4,14 +4,15 @@ import type { ConfigurationRepository } from './ports/configuration-repository';
 import type { ActivationOperationRepository } from './ports/activation-operation-repository';
 import type { LaunchObservationRepository } from './ports/launch-observation-repository';
 import type { AgentAdapter, AgentAdapterRegistry, PreparedActivation, StartedProcess } from './ports/agent-adapter';
+import type { AgentRegistry } from './ports/agent-registry';
 import { configurationName, type ConfigurationRevision } from '../domain/configuration';
-import { agentId } from '../domain/agent';
+import { agentId, type AgentId } from '../domain/agent';
 import { createLaunchObservation, type LaunchObservation } from '../domain/launch-observation';
 export interface ActivationDependencies {
   readonly configurations: ConfigurationRepository;
   readonly operations: ActivationOperationRepository;
   readonly observations: LaunchObservationRepository;
-  readonly adapters: AgentAdapterRegistry;
+  readonly adapters: AgentAdapterRegistry | Pick<AgentRegistry, 'adapter'>;
 }
 
 export class ActivationNotFoundError extends Error {
@@ -32,6 +33,11 @@ function operationFailure(operation: ActivationOperation, reason: string): Activ
 async function updateOperation(deps: ActivationDependencies, operation: ActivationOperation, next: ActivationOperation): Promise<ActivationOperation> {
   await deps.operations.updateIfVersion(operation.operationId, operation.version, next);
   return next;
+}
+
+function resolveAgentAdapter(source: ActivationDependencies['adapters'], requestedAgentId: AgentId): AgentAdapter | null {
+  if ('adapter' in source) return source.adapter(requestedAgentId);
+  return (source as AgentAdapterRegistry).get(requestedAgentId);
 }
 
 export async function prepareActivation(deps: ActivationDependencies, params: { readonly revisionId: string; readonly agentId: string; readonly operationId?: string; readonly now?: string }): Promise<ActivationOperation> {
@@ -74,7 +80,7 @@ export async function executeActivation(deps: ActivationDependencies, operationI
   const operation = await deps.operations.findById(operationId);
   if (operation === null) throw new ActivationNotFoundError(operationId);
   if (operation.phase !== 'applying') throw new Error(`activation operation ${operationId} is not applying`);
-  const adapter = deps.adapters.get(operation.agentId);
+  const adapter = resolveAgentAdapter(deps.adapters, operation.agentId);
   if (adapter === null) {
     const failed = operationFailure(operation, `agent-adapter-not-found:${operation.agentId}`);
     return updateOperation(deps, operation, failed);
@@ -167,7 +173,7 @@ export async function requestConfigurationSwitch(deps: ActivationDependencies, p
   if (current.phase !== 'succeeded' && current.phase !== 'degraded') throw new Error(`switch is not allowed from operation phase ${current.phase}; use a new activation explicitly`);
   const target = await deps.configurations.findById(params.newRevisionId);
   if (target === null) throw new Error(`revision not found: ${params.newRevisionId}`);
-  if (deps.adapters.get(agentId(params.agentId)) === null) throw new AgentAdapterNotFoundError(params.agentId);
+  if (resolveAgentAdapter(deps.adapters, agentId(params.agentId)) === null) throw new AgentAdapterNotFoundError(params.agentId);
   const transitioned = transitionActivationOperation(current, { type: 'requires-restart', reason: 'configuration-switch-requested' });
   if (!transitioned.ok) throw new Error(transitioned.reason);
   const previous = await updateOperation(deps, current, transitioned.operation);

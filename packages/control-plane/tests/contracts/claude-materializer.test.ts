@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { materializeClaudeContent } from '../../src/adapters/clients/claude/content-materializer';
-import { ClaudeAgentAdapter } from '../../src/adapters/clients/client-adapters';
+import { ClaudeAgentAdapter } from '../../src/adapters/clients/agent-adapters';
 import { configurationName, configurationRevisionId, type ConfigurationRevision } from '../../src/domain/configuration';
 
 describe('materializeClaudeContent', () => {

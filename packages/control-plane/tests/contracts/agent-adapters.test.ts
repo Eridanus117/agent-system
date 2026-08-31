@@ -15,11 +15,11 @@ const defineRevision = (capabilities: ConfigurationRevision['capabilities']): Co
   capabilities,
   createdAt: '2026-08-29T00:00:00.000Z',
   triggerCategory: 'new-scenario',
-  evidenceRef: 'tests/contracts/client-adapters.test.ts',
+  evidenceRef: 'tests/contracts/agent-adapters.test.ts',
   supersedesRevisionId: null,
 });
 
-describe('client adapter contracts', () => {
+describe('agent adapter contracts', () => {
   test('builds isolated OMP argv and rejects forwarded control flags', () => {
     const revision = defineRevision([]);
     expect(buildOmpArgv(revision, 'context.json', 'extension.ts', ['--verbose'])).toEqual(['--no-extensions', '-e', 'extension.ts', '--no-skills', '--verbose']);

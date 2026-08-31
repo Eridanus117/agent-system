@@ -14,7 +14,7 @@ import { SqliteConfigRevisionWriter } from '../adapters/sqlite/config-revision-w
 import { SqliteActivationOperationRepository } from '../adapters/sqlite/activation-operation-repository';
 import { SqliteLaunchObservationRepository } from '../adapters/sqlite/launch-observation-repository';
 import { findDenylistedForwardedArg } from '../adapters/omp/process-port';
-import { InMemoryAgentAdapterRegistry, OmpAgentAdapter, ClaudeAgentAdapter } from '../adapters/clients/client-adapters';
+import { InMemoryAgentAdapterRegistry, OmpAgentAdapter, ClaudeAgentAdapter } from '../adapters/clients/agent-adapters';
 import { agentId as toAgentId } from '../domain/agent';
 import { prepareActivation, confirmActivation, rejectActivation, executeActivation, recoverActivation, getActivationStatus, requestConfigurationSwitch, type ActivationDependencies } from '../application/activation';
 import { compareConfigRevisions, getConfigRevisionDetail, listConfigRevisions, rebuildConfigSearch, searchConfigRevisions } from '../application/queries';
