@@ -38,4 +38,4 @@ export function renderCompare(result: { readonly resolved: readonly Configuratio
   return lines.join('\n') || 'no configuration revisions';
 }
 export function renderQueryFailure(error: unknown): string { return error instanceof Error ? error.message : String(error); }
-export function renderHandoffLine(): string { return 'handing off to client process'; }
+export function renderHandoffLine(): string { return 'handing off to agent process'; }

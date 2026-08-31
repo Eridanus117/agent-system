@@ -8,7 +8,7 @@ function ports(overrides: Partial<ExistingPublicApplicationPorts> = {}): Existin
   return {
     readRevision: async () => ({ revisionId: 'rev-1', schemaVersion: 1, agentId: 'omp', source: 'fixture', sourceVersion: '1', observedAt: now }),
     readManifest: async () => ({ revisionId: 'rev-1', agentId: 'omp', manifestDigest: 'digest', itemCount: 1, source: 'fixture', sourceVersion: '1', observedAt: now }),
-    probe: async () => ({ agentId: 'omp', agentVersion: '1.0', status: 'supported', source: 'fixture', sourceVersion: '1', observedAt: now }),
+    probe: async () => ({ agentId: 'omp', agentVersion: '1.0', status: 'supported', source: 'fixture', sourceVersion: '1', reasonCode: undefined, observedAt: now }),
     planLaunch: async () => ({ revisionId: 'rev-1', agentId: 'omp', planDigest: 'plan', launchBoundary: 'invocation-scoped', source: 'fixture', sourceVersion: '1', observedAt: now }),
     ...overrides,
   };
@@ -23,6 +23,13 @@ describe('control-plane Harness public facade', () => {
     await expect(facade.readAssemblyManifest('rev-1', 'omp')).resolves.toMatchObject({ manifestDigest: 'digest' });
     await expect(facade.probeAgent('omp')).resolves.toMatchObject({ status: 'supported' });
     await expect(facade.prepareLaunch('rev-1', 'omp')).resolves.toMatchObject({ launchBoundary: 'invocation-scoped' });
+  });
+
+  test('preserves probe reason semantics for supported and failed agents', async () => {
+    const supported = createHarnessControlPlaneFacade(ports());
+    await expect(supported.probeAgent('omp')).resolves.toMatchObject({ status: 'supported', reasonCode: undefined });
+    const failed = createHarnessControlPlaneFacade(ports({ probe: async () => ({ agentId: 'omp', agentVersion: '1.0', status: 'unsupported', source: 'fixture', sourceVersion: '1', reasonCode: 'omp-required-flags-missing:--skills', observedAt: now }) }));
+    await expect(failed.probeAgent('omp')).resolves.toMatchObject({ status: 'unsupported', reasonCode: 'omp-required-flags-missing:--skills' });
   });
 
   test('maps missing, malformed, permission and unavailable facts to unknown', async () => {

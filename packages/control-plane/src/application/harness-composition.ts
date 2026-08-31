@@ -32,7 +32,7 @@ export async function createProductionHarnessControlPlaneFacade(): Promise<Harne
         const adapter = requestedAgentId === 'claude' ? adapters.get(toAgentId('claude-code')) : requestedAgentId === 'omp' ? adapters.get(toAgentId('omp')) : null;
         if (adapter === null) return { agentId: requestedAgentId, agentVersion: 'unknown', status: 'unsupported', source: 'control-plane', sourceVersion, reasonCode: 'control-plane.agent.unsupported', observedAt: new Date().toISOString() };
         const capability = await adapter.probe();
-        return { agentId: requestedAgentId, agentVersion: capability.version.kind === 'known' ? capability.version.value : 'unknown', status: capability.level, source: 'control-plane', sourceVersion, reasonCode: capability.evidenceRef, observedAt: new Date().toISOString() };
+        return { agentId: requestedAgentId, agentVersion: capability.version.kind === 'known' ? capability.version.value : 'unknown', status: capability.level, source: 'control-plane', sourceVersion, reasonCode: capability.level === 'supported' ? undefined : capability.evidenceRef, observedAt: new Date().toISOString() };
       } catch { return unavailable('control-plane.capability.unavailable'); }
     },
     planLaunch: async (revisionId, requestedAgentId) => {
