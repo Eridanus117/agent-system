@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "tasks": [
+    {
+      "id": "1",
+      "state": "planned",
+      "deliverables": [
+        "openspec/changes/orca-agent-scheduling/.openspec.yaml",
+        "openspec/changes/orca-agent-scheduling/README.md",
+        "openspec/changes/orca-agent-scheduling/01-原始需求/原始需求索引.md",
+        "openspec/changes/orca-agent-scheduling/03-业务现状/业务现状.md",
+        "openspec/changes/orca-agent-scheduling/04-技术现状/技术现状.md",
+        "openspec/changes/orca-agent-scheduling/05-改造方案/改造方案.md",
+        "openspec/changes/orca-agent-scheduling/06-测试方案/测试方案.md",
+        "openspec/changes/orca-agent-scheduling/07-实施任务/实施任务.md",
+        "openspec/changes/orca-agent-scheduling/task-state.json"
+      ],
+      "verification": [
+        "npx openspec doctor",
+        "npx openspec validate orca-agent-scheduling --strict",
+        "openspec/specs/ 和 .orca/ 未修改"
+      ],
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "2",
+      "state": "planned",
+      "deliverables": [
+        "packages/control-plane/src/domain/agent.ts",
+        "packages/control-plane/src/application/ports/agent-adapter.ts",
+        "packages/control-plane/tests/domain/agent.test.ts",
+        "packages/control-plane/tests/contracts/agent-adapter.test.ts"
+      ],
+      "verification": [
+        "AgentId、ObservedText、AgentCapabilitySnapshot 和 AgentAdapter 合同定向测试通过",
+        "bunx tsc --noEmit -p packages/control-plane/tsconfig.json"
+      ],
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "3",
+      "state": "planned",
+      "deliverables": [
+        "packages/control-plane/src/application/ports/agent-registry.ts",
+        "packages/control-plane/src/application/agent-registry.ts",
+        "packages/control-plane/src/adapters/orca/agent-provider.ts",
+        "packages/control-plane/tests/contracts/agent-registry.test.ts",
+        "packages/control-plane/tests/contracts/orca-agent-provider.test.ts"
+      ],
+      "verification": [
+        "known/unknown provider、独立 capability levels 和 OMP/Claude adapter lookup 合同测试通过"
+      ],
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "4",
+      "state": "planned",
+      "deliverables": [
+        "packages/control-plane/src/domain/schedule.ts",
+        "packages/control-plane/src/domain/dispatch-operation.ts",
+        "packages/control-plane/src/application/ports/scheduler.ts",
+        "packages/control-plane/src/application/ports/dispatch-repository.ts",
+        "packages/control-plane/tests/domain/schedule.test.ts",
+        "packages/control-plane/tests/domain/dispatch-operation.test.ts"
+      ],
+      "verification": [
+        "trigger、target、Session policy、稳定关联和 dispatch 状态转换定向测试通过"
+      ],
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "5",
+      "state": "planned",
+      "deliverables": [
+        "packages/control-plane/src/adapters/orca/orca-command.ts",
+        "packages/control-plane/src/adapters/orca/orca-scheduler.ts",
+        "packages/control-plane/src/adapters/orca/orca-dispatch.ts",
+        "packages/control-plane/tests/contracts/orca-scheduler.test.ts",
+        "packages/control-plane/tests/contracts/orca-dispatch.test.ts"
+      ],
+      "verification": [
+        "所有 trigger/target/选项映射、JSON receipt、取消和失败关闭合同测试通过",
+        "automation 创建只进入 dispatched，不伪造 Session succeeded"
+      ],
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "6",
+      "state": "planned",
+      "deliverables": [
+        "packages/control-plane/migrations/0004_agent_scheduling.sql",
+        "packages/control-plane/src/adapters/sqlite/schedule-repository.ts",
+        "packages/control-plane/src/adapters/sqlite/dispatch-repository.ts",
+        "packages/control-plane/src/adapters/sqlite/store.ts",
+        "packages/control-plane/tests/integration/agent-scheduling-sqlite.test.ts"
+      ],
+      "verification": [
+        "SQLite round trip、幂等 receipt、条件更新、Unknown evidence 和既有 OMP/Claude 行迁移测试通过"
+      ],
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "7",
+      "state": "planned",
+      "deliverables": [
+        "packages/control-plane/src/application/scheduling.ts",
+        "packages/control-plane/src/application/harness-composition.ts",
+        "packages/control-plane/src/application/activation.ts",
+        "packages/control-plane/src/adapters/clients/",
+        "packages/control-plane/tests/application/scheduling.test.ts",
+        "packages/control-plane/tests/contracts/omp-adapter.test.ts",
+        "packages/control-plane/tests/contracts/claude-materializer.test.ts"
+      ],
+      "verification": [
+        "创建/取消/派发/reconcile 用例和 unknown/skipped/关联校验测试通过",
+        "OMP/Claude 既有 native argv、物化和 activation 行为合同测试通过"
+      ],
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "8",
+      "state": "planned",
+      "deliverables": [
+        "packages/control-plane/src/cli/index.ts",
+        "packages/control-plane/src/cli/render.ts",
+        "packages/control-plane/tests/cli/agent-scheduling.test.ts",
+        "openspec/changes/orca-agent-scheduling/07-实施任务/实施任务.md"
+      ],
+      "verification": [
+        "agents list/probe、schedule dry-run/lifecycle CLI 合同测试和 dry-run smoke 通过",
+        "dry-run 不调用外部 Orca、不修改 .orca/"
+      ],
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "9",
+      "state": "planned",
+      "deliverables": [
+        "openspec/changes/orca-agent-scheduling/08-验收/验收记录.md",
+        "work/records/2026-08-31-orca-agent-scheduling/orca-provider-matrix.json",
+        "packages/control-plane/tests/contracts/orca-provider-matrix.test.ts",
+        "openspec/changes/orca-agent-scheduling/task-state.json"
+      ],
+      "verification": [
+        "provider matrix consistency、项目验证、TypeScript 类型检查和 strict OpenSpec 验证通过",
+        "保存可重放 run-id 或等价证据；Hermes 无证据时为 unknown"
+      ],
+      "evidence": [],
+      "blocker": null
+    }
+  ]
+}

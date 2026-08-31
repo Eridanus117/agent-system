@@ -1,0 +1,4 @@
+schema: delivery-change
+created: 2026-08-31
+goal: 将已审阅的 Orca Agent 统一接入、调度与证据闭环设计正式化为可实施的 OpenSpec 变更骨架
+skip_specs: true
