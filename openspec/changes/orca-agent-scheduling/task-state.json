@@ -130,20 +130,14 @@
       "state": "planned",
       "deliverables": [
         "packages/control-plane/src/application/scheduling.ts",
-        "packages/control-plane/src/application/harness-composition.ts",
-        "packages/control-plane/src/application/activation.ts",
-        "packages/control-plane/src/adapters/clients/agent-adapters.ts",
-        "packages/control-plane/src/adapters/omp/process-port.ts",
-        "packages/control-plane/src/adapters/omp/extensions/agent-status-extension.ts",
-        "packages/control-plane/src/adapters/clients/claude/",
-        "packages/control-plane/tests/application/scheduling.test.ts",
-        "packages/control-plane/tests/contracts/omp-adapter.test.ts",
-        "packages/control-plane/tests/contracts/claude-materializer.test.ts"
+        "packages/control-plane/tests/application/scheduling.test.ts"
       ],
       "verification": [
-        "创建/取消/派发/reconcile 用例和 unknown/skipped/关联校验测试通过",
-        "消费已迁移 Agent contract，不重复执行 Client->Agent symbol/callsite migration",
-        "OMP/Claude 既有 native argv、物化和 activation 行为合同测试通过"
+        "application 10 条 observable acceptance、调用顺序和 fail-closed 行为测试通过",
+        "create/cancel/dispatch/reconcile 通过 AgentRegistry、scheduler、schedule/dispatch repository 和 configuration ports",
+        "OMP/Claude native argv、invocation-scoped materialization 和 activation 合同测试保持通过",
+        "bun test packages/control-plane/tests",
+        "bunx tsc --noEmit -p packages/control-plane/tsconfig.json"
       ],
       "evidence": [],
       "blocker": null

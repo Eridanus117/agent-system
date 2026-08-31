@@ -20,7 +20,7 @@ describe('sqlite store contract', () => {
   test('applies ordered migrations with checksums and persists CAS operations', async () => {
     const dbPath = tempDb();
     const store = new SqliteStore(dbPath);
-    expect(store.manifest.appliedVersions).toEqual([1, 2, 3]);
+    expect(store.manifest.appliedVersions).toEqual([1, 2, 3, 4]);
     expect(store.manifest.validation).toEqual({ foreignKeys: true, projectionConsistent: true });
     const revision = await new SqliteConfigRevisionWriter(store).create({ triggerCategory: 'new-scenario', evidenceRef: 'contract', candidate: candidate('default'), supersedesRevisionId: null });
     const operations = new SqliteActivationOperationRepository(store);
@@ -32,11 +32,11 @@ describe('sqlite store contract', () => {
     const observations = new SqliteLaunchObservationRepository(store);
     await observations.append(createLaunchObservation({ operationId: operation.operationId, agentId: agentId('omp'), stage: 'process-started', outcome: 'unknown', processReference: undefined, reason: undefined, observedAt: revision.createdAt }));
     expect((await observations.listByOperation(operation.operationId)).length).toBe(1);
-    expect(store.db.query<{ count: number }, []>('SELECT COUNT(*) AS count FROM schema_migrations').get()?.count).toBe(3);
+    expect(store.db.query<{ count: number }, []>('SELECT COUNT(*) AS count FROM schema_migrations').get()?.count).toBe(4);
     await expect(operations.updateIfVersion(operation.operationId, 1, { ...next, phase: 'succeeded', version: 2 })).rejects.toBeInstanceOf(InvalidActivationTransitionError);
     store.close();
     const reopened = new SqliteStore(dbPath);
-    expect(reopened.manifest.appliedVersions).toEqual([1, 2, 3]);
+    expect(reopened.manifest.appliedVersions).toEqual([1, 2, 3, 4]);
     expect(reopened.manifest.legacyBootstrap).toBe(false);
     reopened.close();
   });

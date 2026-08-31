@@ -459,19 +459,12 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
   ```
 
 
-### Task 7: Add scheduling application use cases and wire migrated OMP/Claude adapters
+### Task 7: Add scheduling application use cases and consume migrated OMP/Claude adapters
 
 **Files:**
 - Create: `packages/control-plane/src/application/scheduling.ts`
-- Modify: `packages/control-plane/src/application/harness-composition.ts`
-- Modify: `packages/control-plane/src/application/activation.ts`
-- Modify: `packages/control-plane/src/adapters/clients/agent-adapters.ts` (consume migrated `AgentAdapter`)
-- Modify: `packages/control-plane/src/adapters/omp/process-port.ts`
-- Modify: `packages/control-plane/src/adapters/omp/extensions/agent-status-extension.ts`
-- Modify: `packages/control-plane/src/adapters/clients/claude/`
 - Create: `packages/control-plane/tests/application/scheduling.test.ts`
-- Modify: `packages/control-plane/tests/contracts/claude-materializer.test.ts`
-- Modify: `packages/control-plane/tests/contracts/omp-adapter.test.ts`
+
 
 **Interfaces:**
 - Consumes: `AgentRegistry`, `AgentSchedulerPort`, schedule/dispatch repositories, migrated `AgentAdapter` contract and existing activation flow.
@@ -508,7 +501,7 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
   Cancellation must be idempotent and operation-bound. Reconciliation must require matching schedule ID, operation ID, Agent ID, revision ID, target and manifest hash; mismatches remain `unknown` or `incomplete`.
 - [ ] **Step 4: Consume migrated Agent contracts without changing native behavior**
 
-  Task 2 owns the full Client→Agent exported symbol and callsite migration. Task 7 only wires the already-migrated `AgentRegistry`/`AgentAdapter` into scheduling and activation. OMP continues to pass Skill names to OMP. Claude continues invocation-scoped materialization for instructions, skills and MCP. No native argv, materialization, or Session semantics change.
+  Task 2 owns the full Client→Agent exported symbol and callsite migration. Task 7 consumes the existing `AgentRegistry`/`AgentAdapter` contract through `SchedulingDependencies`; no composition, activation, OMP argv, Claude materialization, or Session behavior changes were required. OMP continues to pass Skill names to OMP. Claude continues invocation-scoped materialization for instructions, skills and MCP.
 
 - [ ] **Step 5: Run application and existing contract tests**
 
