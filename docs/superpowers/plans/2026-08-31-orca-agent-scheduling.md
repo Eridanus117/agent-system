@@ -93,11 +93,12 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
   Create `task-state.json` with one planned task per implementation task below. Run:
 
   ```text
+  node --experimental-strip-types .delivery-spec-runtime/openspec/tools/delivery-control.ts task inspect --change-root openspec/changes/orca-agent-scheduling
   npx openspec doctor
   npx openspec validate orca-agent-scheduling --strict
   ```
 
-  Expected: the change is structurally valid; no live spec is modified.
+  Expected: task projection has no drift; the change is structurally valid; no live spec is modified.
 
 - [ ] **Step 4: Commit the OpenSpec change skeleton**
 
@@ -107,17 +108,21 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
   ```
 
 ### Task 2: Introduce Agent domain terminology and immutable support snapshots
-
 **Files:**
 - Create: `packages/control-plane/src/domain/agent.ts`
 - Modify: `packages/control-plane/src/domain/client.ts` → replace with `agent.ts` using an LSP file rename
 - Modify: `packages/control-plane/src/application/ports/client-adapter.ts` → `agent-adapter.ts`
 - Modify: `packages/control-plane/src/application/ports/index.ts`
 - Modify: `packages/control-plane/src/domain/index.ts`
+- Modify: `packages/control-plane/src/application/activation.ts`
+- Modify: `packages/control-plane/src/application/harness-composition.ts`
+- Modify: `packages/control-plane/src/cli/index.ts`
+- Modify: `packages/control-plane/src/adapters/clients/client-adapters.ts`
 - Test: `packages/control-plane/tests/domain/agent.test.ts`
 - Test: `packages/control-plane/tests/contracts/agent-adapter.test.ts`
+- Modify: all existing tests and source callsites importing the renamed client symbols
 
-- Consumes: existing `ClientId`, `ClientCapability`, `ClientAdapter` behavior and activation flow.
+- Consumes: existing `ClientId`, `ClientCapability`, `ClientAdapter` behavior and all current activation, composition, CLI and test callsites.
 - Produces:
 
   ```ts
@@ -159,10 +164,9 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
   }
   ```
 
-- [ ] **Step 1: Use LSP to rename the exported client symbols and file references**
+- [ ] **Step 1: Use LSP to rename the exported client symbols and every current callsite**
 
-  Run LSP references for `ClientId`, `clientId`, `ClientCapability`, `ClientAdapter`, `ClientAdapterRegistry`, then apply symbol-aware renames to `AgentId`, `agentId`, `AgentCapabilitySnapshot`, `AgentAdapter`, and `AgentAdapterRegistry`. Do not leave aliases or compatibility re-exports.
-
+  Run LSP references for `ClientId`, `clientId`, `ClientCapability`, `ClientAdapter`, `ClientAdapterRegistry`, then apply symbol-aware renames to `AgentId`, `agentId`, `AgentCapabilitySnapshot`, `AgentAdapter`, and `AgentAdapterRegistry`. The migration covers `domain/index.ts`, `application/ports/index.ts`, `application/activation.ts`, `application/harness-composition.ts`, `cli/index.ts`, `adapters/clients/client-adapters.ts`, and every existing source/test import. Do not leave aliases, compatibility re-exports, or stale `Client*` references.
 - [ ] **Step 2: Write failing Agent domain tests**
 
   Add tests named:
@@ -186,8 +190,7 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
   bunx tsc --noEmit -p packages/control-plane/tsconfig.json
   ```
 
-  Expected: all focused tests pass and typecheck exits 0.
-
+  Expected: all focused tests pass, every migrated source/test callsite compiles with no `Client*` alias, and typecheck exits 0.
 - [ ] **Step 5: Commit the domain migration**
 
   ```text
@@ -454,13 +457,13 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
   git commit -m "feat: 持久化 Agent 调度与派发事实"
   ```
 
-### Task 7: Add scheduling application use cases and migrate OMP/Claude
+### Task 7: Add scheduling application use cases and wire migrated OMP/Claude adapters
 
 **Files:**
 - Create: `packages/control-plane/src/application/scheduling.ts`
 - Modify: `packages/control-plane/src/application/harness-composition.ts`
 - Modify: `packages/control-plane/src/application/activation.ts`
-- Modify: `packages/control-plane/src/adapters/clients/client-adapters.ts` → Agent terminology only
+- Modify: `packages/control-plane/src/adapters/clients/agent-adapters.ts` (consume migrated `AgentAdapter`)
 - Modify: `packages/control-plane/src/adapters/omp/process-port.ts`
 - Modify: `packages/control-plane/src/adapters/omp/extensions/agent-status-extension.ts`
 - Modify: `packages/control-plane/src/adapters/clients/claude/`
@@ -469,8 +472,9 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
 - Modify: `packages/control-plane/tests/contracts/omp-adapter.test.ts`
 
 **Interfaces:**
-- Consumes: `AgentRegistry`, `AgentSchedulerPort`, schedule/dispatch repositories, existing activation flow.
+- Consumes: `AgentRegistry`, `AgentSchedulerPort`, schedule/dispatch repositories, migrated `AgentAdapter` contract and existing activation flow.
 - Produces:
+
 
   ```ts
   export async function createAgentSchedule(...): Promise<AgentScheduleIntent>;
@@ -500,10 +504,9 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
 - [ ] **Step 3: Implement cancellation and reconciliation**
 
   Cancellation must be idempotent and operation-bound. Reconciliation must require matching schedule ID, operation ID, Agent ID, revision ID, target and manifest hash; mismatches remain `unknown` or `incomplete`.
+- [ ] **Step 4: Consume migrated Agent contracts without changing native behavior**
 
-- [ ] **Step 4: Migrate OMP and Claude vocabulary without changing native behavior**
-
-  OMP continues to pass Skill names to OMP. Claude continues invocation-scoped materialization for instructions, skills and MCP. Only the control-plane contract names and registry wiring change.
+  Task 2 owns the full Client→Agent exported symbol and callsite migration. Task 7 only wires the already-migrated `AgentRegistry`/`AgentAdapter` into scheduling and activation. OMP continues to pass Skill names to OMP. Claude continues invocation-scoped materialization for instructions, skills and MCP. No native argv, materialization, or Session semantics change.
 
 - [ ] **Step 5: Run application and existing contract tests**
 
