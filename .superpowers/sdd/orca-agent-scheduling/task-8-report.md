@@ -17,7 +17,7 @@
 - fix round 5: `7defb82 fix: 完善 Agent 调度 CLI 最终门禁`
 - fix round 6: `ec0cc97 fix: 严格校验 Agent CLI 时间与标签`
 - fix round 7: `61b49d2 fix: 拒绝 Agent CLI 证据错配`
-- evidence sync: `59af058`, `6934959`, `e2f8222`, `ca7fb7e`, `ee2b421` and latest state sync pending
+- evidence sync: `59af058`, `6934959`, `e2f8222`, `ca7fb7e`, `ee2b421`, `f902a02`
 ## Changed files
 
 - `packages/control-plane/src/cli/index.ts`
@@ -111,3 +111,7 @@ Injected dry-run contract output has stable root keys:
   - snapshot identity must match descriptor identity; mismatches project all snapshot-derived fields to unknown.
   - only controlled `evidence://` inventory evidence can expose a probed list/probe level; malformed inventory remains unknown.
   - final evidence: focused `15 pass, 0 fail, 134 expect() calls`, CLI `50 pass`, package `185 pass`, tsc exit 0.
+
+- round 8: `675e3a8 fix: 接受 Agent CLI Orca inventory 证据`
+  - inventory evidence projection accepts controlled `evidence://` and `orca:` references; unrelated `context://` and malformed values remain unknown.
+  - final evidence remains focused `15 pass, 0 fail, 134 expect() calls`, CLI `50 pass`, package `185 pass`, tsc exit 0.
