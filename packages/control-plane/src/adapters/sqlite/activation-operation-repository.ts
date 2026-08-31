@@ -1,7 +1,7 @@
 import type { ActivationOperationRepository } from '../../application/ports/activation-operation-repository';
 import { ConcurrencyConflictError, InvalidActivationTransitionError, InvalidActivationVersionError } from '../../domain/errors';
 import { transitionActivationOperation, type ActivationOperation, type ActivationOperationEvent } from '../../domain/activation-operation';
-import { clientId } from '../../domain/client';
+import { agentId } from '../../domain/agent';
 import { configurationName, configurationRevisionId } from '../../domain/configuration';
 import { SqliteStore } from './store';
 
@@ -10,7 +10,7 @@ function fromRow(row: Record<string, unknown>): ActivationOperation {
     operationId: String(row.operation_id),
     revisionId: row.revision_id === null ? null : configurationRevisionId(String(row.revision_id)),
     configName: configurationName(String(row.config_name)),
-    clientId: clientId(String(row.client_id)),
+    agentId: agentId(String(row.client_id)),
     phase: String(row.phase) as ActivationOperation['phase'],
     version: Number(row.version),
     planHash: String(row.plan_hash),
@@ -26,7 +26,7 @@ export class SqliteActivationOperationRepository implements ActivationOperationR
   constructor(readonly store: SqliteStore) {}
 
   async insert(operation: ActivationOperation): Promise<void> {
-    this.store.db.query(`INSERT INTO activation_operation(${COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(operation.operationId, operation.revisionId, operation.configName, operation.clientId, operation.phase, operation.version, operation.planHash, operation.createdAt, operation.updatedAt, operation.terminalReason ?? null);
+    this.store.db.query(`INSERT INTO activation_operation(${COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(operation.operationId, operation.revisionId, operation.configName, operation.agentId, operation.phase, operation.version, operation.planHash, operation.createdAt, operation.updatedAt, operation.terminalReason ?? null);
   }
 
   async updateIfVersion(operationId: string, expectedVersion: number, nextState: ActivationOperation): Promise<void> {
@@ -37,7 +37,7 @@ export class SqliteActivationOperationRepository implements ActivationOperationR
     if (currentRow === null) throw new ConcurrencyConflictError(operationId, expectedVersion);
     const current = fromRow(currentRow);
     if (current.version !== expectedVersion) throw new ConcurrencyConflictError(operationId, expectedVersion);
-    if (nextState.configName !== current.configName || nextState.clientId !== current.clientId || nextState.revisionId !== current.revisionId || nextState.planHash !== current.planHash || nextState.createdAt !== current.createdAt) {
+    if (nextState.configName !== current.configName || nextState.agentId !== current.agentId || nextState.revisionId !== current.revisionId || nextState.planHash !== current.planHash || nextState.createdAt !== current.createdAt) {
       throw new InvalidActivationTransitionError(current.phase, 'aggregate-mutation');
     }
     const events: readonly ActivationOperationEvent[] = [
@@ -54,7 +54,7 @@ export class SqliteActivationOperationRepository implements ActivationOperationR
       return transition.ok && transition.operation.phase === nextState.phase;
     })) throw new InvalidActivationTransitionError(current.phase, nextState.phase);
     if (nextState.version !== expectedVersion + 1) throw new InvalidActivationVersionError(operationId, expectedVersion, nextState.version);
-    const result = this.store.db.query(`UPDATE activation_operation SET revision_id = ?, config_name = ?, client_id = ?, phase = ?, version = ?, plan_hash = ?, updated_at = ?, terminal_reason = ? WHERE operation_id = ? AND version = ?`).run(nextState.revisionId, nextState.configName, nextState.clientId, nextState.phase, nextState.version, nextState.planHash, nextState.updatedAt, nextState.terminalReason ?? null, operationId, expectedVersion);
+    const result = this.store.db.query(`UPDATE activation_operation SET revision_id = ?, config_name = ?, client_id = ?, phase = ?, version = ?, plan_hash = ?, updated_at = ?, terminal_reason = ? WHERE operation_id = ? AND version = ?`).run(nextState.revisionId, nextState.configName, nextState.agentId, nextState.phase, nextState.version, nextState.planHash, nextState.updatedAt, nextState.terminalReason ?? null, operationId, expectedVersion);
     if (result.changes !== 1) throw new ConcurrencyConflictError(operationId, expectedVersion);
   }
 
@@ -76,8 +76,8 @@ export class SqliteActivationOperationRepository implements ActivationOperationR
     return row === null ? null : fromRow(row);
   }
 
-  async findLatestForClient(client: ActivationOperation['clientId']): Promise<ActivationOperation | null> {
-    const row = this.store.db.query<Record<string, unknown>, [string]>(`SELECT ${COLUMNS} FROM activation_operation WHERE client_id = ? ORDER BY updated_at DESC, rowid DESC LIMIT 1`).get(client);
+  async findLatestForAgent(agentIdValue: ActivationOperation['agentId']): Promise<ActivationOperation | null> {
+    const row = this.store.db.query<Record<string, unknown>, [string]>(`SELECT ${COLUMNS} FROM activation_operation WHERE client_id = ? ORDER BY updated_at DESC, rowid DESC LIMIT 1`).get(agentIdValue);
     return row === null ? null : fromRow(row);
   }
 }

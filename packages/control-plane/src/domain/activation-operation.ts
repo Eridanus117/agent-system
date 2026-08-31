@@ -1,4 +1,4 @@
-import type { ClientId } from './client';
+import type { AgentId } from './agent';
 import type { ConfigurationName, ConfigurationRevisionId } from './configuration';
 
 export type ActivationOperationPhase =
@@ -15,7 +15,7 @@ export interface ActivationOperation {
   readonly operationId: string;
   readonly revisionId: ConfigurationRevisionId | null;
   readonly configName: ConfigurationName;
-  readonly clientId: ClientId;
+  readonly agentId: AgentId;
   readonly phase: ActivationOperationPhase;
   readonly version: number;
   readonly createdAt: string;
@@ -38,7 +38,7 @@ export function createActivationOperation(params: {
   readonly operationId: string;
   readonly revisionId: ConfigurationRevisionId | null;
   readonly configName: ConfigurationName;
-  readonly clientId: ClientId;
+  readonly agentId: AgentId;
   readonly planHash: string;
   readonly createdAt: string;
 }): ActivationOperation {

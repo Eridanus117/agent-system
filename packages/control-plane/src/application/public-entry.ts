@@ -1,3 +1,3 @@
 export { createHarnessControlPlaneFacade } from './harness-facade';
 export { createProductionHarnessControlPlaneFacade } from './harness-composition';
-export type { ExistingPublicApplicationPorts, HarnessAssemblyManifestRef, HarnessClientCapability, HarnessConfigRevisionRef, HarnessControlPlanePort, HarnessControlPlanePortFactory, HarnessLaunchPlanRef, HarnessUnknown } from './ports/harness';
+export type { ExistingPublicApplicationPorts, HarnessAssemblyManifestRef, HarnessAgentCapability, HarnessAgentId, HarnessConfigRevisionRef, HarnessControlPlanePort, HarnessControlPlanePortFactory, HarnessLaunchPlanRef, HarnessProbeAgentId, HarnessUnknown } from './ports/harness';

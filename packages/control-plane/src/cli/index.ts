@@ -14,8 +14,8 @@ import { SqliteConfigRevisionWriter } from '../adapters/sqlite/config-revision-w
 import { SqliteActivationOperationRepository } from '../adapters/sqlite/activation-operation-repository';
 import { SqliteLaunchObservationRepository } from '../adapters/sqlite/launch-observation-repository';
 import { findDenylistedForwardedArg } from '../adapters/omp/process-port';
-import { InMemoryClientAdapterRegistry, OmpClientAdapter, ClaudeClientAdapter } from '../adapters/clients/client-adapters';
-import { clientId as toClientId } from '../domain/client';
+import { InMemoryAgentAdapterRegistry, OmpAgentAdapter, ClaudeAgentAdapter } from '../adapters/clients/client-adapters';
+import { agentId as toAgentId } from '../domain/agent';
 import { prepareActivation, confirmActivation, rejectActivation, executeActivation, recoverActivation, getActivationStatus, requestConfigurationSwitch, type ActivationDependencies } from '../application/activation';
 import { compareConfigRevisions, getConfigRevisionDetail, listConfigRevisions, rebuildConfigSearch, searchConfigRevisions } from '../application/queries';
 import { parseCandidateRevision, parseEvidenceRef, parseSupersedesRevisionId, parseTriggerCategory, InvalidCandidateError, InvalidTriggerCategoryError, MissingEvidenceError, MissingSupersedesError, NoCandidateSourceError } from '../application/establish';
@@ -24,12 +24,12 @@ import { buildRoleCandidate, loadRoleSource } from '../adapters/sources/role-fs'
 import { readSelfUpdateState, writeSelfUpdateState, isCheckDue } from '../adapters/self-update/check-state';
 import { GithubReleaseUpdater } from '../adapters/self-update/github-release-updater';
 import type { SelfUpdatePort } from '../application/ports/self-update';
-import type { ClientAdapterRegistry } from '../application/ports/client-adapter';
+import type { AgentAdapterRegistry } from '../application/ports/agent-adapter';
 import { runTui } from './tui';
 
 export interface CliOverrides {
   readonly databasePath?: string;
-  readonly adapters?: ClientAdapterRegistry;
+  readonly adapters?: AgentAdapterRegistry;
 }
 export interface FullDeps extends ActivationDependencies { readonly store: SqliteStore; readonly configurations: SqliteConfigRevisionRepository; readonly operations: SqliteActivationOperationRepository; readonly observations: SqliteLaunchObservationRepository; }
 
@@ -38,7 +38,7 @@ export function openDeps(overrides: CliOverrides = {}): FullDeps {
   const configurations = new SqliteConfigRevisionRepository(store);
   const operations = new SqliteActivationOperationRepository(store);
   const observations = new SqliteLaunchObservationRepository(store);
-  const adapters = overrides.adapters ?? new InMemoryClientAdapterRegistry([new OmpClientAdapter(), new ClaudeClientAdapter()]);
+  const adapters = overrides.adapters ?? new InMemoryAgentAdapterRegistry([new OmpAgentAdapter(), new ClaudeAgentAdapter()]);
   return { store, configurations, operations, observations, adapters };
 }
 
@@ -77,12 +77,12 @@ export async function runSelfUpdateWorker(params: { readonly statePath: string; 
   } catch { /* 中文注释：自更新失败只影响下一次检查。 */ }
 }
 
-function parseClient(args: string[]): { readonly clientId: string; readonly args: string[] } {
+function parseAgent(args: string[]): { readonly agentId: string; readonly args: string[] } {
   const index = args.indexOf('--client');
-  if (index === -1) return { clientId: 'omp', args };
+  if (index === -1) return { agentId: 'omp', args };
   const value = args[index + 1];
-  if (value !== 'omp' && value !== 'claude-code' && value !== 'claude') throw new Error(`unsupported client: ${value ?? '(missing)'}`);
-  return { clientId: value === 'claude' ? 'claude-code' : value, args: [...args.slice(0, index), ...args.slice(index + 2)] };
+  if (value !== 'omp' && value !== 'claude-code' && value !== 'claude') throw new Error(`unsupported agent: ${value ?? '(missing)'}`);
+  return { agentId: value === 'claude' ? 'claude-code' : value, args: [...args.slice(0, index), ...args.slice(index + 2)] };
 }
 function hasYes(args: string[]): boolean { return args.includes('--yes'); }
 function stripYes(args: string[]): string[] { return args.filter((arg) => arg !== '--yes'); }
@@ -115,24 +115,24 @@ function validateCommandBeforeStore(command: string | undefined, args: readonly 
   if (command === 'use' || command === 'switch') {
     const split = splitForwarded([...args]);
     const commandArgs = stripYes(split.commandArgs);
-    const parsed = parseClient(commandArgs);
+    const parsed = parseAgent(commandArgs);
     if (parsed.args.length !== 1 || parsed.args[0]?.startsWith('--')) throw new Error(`${command} requires exactly one revision id`);
     const denied = findDenylistedForwardedArg(split.forwardedArgs);
     if (denied !== null) throw new Error(`forwarded argument is reserved by Agent System: ${denied}`);
   }
 }
 
-async function runActivationCommand(deps: FullDeps, mode: 'use' | 'switch', revisionId: string, clientId: string, yes: boolean, forwardedArgs: readonly string[]): Promise<number> {
-  const latest = await deps.operations.findLatestForClient(toClientId(clientId));
+async function runActivationCommand(deps: FullDeps, mode: 'use' | 'switch', revisionId: string, agentId: string, yes: boolean, forwardedArgs: readonly string[]): Promise<number> {
+  const latest = await deps.operations.findLatestForAgent(toAgentId(agentId));
   if (mode === 'use' && latest !== null && ['prepared', 'awaiting-confirmation', 'applying'].includes(latest.phase)) {
-    throw new Error(`activation ${latest.operationId} is still ${latest.phase}; run configs recover ${latest.operationId} before starting another client`);
+    throw new Error(`activation ${latest.operationId} is still ${latest.phase}; run configs recover ${latest.operationId} before starting another agent`);
   }
   let operation;
   if (mode === 'switch') {
-    if (latest === null) throw new Error(`switch requires an existing completed operation for ${clientId}; use configs use ${revisionId} --client ${clientId}`);
-    const switched = await requestConfigurationSwitch(deps, { currentOperationId: latest.operationId, newRevisionId: revisionId, clientId });
+    if (latest === null) throw new Error(`switch requires an existing completed operation for ${agentId}; use configs use ${revisionId} --client ${agentId}`);
+    const switched = await requestConfigurationSwitch(deps, { currentOperationId: latest.operationId, newRevisionId: revisionId, agentId });
     operation = switched.next;
-  } else operation = await prepareActivation(deps, { revisionId, clientId });
+  } else operation = await prepareActivation(deps, { revisionId, agentId });
   if (operation.phase !== 'awaiting-confirmation') { console.log(renderFailure(operation)); return 1; }
   const revision = await getConfigRevisionDetail(deps.configurations, revisionId);
   console.log(renderConfirmationSummary(operation, revision));
@@ -260,10 +260,10 @@ export async function main(argv: readonly string[] = process.argv.slice(2), over
     if (command === 'use' || command === 'switch') {
       const split = splitForwarded([...argv.slice(1)]);
       const commandArgs = stripYes(split.commandArgs);
-      const parsed = parseClient(commandArgs);
+      const parsed = parseAgent(commandArgs);
       const revisionId = parsed.args.length === 1 ? parsed.args[0] : undefined;
       if (revisionId === undefined || revisionId.startsWith('--')) throw new Error(`${command} requires exactly one revision id`);
-      return await runActivationCommand(deps, command, revisionId, parsed.clientId, hasYes(split.commandArgs), split.forwardedArgs);
+      return await runActivationCommand(deps, command, revisionId, parsed.agentId, hasYes(split.commandArgs), split.forwardedArgs);
     }
     throw new Error(`unknown command: ${command}`);
   } catch (error) { console.error(renderQueryFailure(error)); return 1; } finally { closeDeps(deps); }

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, Text, render, useInput } from 'ink';
 import type { ActivationOperation } from '../domain/activation-operation';
 import type { ConfigurationRevision } from '../domain/configuration';
-import { clientId } from '../domain/client';
+import { agentId } from '../domain/agent';
 import type { CliOverrides, FullDeps } from './index';
 import { openDeps } from './index';
 import { listConfigRevisions } from '../application/queries';
@@ -24,7 +24,7 @@ export function TuiApp({ revisions, onConfirm, onCancel, onPrepare, onReject }: 
   const [preparing, setPreparing] = useState(false);
   const [operation, setOperation] = useState<ActivationOperation>();
   const selected = revisions[selectedIndex];
-  const operationPreview = operation ?? { operationId: 'pending', revisionId: selected?.revisionId ?? null, configName: selected?.configName ?? 'pending' as ConfigurationRevision['configName'], clientId: clientId('omp'), phase: 'awaiting-confirmation', version: 0, planHash: 'pending', createdAt: '', updatedAt: '', terminalReason: undefined } as const;
+  const operationPreview = operation ?? { operationId: 'pending', revisionId: selected?.revisionId ?? null, configName: selected?.configName ?? 'pending' as ConfigurationRevision['configName'], agentId: agentId('omp'), phase: 'awaiting-confirmation', version: 0, planHash: 'pending', createdAt: '', updatedAt: '', terminalReason: undefined } as const;
   useInput((input, key) => {
     if (screen === 'list') {
       if (key.upArrow) setSelectedIndex((index) => Math.max(0, index - 1));
@@ -64,7 +64,7 @@ function runTuiScreen(revisions: readonly ConfigurationRevision[], prepare: (rev
 
 export async function runTuiWithDeps(deps: FullDeps): Promise<number> {
   const revisions = await listConfigRevisions(deps.configurations);
-  const decision = await runTuiScreen(revisions, (revision) => prepareActivation(deps, { revisionId: revision.revisionId, clientId: clientId('omp') }), (operation) => rejectActivation(deps, operation.operationId).then(() => undefined));
+  const decision = await runTuiScreen(revisions, (revision) => prepareActivation(deps, { revisionId: revision.revisionId, agentId: agentId('omp') }), (operation) => rejectActivation(deps, operation.operationId).then(() => undefined));
   if (decision.kind === 'quit') return 0;
   if (decision.operation.phase !== 'awaiting-confirmation') { console.error(renderFailure(decision.operation)); return 1; }
   await confirmActivation(deps, decision.operation.operationId);

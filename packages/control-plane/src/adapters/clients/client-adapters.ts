@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { ClientAdapter, ClientAdapterInput, ClientAdapterRegistry, ClientCapability, ObservedLaunch, ObservedText, PreparedActivation, StartedProcess } from '../../application/ports/client-adapter';
+import type { AgentAdapter, AgentAdapterInput, AgentAdapterRegistry, AgentCapabilitySnapshot, ObservedLaunch, PreparedActivation, StartedProcess } from '../../application/ports/agent-adapter';
+import type { ObservedText, SupportLevel } from '../../domain/agent';
+import { agentId, type AgentId } from '../../domain/agent';
 import type { ConfigurationRevision } from '../../domain/configuration';
-import { clientId, type ClientId } from '../../domain/client';
 import { defaultDbPath } from '../../cli/db-path';
 import { buildOmpArgv, defaultExtensionPath } from '../omp/process-port';
 import { FsClaudeContentMaterializer, type ClaudeContentMaterializationResult } from './claude/content-materializer';
@@ -27,6 +28,10 @@ function helpHasFlag(help: string, flag: string): boolean {
   return help.split(/\s+/u).some((token) => token === flag || token.startsWith(`${flag}=`) || token.startsWith(`${flag},`));
 }
 
+function capabilitySnapshot(agent: AgentId, binary: string, level: SupportLevel, version: ObservedText, capabilities: Readonly<Record<string, SupportLevel>>, evidenceRef: string): AgentCapabilitySnapshot {
+  return { probeId: `${binary}-probe`, agentId: agent, level, version, capabilities, observedAt: new Date().toISOString(), evidenceRef };
+}
+
 async function readPipe(stream: ReadableStream<Uint8Array> | null): Promise<string> {
   return stream === null ? '' : new TextDecoder().decode(await new Response(stream).arrayBuffer());
 }
@@ -48,34 +53,37 @@ async function runHelp(binary: string): Promise<string> {
   return `${stdout}\n${stderr}`;
 }
 
-abstract class IsolatedClientAdapter implements ClientAdapter {
-  abstract readonly clientId: ClientId;
+abstract class IsolatedAgentAdapter implements AgentAdapter {
+  abstract readonly agentId: AgentId;
   protected abstract readonly binary: string;
   protected abstract requiredFlags(revision: ConfigurationRevision): readonly string[];
-  protected abstract prepareContext(input: ClientAdapterInput): Promise<Record<string, unknown>>;
-  protected abstract buildArgv(input: ClientAdapterInput, context: Record<string, unknown>): readonly string[];
+  protected abstract prepareContext(input: AgentAdapterInput): Promise<Record<string, unknown>>;
+  protected abstract buildArgv(input: AgentAdapterInput, context: Record<string, unknown>): readonly string[];
   protected abstract spawnOptions(context: Record<string, unknown>): { readonly cwd: string; readonly env: Record<string, string | undefined> };
   protected abstract cleanup(context: Record<string, unknown>): Promise<void>;
 
-  async probe(input?: { readonly revision: ConfigurationRevision }): Promise<ClientCapability> {
+  async probe(input?: { readonly revision: ConfigurationRevision }): Promise<AgentCapabilitySnapshot> {
     try {
       const version = await runVersion(this.binary);
-      if (version.exitCode !== 0 || version.output.length === 0) return { level: 'unknown', version: unknown(`${this.binary}-version-unavailable`), reason: `${this.binary}-version-unavailable` };
+      if (version.exitCode !== 0 || version.output.length === 0) return capabilitySnapshot(this.agentId, this.binary, 'unknown', unknown(`${this.binary}-version-unavailable`), {}, `${this.binary}-version-unavailable`);
       const help = await runHelp(this.binary);
-      const missing = input === undefined ? [] : this.requiredFlags(input.revision).filter((flag) => !helpHasFlag(help, flag));
-      if (missing.length > 0) return { level: 'unsupported', version: known(version.output), reason: `${this.binary}-required-flags-missing:${missing.join(',')}` };
-      return { level: 'supported', version: known(version.output), reason: undefined };
+      const flags = input === undefined ? [] : this.requiredFlags(input.revision);
+      const capabilities: Record<string, SupportLevel> = {};
+      for (const flag of flags) capabilities[flag] = helpHasFlag(help, flag) ? 'supported' : 'unsupported';
+      const missing = flags.filter((flag) => capabilities[flag] === 'unsupported');
+      if (missing.length > 0) return capabilitySnapshot(this.agentId, this.binary, 'unsupported', known(version.output), capabilities, `${this.binary}-required-flags-missing:${missing.join(',')}`);
+      return capabilitySnapshot(this.agentId, this.binary, 'supported', known(version.output), capabilities, `${this.binary}-probe-succeeded`);
     } catch {
-      return { level: 'unknown', version: unknown(safeErrorCode(`${this.binary}-probe-failed`)), reason: safeErrorCode(`${this.binary}-probe-failed`) };
+      return capabilitySnapshot(this.agentId, this.binary, 'unknown', unknown(safeErrorCode(`${this.binary}-probe-failed`)), {}, safeErrorCode(`${this.binary}-probe-failed`));
     }
   }
 
-  async prepare(input: ClientAdapterInput): Promise<PreparedActivation> {
+  async prepare(input: AgentAdapterInput): Promise<PreparedActivation> {
     const context = await this.prepareContext(input);
-    return { manifestHash: hash({ clientId: this.clientId, revision: input.revision, context }), context };
+    return { manifestHash: hash({ agentId: this.agentId, revision: input.revision, context }), context };
   }
 
-  async start(input: ClientAdapterInput & { readonly prepared: PreparedActivation }): Promise<StartedProcess> {
+  async start(input: AgentAdapterInput & { readonly prepared: PreparedActivation }): Promise<StartedProcess> {
     const context = input.prepared.context;
     try {
       const executable = Bun.which(this.binary);
@@ -89,17 +97,17 @@ abstract class IsolatedClientAdapter implements ClientAdapter {
         stderr: 'inherit',
       });
       const waitForExit = child.exited.then((exitCode) => ({ exitCode, signal: child.signalCode }));
-      return { processReference: { pid: child.pid, token: `${this.clientId}:${hash(input.operationId).slice(0, 32)}` }, exitCode: null, signal: null, context, terminate: async () => { child.kill(); }, waitForExit };
+      return { processReference: { pid: child.pid, token: `${this.agentId}:${hash(input.operationId).slice(0, 32)}` }, exitCode: null, signal: null, context, terminate: async () => { child.kill(); }, waitForExit };
     } catch (error) {
       try { await this.cleanup(context); } catch { }
       throw error;
     }
   }
-  async abort(input: ClientAdapterInput & { readonly prepared: PreparedActivation; readonly started?: StartedProcess }): Promise<void> {
+  async abort(input: AgentAdapterInput & { readonly prepared: PreparedActivation; readonly started?: StartedProcess }): Promise<void> {
     if (input.started?.terminate !== undefined) await input.started.terminate();
     await this.cleanup(input.started?.context ?? input.prepared.context);
   }
-  async observe(input: ClientAdapterInput & { readonly started: StartedProcess }): Promise<ObservedLaunch> {
+  async observe(input: AgentAdapterInput & { readonly started: StartedProcess }): Promise<ObservedLaunch> {
     try {
       const exit = input.started.waitForExit === undefined ? { exitCode: input.started.exitCode, signal: input.started.signal } : await input.started.waitForExit;
       if (exit.exitCode === 0) return { outcome: 'succeeded', reason: undefined };
@@ -112,23 +120,23 @@ abstract class IsolatedClientAdapter implements ClientAdapter {
   }
 }
 
-export class OmpClientAdapter extends IsolatedClientAdapter {
-  readonly clientId = clientId('omp');
+export class OmpAgentAdapter extends IsolatedAgentAdapter {
+  readonly agentId = agentId('omp');
   protected readonly binary = 'omp';
   protected requiredFlags(revision: ConfigurationRevision): readonly string[] {
     const flags = ['--no-skills'];
     if (revision.capabilities.some((capability) => capability.kind === 'skill')) flags.push('--skills');
     return flags;
   }
-  protected async prepareContext(input: ClientAdapterInput): Promise<Record<string, unknown>> {
+  protected async prepareContext(input: AgentAdapterInput): Promise<Record<string, unknown>> {
     const directory = path.join(path.dirname(defaultDbPath()), 'launch-context');
     await mkdir(directory, { recursive: true });
     const contextPath = path.join(directory, `${hash(input.operationId).slice(0, 32)}.json`);
     const extensionPath = defaultExtensionPath();
-    await writeFile(contextPath, JSON.stringify({ version: 1, operationId: input.operationId, revisionId: input.revision.revisionId, configName: input.revision.configName, client: this.clientId }, null, 2));
+    await writeFile(contextPath, JSON.stringify({ version: 1, operationId: input.operationId, revisionId: input.revision.revisionId, configName: input.revision.configName, client: this.agentId }, null, 2));
     return { cwd: process.cwd(), contextPath, extensionPath };
   }
-  protected buildArgv(input: ClientAdapterInput, context: Record<string, unknown>): readonly string[] {
+  protected buildArgv(input: AgentAdapterInput, context: Record<string, unknown>): readonly string[] {
     return buildOmpArgv(input.revision, String(context.contextPath), String(context.extensionPath), input.forwardedArgs ?? []);
   }
   protected spawnOptions(context: Record<string, unknown>): { readonly cwd: string; readonly env: Record<string, string | undefined> } {
@@ -139,8 +147,8 @@ export class OmpClientAdapter extends IsolatedClientAdapter {
   }
 }
 
-export class ClaudeClientAdapter extends IsolatedClientAdapter {
-  readonly clientId = clientId('claude-code');
+export class ClaudeAgentAdapter extends IsolatedAgentAdapter {
+  readonly agentId = agentId('claude-code');
   protected readonly binary = 'claude';
   private readonly materializer = new FsClaudeContentMaterializer();
   protected requiredFlags(revision: ConfigurationRevision): readonly string[] {
@@ -150,7 +158,7 @@ export class ClaudeClientAdapter extends IsolatedClientAdapter {
     if (revision.capabilities.some((capability) => capability.kind === 'mcp')) flags.push('--mcp-config', '--strict-mcp-config');
     return flags;
   }
-  protected async prepareContext(input: ClientAdapterInput): Promise<Record<string, unknown>> {
+  protected async prepareContext(input: AgentAdapterInput): Promise<Record<string, unknown>> {
     const invocationDir = await mkdtemp(path.join(path.dirname(defaultDbPath()), 'claude-invocation-'));
     try {
       const materialization = await this.materializer.materialize(input.revision, invocationDir);
@@ -162,7 +170,7 @@ export class ClaudeClientAdapter extends IsolatedClientAdapter {
       throw error;
     }
   }
-  protected buildArgv(input: ClientAdapterInput, context: Record<string, unknown>): readonly string[] {
+  protected buildArgv(input: AgentAdapterInput, context: Record<string, unknown>): readonly string[] {
     const materialization = context.materialization as ClaudeContentMaterializationResult;
     const argv: string[] = [];
     if (materialization.instructions.appendSystemPromptText !== null) argv.push('--append-system-prompt', materialization.instructions.appendSystemPromptText);
@@ -180,12 +188,12 @@ export class ClaudeClientAdapter extends IsolatedClientAdapter {
   }
 }
 
-export class InMemoryClientAdapterRegistry implements ClientAdapterRegistry {
-  private readonly adapters = new Map<ClientId, ClientAdapter>();
-  constructor(adapters: readonly ClientAdapter[] = [new OmpClientAdapter(), new ClaudeClientAdapter()]) {
-    for (const adapter of adapters) this.adapters.set(adapter.clientId, adapter);
+export class InMemoryAgentAdapterRegistry implements AgentAdapterRegistry {
+  private readonly adapters = new Map<AgentId, AgentAdapter>();
+  constructor(adapters: readonly AgentAdapter[] = [new OmpAgentAdapter(), new ClaudeAgentAdapter()]) {
+    for (const adapter of adapters) this.adapters.set(adapter.agentId, adapter);
   }
-  get(clientIdValue: ClientId): ClientAdapter | null {
-    return this.adapters.get(clientIdValue) ?? null;
+  get(agentIdValue: AgentId): AgentAdapter | null {
+    return this.adapters.get(agentIdValue) ?? null;
   }
 }

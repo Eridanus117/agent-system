@@ -4,9 +4,9 @@ import { SqliteStore } from '../adapters/sqlite/store';
 import { SqliteConfigRevisionRepository } from '../adapters/sqlite/repository';
 import { SqliteActivationOperationRepository } from '../adapters/sqlite/activation-operation-repository';
 import { SqliteLaunchObservationRepository } from '../adapters/sqlite/launch-observation-repository';
-import { OmpClientAdapter, ClaudeClientAdapter, InMemoryClientAdapterRegistry } from '../adapters/clients/client-adapters';
+import { OmpAgentAdapter, ClaudeAgentAdapter, InMemoryAgentAdapterRegistry } from '../adapters/clients/client-adapters';
 import { prepareActivation } from './activation';
-import { clientId as toClientId } from '../domain/client';
+import { agentId as toAgentId } from '../domain/agent';
 import type { ExistingPublicApplicationPorts, HarnessControlPlanePort } from './ports/harness';
 import { createHarnessControlPlaneFacade } from './harness-facade';
 
@@ -18,25 +18,25 @@ export async function createProductionHarnessControlPlaneFacade(): Promise<Harne
   const configurations = new SqliteConfigRevisionRepository(store);
   const operations = new SqliteActivationOperationRepository(store);
   const observations = new SqliteLaunchObservationRepository(store);
-  const adapters = new InMemoryClientAdapterRegistry([new OmpClientAdapter(), new ClaudeClientAdapter()]);
+  const adapters = new InMemoryAgentAdapterRegistry([new OmpAgentAdapter(), new ClaudeAgentAdapter()]);
   const sourceVersion = '1';
   const publicPorts: ExistingPublicApplicationPorts = {
-    readRevision: async (revisionId, clientId) => {
-      try { return await configurations.findById(revisionId) === null ? unavailable('control-plane.revision.missing') : { revisionId, schemaVersion: 1, clientId, source: 'control-plane', sourceVersion, observedAt: new Date().toISOString() }; } catch { return unavailable('control-plane.revision.unavailable'); }
+    readRevision: async (revisionId, agentId) => {
+      try { return await configurations.findById(revisionId) === null ? unavailable('control-plane.revision.missing') : { revisionId, schemaVersion: 1, agentId, source: 'control-plane', sourceVersion, observedAt: new Date().toISOString() }; } catch { return unavailable('control-plane.revision.unavailable'); }
     },
-    readManifest: async (revisionId, clientId) => {
-      try { const revision = await configurations.findById(revisionId); if (revision === null) return unavailable('control-plane.manifest.revision-missing'); const digest = createHash('sha256').update(JSON.stringify({ revisionId, clientId, capabilities: revision.capabilities })).digest('hex'); return { revisionId, clientId, manifestDigest: digest, itemCount: revision.capabilities.length, source: 'control-plane', sourceVersion, observedAt: new Date().toISOString() }; } catch { return unavailable('control-plane.manifest.unavailable'); }
+    readManifest: async (revisionId, agentId) => {
+      try { const revision = await configurations.findById(revisionId); if (revision === null) return unavailable('control-plane.manifest.revision-missing'); const digest = createHash('sha256').update(JSON.stringify({ revisionId, agentId, capabilities: revision.capabilities })).digest('hex'); return { revisionId, agentId, manifestDigest: digest, itemCount: revision.capabilities.length, source: 'control-plane', sourceVersion, observedAt: new Date().toISOString() }; } catch { return unavailable('control-plane.manifest.unavailable'); }
     },
-    probe: async (requestedClientId) => {
+    probe: async (requestedAgentId) => {
       try {
-        const adapter = requestedClientId === 'claude' ? adapters.get(toClientId('claude-code')) : requestedClientId === 'omp' ? adapters.get(toClientId('omp')) : null;
-        if (adapter === null) return { clientId: requestedClientId, clientVersion: 'unknown', status: 'unsupported', source: 'control-plane', sourceVersion, reasonCode: 'control-plane.client.unsupported', observedAt: new Date().toISOString() };
+        const adapter = requestedAgentId === 'claude' ? adapters.get(toAgentId('claude-code')) : requestedAgentId === 'omp' ? adapters.get(toAgentId('omp')) : null;
+        if (adapter === null) return { agentId: requestedAgentId, agentVersion: 'unknown', status: 'unsupported', source: 'control-plane', sourceVersion, reasonCode: 'control-plane.agent.unsupported', observedAt: new Date().toISOString() };
         const capability = await adapter.probe();
-        return { clientId: requestedClientId, clientVersion: capability.version.kind === 'known' ? capability.version.value : 'unknown', status: capability.level, source: 'control-plane', sourceVersion, reasonCode: capability.reason, observedAt: new Date().toISOString() };
+        return { agentId: requestedAgentId, agentVersion: capability.version.kind === 'known' ? capability.version.value : 'unknown', status: capability.level, source: 'control-plane', sourceVersion, reasonCode: capability.evidenceRef, observedAt: new Date().toISOString() };
       } catch { return unavailable('control-plane.capability.unavailable'); }
     },
-    planLaunch: async (revisionId, requestedClientId) => {
-      try { const operation = await prepareActivation({ configurations, operations, observations, adapters }, { revisionId, clientId: requestedClientId === 'claude' ? 'claude-code' : 'omp' }); return { revisionId, clientId: requestedClientId, planDigest: operation.planHash, launchBoundary: 'invocation-scoped', source: 'control-plane', sourceVersion, observedAt: new Date().toISOString() }; } catch { return unavailable('control-plane.launch.unavailable'); }
+    planLaunch: async (revisionId, requestedAgentId) => {
+      try { const operation = await prepareActivation({ configurations, operations, observations, adapters }, { revisionId, agentId: requestedAgentId === 'claude' ? 'claude-code' : 'omp' }); return { revisionId, agentId: requestedAgentId, planDigest: operation.planHash, launchBoundary: 'invocation-scoped', source: 'control-plane', sourceVersion, observedAt: new Date().toISOString() }; } catch { return unavailable('control-plane.launch.unavailable'); }
     },
   };
   return createHarnessControlPlaneFacade(publicPorts);

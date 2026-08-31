@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { validateCapabilityReference } from '../../src/domain/capability';
 import { configurationName, configurationRevisionId, validateConfigurationRevision, type ConfigurationRevision } from '../../src/domain/configuration';
-import { clientId } from '../../src/domain/client';
+import { agentId } from '../../src/domain/agent';
 import { createActivationOperation, transitionActivationOperation } from '../../src/domain/activation-operation';
 import { createLaunchObservation } from '../../src/domain/launch-observation';
 
@@ -27,7 +27,7 @@ describe('canonical domain', () => {
   });
 
   test('separates activation operation transitions from launch observations', () => {
-    const operation = createActivationOperation({ operationId: 'op-1', revisionId: revision.revisionId, configName: revision.configName, clientId: clientId('omp'), planHash: 'hash', createdAt: revision.createdAt });
+    const operation = createActivationOperation({ operationId: 'op-1', revisionId: revision.revisionId, configName: revision.configName, agentId: agentId('omp'), planHash: 'hash', createdAt: revision.createdAt });
     const awaiting = transitionActivationOperation(operation, { type: 'awaiting-confirmation' });
     expect(awaiting.ok).toBe(true);
     if (!awaiting.ok) return;
@@ -39,7 +39,7 @@ describe('canonical domain', () => {
     if (!succeeded.ok) return;
     const restart = transitionActivationOperation(succeeded.operation, { type: 'requires-restart', reason: 'switch' });
     expect(restart.ok).toBe(true);
-    const observation = createLaunchObservation({ operationId: 'op-1', clientId: clientId('omp'), stage: 'outcome-observed', outcome: 'succeeded', processReference: undefined, reason: undefined, observedAt: revision.createdAt });
+    const observation = createLaunchObservation({ operationId: 'op-1', agentId: agentId('omp'), stage: 'outcome-observed', outcome: 'succeeded', processReference: undefined, reason: undefined, observedAt: revision.createdAt });
     expect(observation.stage).toBe('outcome-observed');
     expect('phase' in observation).toBe(false);
   });

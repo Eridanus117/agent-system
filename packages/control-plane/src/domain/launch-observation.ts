@@ -1,4 +1,4 @@
-import type { ClientId } from './client';
+import type { AgentId } from './agent';
 
 export type LaunchObservationStage = 'process-started' | 'context-written' | 'process-exited' | 'outcome-observed';
 export type LaunchObservationOutcome = 'succeeded' | 'degraded' | 'failed' | 'incomplete' | 'unknown' | 'not-available';
@@ -36,7 +36,7 @@ function normalizeReason(value: string | undefined): string | undefined {
 export interface LaunchObservation {
   readonly observationId: string;
   readonly operationId: string;
-  readonly clientId: ClientId;
+  readonly agentId: AgentId;
   readonly stage: LaunchObservationStage;
   readonly outcome: LaunchObservationOutcome;
   readonly processReference: ProcessReference | undefined;

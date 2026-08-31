@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { materializeClaudeContent } from '../../src/adapters/clients/claude/content-materializer';
-import { ClaudeClientAdapter } from '../../src/adapters/clients/client-adapters';
+import { ClaudeAgentAdapter } from '../../src/adapters/clients/client-adapters';
 import { configurationName, configurationRevisionId, type ConfigurationRevision } from '../../src/domain/configuration';
 
 describe('materializeClaudeContent', () => {
@@ -46,7 +46,7 @@ describe('materializeClaudeContent', () => {
     };
     const result = await materializeClaudeContent(revision, invocationDir);
 
-    const adapter = new ClaudeClientAdapter();
+    const adapter = new ClaudeAgentAdapter();
     const prepared = await adapter.prepare({ operationId: 'operation-1', revision });
     expect(prepared.manifestHash).toMatch(/^[0-9a-f]{64}$/u);
     await adapter.abort?.({ operationId: 'operation-1', revision, prepared });
@@ -86,7 +86,7 @@ describe('materializeClaudeContent', () => {
 
     expect(result.instructions.appendSystemPromptText).toBeNull();
     expect(result.instructions.failures).toHaveLength(1);
-    await expect(new ClaudeClientAdapter().prepare({ operationId: 'operation-missing', revision })).rejects.toThrow('content-materialization-failed');
+    await expect(new ClaudeAgentAdapter().prepare({ operationId: 'operation-missing', revision })).rejects.toThrow('content-materialization-failed');
   });
 });
 

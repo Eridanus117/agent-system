@@ -5,13 +5,13 @@ export interface HarnessUnknown {
   readonly recovery: string;
 }
 
-export type HarnessClientId = 'omp' | 'claude';
-export type HarnessProbeClientId = HarnessClientId | 'codex' | 'opencode';
+export type HarnessAgentId = 'omp' | 'claude';
+export type HarnessProbeAgentId = HarnessAgentId | 'codex' | 'opencode';
 
 export interface HarnessConfigRevisionRef {
   readonly revisionId: string;
   readonly schemaVersion: number;
-  readonly clientId: HarnessClientId;
+  readonly agentId: HarnessAgentId;
   readonly source: string;
   readonly sourceVersion: string;
   readonly observedAt: string;
@@ -19,7 +19,7 @@ export interface HarnessConfigRevisionRef {
 
 export interface HarnessAssemblyManifestRef {
   readonly revisionId: string;
-  readonly clientId: HarnessClientId;
+  readonly agentId: HarnessAgentId;
   readonly manifestDigest: string;
   readonly itemCount: number;
   readonly source: string;
@@ -27,9 +27,9 @@ export interface HarnessAssemblyManifestRef {
   readonly observedAt: string;
 }
 
-export interface HarnessClientCapability {
-  readonly clientId: HarnessProbeClientId;
-  readonly clientVersion: string;
+export interface HarnessAgentCapability {
+  readonly agentId: HarnessProbeAgentId;
+  readonly agentVersion: string;
   readonly status: 'supported' | 'degraded' | 'unsupported' | 'unknown';
   readonly source: string;
   readonly sourceVersion: string;
@@ -39,7 +39,7 @@ export interface HarnessClientCapability {
 
 export interface HarnessLaunchPlanRef {
   readonly revisionId: string;
-  readonly clientId: HarnessClientId;
+  readonly agentId: HarnessAgentId;
   readonly planDigest: string;
   readonly launchBoundary: 'invocation-scoped';
   readonly source: string;
@@ -48,16 +48,16 @@ export interface HarnessLaunchPlanRef {
 }
 
 export interface HarnessControlPlanePort {
-  readConfigRevision(revisionId: string, clientId: HarnessClientId): Promise<HarnessConfigRevisionRef | HarnessUnknown>;
-  readAssemblyManifest(revisionId: string, clientId: HarnessClientId): Promise<HarnessAssemblyManifestRef | HarnessUnknown>;
-  probeClient(clientId: HarnessProbeClientId): Promise<HarnessClientCapability | HarnessUnknown>;
-  prepareLaunch(revisionId: string, clientId: HarnessClientId): Promise<HarnessLaunchPlanRef | HarnessUnknown>;
+  readConfigRevision(revisionId: string, agentId: HarnessAgentId): Promise<HarnessConfigRevisionRef | HarnessUnknown>;
+  readAssemblyManifest(revisionId: string, agentId: HarnessAgentId): Promise<HarnessAssemblyManifestRef | HarnessUnknown>;
+  probeAgent(agentId: HarnessProbeAgentId): Promise<HarnessAgentCapability | HarnessUnknown>;
+  prepareLaunch(revisionId: string, agentId: HarnessAgentId): Promise<HarnessLaunchPlanRef | HarnessUnknown>;
 }
 
 export interface ExistingPublicApplicationPorts {
   readonly readRevision: HarnessControlPlanePort['readConfigRevision'];
   readonly readManifest: HarnessControlPlanePort['readAssemblyManifest'];
-  readonly probe: HarnessControlPlanePort['probeClient'];
+  readonly probe: HarnessControlPlanePort['probeAgent'];
   readonly planLaunch: HarnessControlPlanePort['prepareLaunch'];
 }
 
