@@ -306,4 +306,27 @@ describe('scheduling application use cases', () => {
     context.operations.failUpdate = true;
     await expect(dispatchAgentSchedule(context, { scheduleId: 'schedule-1', operationId: 'operation-1', manifestHash: 'sha256:manifest' })).rejects.toBeInstanceOf(AggregateError);
   });
+  test('dispatch rejects incomplete revision evidence before scheduler side effect', async () => {
+    const context = deps();
+    await createAgentSchedule(context, schedule());
+    context.configurations.value = { ...revision(), availability: { kind: 'unknown', reason: 'not resolved', observedAt: NOW } };
+    await expect(dispatchAgentSchedule(context, { scheduleId: 'schedule-1', operationId: 'operation-1', manifestHash: 'sha256:manifest' })).rejects.toThrow(/availability|resolved|unknown/u);
+    expect(context.scheduler.creates).toBe(0);
+    expect((await context.operations.findById('operation-1'))?.phase).toBeUndefined();
+  });
+
+  test('persistence failure exposes scheduler error and leaves planned operation', async () => {
+    const context = deps();
+    const schedulerError = Object.assign(new Error('scheduler unavailable'), { code: 'unavailable' });
+    context.scheduler.failure = schedulerError;
+    await createAgentSchedule(context, schedule());
+    context.operations.failUpdate = true;
+    const thrown = await dispatchAgentSchedule(context, { scheduleId: 'schedule-1', operationId: 'operation-1', manifestHash: 'sha256:manifest' }).catch((error: unknown) => error);
+    expect(thrown).toBeInstanceOf(AggregateError);
+    if (thrown instanceof AggregateError) {
+      expect(thrown.errors[0]).toBe(schedulerError);
+      expect((thrown.errors[1] as Error).message).toBe('persistence failure');
+    }
+    expect((await context.operations.findById('operation-1'))?.phase).toBe('planned');
+  });
 });

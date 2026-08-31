@@ -4,9 +4,8 @@ import type { ConfigurationRepository } from './ports/configuration-repository';
 import type { AgentScheduleRepository } from './ports/schedule-repository';
 import type { DispatchOperationRepository } from './ports/dispatch-repository';
 import type { AgentSchedulerPort } from './ports/scheduler';
-import type { AgentId, AgentCapabilitySnapshot, SupportLevel } from '../domain/agent';
-import { agentId } from '../domain/agent';
-import type { ConfigurationRevision } from '../domain/configuration';
+import { agentId, validateAgentCapabilitySnapshot, type AgentId, type AgentCapabilitySnapshot, type SupportLevel } from '../domain/agent';
+import { validateConfigurationRevision, type ConfigurationRevision } from '../domain/configuration';
 import {
   createAgentScheduleIntent,
   createOrcaAutomationReceipt,
@@ -149,8 +148,21 @@ async function validateSchedule(deps: SchedulingDependencies, schedule: AgentSch
   if (descriptor === null || descriptor.id !== schedule.agentId) throw new SchedulingError('agent-not-found', `Agent not found: ${schedule.agentId}`);
   const revision = await deps.configurations.findById(schedule.revisionId);
   if (revision === null) throw new SchedulingError('revision-not-found', `revision not found: ${schedule.revisionId}`);
+  try {
+    validateConfigurationRevision(revision);
+  } catch (error) {
+    throw new SchedulingError('revision-agent-mismatch', `revision evidence invalid: ${error instanceof Error ? error.message : 'unknown error'}`);
+  }
+  if (revision.availability.kind !== 'known' || revision.availability.value !== 'resolved') {
+    throw new SchedulingError('revision-agent-mismatch', 'revision availability is not resolved');
+  }
   if (revision.revisionId !== schedule.revisionId) throw new SchedulingError('revision-agent-mismatch', 'revision correlation mismatch');
   const snapshot = await deps.registry.probe(schedule.agentId, revision);
+  try {
+    validateAgentCapabilitySnapshot(snapshot);
+  } catch (error) {
+    throw new SchedulingError('agent-capability-unsupported', `capability evidence invalid: ${error instanceof Error ? error.message : 'unknown error'}`);
+  }
   assertSupportedCapability(snapshot, schedule);
   for (const capability of revision.capabilities) {
     const level: SupportLevel | undefined = snapshot.capabilities[capability.name];
