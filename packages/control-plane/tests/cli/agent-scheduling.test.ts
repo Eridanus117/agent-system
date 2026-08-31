@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
-import { SqliteStore } from '../../src/adapters/sqlite/store';
 import { mkdtemp, rm } from 'node:fs/promises';
+import { SqliteStore } from '../../src/adapters/sqlite/store';
+import { SqliteConfigRevisionRepository } from '../../src/adapters/sqlite/repository';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -262,10 +263,15 @@ describe('agent scheduling CLI', () => {
   test('default dry-run opens an isolated readonly snapshot without mutating database sidecars', async () => {
     const databasePath = path.join(tempRoot!, 'readonly-existing.sqlite3');
     const seeded = new SqliteStore(databasePath);
+    new SqliteConfigRevisionRepository(seeded).seed([revision()]);
     seeded.close();
     const paths = ['', '-wal', '-shm'].map((suffix) => `${databasePath}${suffix}`);
     const before = paths.map((filePath) => existsSync(filePath) ? readFileSync(filePath) : null);
-    const result = await run(['schedule', 'create', '--agent', 'omp', '--revision', 'rev-1', '--trigger', 'bad:value', '--target', 'repo:src', '--session-policy', 'fresh', '--dry-run'], { databasePath, now: () => now });
+    const registry = new FakeRegistry([descriptor('omp', 'evidence://inventory/omp')], new Map([['omp', snapshot('omp', 'supported')]]));
+    const success = await run(['schedule', 'create', '--agent', 'omp', '--revision', 'rev-1', '--trigger', 'preset:hourly', '--target', 'repo:src', '--session-policy', 'fresh', '--dry-run'], { databasePath, registry, now: () => now });
+    expect(success.code).toBe(0);
+    expect(parse(success.stdout).externalCall).toBe(false);
+    const result = await run(['schedule', 'create', '--agent', 'omp', '--revision', 'rev-1', '--trigger', 'bad:value', '--target', 'repo:src', '--session-policy', 'fresh', '--dry-run'], { databasePath, registry, now: () => now });
     expect(result.code).toBe(1);
     expect(result.stderr).toBe('schedule error: invalid-trigger');
     for (const [index, filePath] of paths.entries()) {
