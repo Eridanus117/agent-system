@@ -8,6 +8,7 @@ completed
 
 - `db38bd6` — `feat: 建立 Agent 调度与派发领域事实`
 - `7c8f1b2` — `fix: 收紧 Agent 调度领域事实边界`
+- `d6fe87e` — `fix: 收紧 Agent 调度引用与事件边界`
 
 ## changed files
 
@@ -96,3 +97,41 @@ completed
 - trigger/target 的嵌套 prompt/task/credentials/transcript 注入、receipt 顶层及嵌套注入均被拒绝；构造成功对象只含合同字段且嵌套对象为受控副本。
 - `evidence://precheck-1`、`context://source-1`、`orca:automation:automation-1` 保持合法；空格和 forbidden raw-text schemes 被拒绝。
 - 未触碰 `.orca/`，未引入 Orca/Bun/SQLite/process/filesystem/projection imports。
+
+## fix round 2
+
+### status
+
+completed
+
+### commit
+
+- `d6fe87e` — `fix: 收紧 Agent 调度引用与事件边界`
+
+### changed files
+
+- `packages/control-plane/src/domain/dispatch-operation.ts`
+  - 在读取事件类型前验证 runtime event shape；null、undefined、非对象及未知类型统一返回 `{ ok: false, reason: 'invalid-event' }`。
+- `packages/control-plane/src/domain/schedule.ts`
+  - controlled reference 从 denylist 收紧为 positive ASCII scheme allowlist，仅接受 `evidence://...`、`context://...` 与 `orca:...`。
+- `packages/control-plane/tests/domain/dispatch-operation.test.ts`
+  - 新增 null、undefined、string、number、空对象 malformed event 边界测试。
+- `packages/control-plane/tests/domain/schedule.test.ts`
+  - 新增 `foo://x`、`http://x` arbitrary scheme 边界测试，覆盖 schedule refs 与 receipt source evidence。
+
+### commands and observed outputs
+
+1. `bun test packages/control-plane/tests/domain/schedule.test.ts packages/control-plane/tests/domain/dispatch-operation.test.ts`
+   - RED：`16 pass, 2 fail`；malformed null event 抛 TypeError，`foo://x` 未被拒绝。
+2. `bun run --cwd packages/control-plane typecheck`
+   - GREEN：`tsc --noEmit` 成功，无 diagnostics。
+3. `bun test packages/control-plane/tests/domain/schedule.test.ts packages/control-plane/tests/domain/dispatch-operation.test.ts`
+   - GREEN：`18 pass, 0 fail, 113 expect() calls`。
+4. `git diff --check`
+   - 通过，无 whitespace 错误。
+
+### invariant/test evidence
+
+- malformed event 在 `nextPhaseFor` 前被拦截，不会因 `event.type` 解引用向调用方抛出 TypeError。
+- controlled reference 只接受 positive scheme allowlist；未知 `foo`/`http` scheme、空格和 raw forbidden scheme 被拒绝。
+- 前一轮 planned→skipped 无 automationId、dispatched/observing correlation、nested allowlist/clone 与 receipt validator 行为保持通过。
