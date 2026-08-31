@@ -110,6 +110,26 @@ describe('dispatch operation domain facts', () => {
       });
     }
   });
+  test('fails closed without throwing for hostile event objects', () => {
+    const throwingGetter = Object.defineProperty({}, 'type', {
+      get: () => {
+        throw new Error('hostile getter');
+      },
+    });
+    expect(() => transitionDispatchOperation(operation(), throwingGetter as DispatchOperationEvent)).not.toThrow();
+    expect(transitionDispatchOperation(operation(), throwingGetter as DispatchOperationEvent)).toEqual({
+      ok: false,
+      reason: 'invalid-event',
+    });
+
+    const revoked = Proxy.revocable({ type: 'skipped' }, {});
+    revoked.revoke();
+    expect(() => transitionDispatchOperation(operation(), revoked.proxy as DispatchOperationEvent)).not.toThrow();
+    expect(transitionDispatchOperation(operation(), revoked.proxy as DispatchOperationEvent)).toEqual({
+      ok: false,
+      reason: 'invalid-event',
+    });
+  });
 
   test('allows the planned, dispatched, observing, and succeeded path', () => {
     const planned = createDispatchOperation({

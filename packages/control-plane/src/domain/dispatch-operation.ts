@@ -51,7 +51,6 @@ const DISPATCH_PHASES: readonly DispatchOperationPhase[] = [
 ];
 const TERMINAL_PHASES: readonly DispatchOperationPhase[] = ['succeeded', 'degraded', 'failed', 'skipped', 'unknown'];
 const DISPATCH_OPERATION_KEYS = ['operationId', 'scheduleId', 'agentId', 'revisionId', 'target', 'phase', 'automationId', 'manifestHash', 'createdAt', 'updatedAt', 'terminalReason'] as const;
-const DISPATCH_EVENT_TYPES: readonly DispatchOperationEvent['type'][] = ['dispatched', 'observing', 'succeeded', 'degraded', 'failed', 'skipped', 'unknown'];
 
 function requireNonEmptyText(value: unknown, label: string): asserts value is string {
   if (typeof value !== 'string' || value.trim().length === 0) throw new Error(`${label} must not be empty`);
@@ -62,10 +61,34 @@ function requireDispatchOperationKeys(operation: object): void {
     if (!(DISPATCH_OPERATION_KEYS as readonly string[]).includes(key)) throw new Error(`dispatch operation contains unknown field: ${key}`);
   }
 }
-function isDispatchOperationEvent(value: unknown): value is DispatchOperationEvent {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
-  if (Object.getPrototypeOf(value) !== Object.prototype || !('type' in value)) return false;
-  return typeof value.type === 'string' && (DISPATCH_EVENT_TYPES as readonly string[]).includes(value.type);
+function normalizeDispatchOperationEvent(value: unknown): DispatchOperationEvent | null {
+  try {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+    if (Object.getPrototypeOf(value) !== Object.prototype || !('type' in value)) return null;
+    const eventRecord = value as { readonly type?: unknown; readonly automationId?: unknown; readonly reason?: unknown };
+    const reason = eventRecord.reason;
+    if (reason !== undefined && typeof reason !== 'string') return null;
+    switch (eventRecord.type) {
+      case 'dispatched':
+        return typeof eventRecord.automationId === 'string' ? { type: 'dispatched', automationId: eventRecord.automationId } : null;
+      case 'observing':
+        return { type: 'observing' };
+      case 'succeeded':
+        return reason === undefined ? { type: 'succeeded' } : { type: 'succeeded', reason };
+      case 'degraded':
+        return reason === undefined ? { type: 'degraded' } : { type: 'degraded', reason };
+      case 'failed':
+        return reason === undefined ? { type: 'failed' } : { type: 'failed', reason };
+      case 'skipped':
+        return reason === undefined ? { type: 'skipped' } : { type: 'skipped', reason };
+      case 'unknown':
+        return reason === undefined ? { type: 'unknown' } : { type: 'unknown', reason };
+      default:
+        return null;
+    }
+  } catch {
+    return null;
+  }
 }
 
 export function validateDispatchOperation(operation: DispatchOperation): void {
@@ -128,27 +151,28 @@ export function transitionDispatchOperation(
   operation: DispatchOperation,
   event: DispatchOperationEvent,
 ): { readonly ok: true; readonly operation: DispatchOperation } | { readonly ok: false; readonly reason: string } {
-  if (!isDispatchOperationEvent(event)) return { ok: false, reason: 'invalid-event' };
+  const safeEvent = normalizeDispatchOperationEvent(event);
+  if (safeEvent === null) return { ok: false, reason: 'invalid-event' };
   try {
     validateDispatchOperation(operation);
   } catch {
     return { ok: false, reason: 'invalid-operation' };
   }
-  const nextPhase = nextPhaseFor(operation.phase, event);
-  if (nextPhase === null) return { ok: false, reason: `invalid-transition:${operation.phase}:${event.type}` };
+  const nextPhase = nextPhaseFor(operation.phase, safeEvent);
+  if (nextPhase === null) return { ok: false, reason: `invalid-transition:${operation.phase}:${safeEvent.type}` };
 
-  if (event.type === 'dispatched') {
+  if (safeEvent.type === 'dispatched') {
     try {
-      requireNonEmptyText(event.automationId, 'automation id');
+      requireNonEmptyText(safeEvent.automationId, 'automation id');
     } catch {
       return { ok: false, reason: 'invalid-event:dispatched:automation-id' };
     }
   }
-  if (event.type !== 'observing' && event.type !== 'dispatched' && event.reason !== undefined) {
+  if (safeEvent.type !== 'observing' && safeEvent.type !== 'dispatched' && safeEvent.reason !== undefined) {
     try {
-      requireNonEmptyText(event.reason, 'terminal reason');
+      requireNonEmptyText(safeEvent.reason, 'terminal reason');
     } catch {
-      return { ok: false, reason: `invalid-event:${event.type}:reason` };
+      return { ok: false, reason: `invalid-event:${safeEvent.type}:reason` };
     }
   }
 
@@ -159,11 +183,11 @@ export function transitionDispatchOperation(
     revisionId: operation.revisionId,
     target: normalizeDispatchTarget(operation.target),
     phase: nextPhase,
-    automationId: event.type === 'dispatched' ? event.automationId.trim() : operation.automationId,
+    automationId: safeEvent.type === 'dispatched' ? safeEvent.automationId.trim() : operation.automationId,
     manifestHash: operation.manifestHash,
     createdAt: operation.createdAt,
     updatedAt: new Date().toISOString(),
-    terminalReason: event.type === 'observing' || event.type === 'dispatched' ? operation.terminalReason : event.reason?.trim() ?? operation.terminalReason,
+    terminalReason: safeEvent.type === 'observing' || safeEvent.type === 'dispatched' ? operation.terminalReason : safeEvent.reason?.trim() ?? operation.terminalReason,
   };
   try {
     validateDispatchOperation(next);
