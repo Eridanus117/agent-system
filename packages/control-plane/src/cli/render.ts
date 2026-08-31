@@ -46,7 +46,7 @@ import type { ValidatedSchedule } from '../application/scheduling';
 
 const CONTROLLED_REFERENCE = /^(?:evidence:\/\/[A-Za-z0-9._~/-]+|context:\/\/[A-Za-z0-9._~/-]+|orca:[A-Za-z0-9._~:/-]+)$/;
 const SAFE_LABEL = /^[A-Za-z0-9._ ()/:-]{1,128}$/;
-const SAFE_TEXT = /^(?!.*(?:credential|prompt|task|transcript|environment|secret))[A-Za-z0-9._ ()/:-]{1,128}$/i;
+const SAFE_TEXT = /^(?!.*(?:credential|prompt|task|transcript|environment|secret))(?!.*:\/\/)(?!.*=)[A-Za-z0-9._ ()/:-]{1,128}$/i;
 const SAFE_SELECTOR = /^[A-Za-z0-9._~:/\\ -]{1,256}$/;
 const SAFE_CRON = /^[0-9*/?, -]{1,128}$/;
 const SAFE_RRULE = /^FREQ=(?:MINUTELY|HOURLY|DAILY|WEEKLY|MONTHLY|YEARLY)(?:;(?:INTERVAL|BYDAY|BYHOUR|BYMINUTE|BYMONTHDAY|BYMONTH|COUNT|UNTIL|WKST|BYSETPOS)=[A-Za-z0-9,.*?+TZ-]+)*$/;
@@ -68,7 +68,9 @@ function projectReference(value: unknown): string | null {
 function projectTimestamp(value: unknown): string {
   if (!matches(value, SAFE_TIMESTAMP)) return 'unknown';
   const parsed = Date.parse(value);
-  return Number.isNaN(parsed) ? 'unknown' : new Date(parsed).toISOString();
+  if (Number.isNaN(parsed)) return 'unknown';
+  const canonical = new Date(parsed).toISOString();
+  return canonical === value ? value : 'unknown';
 }
 function projectIdentifier(value: unknown): string {
   return matches(value, SAFE_PROBE_ID) ? value : 'unknown';

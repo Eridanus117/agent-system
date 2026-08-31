@@ -151,8 +151,8 @@ describe('agent scheduling CLI', () => {
 
   test('projections strictly redact uncontrolled evidence, target, trigger and terminal values', async () => {
     const registry = new FakeRegistry(
-      [{ id: agentId('omp'), displayName: 'prompt secret', provider: 'credentials://provider-secret', sourceEvidence: 'transcript://private' }],
-      new Map([['omp', { ...snapshot('omp', 'prompt=secret' as AgentCapabilitySnapshot['level']), probeId: ['transcript=secret'] as unknown as string, capabilities: { scheduling: 'supported', credentials: 'supported', prompt: 'supported', transcript: 'supported' }, observedAt: '2026-99-99T99:99:99.999Z', evidenceRef: 'credentials://agent-secret', version: { kind: 'unknown', reason: 'prompt secret', observedAt: 'transcript=secret' } }]]),
+      [{ id: agentId('omp'), displayName: 'vault://private', provider: 'token://abc', sourceEvidence: 'transcript://private' }],
+      new Map([['omp', { ...snapshot('omp', 'prompt=secret' as AgentCapabilitySnapshot['level']), probeId: ['transcript=secret'] as unknown as string, capabilities: { scheduling: 'supported', credentials: 'supported', prompt: 'supported', transcript: 'supported' }, observedAt: '2026-02-31T00:00:00.000Z', evidenceRef: 'credentials://agent-secret', version: { kind: 'unknown', reason: 'prompt secret', observedAt: 'transcript=secret' } }]]),
     );
     const result = await run(['agents', 'probe', 'omp'], makeOverrides(registry, new FakeScheduler(), new FakeSchedules(), new FakeOperations()));
     expect((parse(result.stdout).agent as Record<string, unknown>).probeId).toBe('unknown');
@@ -162,6 +162,8 @@ describe('agent scheduling CLI', () => {
     expect(((parse(result.stdout).agent as Record<string, unknown>).version as Record<string, unknown>).reason).toBe('unknown');
     expect(result.code).toBe(0);
     expect(result.stdout).not.toContain('credentials://');
+    expect(result.stdout).not.toContain('vault://');
+    expect(result.stdout).not.toContain('token://');
     expect(result.stdout).not.toContain('transcript://');
     expect(result.stdout).not.toContain('prompt=');
     const safeRegistry = new FakeRegistry([descriptor('omp', 'evidence://inventory/omp')], new Map([['omp', { ...snapshot('omp', 'supported'), observedAt: 'transcript=secret' }]]));
