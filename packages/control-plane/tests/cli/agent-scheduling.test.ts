@@ -138,6 +138,32 @@ describe('agent scheduling CLI', () => {
     expect(existsSync(path.join(tempRoot!, 'control-plane.sqlite3'))).toBe(false);
   });
 
+  test('agents projections fail closed for malformed inventory evidence and mismatched probe identity', async () => {
+    const registry = new FakeRegistry(
+      [descriptor('garbage', 'inventory-without-controlled-reference'), descriptor('omp', 'evidence://inventory/omp')],
+      new Map([
+        ['garbage', snapshot('garbage', 'supported')],
+        ['omp', snapshot('claude-code', 'supported')],
+      ]),
+    );
+    const listed = await run(['agents', 'list'], makeOverrides(registry, new FakeScheduler(), new FakeSchedules(), new FakeOperations()));
+    const agents = (parse(listed.stdout).agents as readonly Record<string, unknown>[]);
+    const malformed = agents.find((item) => item.id === 'garbage')!;
+    expect(malformed.level).toBe('unknown');
+    const mismatched = agents.find((item) => item.id === 'omp')!;
+    expect(mismatched.level).toBe('unknown');
+    expect(mismatched.version).toEqual({ kind: 'unknown', reason: 'version-evidence-invalid', observedAt: 'unknown' });
+    expect(mismatched.probeId).toBe('unknown');
+    expect(mismatched.capabilities).toEqual({});
+    expect(mismatched.evidenceRef).toBe('unknown');
+    expect(mismatched.observedAt).toBe('unknown');
+    const probed = await run(['agents', 'probe', 'omp'], makeOverrides(registry, new FakeScheduler(), new FakeSchedules(), new FakeOperations()));
+    const probe = parse(probed.stdout).agent as Record<string, unknown>;
+    expect(probe.level).toBe('unknown');
+    expect(probe.probeId).toBe('unknown');
+    expect(probe.evidenceRef).toBe('unknown');
+  });
+
   test('agents probe returns allowlisted JSON and unknown agent is a contained failure', async () => {
     const registry = new FakeRegistry([descriptor('omp', 'evidence://inventory/omp')], new Map([['omp', snapshot('omp', 'supported')]]));
     const overrides = makeOverrides(registry, new FakeScheduler(), new FakeSchedules(), new FakeOperations());

@@ -118,18 +118,24 @@ function projectCapabilities(capabilities: unknown): Record<string, AgentCapabil
 }
 export function projectAgent(descriptor: AgentDescriptor, snapshot: AgentCapabilitySnapshot, preserveUnknownInventory = false): Record<string, unknown> {
   const value = typeof snapshot === 'object' && snapshot !== null ? snapshot as unknown as Record<string, unknown> : {};
-  const level = typeof value.level === 'string' && SUPPORT_LEVELS.has(value.level as AgentCapabilitySnapshot['level']) ? value.level : 'unknown';
+  const identityMatches = value.agentId === descriptor.id;
+  const projectedSnapshot = identityMatches ? value : {};
+  const level = typeof projectedSnapshot.level === 'string' && SUPPORT_LEVELS.has(projectedSnapshot.level as AgentCapabilitySnapshot['level']) ? projectedSnapshot.level : 'unknown';
   return {
     id: projectIdentifier(descriptor.id),
     displayName: projectLabel(descriptor.displayName),
     provider: projectLabel(descriptor.provider),
-    level: preserveUnknownInventory ? 'unknown' : level,
-    version: projectVersion(value.version, value.observedAt),
-    probeId: matches(value.probeId, SAFE_PROBE_ID) ? value.probeId : 'unknown',
-    capabilities: projectCapabilities(value.capabilities),
-    evidenceRef: projectReference(value.evidenceRef) ?? projectReference(descriptor.sourceEvidence) ?? 'unknown',
-    observedAt: projectTimestamp(value.observedAt),
+    level: preserveUnknownInventory || !identityMatches ? 'unknown' : level,
+    version: projectVersion(projectedSnapshot.version, projectedSnapshot.observedAt),
+    probeId: matches(projectedSnapshot.probeId, SAFE_PROBE_ID) ? projectedSnapshot.probeId : 'unknown',
+    capabilities: projectCapabilities(projectedSnapshot.capabilities),
+    evidenceRef: identityMatches ? projectReference(projectedSnapshot.evidenceRef) ?? projectReference(descriptor.sourceEvidence) ?? 'unknown' : 'unknown',
+    observedAt: projectTimestamp(projectedSnapshot.observedAt),
   };
+}
+
+function hasControlledInventoryEvidence(value: unknown): value is string {
+  return matches(value, /^evidence:\/\/[A-Za-z0-9._~/-]+$/);
 }
 
 export function renderAgentListJson(items: readonly { readonly descriptor: AgentDescriptor; readonly snapshot: AgentCapabilitySnapshot }[]): string {
@@ -137,13 +143,14 @@ export function renderAgentListJson(items: readonly { readonly descriptor: Agent
     agents: items.map((item) => projectAgent(
       item.descriptor,
       item.snapshot,
-      typeof item.descriptor.sourceEvidence === 'string' && item.descriptor.sourceEvidence.startsWith('unknown:'),
+      !hasControlledInventoryEvidence(item.descriptor.sourceEvidence),
     )),
   });
 }
 export function renderAgentProbeJson(descriptor: AgentDescriptor, snapshot: AgentCapabilitySnapshot): string {
-  return JSON.stringify({ agent: projectAgent(descriptor, snapshot) });
+  return JSON.stringify({ agent: projectAgent(descriptor, snapshot, !hasControlledInventoryEvidence(descriptor.sourceEvidence)) });
 }
+
 
 function projectSchedule(schedule: AgentScheduleIntent): Record<string, unknown> {
   return {
