@@ -73,7 +73,7 @@ Injected dry-run contract output has stable root keys:
 
 ## Compatibility evidence
 
-- 既有 CLI suite 49 pass；control-plane package suite 184 pass，保留现有 `list/show/use/switch/status/recover/establish/revise/supply` 路径。
+- 最终 CLI suite `50 pass`；control-plane package suite `185 pass`，保留现有 `list/show/use/switch/status/recover/establish/revise/supply` 路径；历史轮次的 49/184 计数仅反映当时尚未加入最终回归用例的状态。
 - `schedule cancel` 通过 application `cancelAgentSchedule`，使用持久化 operation 的精确 automation ID；重复已取消 operation 由 application 幂等返回，不重复调用 scheduler。
 - `agents list` 对 unknown provider inventory 保留 `level: unknown`，即使 probe snapshot 报告 supported；不会仅因 Orca provider 字符串升级支持状态。
 
