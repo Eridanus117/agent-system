@@ -109,6 +109,8 @@ describe('Orca scheduler contract', () => {
     const failures: readonly [StubRunner, OrcaCommandError['code']][] = [
       [runner('', 2, 'permission denied'), 'non-zero-exit'],
       [runner('human readable output'), 'invalid-json'],
+      [runner('1'), 'invalid-output'],
+      [runner('[]'), 'invalid-output'],
       [runner(JSON.stringify({ provider: 'codex', sourceEvidence: 'orca:automation:x' })), 'missing-automation-id'],
       [runner(JSON.stringify({ automationId: 'automation-1', sourceEvidence: 'orca:automation:x' })), 'missing-provider'],
       [runner(JSON.stringify({ automationId: 'automation-1', provider: 'codex' })), 'missing-creation-evidence'],
@@ -121,6 +123,8 @@ describe('Orca scheduler contract', () => {
 
   test('cancels only on matching JSON cancellation confirmation', async () => {
     const command = runner(JSON.stringify({ automationId: 'automation-1', status: 'cancelled' }));
+    const mismatched = runner(JSON.stringify({ automationId: 'automation-2', status: 'cancelled' }));
+    await expect(new OrcaScheduler(mismatched).cancel('automation-1')).rejects.toMatchObject({ code: 'cancellation-mismatch' });
     await new OrcaScheduler(command).cancel('automation-1');
     expect(command.calls[0]).toEqual(['orca', 'automations', 'cancel', '--id', 'automation-1', '--json']);
     const invalidJson = runner('not json');

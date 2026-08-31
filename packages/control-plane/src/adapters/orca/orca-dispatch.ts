@@ -56,6 +56,11 @@ function triggersEqual(left: ScheduleTrigger, right: ScheduleTrigger): boolean {
   return false;
 }
 
+function providerMatchesAgent(provider: string, agent: AgentId): boolean {
+  if (provider === String(agent)) return true;
+  return (provider === 'claude' || provider === 'claude-code')
+    && (String(agent) === 'claude' || String(agent) === 'claude-code');
+}
 function assertCorrelation(input: OrcaDispatchCorrelation): void {
   try {
     validateScheduleTarget(input.target);
@@ -63,6 +68,9 @@ function assertCorrelation(input: OrcaDispatchCorrelation): void {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'receipt or target is invalid';
     throw new OrcaDispatchCorrelationError('invalid-receipt', message);
+  }
+  if (!providerMatchesAgent(input.receipt.provider, input.agentId)) {
+    throw new OrcaDispatchCorrelationError('correlation-mismatch', 'receipt provider does not match dispatch agent');
   }
   if (!targetsEqual(input.receipt.target, input.target)) {
     throw new OrcaDispatchCorrelationError('correlation-mismatch', 'receipt target does not match dispatch target');

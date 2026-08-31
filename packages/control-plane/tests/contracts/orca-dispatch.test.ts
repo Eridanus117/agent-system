@@ -81,6 +81,11 @@ describe('Orca dispatch contract', () => {
       target: { kind: 'repo', selector: 'other/repo' },
     }))).toThrowError(new OrcaDispatchCorrelationError('correlation-mismatch', 'receipt target does not match dispatch target'));
   });
+  test('rejects receipt correlation when provider does not match the requested agent', () => {
+    expect(() => correlateOrcaAutomationReceipt(correlation({
+      receipt: { ...correlation().receipt, provider: 'claude' },
+    }))).toThrowError(new OrcaDispatchCorrelationError('correlation-mismatch', 'receipt provider does not match dispatch agent'));
+  });
 
   test('adapter dispatches one schedule and returns correlated dispatched operation', async () => {
     const receipt = correlation().receipt;
