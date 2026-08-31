@@ -160,10 +160,10 @@
         "help/agents 无 store 快路径；默认 dry-run 使用 DB/sidecar 临时快照，禁止 target 迁移/写入；missing DB 返回 exit1"
       ],
       "evidence": [
-        "base bfdbc00；fix 6e39ebd/a23f7bc；regression 4483cf6；round3 267ad92；round4 8e7cdaf/049ecec；round5 7defb82；round6 ec0cc97；docs 59af058/6934959/e2f8222/ca7fb7e",
-        "bun test packages/control-plane/tests/cli/agent-scheduling.test.ts（14 pass，124 expects）",
-        "bun test packages/control-plane/tests/cli（49 pass，222 expects）",
-        "bun test packages/control-plane/tests（184 pass，672 expects）",
+        "base bfdbc00；fix 6e39ebd/a23f7bc；regression 4483cf6；round3 267ad92；round4 8e7cdaf/049ecec；round5 7defb82；round6 ec0cc97；round7 61b49d2；docs 59af058/6934959/e2f8222/ca7fb7e/ee2b421",
+        "bun test packages/control-plane/tests/cli/agent-scheduling.test.ts（15 pass，134 expects）",
+        "bun test packages/control-plane/tests/cli（50 pass，232 expects）",
+        "bun test packages/control-plane/tests（185 pass，682 expects）",
         "bunx tsc --noEmit -p packages/control-plane/tsconfig.json",
         "bun packages/control-plane/src/cli/index.ts agents list",
         "bun packages/control-plane/src/cli/index.ts schedule create --help"
