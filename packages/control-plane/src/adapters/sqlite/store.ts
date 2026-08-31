@@ -38,10 +38,7 @@ function createReadonlySnapshot(source: string): { readonly databasePath: string
   const directory = mkdtempSync(path.join(tmpdir(), 'configs-readonly-'));
   const snapshot = path.join(directory, path.basename(resolved));
   try {
-    for (const suffix of SQLITE_SNAPSHOT_SIDECARS) {
-      const sourcePath = `${resolved}${suffix}`;
-      if (existsSync(sourcePath)) copyFileSync(sourcePath, `${snapshot}${suffix}`);
-    }
+    if (copyDatabaseConsistently(resolved, snapshot, true) === null) throw new Error(`database does not exist: ${source}`);
     return { databasePath: snapshot, directory };
   } catch (error) {
     rmSync(directory, { force: true, recursive: true });
@@ -49,18 +46,24 @@ function createReadonlySnapshot(source: string): { readonly databasePath: string
   }
 }
 
-function copyDatabase(source: string, staging: string): void {
-  for (const suffix of SQLITE_SNAPSHOT_SIDECARS.slice(0, 2)) {
+function copyDatabase(source: string, staging: string, includeSharedMemory = false): void {
+  const suffixes = includeSharedMemory ? SQLITE_SNAPSHOT_SIDECARS : SQLITE_SNAPSHOT_SIDECARS.slice(0, 2);
+  for (const suffix of suffixes) {
     const sourcePath = `${source}${suffix}`;
-    if (existsSync(sourcePath)) copyFileSync(sourcePath, `${staging}${suffix}`);
+    if (!existsSync(sourcePath)) continue;
+    try {
+      copyFileSync(sourcePath, `${staging}${suffix}`);
+    } catch (error) {
+      if (suffix !== '-shm') throw error;
+    }
   }
 }
-function copyDatabaseConsistently(source: string, staging: string): number | null {
+function copyDatabaseConsistently(source: string, staging: string, includeSharedMemory = false): number | null {
   if (!existsSync(source)) return null;
   const sourceDb = new Database(source);
   try {
     sourceDb.exec('BEGIN IMMEDIATE');
-    copyDatabase(source, staging);
+    copyDatabase(source, staging, includeSharedMemory);
     const dataVersion = sourceDb.query<{ data_version: number }, []>('PRAGMA data_version').get()?.data_version ?? 0;
     sourceDb.exec('COMMIT');
     return dataVersion;
@@ -71,6 +74,7 @@ function copyDatabaseConsistently(source: string, staging: string): number | nul
     sourceDb.close();
   }
 }
+
 function assertSourceUnchanged(source: string, snapshotVersion: number | null): void {
   if (snapshotVersion === null) {
     if (existsSync(source)) throw new Error('source database appeared during migration');
