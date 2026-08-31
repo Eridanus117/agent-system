@@ -329,4 +329,24 @@ describe('scheduling application use cases', () => {
     }
     expect((await context.operations.findById('operation-1'))?.phase).toBe('planned');
   });
+  test('dispatch blocks every incomplete Agent evidence before scheduler side effect', async () => {
+    const mutations: readonly ((context: { readonly registry: FakeRegistry }) => void)[] = [
+      (context) => {
+        context.registry.capability = { ...snapshot(), version: { kind: 'unknown', reason: 'version unavailable', observedAt: NOW } };
+      },
+      (context) => {
+        context.registry.capability = { ...snapshot(), capabilities: {} };
+      },
+      (context) => {
+        context.registry.capability = { ...snapshot(), capabilities: { scheduling: 'unknown' } };
+      },
+    ];
+    for (const mutate of mutations) {
+      const context = deps();
+      await createAgentSchedule(context, schedule());
+      mutate(context);
+      await expect(dispatchAgentSchedule(context, { scheduleId: 'schedule-1', operationId: 'operation-1', manifestHash: 'sha256:manifest' })).rejects.toThrow(/version|scheduling|capability|unknown/u);
+      expect(context.scheduler.creates).toBe(0);
+    }
+  });
 });

@@ -507,7 +507,7 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
 - [ ] **Step 5: Run application and existing contract tests**
 
   ```text
-  bun test packages/control-plane/tests/application/scheduling.test.ts packages/control-plane/tests/contracts/omp-adapter.test.ts packages/control-plane/tests/contracts/claude-materializer.test.ts
+  bun test packages/control-plane/tests/application/scheduling.test.ts packages/control-plane/tests/contracts/agent-adapters.test.ts packages/control-plane/tests/contracts/claude-materializer.test.ts
   bun test packages/control-plane/tests
   bunx tsc --noEmit -p packages/control-plane/tsconfig.json
   ```
