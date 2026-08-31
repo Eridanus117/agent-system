@@ -152,17 +152,22 @@ describe('agent scheduling CLI', () => {
   test('projections strictly redact uncontrolled evidence, target, trigger and terminal values', async () => {
     const registry = new FakeRegistry(
       [{ id: agentId('omp'), displayName: 'safe', provider: 'credentials://provider-secret', sourceEvidence: 'transcript://private' }],
-      new Map([['omp', { ...snapshot('omp', 'supported'), probeId: 'transcript://probe-secret', capabilities: { scheduling: 'supported', credentials: 'supported', prompt: 'supported', transcript: 'supported' }, evidenceRef: 'credentials://agent-secret', version: { kind: 'known', value: 'prompt=hidden' } }]]),
+      new Map([['omp', { ...snapshot('omp', 'prompt=secret' as AgentCapabilitySnapshot['level']), probeId: ['transcript=secret'] as unknown as string, capabilities: { scheduling: 'supported', credentials: 'supported', prompt: 'supported', transcript: 'supported' }, observedAt: 'transcript=secret', evidenceRef: 'credentials://agent-secret', version: { kind: 'unknown', reason: 'ok', observedAt: 'transcript=secret' } }]]),
     );
     const result = await run(['agents', 'probe', 'omp'], makeOverrides(registry, new FakeScheduler(), new FakeSchedules(), new FakeOperations()));
     expect((parse(result.stdout).agent as Record<string, unknown>).probeId).toBe('unknown');
-    expect((parse(result.stdout).agent as Record<string, unknown>).capabilities).toEqual({ scheduling: 'supported' });
+    expect((parse(result.stdout).agent as Record<string, unknown>).level).toBe('unknown');
+    expect((parse(result.stdout).agent as Record<string, unknown>).observedAt).toBe('unknown');
+    expect(((parse(result.stdout).agent as Record<string, unknown>).version as Record<string, unknown>).observedAt).toBe('unknown');
     expect(result.code).toBe(0);
     expect(result.stdout).not.toContain('credentials://');
     expect(result.stdout).not.toContain('transcript://');
     expect(result.stdout).not.toContain('prompt=');
-    const dryRun = await run(['schedule', 'create', '--schedule-id', 'safe', '--agent', 'omp', '--revision', 'rev-1', '--trigger', 'preset:hourly', '--target', 'repo:src', '--session-policy', 'fresh', '--dry-run'], makeOverrides(registry, new FakeScheduler(), new FakeSchedules(), new FakeOperations(), new FakeConfigurations({ ...revision(), evidenceRef: 'credentials://revision-secret' })));
+    const safeRegistry = new FakeRegistry([descriptor('omp', 'evidence://inventory/omp')], new Map([['omp', { ...snapshot('omp', 'supported'), observedAt: 'transcript=secret' }]]));
+    const dryRun = await run(['schedule', 'create', '--schedule-id', 'safe', '--agent', 'omp', '--revision', 'rev-1', '--trigger', 'preset:hourly', '--target', 'repo:src', '--session-policy', 'fresh', '--dry-run'], makeOverrides(safeRegistry, new FakeScheduler(), new FakeSchedules(), new FakeOperations(), new FakeConfigurations({ ...revision(), evidenceRef: 'credentials://revision-secret' })));
     expect(dryRun.code).toBe(0);
+    const dryOutput = parse(dryRun.stdout);
+    expect((dryOutput.timestamps as Record<string, unknown>).observedAt).toBe('unknown');
     expect(dryRun.stdout).not.toContain('credentials://');
     expect(dryRun.stdout).not.toContain('transcript://');
     expect(dryRun.stdout).not.toContain('prompt=');

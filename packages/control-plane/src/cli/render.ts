@@ -51,93 +51,111 @@ const SAFE_CRON = /^[0-9*/?, -]{1,128}$/;
 const SAFE_RRULE = /^FREQ=(?:MINUTELY|HOURLY|DAILY|WEEKLY|MONTHLY|YEARLY)(?:;(?:INTERVAL|BYDAY|BYHOUR|BYMINUTE|BYMONTHDAY|BYMONTH|COUNT|UNTIL|WKST|BYSETPOS)=[A-Za-z0-9,.*?+TZ-]+)*$/;
 const SAFE_CAPABILITY = /^(?!.*(?:credential|prompt|task|transcript|environment|secret))[a-z][a-z0-9._-]{0,63}$/i;
 const SAFE_PROBE_ID = /^(?!.*(?:credential|prompt|task|transcript|environment|secret))[A-Za-z0-9._~:/-]{1,128}$/i;
+const SAFE_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 const SUPPORT_LEVELS = new Set<AgentCapabilitySnapshot['level']>(['supported', 'degraded', 'unsupported', 'unknown']);
 
-function safeSelector(value: string): boolean {
-  return SAFE_SELECTOR.test(value) && !value.includes('://') && !value.includes('=');
+function matches(value: unknown, pattern: RegExp): value is string {
+  return typeof value === 'string' && pattern.test(value);
 }
-function projectReference(value: string | undefined | null): string | null {
-  if (value === null || value === undefined || !CONTROLLED_REFERENCE.test(value)) return null;
-  return value;
+function safeSelector(value: unknown): value is string {
+  return matches(value, SAFE_SELECTOR) && !value.includes('://') && !value.includes('=');
 }
-
-function projectLabel(value: string): string {
-  return SAFE_LABEL.test(value) && !value.includes('://') && !value.includes('=') ? value : 'unknown';
+function projectReference(value: unknown): string | null {
+  return matches(value, CONTROLLED_REFERENCE) ? value : null;
 }
-function projectVersion(version: AgentCapabilitySnapshot['version'], observedAt: string): Record<string, string> {
-  if (version.kind === 'known' && projectLabel(version.value) !== 'unknown') return { kind: 'known', value: version.value };
-  if (version.kind === 'unknown') return { kind: 'unknown', reason: projectLabel(version.reason), observedAt: version.observedAt };
-  return { kind: 'unknown', reason: 'version-evidence-invalid', observedAt };
+function projectTimestamp(value: unknown): string {
+  return matches(value, SAFE_TIMESTAMP) ? value : 'unknown';
+}
+function projectIdentifier(value: unknown): string {
+  return matches(value, SAFE_PROBE_ID) ? value : 'unknown';
+}
+function projectLabel(value: unknown): string {
+  return matches(value, SAFE_LABEL) && !value.includes('://') && !value.includes('=') ? value : 'unknown';
+}
+function projectVersion(version: unknown, observedAt: unknown): Record<string, string> {
+  const value = typeof version === 'object' && version !== null ? version as Record<string, unknown> : {};
+  const safeObservedAt = projectTimestamp(observedAt);
+  if (value.kind === 'known' && projectLabel(value.value) !== 'unknown') return { kind: 'known', value: value.value as string };
+  if (value.kind === 'unknown') return { kind: 'unknown', reason: projectLabel(value.reason), observedAt: projectTimestamp(value.observedAt) };
+  return { kind: 'unknown', reason: 'version-evidence-invalid', observedAt: safeObservedAt };
 }
 
 function projectTrigger(trigger: unknown): Record<string, string> {
   if (typeof trigger !== 'object' || trigger === null || Array.isArray(trigger)) return { kind: 'unknown' };
   const value = trigger as Record<string, unknown>;
-  if (value.kind === 'preset' && typeof value.value === 'string' && ['hourly', 'daily', 'weekdays', 'weekly'].includes(value.value)) return { kind: 'preset', value: value.value };
-  if (value.kind === 'cron' && typeof value.expression === 'string' && SAFE_CRON.test(value.expression)) return { kind: 'cron', expression: value.expression };
-  if (value.kind === 'rrule' && typeof value.value === 'string' && SAFE_RRULE.test(value.value)) return { kind: 'rrule', value: value.value };
+  if (value.kind === 'preset' && matches(value.value, /^(?:hourly|daily|weekdays|weekly)$/)) return { kind: 'preset', value: value.value };
+  if (value.kind === 'cron' && matches(value.expression, SAFE_CRON)) return { kind: 'cron', expression: value.expression };
+  if (value.kind === 'rrule' && matches(value.value, SAFE_RRULE)) return { kind: 'rrule', value: value.value };
   return { kind: 'unknown' };
 }
 
 function projectTarget(target: unknown): Record<string, string> {
   if (typeof target !== 'object' || target === null || Array.isArray(target)) return { kind: 'unknown' };
   const value = target as Record<string, unknown>;
-  if (!['repo', 'workspace', 'project', 'runtime'].includes(String(value.kind)) || typeof value.selector !== 'string' || !safeSelector(value.selector)) return { kind: 'unknown' };
-  const result: Record<string, string> = { kind: String(value.kind), selector: value.selector };
+  if (!matches(value.kind, /^(?:repo|workspace|project|runtime)$/) || !safeSelector(value.selector)) return { kind: 'unknown' };
+  const result: Record<string, string> = { kind: value.kind, selector: value.selector };
   if (value.kind === 'project' && value.host !== undefined) {
-    if (typeof value.host !== 'string' || !safeSelector(value.host)) return { kind: 'unknown' };
+    if (!safeSelector(value.host)) return { kind: 'unknown' };
     result.host = value.host;
   }
   return result;
 }
 
-function projectCapabilities(capabilities: Readonly<Record<string, AgentCapabilitySnapshot['level']>>): Record<string, AgentCapabilitySnapshot['level']> {
+function projectCapabilities(capabilities: unknown): Record<string, AgentCapabilitySnapshot['level']> {
   const result: Record<string, AgentCapabilitySnapshot['level']> = {};
+  if (typeof capabilities !== 'object' || capabilities === null || Array.isArray(capabilities)) return result;
   for (const name of Object.keys(capabilities).sort()) {
-    const level = capabilities[name];
-    if (SAFE_CAPABILITY.test(name) && level !== undefined && SUPPORT_LEVELS.has(level)) result[name] = level;
+    const level = (capabilities as Record<string, unknown>)[name];
+    if (SAFE_CAPABILITY.test(name) && typeof level === 'string' && SUPPORT_LEVELS.has(level as AgentCapabilitySnapshot['level'])) result[name] = level as AgentCapabilitySnapshot['level'];
   }
   return result;
 }
-
 export function projectAgent(descriptor: AgentDescriptor, snapshot: AgentCapabilitySnapshot, preserveUnknownInventory = false): Record<string, unknown> {
+  const value = typeof snapshot === 'object' && snapshot !== null ? snapshot as unknown as Record<string, unknown> : {};
+  const level = typeof value.level === 'string' && SUPPORT_LEVELS.has(value.level as AgentCapabilitySnapshot['level']) ? value.level : 'unknown';
   return {
-    id: descriptor.id,
+    id: projectIdentifier(descriptor.id),
     displayName: projectLabel(descriptor.displayName),
     provider: projectLabel(descriptor.provider),
-    level: preserveUnknownInventory ? 'unknown' : snapshot.level,
-    version: projectVersion(snapshot.version, snapshot.observedAt),
-    probeId: SAFE_PROBE_ID.test(snapshot.probeId) ? snapshot.probeId : 'unknown',
-    capabilities: projectCapabilities(snapshot.capabilities),
-    evidenceRef: projectReference(snapshot.evidenceRef) ?? projectReference(descriptor.sourceEvidence) ?? 'unknown',
-    observedAt: snapshot.observedAt,
+    level: preserveUnknownInventory ? 'unknown' : level,
+    version: projectVersion(value.version, value.observedAt),
+    probeId: matches(value.probeId, SAFE_PROBE_ID) ? value.probeId : 'unknown',
+    capabilities: projectCapabilities(value.capabilities),
+    evidenceRef: projectReference(value.evidenceRef) ?? projectReference(descriptor.sourceEvidence) ?? 'unknown',
+    observedAt: projectTimestamp(value.observedAt),
   };
 }
 
 export function renderAgentListJson(items: readonly { readonly descriptor: AgentDescriptor; readonly snapshot: AgentCapabilitySnapshot }[]): string {
-  return JSON.stringify({ agents: items.map((item) => projectAgent(item.descriptor, item.snapshot, item.descriptor.sourceEvidence.startsWith('unknown:'))) });
+  return JSON.stringify({
+    agents: items.map((item) => projectAgent(
+      item.descriptor,
+      item.snapshot,
+      typeof item.descriptor.sourceEvidence === 'string' && item.descriptor.sourceEvidence.startsWith('unknown:'),
+    )),
+  });
 }
-
 export function renderAgentProbeJson(descriptor: AgentDescriptor, snapshot: AgentCapabilitySnapshot): string {
   return JSON.stringify({ agent: projectAgent(descriptor, snapshot) });
 }
 
 function projectSchedule(schedule: AgentScheduleIntent): Record<string, unknown> {
   return {
-    scheduleId: schedule.scheduleId,
-    agentId: schedule.agentId,
-    revisionId: schedule.revisionId,
+    scheduleId: projectIdentifier(schedule.scheduleId),
+    agentId: projectIdentifier(schedule.agentId),
+    revisionId: projectIdentifier(schedule.revisionId),
     trigger: projectTrigger(schedule.trigger),
     target: projectTarget(schedule.target),
-    sessionPolicy: schedule.sessionPolicy,
+    sessionPolicy: matches(schedule.sessionPolicy, /^(?:fresh|reuse)$/) ? schedule.sessionPolicy : 'unknown',
     precheckRef: projectReference(schedule.precheckRef),
     sourceContextRef: projectReference(schedule.sourceContextRef),
-    createdAt: schedule.createdAt,
+    createdAt: projectTimestamp(schedule.createdAt),
   };
 }
 
-function projectReason(reason: string | null): string | null {
+function projectReason(reason: unknown): string | null {
   if (reason === null) return null;
+  if (typeof reason !== 'string') return 'unknown';
   const known = ['cancelled', 'precheck-failed', 'scheduler-failure', 'correlation-mismatch', 'unknown', 'incomplete'];
   return known.find((code) => reason === code || reason.startsWith(`${code}:`)) ?? 'unknown';
 }
@@ -145,17 +163,17 @@ function projectReason(reason: string | null): string | null {
 function projectOperation(operation: DispatchOperation | null): Record<string, unknown> | null {
   if (operation === null) return null;
   return {
-    operationId: operation.operationId,
-    scheduleId: operation.scheduleId,
-    agentId: operation.agentId,
-    revisionId: operation.revisionId,
+    operationId: projectIdentifier(operation.operationId),
+    scheduleId: projectIdentifier(operation.scheduleId),
+    agentId: projectIdentifier(operation.agentId),
+    revisionId: projectIdentifier(operation.revisionId),
     target: projectTarget(operation.target),
-    phase: operation.phase,
+    phase: projectLabel(operation.phase),
     automationId: projectReference(operation.automationId),
-    manifestHash: /^[a-f0-9]{64}$/i.test(operation.manifestHash) ? operation.manifestHash : null,
+    manifestHash: matches(operation.manifestHash, /^[a-f0-9]{64}$/i) ? operation.manifestHash : null,
     terminalReason: projectReason(operation.terminalReason),
-    createdAt: operation.createdAt,
-    updatedAt: operation.updatedAt,
+    createdAt: projectTimestamp(operation.createdAt),
+    updatedAt: projectTimestamp(operation.updatedAt),
   };
 }
 
@@ -168,10 +186,10 @@ export function renderScheduleDryRunJson(validated: ValidatedSchedule, manifestH
     spec: { argv: [...argv] },
     externalCall: false,
     evidence: {
-      agent: { probeId: SAFE_PROBE_ID.test(validated.snapshot.probeId) ? validated.snapshot.probeId : 'unknown', evidenceRef: projectReference(validated.snapshot.evidenceRef) ?? 'unknown' },
-      revision: { revisionId: validated.revision.revisionId, evidenceRef: projectReference(validated.revision.evidenceRef) ?? 'unknown' },
+      agent: { probeId: matches(validated.snapshot.probeId, SAFE_PROBE_ID) ? validated.snapshot.probeId : 'unknown', evidenceRef: projectReference(validated.snapshot.evidenceRef) ?? 'unknown' },
+      revision: { revisionId: projectIdentifier(validated.revision.revisionId), evidenceRef: projectReference(validated.revision.evidenceRef) ?? 'unknown' },
     },
-    timestamps: { createdAt: validated.schedule.createdAt, observedAt: validated.snapshot.observedAt },
+    timestamps: { createdAt: projectTimestamp(validated.schedule.createdAt), observedAt: projectTimestamp(validated.snapshot.observedAt) },
   });
 }
 
@@ -179,11 +197,11 @@ export function renderScheduleJson(schedule: AgentScheduleIntent, operation: Dis
   return JSON.stringify({
     schedule: projectSchedule(schedule),
     operation: projectOperation(operation),
-    evidence: { manifestHash: operation === null || !/^[a-f0-9]{64}$/i.test(operation.manifestHash) ? null : operation.manifestHash },
+    evidence: { manifestHash: operation === null || !matches(operation.manifestHash, /^[a-f0-9]{64}$/i) ? null : operation.manifestHash },
     timestamps: {
-      scheduleCreatedAt: schedule.createdAt,
-      operationCreatedAt: operation?.createdAt ?? null,
-      operationUpdatedAt: operation?.updatedAt ?? null,
+      scheduleCreatedAt: projectTimestamp(schedule.createdAt),
+      operationCreatedAt: operation === null ? null : projectTimestamp(operation.createdAt),
+      operationUpdatedAt: operation === null ? null : projectTimestamp(operation.updatedAt),
     },
   });
 }
