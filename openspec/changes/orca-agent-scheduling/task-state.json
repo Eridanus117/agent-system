@@ -160,7 +160,7 @@
         "help/agents 无 store 快路径；默认 dry-run 使用 DB/sidecar 临时快照，禁止 target 迁移/写入；missing DB 返回 exit1"
       ],
       "evidence": [
-        "base bfdbc00；fix 6e39ebd/a23f7bc；regression 4483cf6；round3 267ad92；round4 8e7cdaf；docs 59af058",
+        "base bfdbc00；fix 6e39ebd/a23f7bc；regression 4483cf6；round3 267ad92；round4 8e7cdaf/049ecec；docs 59af058/6934959",
         "bun test packages/control-plane/tests/cli/agent-scheduling.test.ts（14 pass，119 expects）",
         "bun test packages/control-plane/tests/cli（49 pass，217 expects）",
         "bun test packages/control-plane/tests（184 pass，667 expects）",
