@@ -160,10 +160,10 @@
         "help/agents 无 store 快路径；默认 dry-run 使用 DB/sidecar 临时快照，禁止 target 迁移/写入；missing DB 返回 exit1"
       ],
       "evidence": [
-        "base bfdbc00 feat: 增加 Agent 调度 CLI dry-run；final 6e39ebd fix: 收紧 Agent 调度 CLI 投影",
-        "bun test packages/control-plane/tests/cli/agent-scheduling.test.ts（13 pass）",
-        "bun test packages/control-plane/tests/cli",
-        "bun test packages/control-plane/tests",
+        "base bfdbc00 feat: 增加 Agent 调度 CLI dry-run；fix 6e39ebd/a23f7bc；regression 4483cf6",
+        "bun test packages/control-plane/tests/cli/agent-scheduling.test.ts（13 pass，111 expects）",
+        "bun test packages/control-plane/tests/cli（48 pass）",
+        "bun test packages/control-plane/tests（183 pass）",
         "bunx tsc --noEmit -p packages/control-plane/tsconfig.json",
         "bun packages/control-plane/src/cli/index.ts agents list",
         "bun packages/control-plane/src/cli/index.ts schedule create --help"
