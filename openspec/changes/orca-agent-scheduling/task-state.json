@@ -16,6 +16,7 @@
         "openspec/changes/orca-agent-scheduling/task-state.json"
       ],
       "verification": [
+        "node --experimental-strip-types .delivery-spec-runtime/openspec/tools/delivery-control.ts task inspect --change-root openspec/changes/orca-agent-scheduling",
         "npx openspec doctor",
         "npx openspec validate orca-agent-scheduling --strict",
         "openspec/specs/ 和 .orca/ 未修改"
