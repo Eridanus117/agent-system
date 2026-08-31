@@ -111,11 +111,14 @@
         "packages/control-plane/src/adapters/sqlite/launch-observation-repository.ts",
         "packages/control-plane/src/application/ports/schedule-repository.ts",
         "packages/control-plane/src/application/ports/index.ts",
-        "packages/control-plane/tests/integration/agent-scheduling-sqlite.test.ts"
+        "packages/control-plane/tests/integration/agent-scheduling-sqlite.test.ts",
+        "packages/control-plane/src/domain/dispatch-operation.ts",
+        "packages/control-plane/tests/domain/dispatch-operation.test.ts"
       ],
       "verification": [
         "migration version 4/user_version、历史 OMP/Claude 行和 agent_id 保留测试通过",
         "SQLite schedule/dispatch round trip、重复 schedule、外键、receipt 幂等与 Unknown evidence 测试通过",
+        "并发/重复 receipt 导入对相同事实幂等、冲突 receipt fail closed",
         "stale/duplicate conditional phase/version 更新和无 prompt/task/credentials/transcript 持久化边界测试通过",
         "bunx tsc --noEmit -p packages/control-plane/tsconfig.json 通过"
       ],

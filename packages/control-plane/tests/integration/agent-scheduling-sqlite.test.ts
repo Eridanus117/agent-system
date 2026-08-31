@@ -48,6 +48,8 @@ function seedLegacyCanonicalDatabase(databasePath: string): void {
     INSERT INTO configuration_revision VALUES ('legacy-revision', 'default', 1, '{"kind":"known","value":true}', '{"kind":"unknown","reason":"legacy","observedAt":"2026-08-30T00:00:00.000Z"}', '{"kind":"known","value":"resolved"}', '[]', 'new-scenario', 'evidence://legacy/revision', NULL, '2026-08-30T00:00:00.000Z');
     INSERT INTO activation_operation VALUES ('legacy-operation', 'legacy-revision', 'default', 'claude', 'succeeded', 1, 'sha256:legacy', '2026-08-30T00:00:00.000Z', '2026-08-30T00:01:00.000Z', NULL);
     INSERT INTO launch_observation VALUES ('legacy-observation', 'legacy-operation', 'claude', 'outcome-observed', 'succeeded', NULL, NULL, '2026-08-30T00:01:00.000Z');
+    INSERT INTO activation_operation VALUES ('legacy-omp-operation', 'legacy-revision', 'default', 'omp', 'degraded', 2, 'sha256:legacy-omp', '2026-08-30T00:02:00.000Z', '2026-08-30T00:03:00.000Z', 'degraded');
+    INSERT INTO launch_observation VALUES ('legacy-omp-observation', 'legacy-omp-operation', 'omp', 'outcome-observed', 'degraded', NULL, 'legacy evidence incomplete', '2026-08-30T00:03:00.000Z');
   `);
   db.close();
 }
@@ -61,6 +63,8 @@ describe('SQLite agent scheduling persistence', () => {
     expect(store.manifest.appliedVersions).toEqual([1, 2, 3, 4]);
     expect(store.db.query<{ name: string }, []>('PRAGMA table_info(activation_operation)').all().map((row) => row.name)).toContain('agent_id');
     expect(store.db.query<{ name: string }, []>('PRAGMA table_info(activation_operation)').all().map((row) => row.name)).not.toContain('client_id');
+    expect(store.db.query<{ agent_id: string }, [string]>('SELECT agent_id FROM activation_operation WHERE operation_id = ?').get('legacy-omp-operation')?.agent_id).toBe('omp');
+    expect(store.db.query<{ agent_id: string }, [string]>('SELECT agent_id FROM launch_observation WHERE observation_id = ?').get('legacy-omp-observation')?.agent_id).toBe('omp');
     expect(store.db.query<{ agent_id: string }, [string]>('SELECT agent_id FROM activation_operation WHERE operation_id = ?').get('legacy-operation')?.agent_id).toBe('claude');
     expect(store.db.query<{ agent_id: string }, [string]>('SELECT agent_id FROM launch_observation WHERE observation_id = ?').get('legacy-observation')?.agent_id).toBe('claude');
     store.close();
@@ -121,8 +125,7 @@ describe('SQLite agent scheduling persistence', () => {
     const dispatchedResult = transitionDispatchOperation(planned, { type: 'dispatched', automationId: 'automation-1' });
     if (!dispatchedResult.ok) throw new Error(dispatchedResult.reason);
     await repository.updatePhase(planned.operationId, planned.phase, dispatchedResult.operation);
-    await repository.appendReceipt(planned.operationId, receipt());
-    await repository.appendReceipt(planned.operationId, receipt());
+    await Promise.all([repository.appendReceipt(planned.operationId, receipt()), repository.appendReceipt(planned.operationId, receipt())]);
     const row = store.db.query<{ receipt_source_evidence: string; receipt_provider: string }, [string]>('SELECT receipt_source_evidence, receipt_provider FROM dispatch_operation WHERE operation_id = ?').get(planned.operationId);
     expect(row).toEqual({ receipt_source_evidence: 'evidence://orca/automation-1', receipt_provider: 'orca' });
     const unknown = transitionDispatchOperation(dispatchedResult.operation, { type: 'observing' });

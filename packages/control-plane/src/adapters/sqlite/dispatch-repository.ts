@@ -108,6 +108,9 @@ export class SqliteDispatchOperationRepository implements DispatchOperationRepos
       throw new Error(`dispatch receipt conflict: ${operationId}`);
     }
     const result = this.store.db.query('UPDATE dispatch_operation SET receipt_automation_id = ?, receipt_provider = ?, receipt_target_json = ?, receipt_trigger_json = ?, receipt_created_at = ?, receipt_source_evidence = ? WHERE operation_id = ? AND automation_id = ? AND receipt_automation_id IS NULL').run(receipt.automationId, receipt.provider, JSON.stringify(receipt.target), JSON.stringify(receipt.trigger), receipt.createdAt, receipt.sourceEvidence, operationId, receipt.automationId);
-    if (result.changes !== 1) throw new Error(`dispatch receipt conflict: ${operationId}`);
+    if (result.changes === 1) return;
+    const concurrent = this.store.db.query<Record<string, unknown>, [string]>(`SELECT ${COLUMNS} FROM dispatch_operation WHERE operation_id = ?`).get(operationId);
+    if (concurrent !== null && sameReceipt(concurrent, receipt)) return;
+    throw new Error(`dispatch receipt conflict: ${operationId}`);
   }
 }

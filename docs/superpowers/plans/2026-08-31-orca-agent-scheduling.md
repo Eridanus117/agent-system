@@ -420,6 +420,8 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
 - Modify: `packages/control-plane/src/adapters/sqlite/launch-observation-repository.ts`
 - Modify: `packages/control-plane/src/application/ports/index.ts`
 - Create: `packages/control-plane/tests/integration/agent-scheduling-sqlite.test.ts`
+- Modify: `packages/control-plane/src/domain/dispatch-operation.ts` (add persisted version field)
+- Modify: `packages/control-plane/tests/domain/dispatch-operation.test.ts` (version fixture/regression)
 
 **Interfaces:**
 - Consumes: `AgentScheduleIntent`, `DispatchOperation`, `OrcaAutomationReceipt`, existing SQLite transaction and migration patterns.
@@ -432,7 +434,7 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
   CREATE INDEX idx_dispatch_operation_agent_updated ON dispatch_operation(agent_id, updated_at DESC);
   ```
 
-  `agent_schedule` persists explicit schedule/agent/revision/policy/reference columns and validated trigger/target JSON. `dispatch_operation` persists explicit operation/schedule/agent/revision/phase/automation/manifest/timestamps/reason/version columns plus controlled receipt evidence. The migration renames canonical `client_id` columns to `agent_id`; store legacy-copy SQL and both existing repositories use the renamed columns.
+  `agent_schedule` persists explicit schedule/agent/revision/policy/reference columns and validated trigger/target JSON. `dispatch_operation` persists explicit operation/schedule/agent/revision/phase/automation/manifest/timestamps/reason/version columns plus controlled receipt evidence. The migration renames canonical `client_id` columns to `agent_id`; store legacy-copy SQL and both existing repositories use the renamed columns. The dispatch domain aggregate and its regression fixture include the persisted concurrency version.
 
 - [ ] **Step 1: Write failing SQLite integration tests**
 
