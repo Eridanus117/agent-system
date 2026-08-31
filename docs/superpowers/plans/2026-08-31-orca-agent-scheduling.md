@@ -464,6 +464,7 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
 **Files:**
 - Create: `packages/control-plane/src/application/scheduling.ts`
 - Create: `packages/control-plane/tests/application/scheduling.test.ts`
+- Modify: `packages/control-plane/tests/contracts/sqlite-store.test.ts` (Task 6 migration v4 expectation compatibility)
 
 
 **Interfaces:**

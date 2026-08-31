@@ -105,6 +105,7 @@ class FakeScheduleRepository implements AgentScheduleRepository {
 
 class FakeDispatchRepository implements DispatchOperationRepository {
   readonly values = new Map<string, DispatchOperation>();
+  failUpdate = false;
   readonly calls: string[] = [];
   async save(value: DispatchOperation): Promise<void> {
     if (this.values.has(value.operationId)) throw new Error('duplicate operation');
@@ -114,6 +115,7 @@ class FakeDispatchRepository implements DispatchOperationRepository {
   async findById(id: string): Promise<DispatchOperation | null> { return this.values.get(id) ?? null; }
   async listByAgent(): Promise<readonly DispatchOperation[]> { return [...this.values.values()]; }
   async updatePhase(id: string, expectedPhase: DispatchOperation['phase'], nextState: DispatchOperation): Promise<void> {
+    if (this.failUpdate) throw new Error('persistence failure');
     const current = this.values.get(id);
     if (current === undefined || current.phase !== expectedPhase) throw new Error('stale update');
     this.calls.push(`update:${expectedPhase}->${nextState.phase}`);
@@ -130,14 +132,18 @@ class FakeScheduler implements AgentSchedulerPort {
   creates = 0;
   cancels: string[] = [];
   failure: Error | null = null;
+  receiptValue = receipt();
   readonly calls: string[] = [];
   async create(): Promise<OrcaAutomationReceipt> {
     this.creates += 1;
     this.calls.push('create');
     if (this.failure !== null) throw this.failure;
-    return receipt();
+    return this.receiptValue;
   }
-  async cancel(id: string): Promise<void> { this.cancels.push(id); this.calls.push(`cancel:${id}`); }
+  async cancel(id: string): Promise<void> {
+    this.cancels.push(id);
+    this.calls.push(`cancel:${id}`);
+  }
 }
 
 function deps() {
@@ -262,5 +268,42 @@ describe('scheduling application use cases', () => {
     const unknown = await reconcileAgentDispatch(context, { scheduleId: 'schedule-1', operationId: 'operation-1', agentId: AGENT, revisionId: REVISION, target: TARGET, manifestHash: 'sha256:manifest', outcome: 'not-available', reason: 'Orca unavailable' });
     expect(unknown.phase).toBe('unknown');
     expect(unknown.phase).not.toBe('succeeded');
+  });
+  test('missing Agent version or required capability evidence fails closed', async () => {
+    const unknownVersion = deps();
+    unknownVersion.registry.capability = { ...snapshot(), version: { kind: 'unknown', reason: 'version unavailable', observedAt: NOW } };
+    await expect(createAgentSchedule(unknownVersion, schedule())).rejects.toThrow(/version|unknown|capability/u);
+    expect(unknownVersion.schedules.values.size).toBe(0);
+
+    const missingScheduling = deps();
+    missingScheduling.registry.capability = { ...snapshot(), capabilities: {} };
+    await expect(createAgentSchedule(missingScheduling, schedule())).rejects.toThrow(/scheduling|capability/u);
+
+    const missingRevisionCapability = deps();
+    missingRevisionCapability.configurations.value = { ...revision(), capabilities: [{ kind: 'skill', name: 'review', source: undefined, summary: undefined, sourceRef: undefined, contentFingerprint: undefined }] };
+    await expect(createAgentSchedule(missingRevisionCapability, schedule())).rejects.toThrow(/review|capability/u);
+  });
+
+  test('receipt provider, target and trigger mismatches fail closed', async () => {
+    const mismatches = [
+      receipt({ provider: 'claude-code' }),
+      receipt({ target: { kind: 'repo', selector: 'other/repo' } }),
+      receipt({ trigger: { kind: 'preset', value: 'hourly' } }),
+    ] as const;
+    for (const receiptValue of mismatches) {
+      const context = deps();
+      context.scheduler.receiptValue = receiptValue;
+      await createAgentSchedule(context, schedule());
+      await expect(dispatchAgentSchedule(context, { scheduleId: 'schedule-1', operationId: 'operation-1', manifestHash: 'sha256:manifest' })).rejects.toThrow(/correlation/u);
+      expect((await context.operations.findById('operation-1'))?.phase).toBe('unknown');
+    }
+  });
+
+  test('failure fact persistence errors remain visible with the scheduler error', async () => {
+    const context = deps();
+    context.scheduler.failure = Object.assign(new Error('scheduler unavailable'), { code: 'unavailable' });
+    await createAgentSchedule(context, schedule());
+    context.operations.failUpdate = true;
+    await expect(dispatchAgentSchedule(context, { scheduleId: 'schedule-1', operationId: 'operation-1', manifestHash: 'sha256:manifest' })).rejects.toBeInstanceOf(AggregateError);
   });
 });

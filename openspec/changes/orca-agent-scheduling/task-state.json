@@ -130,7 +130,8 @@
       "state": "planned",
       "deliverables": [
         "packages/control-plane/src/application/scheduling.ts",
-        "packages/control-plane/tests/application/scheduling.test.ts"
+        "packages/control-plane/tests/application/scheduling.test.ts",
+        "packages/control-plane/tests/contracts/sqlite-store.test.ts"
       ],
       "verification": [
         "application 10 条 observable acceptance、调用顺序和 fail-closed 行为测试通过",

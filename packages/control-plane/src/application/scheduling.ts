@@ -132,8 +132,11 @@ function requireManifestHash(value: string | undefined, schedule: AgentScheduleI
 function assertSupportedCapability(snapshot: AgentCapabilitySnapshot, schedule: AgentScheduleIntent): void {
   if (snapshot.agentId !== schedule.agentId) throw new SchedulingError('agent-capability-unsupported', 'capability snapshot Agent mismatch');
   if (snapshot.level !== 'supported') throw new SchedulingError('agent-capability-unsupported', `Agent capability is ${snapshot.level}`);
+  if (snapshot.version.kind !== 'known' || snapshot.version.value.trim().length === 0) {
+    throw new SchedulingError('agent-capability-unsupported', 'Agent version evidence is unknown');
+  }
   const schedulingLevel = snapshot.capabilities.scheduling;
-  if (schedulingLevel !== undefined && schedulingLevel !== 'supported') throw new SchedulingError('agent-capability-unsupported', `scheduling capability is ${schedulingLevel}`);
+  if (schedulingLevel !== 'supported') throw new SchedulingError('agent-capability-unsupported', `scheduling capability is ${schedulingLevel ?? 'unknown'}`);
 }
 interface ValidatedSchedule {
   readonly schedule: AgentScheduleIntent;
@@ -151,7 +154,7 @@ async function validateSchedule(deps: SchedulingDependencies, schedule: AgentSch
   assertSupportedCapability(snapshot, schedule);
   for (const capability of revision.capabilities) {
     const level: SupportLevel | undefined = snapshot.capabilities[capability.name];
-    if (level !== undefined && level !== 'supported') throw new SchedulingError('agent-capability-unsupported', `capability ${capability.name} is ${level}`);
+    if (level !== 'supported') throw new SchedulingError('agent-capability-unsupported', `capability ${capability.name} is ${level ?? 'unknown'}`);
   }
   return { schedule, revision, snapshot };
 }
@@ -165,6 +168,22 @@ async function transitionAndPersist(
   if (!result.ok) throw new SchedulingError('operation-correlation-mismatch', result.reason);
   await deps.operations.updatePhase(operation.operationId, operation.phase, result.operation);
   return result.operation;
+}
+async function persistUnknownOrThrow(
+  deps: SchedulingDependencies,
+  operation: DispatchOperation,
+  originalError: unknown,
+  reasonPrefix = 'scheduler-failure',
+): Promise<never> {
+  try {
+    await transitionAndPersist(deps, operation, {
+      type: 'unknown',
+      reason: originalError instanceof Error ? `${reasonPrefix}:${originalError.message}` : reasonPrefix,
+    });
+  } catch (persistenceError) {
+    throw new AggregateError([originalError, persistenceError], 'failed to persist dispatch failure');
+  }
+  throw originalError;
 }
 export async function createAgentSchedule(deps: SchedulingDependencies, input: CreateAgentScheduleInput): Promise<AgentScheduleIntent> {
   const schedule = createAgentScheduleIntent({
@@ -211,19 +230,13 @@ export async function dispatchAgentSchedule(deps: SchedulingDependencies, input:
   try {
     receipt = createOrcaAutomationReceipt(await deps.scheduler.create(schedule));
   } catch (error) {
-    try {
-      await transitionAndPersist(deps, operation, { type: 'unknown', reason: error instanceof Error ? `scheduler-failure:${error.message}` : 'scheduler-failure' });
-    } catch { }
-    throw error;
+    return persistUnknownOrThrow(deps, operation, error);
   }
   if (!providerMatchesAgent(receipt.provider, schedule.agentId)
     || !targetsEqual(receipt.target, schedule.target)
     || !triggersEqual(receipt.trigger, schedule.trigger)) {
-    const error = new SchedulingError('correlation-mismatch', `automation receipt does not match schedule: ${schedule.scheduleId}`);
-    try {
-      await transitionAndPersist(deps, operation, { type: 'unknown', reason: error.message });
-    } catch { }
-    throw error;
+    const error = new SchedulingError('correlation-mismatch', `correlation-mismatch: automation receipt does not match schedule: ${schedule.scheduleId}`);
+    return persistUnknownOrThrow(deps, operation, error, 'correlation-mismatch');
   }
   const dispatched = await transitionAndPersist(deps, operation, { type: 'dispatched', automationId: receipt.automationId });
   await deps.operations.appendReceipt(dispatched.operationId, receipt);
