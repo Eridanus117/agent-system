@@ -107,6 +107,7 @@ export function projectAgent(descriptor: AgentDescriptor, snapshot: AgentCapabil
     provider: projectLabel(descriptor.provider),
     level: preserveUnknownInventory ? 'unknown' : snapshot.level,
     version: projectVersion(snapshot.version, snapshot.observedAt),
+    probeId: SAFE_PROBE_ID.test(snapshot.probeId) ? snapshot.probeId : 'unknown',
     capabilities: projectCapabilities(snapshot.capabilities),
     evidenceRef: projectReference(snapshot.evidenceRef) ?? projectReference(descriptor.sourceEvidence) ?? 'unknown',
     observedAt: snapshot.observedAt,
@@ -186,9 +187,13 @@ export function renderScheduleJson(schedule: AgentScheduleIntent, operation: Dis
     },
   });
 }
-
 export function renderSchedulingFailure(error: unknown): string {
-  const knownCodes = ['invalid-arguments', 'invalid-trigger', 'invalid-target', 'invalid-session-policy', 'confirmation-required', 'agent-not-found', 'schedule-not-found', 'operation-not-found', 'agent-capability-unsupported', 'revision-not-found', 'revision-agent-mismatch', 'scheduler-failure', 'correlation-mismatch', 'automation-missing'];
+  const knownCodes = [
+    'invalid-arguments', 'invalid-trigger', 'invalid-target', 'invalid-session-policy', 'confirmation-required',
+    'agent-not-found', 'schedule-not-found', 'operation-not-found', 'duplicate-schedule', 'duplicate-operation',
+    'operation-correlation-mismatch', 'invalid-precheck', 'agent-capability-unsupported', 'revision-not-found',
+    'revision-agent-mismatch', 'scheduler-failure', 'correlation-mismatch', 'automation-missing',
+  ];
   if (error instanceof Error && 'code' in error && typeof error.code === 'string' && knownCodes.includes(error.code)) return `schedule error: ${error.code}`;
   return 'schedule error: scheduler-failure';
 }

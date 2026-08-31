@@ -5,8 +5,9 @@ import { SqliteStore } from '../../src/adapters/sqlite/store';
 import { SqliteConfigRevisionRepository } from '../../src/adapters/sqlite/repository';
 import os from 'node:os';
 import path from 'node:path';
-
 import { main, type CliOverrides } from '../../src/cli/index';
+import { renderSchedulingFailure } from '../../src/cli/render';
+import { SchedulingError } from '../../src/application/scheduling';
 import { agentId, type AgentCapabilitySnapshot, type AgentDescriptor, type AgentId } from '../../src/domain/agent';
 import type { AgentRegistry } from '../../src/application/ports/agent-registry';
 import type { AgentSchedulerPort } from '../../src/application/ports/scheduler';
@@ -141,8 +142,7 @@ describe('agent scheduling CLI', () => {
     const registry = new FakeRegistry([descriptor('omp', 'evidence://inventory/omp')], new Map([['omp', snapshot('omp', 'supported')]]));
     const overrides = makeOverrides(registry, new FakeScheduler(), new FakeSchedules(), new FakeOperations());
     const success = await run(['agents', 'probe', 'omp'], overrides);
-    expect(success.code).toBe(0);
-    expect(parse(success.stdout)).toEqual(expect.objectContaining({ agent: expect.objectContaining({ id: 'omp', evidenceRef: 'evidence://agents/omp' }) }));
+    expect(parse(success.stdout)).toEqual(expect.objectContaining({ agent: expect.objectContaining({ id: 'omp', probeId: 'omp-probe', evidenceRef: 'evidence://agents/omp' }) }));
     const failure = await run(['agents', 'probe', 'missing'], overrides);
     expect(failure.code).toBe(1);
     expect(failure.stderr).toContain('agent-not-found');
@@ -155,6 +155,8 @@ describe('agent scheduling CLI', () => {
       new Map([['omp', { ...snapshot('omp', 'supported'), probeId: 'transcript://probe-secret', capabilities: { scheduling: 'supported', credentials: 'supported', prompt: 'supported', transcript: 'supported' }, evidenceRef: 'credentials://agent-secret', version: { kind: 'known', value: 'prompt=hidden' } }]]),
     );
     const result = await run(['agents', 'probe', 'omp'], makeOverrides(registry, new FakeScheduler(), new FakeSchedules(), new FakeOperations()));
+    expect((parse(result.stdout).agent as Record<string, unknown>).probeId).toBe('unknown');
+    expect((parse(result.stdout).agent as Record<string, unknown>).capabilities).toEqual({ scheduling: 'supported' });
     expect(result.code).toBe(0);
     expect(result.stdout).not.toContain('credentials://');
     expect(result.stdout).not.toContain('transcript://');
@@ -164,6 +166,10 @@ describe('agent scheduling CLI', () => {
     expect(dryRun.stdout).not.toContain('credentials://');
     expect(dryRun.stdout).not.toContain('transcript://');
     expect(dryRun.stdout).not.toContain('prompt=');
+  });
+  test('scheduling failure projection preserves every known stable code', () => {
+    const codes = ['duplicate-schedule', 'duplicate-operation', 'operation-correlation-mismatch', 'invalid-precheck'] as const;
+    for (const code of codes) expect(renderSchedulingFailure(new SchedulingError(code, 'raw secret'))).toBe(`schedule error: ${code}`);
   });
 
   test('schedule dry-run normalizes every trigger and target kind without persistence or Orca calls', async () => {
@@ -340,7 +346,7 @@ describe('agent scheduling CLI', () => {
     expect(Object.keys(list)).toEqual(['agents']);
     expect(Object.keys(probe)).toEqual(['agent']);
     expect(Object.keys(dry)).toEqual(['schedule', 'manifest', 'argv', 'spec', 'externalCall', 'evidence', 'timestamps']);
-    expect(Object.keys((probe.agent as Record<string, unknown>))).toEqual(['id', 'displayName', 'provider', 'level', 'version', 'capabilities', 'evidenceRef', 'observedAt']);
+    expect(Object.keys((probe.agent as Record<string, unknown>))).toEqual(['id', 'displayName', 'provider', 'level', 'version', 'probeId', 'capabilities', 'evidenceRef', 'observedAt']);
     expect(Object.keys((dry.schedule as Record<string, unknown>))).toEqual(['scheduleId', 'agentId', 'revisionId', 'trigger', 'target', 'sessionPolicy', 'precheckRef', 'sourceContextRef', 'createdAt']);
     expect(Object.keys((dry.evidence as Record<string, unknown>))).toEqual(['agent', 'revision']);
     expect(JSON.stringify({ list, probe, dry })).not.toMatch(/prompt|task|credential|transcript|environment/i);
