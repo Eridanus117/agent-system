@@ -48,8 +48,14 @@ const CONTROLLED_REFERENCE = /^(?:evidence:\/\/[A-Za-z0-9._~/-]+|context:\/\/[A-
 const SAFE_LABEL = /^[A-Za-z0-9._ ()/:-]{1,128}$/;
 const SAFE_SELECTOR = /^[A-Za-z0-9._~:/\\ -]{1,256}$/;
 const SAFE_CRON = /^[0-9*/?, -]{1,128}$/;
-const SAFE_RRULE = /^[A-Za-z0-9_=;,+*/? -]{1,256}$/;
+const SAFE_RRULE = /^FREQ=(?:MINUTELY|HOURLY|DAILY|WEEKLY|MONTHLY|YEARLY)(?:;(?:INTERVAL|BYDAY|BYHOUR|BYMINUTE|BYMONTHDAY|BYMONTH|COUNT|UNTIL|WKST|BYSETPOS)=[A-Za-z0-9,.*?+TZ-]+)*$/;
+const SAFE_CAPABILITY = /^(?!.*(?:credential|prompt|task|transcript|environment|secret))[a-z][a-z0-9._-]{0,63}$/i;
+const SAFE_PROBE_ID = /^(?!.*(?:credential|prompt|task|transcript|environment|secret))[A-Za-z0-9._~:/-]{1,128}$/i;
+const SUPPORT_LEVELS = new Set<AgentCapabilitySnapshot['level']>(['supported', 'degraded', 'unsupported', 'unknown']);
 
+function safeSelector(value: string): boolean {
+  return SAFE_SELECTOR.test(value) && !value.includes('://') && !value.includes('=');
+}
 function projectReference(value: string | undefined | null): string | null {
   if (value === null || value === undefined || !CONTROLLED_REFERENCE.test(value)) return null;
   return value;
@@ -76,10 +82,10 @@ function projectTrigger(trigger: unknown): Record<string, string> {
 function projectTarget(target: unknown): Record<string, string> {
   if (typeof target !== 'object' || target === null || Array.isArray(target)) return { kind: 'unknown' };
   const value = target as Record<string, unknown>;
-  if (!['repo', 'workspace', 'project', 'runtime'].includes(String(value.kind)) || typeof value.selector !== 'string' || !SAFE_SELECTOR.test(value.selector)) return { kind: 'unknown' };
+  if (!['repo', 'workspace', 'project', 'runtime'].includes(String(value.kind)) || typeof value.selector !== 'string' || !safeSelector(value.selector)) return { kind: 'unknown' };
   const result: Record<string, string> = { kind: String(value.kind), selector: value.selector };
   if (value.kind === 'project' && value.host !== undefined) {
-    if (typeof value.host !== 'string' || !SAFE_SELECTOR.test(value.host)) return { kind: 'unknown' };
+    if (typeof value.host !== 'string' || !safeSelector(value.host)) return { kind: 'unknown' };
     result.host = value.host;
   }
   return result;
@@ -87,7 +93,10 @@ function projectTarget(target: unknown): Record<string, string> {
 
 function projectCapabilities(capabilities: Readonly<Record<string, AgentCapabilitySnapshot['level']>>): Record<string, AgentCapabilitySnapshot['level']> {
   const result: Record<string, AgentCapabilitySnapshot['level']> = {};
-  for (const name of Object.keys(capabilities).sort()) result[name] = capabilities[name]!;
+  for (const name of Object.keys(capabilities).sort()) {
+    const level = capabilities[name];
+    if (SAFE_CAPABILITY.test(name) && level !== undefined && SUPPORT_LEVELS.has(level)) result[name] = level;
+  }
   return result;
 }
 
@@ -158,7 +167,7 @@ export function renderScheduleDryRunJson(validated: ValidatedSchedule, manifestH
     spec: { argv: [...argv] },
     externalCall: false,
     evidence: {
-      agent: { probeId: validated.snapshot.probeId, evidenceRef: projectReference(validated.snapshot.evidenceRef) ?? 'unknown' },
+      agent: { probeId: SAFE_PROBE_ID.test(validated.snapshot.probeId) ? validated.snapshot.probeId : 'unknown', evidenceRef: projectReference(validated.snapshot.evidenceRef) ?? 'unknown' },
       revision: { revisionId: validated.revision.revisionId, evidenceRef: projectReference(validated.revision.evidenceRef) ?? 'unknown' },
     },
     timestamps: { createdAt: validated.schedule.createdAt, observedAt: validated.snapshot.observedAt },

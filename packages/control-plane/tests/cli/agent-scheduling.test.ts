@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { SqliteStore } from '../../src/adapters/sqlite/store';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -150,7 +151,7 @@ describe('agent scheduling CLI', () => {
   test('projections strictly redact uncontrolled evidence, target, trigger and terminal values', async () => {
     const registry = new FakeRegistry(
       [{ id: agentId('omp'), displayName: 'safe', provider: 'credentials://provider-secret', sourceEvidence: 'transcript://private' }],
-      new Map([['omp', { ...snapshot('omp', 'supported'), evidenceRef: 'credentials://agent-secret', version: { kind: 'known', value: 'prompt=hidden' } }]]),
+      new Map([['omp', { ...snapshot('omp', 'supported'), probeId: 'transcript://probe-secret', capabilities: { scheduling: 'supported', credentials: 'supported', prompt: 'supported', transcript: 'supported' }, evidenceRef: 'credentials://agent-secret', version: { kind: 'known', value: 'prompt=hidden' } }]]),
     );
     const result = await run(['agents', 'probe', 'omp'], makeOverrides(registry, new FakeScheduler(), new FakeSchedules(), new FakeOperations()));
     expect(result.code).toBe(0);
@@ -221,6 +222,20 @@ describe('agent scheduling CLI', () => {
     expect(result.stderr).toContain('confirmation-required');
     expect(scheduler.creates).toBe(0);
   });
+  test('dry-run rejects unsafe trigger and target values before argv projection', async () => {
+    const overrides = makeOverrides(new FakeRegistry([descriptor('omp', 'evidence://inventory/omp')], new Map([['omp', snapshot('omp', 'supported')]])), new FakeScheduler(), new FakeSchedules(), new FakeOperations());
+    const cases = [
+      { trigger: 'cron:0 9 credentials://private', target: 'repo:src', code: 'invalid-trigger' },
+      { trigger: 'rrule:FREQ=DAILY;prompt=secret', target: 'repo:src', code: 'invalid-trigger' },
+      { trigger: 'preset:hourly', target: 'repo:credentials://private', code: 'invalid-target' },
+    ] as const;
+    for (const item of cases) {
+      const result = await run(['schedule', 'create', '--agent', 'omp', '--revision', 'rev-1', '--trigger', item.trigger, '--target', item.target, '--session-policy', 'fresh', '--dry-run'], overrides);
+      expect(result.code).toBe(1);
+      expect(result.stderr).toBe(`schedule error: ${item.code}`);
+      expect(`${result.stdout}\n${result.stderr}`).not.toMatch(/credentials|prompt|transcript|task/i);
+    }
+  });
 
   test('schedule show projects persisted unknown and incomplete operation states', async () => {
     const schedules = new FakeSchedules();
@@ -243,6 +258,30 @@ describe('agent scheduling CLI', () => {
     expect(Object.keys(output.operation as object)).toEqual(['operationId', 'scheduleId', 'agentId', 'revisionId', 'target', 'phase', 'automationId', 'manifestHash', 'terminalReason', 'createdAt', 'updatedAt']);
     expect((output.operation as Record<string, unknown>).phase).toBe('unknown');
     expect(JSON.stringify(output)).not.toMatch(/prompt|task|credential|transcript|environment/i);
+  });
+  test('default dry-run opens an isolated readonly snapshot without mutating database sidecars', async () => {
+    const databasePath = path.join(tempRoot!, 'readonly-existing.sqlite3');
+    const seeded = new SqliteStore(databasePath);
+    seeded.close();
+    const paths = ['', '-wal', '-shm'].map((suffix) => `${databasePath}${suffix}`);
+    const before = paths.map((filePath) => existsSync(filePath) ? readFileSync(filePath) : null);
+    const result = await run(['schedule', 'create', '--agent', 'omp', '--revision', 'rev-1', '--trigger', 'bad:value', '--target', 'repo:src', '--session-policy', 'fresh', '--dry-run'], { databasePath, now: () => now });
+    expect(result.code).toBe(1);
+    expect(result.stderr).toBe('schedule error: invalid-trigger');
+    for (const [index, filePath] of paths.entries()) {
+      expect(existsSync(filePath)).toBe(before[index] !== null);
+      if (before[index] !== null) expect(readFileSync(filePath).equals(before[index]!)).toBe(true);
+    }
+  });
+
+  test('default dry-run missing database returns a stable error instead of throwing', async () => {
+    const databasePath = path.join(tempRoot!, 'readonly-missing.sqlite3');
+    const result = await run(['schedule', 'create', '--agent', 'omp', '--revision', 'rev-1', '--trigger', 'preset:hourly', '--target', 'repo:src', '--session-policy', 'fresh', '--dry-run'], { databasePath, now: () => now });
+    expect(result.code).toBe(1);
+    expect(result.stderr).toBe('schedule error: scheduler-failure');
+    expect(existsSync(databasePath)).toBe(false);
+    expect(existsSync(`${databasePath}-wal`)).toBe(false);
+    expect(existsSync(`${databasePath}-shm`)).toBe(false);
   });
 
   test('schedule cancel requires yes, uses exact automation id and is idempotent', async () => {

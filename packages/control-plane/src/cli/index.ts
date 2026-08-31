@@ -231,11 +231,20 @@ class SchedulingCliError extends Error {
     this.code = code;
   }
 }
-
 function flagValue(args: readonly string[], flag: string): string {
   const index = args.indexOf(flag);
   if (index === -1 || args[index + 1] === undefined || args[index + 1]!.startsWith('--')) throw new SchedulingCliError('invalid-arguments', `${flag} requires a value`);
   return args[index + 1]!;
+}
+
+const SAFE_IDENTIFIER = /^[A-Za-z0-9._~/-]+$/;
+const SAFE_SELECTOR = /^[A-Za-z0-9._~:/@-]+$/;
+const SAFE_CRON = /^[0-9*/?,\s-]+$/;
+const SAFE_RRULE = /^FREQ=(?:MINUTELY|HOURLY|DAILY|WEEKLY|MONTHLY|YEARLY)(?:;(?:INTERVAL|BYDAY|BYHOUR|BYMINUTE|BYMONTHDAY|BYMONTH|COUNT|UNTIL|WKST|BYSETPOS)=[A-Za-z0-9,.*?+TZ-]+)*$/;
+
+function assertSafeIdentifier(value: string, code: 'invalid-arguments' | 'invalid-target' | 'invalid-trigger', message: string): string {
+  if (!SAFE_IDENTIFIER.test(value) || value.includes('://') || value.includes('=')) throw new SchedulingCliError(code, message);
+  return value;
 }
 
 function parseScheduleTrigger(value: string): ScheduleTrigger {
@@ -244,8 +253,8 @@ function parseScheduleTrigger(value: string): ScheduleTrigger {
   const kind = value.slice(0, separator);
   const item = value.slice(separator + 1);
   if (kind === 'preset' && ['hourly', 'daily', 'weekdays', 'weekly'].includes(item)) return { kind: 'preset', value: item as 'hourly' | 'daily' | 'weekdays' | 'weekly' };
-  if (kind === 'cron' && item.trim().length > 0) return { kind: 'cron', expression: item };
-  if (kind === 'rrule' && item.trim().length > 0) return { kind: 'rrule', value: item };
+  if (kind === 'cron' && SAFE_CRON.test(item) && item.trim().length > 0) return { kind: 'cron', expression: item };
+  if (kind === 'rrule' && SAFE_RRULE.test(item)) return { kind: 'rrule', value: item };
   throw new SchedulingCliError('invalid-trigger', 'trigger must be preset, cron or rrule');
 }
 
@@ -254,7 +263,9 @@ function parseScheduleTarget(value: string): ScheduleTarget {
   if (separator <= 0) throw new SchedulingCliError('invalid-target', 'target must use kind:value');
   const kind = value.slice(0, separator);
   const selector = value.slice(separator + 1).trim();
-  if (selector.length === 0 || !['repo', 'workspace', 'project', 'runtime'].includes(kind)) throw new SchedulingCliError('invalid-target', 'target must be repo, workspace, project or runtime');
+  if (selector.length === 0 || !['repo', 'workspace', 'project', 'runtime'].includes(kind) || !SAFE_SELECTOR.test(selector) || selector.includes('://') || selector.includes('=')) {
+    throw new SchedulingCliError('invalid-target', 'target must be repo, workspace, project or runtime');
+  }
   return { kind: kind as ScheduleTarget['kind'], selector } as ScheduleTarget;
 }
 
@@ -275,19 +286,21 @@ interface ParsedScheduleOptions {
 function parseScheduleOptions(args: readonly string[], now: string): ParsedScheduleOptions {
   const allowedFlags = new Set(['--schedule-id', '--agent', '--revision', '--trigger', '--target', '--session-policy', '--precheck', '--source-context', '--dry-run', '--yes']);
   const valueFlags = new Set(['--schedule-id', '--agent', '--revision', '--trigger', '--target', '--session-policy', '--precheck', '--source-context']);
+  const seenFlags = new Set<string>();
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]!;
     if (!arg.startsWith('--')) throw new SchedulingCliError('invalid-arguments', 'schedule options must use named flags');
-    if (!allowedFlags.has(arg)) throw new SchedulingCliError('invalid-arguments', 'unknown schedule option');
+    if (!allowedFlags.has(arg) || seenFlags.has(arg)) throw new SchedulingCliError('invalid-arguments', 'unknown or duplicate schedule option');
+    seenFlags.add(arg);
     if (valueFlags.has(arg)) index += 1;
   }
-  const agent = flagValue(args, '--agent');
-  const revision = flagValue(args, '--revision');
+  const agent = assertSafeIdentifier(flagValue(args, '--agent'), 'invalid-arguments', 'agent id is not safe');
+  const revision = assertSafeIdentifier(flagValue(args, '--revision'), 'invalid-arguments', 'revision id is not safe');
   const trigger = parseScheduleTrigger(flagValue(args, '--trigger'));
   const target = parseScheduleTarget(flagValue(args, '--target'));
   const sessionPolicy = flagValue(args, '--session-policy');
   if (sessionPolicy !== 'fresh' && sessionPolicy !== 'reuse') throw new SchedulingCliError('invalid-session-policy', 'session policy must be fresh or reuse');
-  const scheduleId = args.includes('--schedule-id') ? flagValue(args, '--schedule-id') : `schedule-${Date.now()}`;
+  const scheduleId = assertSafeIdentifier(args.includes('--schedule-id') ? flagValue(args, '--schedule-id') : `schedule-${Date.now()}`, 'invalid-arguments', 'schedule id is not safe');
   return {
     scheduleId, agentId: agent, revisionId: revision, trigger, target,
     sessionPolicy, precheckRef: args.includes('--precheck') ? flagValue(args, '--precheck') : null,
@@ -421,14 +434,16 @@ export async function main(argv: readonly string[] = process.argv.slice(2), over
     }
   }
   if (command === 'schedule' && argv[1] === 'create' && argv.includes('--dry-run')) {
-    const deps = openDeps({ ...overrides, readOnly: true });
     try {
-      return await runScheduleCommand(deps, argv.slice(1));
+      const deps = openDeps({ ...overrides, readOnly: true });
+      try {
+        return await runScheduleCommand(deps, argv.slice(1));
+      } finally {
+        closeDeps(deps);
+      }
     } catch (error) {
       console.error(renderSchedulingFailure(error));
       return 1;
-    } finally {
-      closeDeps(deps);
     }
   }
   if (command === 'schedule') {

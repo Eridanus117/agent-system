@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { copyFileSync, existsSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdtempSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Database } from 'bun:sqlite';
 import CANONICAL_SQL from '../../../migrations/0001_canonical.sql' with { type: 'text' };
@@ -29,10 +30,27 @@ const MIGRATIONS: readonly MigrationDefinition[] = [
   { version: 4, name: 'agent-scheduling', sql: AGENT_SCHEDULING_SQL },
 ];
 const SQLITE_SIDECARS = ['', '-wal', '-shm'] as const;
-const SQLITE_SNAPSHOT_SIDECARS = ['', '-wal'] as const;
+const SQLITE_SNAPSHOT_SIDECARS = ['', '-wal', '-shm'] as const;
+
+function createReadonlySnapshot(source: string): { readonly databasePath: string; readonly directory: string } {
+  const resolved = path.resolve(source);
+  if (!existsSync(resolved)) throw new Error(`database does not exist: ${source}`);
+  const directory = mkdtempSync(path.join(tmpdir(), 'configs-readonly-'));
+  const snapshot = path.join(directory, path.basename(resolved));
+  try {
+    for (const suffix of SQLITE_SNAPSHOT_SIDECARS) {
+      const sourcePath = `${resolved}${suffix}`;
+      if (existsSync(sourcePath)) copyFileSync(sourcePath, `${snapshot}${suffix}`);
+    }
+    return { databasePath: snapshot, directory };
+  } catch (error) {
+    rmSync(directory, { force: true, recursive: true });
+    throw error;
+  }
+}
 
 function copyDatabase(source: string, staging: string): void {
-  for (const suffix of SQLITE_SNAPSHOT_SIDECARS) {
+  for (const suffix of SQLITE_SNAPSHOT_SIDECARS.slice(0, 2)) {
     const sourcePath = `${source}${suffix}`;
     if (existsSync(sourcePath)) copyFileSync(sourcePath, `${staging}${suffix}`);
   }
@@ -344,7 +362,6 @@ function validateMigratedDatabase(db: Database): void {
   const documents = db.query<{ count: number }, []>('SELECT COUNT(*) AS count FROM configuration_search_document').get()?.count ?? 0;
   if (revisions !== documents) throw new Error('search projection count does not match revisions');
 }
-
 function readonlyManifest(db: Database, databasePath: string): MigrationManifest {
   const appliedVersions = db.query<{ version: number }, []>('SELECT version FROM schema_migrations ORDER BY version').all().map((row) => row.version);
   const count = (table: string): number => Number(db.query<{ count: number }, []>(`SELECT COUNT(*) AS count FROM ${table}`).get()?.count ?? 0);
@@ -356,18 +373,24 @@ function readonlyManifest(db: Database, databasePath: string): MigrationManifest
     canonicalCounts: { configurations: count('configuration'), revisions: count('configuration_revision'), operations: count('activation_operation'), observations: count('launch_observation') },
   };
 }
-
 export class SqliteStore {
   readonly db: Database;
   readonly manifest: MigrationManifest;
+  private readonlySnapshotDirectory: string | undefined;
 
   constructor(readonly databasePath: string, options: { readonly readOnly?: boolean } = {}) {
     if (options.readOnly) {
-      this.db = openReadonlySqliteDatabase(databasePath);
+      const snapshot = createReadonlySnapshot(databasePath);
+      this.readonlySnapshotDirectory = snapshot.directory;
+      let snapshotDb: Database | undefined;
       try {
+        snapshotDb = openReadonlySqliteDatabase(snapshot.databasePath);
+        this.db = snapshotDb;
         this.manifest = readonlyManifest(this.db, databasePath);
       } catch (error) {
-        this.db.close();
+        snapshotDb?.close();
+        rmSync(snapshot.directory, { force: true, recursive: true });
+        this.readonlySnapshotDirectory = undefined;
         throw error;
       }
       return;
@@ -450,5 +473,9 @@ export class SqliteStore {
 
   close(): void {
     this.db.close();
+    if (this.readonlySnapshotDirectory !== undefined) {
+      rmSync(this.readonlySnapshotDirectory, { force: true, recursive: true });
+      this.readonlySnapshotDirectory = undefined;
+    }
   }
 }
