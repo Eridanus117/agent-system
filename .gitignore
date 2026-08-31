@@ -20,10 +20,13 @@ WATCHDOG.yml
 vendor/bmad/skills/.openspec-target
 vendor/bmad/skills/openspec-*/
 .claude/commands/opsx/
-.omp/commands/opsx-*.md
 .omp/skills/openspec-*/
 .qoder/commands/opsx/
 .qoder/skills/openspec-*/
+# 2026-08-31：原先这里还有一条 `.omp/commands/opsx-*.md`。delivery-spec-runtime
+# 改用「可校验复制」分发后，.omp/commands 是 runtime-manifest.json 声明的受管投影，
+# 由 runtime-link.ts apply 从 pinned submodule 复制出真实文件并逐文件哈希校验，
+# 必须跟踪；继续忽略会让 runtime-check 在他人 clone 上因投影缺失而 fail-closed。
 
 # 第三方 Skill 组（当前唯一实例 bmad）作为 vendor 内容跟踪在
 # vendor/bmad/skills/ 下，一份，不再按客户端投影成两份。理由：负责人
