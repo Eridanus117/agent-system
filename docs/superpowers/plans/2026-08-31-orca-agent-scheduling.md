@@ -438,13 +438,13 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
 
 - [ ] **Step 1: Write failing SQLite integration tests**
 
-  Cover insert/read round trip, duplicate schedule ID rejection, schedule-to-dispatch foreign key, idempotent receipt import by automation ID plus operation ID, preservation of Unknown evidence, migration of existing OMP/Claude rows to `agent_id`, stale/duplicate conditional phase update rejection, and no raw prompt/task/credentials/transcript persistence.
+  Cover insert/read round trip, duplicate schedule ID rejection, schedule-to-dispatch foreign key, idempotent receipt import by automation ID plus operation ID, preservation of Unknown evidence, migration of existing OMP/Claude rows to `agent_id`, stale/duplicate conditional phase update rejection, no raw prompt/task/credentials/transcript persistence, and both serial duplicate plus controllable concurrent/conditional-race receipt re-read gates.
 - [ ] **Step 2: Implement migration 0004**
 
   Use the repository's transaction migration mechanism. Keep `STRICT` tables, explicit columns, parameterized SQL and WAL. Update store migration imports/manifest/schema version, canonical-table allowlists, validation and legacy-copy SQL so renamed columns and new tables are canonical. Do not introduce an ORM or `SELECT *` projection path.
 - [ ] **Step 3: Implement repositories**
 
-  Add explicit `save`, `findById`, `listByAgent`, `updatePhase` and `appendReceipt` methods. Conditional updates include expected current phase and version so duplicate or stale dispatch updates fail closed. Serialize only validated allowlisted fields and reconstruct domain objects through validators on reads.
+  Add explicit `save`, `findById`, `listByAgent`, `updatePhase` and `appendReceipt` methods. Conditional updates include expected current phase and version so duplicate or stale dispatch updates fail closed. Receipt import uses a conditional write and, when a race loses, re-reads the stored evidence so identical receipts succeed idempotently while conflicting receipts fail closed. Serialize only validated allowlisted fields and reconstruct domain objects through validators on reads.
 - [ ] **Step 4: Run integration tests**
 
   ```text
@@ -454,7 +454,7 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
 - [ ] **Step 5: Commit persistence**
 
   ```text
-  git add packages/control-plane/migrations/0004_agent_scheduling.sql packages/control-plane/src/adapters/sqlite packages/control-plane/src/application/ports packages/control-plane/tests/integration/agent-scheduling-sqlite.test.ts docs/superpowers/plans/2026-08-31-orca-agent-scheduling.md openspec/changes/orca-agent-scheduling/07-实施任务/实施任务.md openspec/changes/orca-agent-scheduling/task-state.json
+  git add packages/control-plane/migrations/0004_agent_scheduling.sql packages/control-plane/src/adapters/sqlite packages/control-plane/src/application/ports packages/control-plane/src/domain/dispatch-operation.ts packages/control-plane/tests/domain/dispatch-operation.test.ts packages/control-plane/tests/integration/agent-scheduling-sqlite.test.ts docs/superpowers/plans/2026-08-31-orca-agent-scheduling.md openspec/changes/orca-agent-scheduling/07-实施任务/实施任务.md openspec/changes/orca-agent-scheduling/task-state.json
   git commit -m "feat: 持久化 Agent 调度与派发事实"
   ```
 

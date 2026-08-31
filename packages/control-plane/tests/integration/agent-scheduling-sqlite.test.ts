@@ -53,6 +53,24 @@ function seedLegacyCanonicalDatabase(databasePath: string): void {
   `);
   db.close();
 }
+function receiptRaceRepository(store: SqliteStore, winner: 'same' | 'different'): SqliteDispatchOperationRepository {
+  let armed = true;
+  const raceDb = Object.create(store.db) as { query: typeof store.db.query };
+  raceDb.query = ((sql: string) => {
+    const statement = store.db.query(sql);
+    if (!armed || !sql.startsWith('UPDATE dispatch_operation SET receipt')) return statement;
+    armed = false;
+    return {
+      run(...bindings: never[]) {
+        const next = [...bindings] as unknown[];
+        if (winner === 'different') next[5] = 'evidence://orca/other';
+        statement.run(...next as never[]);
+        return { changes: 0 };
+      },
+    } as never;
+  }) as typeof raceDb.query;
+  return new SqliteDispatchOperationRepository({ db: raceDb } as unknown as SqliteStore);
+}
 
 describe('SQLite agent scheduling persistence', () => {
   test('applies migration version 4 and preserves historical rows under agent_id', () => {
@@ -136,6 +154,36 @@ describe('SQLite agent scheduling persistence', () => {
     await repository.updatePhase(planned.operationId, 'observing', unknownTerminal.operation);
     expect((await repository.findById(planned.operationId))?.terminalReason).toBe('provider omitted outcome');
     await expect(repository.appendReceipt(planned.operationId, { ...receipt(), automationId: 'automation-2' })).rejects.toThrow();
+    store.close();
+  });
+
+  test('accepts an identical receipt when a conditional write loses a race', async () => {
+    const store = new SqliteStore(':memory:');
+    seedRevision(store);
+    const schedules = new SqliteScheduleRepository(store);
+    const repository = new SqliteDispatchOperationRepository(store);
+    await schedules.save(schedule());
+    const planned = operation();
+    await repository.save(planned);
+    const dispatchedResult = transitionDispatchOperation(planned, { type: 'dispatched', automationId: 'automation-1' });
+    if (!dispatchedResult.ok) throw new Error(dispatchedResult.reason);
+    await repository.updatePhase(planned.operationId, planned.phase, dispatchedResult.operation);
+    await expect(receiptRaceRepository(store, 'same').appendReceipt(planned.operationId, receipt())).resolves.toBeUndefined();
+    store.close();
+  });
+
+  test('rejects a different receipt when a conditional write loses a race', async () => {
+    const store = new SqliteStore(':memory:');
+    seedRevision(store);
+    const schedules = new SqliteScheduleRepository(store);
+    const repository = new SqliteDispatchOperationRepository(store);
+    await schedules.save(schedule());
+    const planned = operation();
+    await repository.save(planned);
+    const dispatchedResult = transitionDispatchOperation(planned, { type: 'dispatched', automationId: 'automation-1' });
+    if (!dispatchedResult.ok) throw new Error(dispatchedResult.reason);
+    await repository.updatePhase(planned.operationId, planned.phase, dispatchedResult.operation);
+    await expect(receiptRaceRepository(store, 'different').appendReceipt(planned.operationId, receipt())).rejects.toThrow('dispatch receipt conflict');
     store.close();
   });
 
