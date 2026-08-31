@@ -3,7 +3,7 @@
   "tasks": [
     {
       "id": "1.1",
-      "state": "planned",
+      "state": "verified",
       "deliverables": [
         "openspec/changes/orca-agent-scheduling/.openspec.yaml",
         "openspec/changes/orca-agent-scheduling/README.md",
@@ -21,12 +21,12 @@
         "npx openspec validate orca-agent-scheduling --strict",
         "openspec/specs/ 和 .orca/ 未修改"
       ],
-      "evidence": [],
+      "evidence": ["fc970b2ca4c48bd8adaeb463e3e8d7c25d4910a0；npx openspec doctor；npx openspec validate orca-agent-scheduling --strict；openspec/specs/ 和 .orca/ 未修改"],
       "blocker": null
     },
     {
       "id": "2.1",
-      "state": "planned",
+      "state": "verified",
       "deliverables": [
         "packages/control-plane/src/domain/agent.ts",
         "packages/control-plane/src/domain/client.ts -> agent.ts",
@@ -46,12 +46,12 @@
         "所有 Client->Agent 迁移调用方无 Client* alias 或 stale reference",
         "bunx tsc --noEmit -p packages/control-plane/tsconfig.json"
       ],
-      "evidence": [],
+      "evidence": ["db2297a；Agent domain/adapter focused 7 pass；typecheck exit 0；Client* bounded search no matches"],
       "blocker": null
     },
     {
       "id": "3.1",
-      "state": "planned",
+      "state": "verified",
       "deliverables": [
         "packages/control-plane/src/application/ports/agent-registry.ts",
         "packages/control-plane/src/application/agent-registry.ts",
@@ -62,12 +62,12 @@
       "verification": [
         "known/unknown provider、独立 capability levels 和 OMP/Claude adapter lookup 合同测试通过"
       ],
-      "evidence": [],
+      "evidence": ["76b06de；registry/provider focused 10 pass；typecheck exit 0；无 provider inventory 时 unknown"],
       "blocker": null
     },
     {
       "id": "4.1",
-      "state": "planned",
+      "state": "verified",
       "deliverables": [
         "packages/control-plane/src/domain/schedule.ts",
         "packages/control-plane/src/domain/dispatch-operation.ts",
@@ -79,12 +79,12 @@
       "verification": [
         "trigger、target、Session policy、稳定关联和 dispatch 状态转换定向测试通过"
       ],
-      "evidence": [],
+      "evidence": ["db38bd6/7c8f1b2/d6fe87e/c810113；domain focused 17 pass、100 expects；无 raw prompt/task"],
       "blocker": null
     },
     {
       "id": "5.1",
-      "state": "planned",
+      "state": "verified",
       "deliverables": [
         "packages/control-plane/src/adapters/orca/orca-command.ts",
         "packages/control-plane/src/adapters/orca/orca-scheduler.ts",
@@ -96,12 +96,12 @@
         "所有 trigger/target/选项映射、JSON receipt、取消和失败关闭合同测试通过",
         "automation 创建只进入 dispatched，不伪造 Session succeeded"
       ],
-      "evidence": [],
+      "evidence": ["dbad32a/633dba0；scheduler/dispatch focused 9 pass、28 expects；typecheck exit 0；结构化 argv 与失败关闭"],
       "blocker": null
     },
     {
       "id": "6.1",
-      "state": "planned",
+      "state": "verified",
       "deliverables": [
         "packages/control-plane/migrations/0004_agent_scheduling.sql",
         "packages/control-plane/src/adapters/sqlite/schedule-repository.ts",
@@ -122,12 +122,12 @@
         "stale/duplicate conditional phase/version 更新和无 prompt/task/credentials/transcript 持久化边界测试通过",
         "bunx tsc --noEmit -p packages/control-plane/tsconfig.json 通过"
       ],
-      "evidence": [],
+      "evidence": ["e4aedfc/ceeda94；SQLite focused 8 pass、24 expects；migration v4、receipt race re-read、typecheck exit 0"],
       "blocker": null
     },
     {
       "id": "7.1",
-      "state": "planned",
+      "state": "verified",
       "deliverables": [
         "packages/control-plane/src/application/scheduling.ts",
         "packages/control-plane/tests/application/scheduling.test.ts",
@@ -140,12 +140,12 @@
         "bun test packages/control-plane/tests",
         "bunx tsc --noEmit -p packages/control-plane/tsconfig.json"
       ],
-      "evidence": [],
+      "evidence": ["7d014cc/5870af5/9e00899/120dc3f；scheduling focused 19 pass、74 expects；package/typecheck 通过；application fail-closed"],
       "blocker": null
     },
     {
       "id": "8.1",
-      "state": "completed",
+      "state": "verified",
       "deliverables": [
         "packages/control-plane/src/cli/index.ts",
         "packages/control-plane/src/cli/render.ts",
@@ -172,7 +172,7 @@
     },
     {
       "id": "9.1",
-      "state": "planned",
+      "state": "verified",
       "deliverables": [
         "openspec/changes/orca-agent-scheduling/08-验收/验收记录.md",
         "work/records/2026-08-31-orca-agent-scheduling/orca-provider-matrix.json",
@@ -183,7 +183,15 @@
         "provider matrix consistency、项目验证、TypeScript 类型检查和 strict OpenSpec 验证通过",
         "保存可重放 run-id 或等价证据；Hermes 无证据时为 unknown"
       ],
-      "evidence": [],
+      "evidence": [
+        "bun test packages/control-plane/tests/contracts/orca-provider-matrix.test.ts（4 pass，67 expects）",
+        "bun test packages/control-plane/tests（189 pass，0 fail，749 expects）",
+        "bunx tsc --noEmit -p packages/control-plane/tsconfig.json（exit 0，无 diagnostics）",
+        "npx openspec doctor（Root/OpenSpec root ok）",
+        "npx openspec validate orca-agent-scheduling --strict（Change valid）",
+        "work/records/2026-08-31-orca-agent-scheduling/orca-provider-matrix.json：runtime 1.4.192；claude/codex/omp/pi/grok discovery known；Hermes 全层 unknown；无真实 automation/launch/task 证据",
+        "openspec/changes/orca-agent-scheduling/08-验收/验收记录.md：分离 code contract、Orca scheduling、native launch、real Agent task 验收及 provider follow-up"
+      ],
       "blocker": null
     }
   ]

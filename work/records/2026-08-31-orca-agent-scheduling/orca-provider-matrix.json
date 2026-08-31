@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-31",
+  "runtime": {
+    "status": "ready",
+    "version": "1.4.192",
+    "evidenceRef": "orca:runtime:1.4.192"
+  },
+  "providers": [
+    {
+      "provider": "claude",
+      "orcaEvidence": "orca:cli-guide:1.4.192:claude",
+      "discovery": "known",
+      "probe": "unknown",
+      "assembly": "degraded",
+      "scheduling": "unknown",
+      "dispatch": "unknown",
+      "observation": "unknown",
+      "recovery": "unknown",
+      "evidenceRefs": [
+        "openspec/changes/orca-agent-scheduling/04-技术现状/技术现状.md#L42-L54",
+        "packages/control-plane/tests/contracts/agent-adapters.test.ts"
+      ]
+    },
+    {
+      "provider": "codex",
+      "orcaEvidence": "orca:cli-guide:1.4.192:codex",
+      "discovery": "known",
+      "probe": "unknown",
+      "assembly": "unknown",
+      "scheduling": "degraded",
+      "dispatch": "unknown",
+      "observation": "unknown",
+      "recovery": "unknown",
+      "evidenceRefs": [
+        "openspec/changes/orca-agent-scheduling/04-技术现状/技术现状.md#L42-L54",
+        "packages/control-plane/tests/contracts/orca-scheduler.test.ts",
+        "packages/control-plane/tests/cli/agent-scheduling.test.ts"
+      ]
+    },
+    {
+      "provider": "omp",
+      "orcaEvidence": "orca:cli-guide:1.4.192:omp",
+      "discovery": "known",
+      "probe": "unknown",
+      "assembly": "degraded",
+      "scheduling": "unknown",
+      "dispatch": "unknown",
+      "observation": "unknown",
+      "recovery": "unknown",
+      "evidenceRefs": [
+        "openspec/changes/orca-agent-scheduling/04-技术现状/技术现状.md#L21-L30",
+        "packages/control-plane/tests/contracts/agent-adapters.test.ts"
+      ]
+    },
+    {
+      "provider": "pi",
+      "orcaEvidence": "orca:cli-guide:1.4.192:pi",
+      "discovery": "known",
+      "probe": "unknown",
+      "assembly": "unknown",
+      "scheduling": "unknown",
+      "dispatch": "unknown",
+      "observation": "unknown",
+      "recovery": "unknown",
+      "evidenceRefs": [
+        "openspec/changes/orca-agent-scheduling/04-技术现状/技术现状.md#L42-L54",
+        "packages/control-plane/tests/contracts/orca-agent-provider.test.ts"
+      ]
+    },
+    {
+      "provider": "grok",
+      "orcaEvidence": "orca:cli-guide:1.4.192:grok",
+      "discovery": "known",
+      "probe": "unknown",
+      "assembly": "unknown",
+      "scheduling": "unknown",
+      "dispatch": "unknown",
+      "observation": "unknown",
+      "recovery": "unknown",
+      "evidenceRefs": [
+        "openspec/changes/orca-agent-scheduling/04-技术现状/技术现状.md#L42-L54"
+      ]
+    },
+    {
+      "provider": "hermes",
+      "orcaEvidence": "unknown:orca-provider-not-in-known-id-list",
+      "discovery": "unknown",
+      "probe": "unknown",
+      "assembly": "unknown",
+      "scheduling": "unknown",
+      "dispatch": "unknown",
+      "observation": "unknown",
+      "recovery": "unknown",
+      "evidenceRefs": [
+        "openspec/changes/orca-agent-scheduling/04-技术现状/技术现状.md#L46-L54"
+      ]
+    }
+  ]
+}
