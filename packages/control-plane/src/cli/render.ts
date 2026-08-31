@@ -46,12 +46,14 @@ import type { ValidatedSchedule } from '../application/scheduling';
 
 const CONTROLLED_REFERENCE = /^(?:evidence:\/\/[A-Za-z0-9._~/-]+|context:\/\/[A-Za-z0-9._~/-]+|orca:[A-Za-z0-9._~:/-]+)$/;
 const SAFE_LABEL = /^[A-Za-z0-9._ ()/:-]{1,128}$/;
+const SAFE_TEXT = /^(?!.*(?:credential|prompt|task|transcript|environment|secret))[A-Za-z0-9._ ()/:-]{1,128}$/i;
 const SAFE_SELECTOR = /^[A-Za-z0-9._~:/\\ -]{1,256}$/;
 const SAFE_CRON = /^[0-9*/?, -]{1,128}$/;
 const SAFE_RRULE = /^FREQ=(?:MINUTELY|HOURLY|DAILY|WEEKLY|MONTHLY|YEARLY)(?:;(?:INTERVAL|BYDAY|BYHOUR|BYMINUTE|BYMONTHDAY|BYMONTH|COUNT|UNTIL|WKST|BYSETPOS)=[A-Za-z0-9,.*?+TZ-]+)*$/;
 const SAFE_CAPABILITY = /^(?!.*(?:credential|prompt|task|transcript|environment|secret))[a-z][a-z0-9._-]{0,63}$/i;
 const SAFE_PROBE_ID = /^(?!.*(?:credential|prompt|task|transcript|environment|secret))[A-Za-z0-9._~:/-]{1,128}$/i;
 const SAFE_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
+const OPERATION_PHASES = new Set(['planned', 'dispatched', 'observing', 'succeeded', 'degraded', 'failed', 'skipped', 'unknown']);
 const SUPPORT_LEVELS = new Set<AgentCapabilitySnapshot['level']>(['supported', 'degraded', 'unsupported', 'unknown']);
 
 function matches(value: unknown, pattern: RegExp): value is string {
@@ -64,13 +66,15 @@ function projectReference(value: unknown): string | null {
   return matches(value, CONTROLLED_REFERENCE) ? value : null;
 }
 function projectTimestamp(value: unknown): string {
-  return matches(value, SAFE_TIMESTAMP) ? value : 'unknown';
+  if (!matches(value, SAFE_TIMESTAMP)) return 'unknown';
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? 'unknown' : new Date(parsed).toISOString();
 }
 function projectIdentifier(value: unknown): string {
   return matches(value, SAFE_PROBE_ID) ? value : 'unknown';
 }
 function projectLabel(value: unknown): string {
-  return matches(value, SAFE_LABEL) && !value.includes('://') && !value.includes('=') ? value : 'unknown';
+  return matches(value, SAFE_TEXT) ? value : 'unknown';
 }
 function projectVersion(version: unknown, observedAt: unknown): Record<string, string> {
   const value = typeof version === 'object' && version !== null ? version as Record<string, unknown> : {};
@@ -168,7 +172,7 @@ function projectOperation(operation: DispatchOperation | null): Record<string, u
     agentId: projectIdentifier(operation.agentId),
     revisionId: projectIdentifier(operation.revisionId),
     target: projectTarget(operation.target),
-    phase: projectLabel(operation.phase),
+    phase: typeof operation.phase === 'string' && OPERATION_PHASES.has(operation.phase) ? operation.phase : 'unknown',
     automationId: projectReference(operation.automationId),
     manifestHash: matches(operation.manifestHash, /^[a-f0-9]{64}$/i) ? operation.manifestHash : null,
     terminalReason: projectReason(operation.terminalReason),

@@ -151,14 +151,15 @@ describe('agent scheduling CLI', () => {
 
   test('projections strictly redact uncontrolled evidence, target, trigger and terminal values', async () => {
     const registry = new FakeRegistry(
-      [{ id: agentId('omp'), displayName: 'safe', provider: 'credentials://provider-secret', sourceEvidence: 'transcript://private' }],
-      new Map([['omp', { ...snapshot('omp', 'prompt=secret' as AgentCapabilitySnapshot['level']), probeId: ['transcript=secret'] as unknown as string, capabilities: { scheduling: 'supported', credentials: 'supported', prompt: 'supported', transcript: 'supported' }, observedAt: 'transcript=secret', evidenceRef: 'credentials://agent-secret', version: { kind: 'unknown', reason: 'ok', observedAt: 'transcript=secret' } }]]),
+      [{ id: agentId('omp'), displayName: 'prompt secret', provider: 'credentials://provider-secret', sourceEvidence: 'transcript://private' }],
+      new Map([['omp', { ...snapshot('omp', 'prompt=secret' as AgentCapabilitySnapshot['level']), probeId: ['transcript=secret'] as unknown as string, capabilities: { scheduling: 'supported', credentials: 'supported', prompt: 'supported', transcript: 'supported' }, observedAt: '2026-99-99T99:99:99.999Z', evidenceRef: 'credentials://agent-secret', version: { kind: 'unknown', reason: 'prompt secret', observedAt: 'transcript=secret' } }]]),
     );
     const result = await run(['agents', 'probe', 'omp'], makeOverrides(registry, new FakeScheduler(), new FakeSchedules(), new FakeOperations()));
     expect((parse(result.stdout).agent as Record<string, unknown>).probeId).toBe('unknown');
     expect((parse(result.stdout).agent as Record<string, unknown>).level).toBe('unknown');
     expect((parse(result.stdout).agent as Record<string, unknown>).observedAt).toBe('unknown');
     expect(((parse(result.stdout).agent as Record<string, unknown>).version as Record<string, unknown>).observedAt).toBe('unknown');
+    expect(((parse(result.stdout).agent as Record<string, unknown>).version as Record<string, unknown>).reason).toBe('unknown');
     expect(result.code).toBe(0);
     expect(result.stdout).not.toContain('credentials://');
     expect(result.stdout).not.toContain('transcript://');
@@ -260,7 +261,7 @@ describe('agent scheduling CLI', () => {
     Object.assign(schedules.values.get('schedule-1')!.target, { credential: 'secret' });
     operations.values.set('operation-schedule-1', {
       operationId: 'operation-schedule-1', scheduleId: 'schedule-1', agentId: agentId('omp'), revisionId: 'rev-1', target: { kind: 'repo', selector: 'src' },
-      phase: 'unknown', automationId: null, manifestHash: 'hash', createdAt: now, updatedAt: now, terminalReason: 'unknown:provider', version: 1,
+      phase: 'prompt secret' as DispatchOperation['phase'], automationId: null, manifestHash: 'hash', createdAt: now, updatedAt: now, terminalReason: 'unknown:provider', version: 1,
     });
     Object.assign(operations.values.get('operation-schedule-1')!.target, { transcript: 'private' });
     const result = await run(['schedule', 'show', 'schedule-1'], makeOverrides(new FakeRegistry([descriptor('omp', 'evidence://inventory/omp')], new Map()), new FakeScheduler(), schedules, operations));
@@ -299,6 +300,9 @@ describe('agent scheduling CLI', () => {
     expect(existsSync(databasePath)).toBe(false);
     expect(existsSync(`${databasePath}-wal`)).toBe(false);
     expect(existsSync(`${databasePath}-shm`)).toBe(false);
+    const show = await run(['schedule', 'show', 'missing'], { databasePath, now: () => now });
+    expect(show.code).toBe(1);
+    expect(show.stderr).toBe('schedule error: schedule-not-found');
   });
 
   test('schedule cancel requires yes, uses exact automation id and is idempotent', async () => {

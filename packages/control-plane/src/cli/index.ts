@@ -447,7 +447,13 @@ export async function main(argv: readonly string[] = process.argv.slice(2), over
     }
   }
   if (command === 'schedule') {
-    const deps = openDeps(overrides);
+    let deps: FullDeps;
+    try {
+      deps = openDeps(overrides);
+    } catch (error) {
+      console.error(renderSchedulingFailure(error));
+      return 1;
+    }
     try {
       return await runScheduleCommand(deps, argv.slice(1));
     } catch (error) {
