@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { agentId, type AgentCapabilitySnapshot, validateAgentCapabilitySnapshot } from '../../src/domain/agent';
+import { agentId, type AgentCapabilitySnapshot, type AgentSourceError, type DiscoveryRecord, type SourceResult, type UnknownReasons, validateAgentCapabilitySnapshot } from '../../src/domain/agent';
 
 describe('Agent domain', () => {
   test('rejects an empty AgentId', () => {
@@ -59,5 +59,47 @@ describe('Agent domain', () => {
       evidenceRef: '   ',
     };
     expect(() => validateAgentCapabilitySnapshot(snapshot)).toThrow('evidence reference');
+  });
+
+  test('models source-scoped identity, stage reasons, and typed source results', () => {
+    const key = { sourceId: 'orca', agentId: agentId('omp') };
+    const unknownReasons: UnknownReasons = {
+      discovery: 'source-only-discovery',
+      probe: 'probe-unavailable',
+      assembly: null,
+      launch: null,
+      scheduling: null,
+      dispatch: null,
+      observation: null,
+      recovery: null,
+      closure: null,
+    };
+    const snapshot: AgentCapabilitySnapshot = {
+      key,
+      sourceId: key.sourceId,
+      agentId: key.agentId,
+      probeId: 'probe-source-scoped',
+      level: 'unknown',
+      version: { kind: 'unknown', reason: 'probe-unavailable', observedAt: '2026-08-31T00:00:00.000Z' },
+      capabilities: {},
+      evidence: [],
+      observedAt: '2026-08-31T00:00:00.000Z',
+      unknownReasons,
+    };
+    validateAgentCapabilitySnapshot(snapshot);
+    const record: DiscoveryRecord = { sourceId: key.sourceId, agentId: key.agentId, providerId: null };
+    const error: AgentSourceError = {
+      code: 'probe-timeout',
+      sourceId: key.sourceId,
+      key,
+      retryable: true,
+      attempt: 1,
+      maxAttempts: 2,
+      message: 'probe timed out',
+    };
+    const partial: SourceResult<readonly DiscoveryRecord[]> = { status: 'partial', value: [record], error, attempts: 1 };
+    expect(partial.value[0]).toEqual(record);
+    expect(snapshot.key).toEqual(key);
+    expect(snapshot.unknownReasons?.probe).toBe('probe-unavailable');
   });
 });

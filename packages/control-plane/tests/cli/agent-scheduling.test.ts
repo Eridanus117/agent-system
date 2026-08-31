@@ -6,9 +6,9 @@ import { SqliteConfigRevisionRepository } from '../../src/adapters/sqlite/reposi
 import os from 'node:os';
 import path from 'node:path';
 import { main, type CliOverrides } from '../../src/cli/index';
-import { renderSchedulingFailure } from '../../src/cli/render';
+import { renderSchedulingFailure, renderAgentListJson } from '../../src/cli/render';
 import { SchedulingError } from '../../src/application/scheduling';
-import { agentId, type AgentCapabilitySnapshot, type AgentDescriptor, type AgentId } from '../../src/domain/agent';
+import { agentId, emptyUnknownReasons, type AgentCapabilitySnapshot, type AgentDescriptor, type AgentId, type AgentKey } from '../../src/domain/agent';
 import type { AgentRegistry } from '../../src/application/ports/agent-registry';
 import type { AgentSchedulerPort } from '../../src/application/ports/scheduler';
 import type { AgentScheduleRepository } from '../../src/application/ports/schedule-repository';
@@ -36,12 +36,23 @@ function revision(): ConfigurationRevision {
   };
 }
 
+function lookupKey(value: AgentId | AgentKey): AgentKey {
+  return typeof value === 'string' ? { sourceId: 'orca', agentId: value } : value;
+}
+
 class FakeRegistry implements AgentRegistry {
   constructor(readonly descriptors: readonly AgentDescriptor[], readonly snapshots: ReadonlyMap<string, AgentCapabilitySnapshot>) {}
   async list(): Promise<readonly AgentDescriptor[]> { return this.descriptors; }
-  async get(id: AgentId): Promise<AgentDescriptor | null> { return this.descriptors.find((item) => item.id === id) ?? null; }
-  async probe(id: AgentId): Promise<AgentCapabilitySnapshot> {
-    return this.snapshots.get(id) ?? snapshot(id as string, 'unknown', { kind: 'unknown', reason: 'not-probed', observedAt: now });
+  async get(value: AgentId | AgentKey): Promise<AgentDescriptor | null> {
+    const key = lookupKey(value);
+    return this.descriptors.find((item) => {
+      const itemKey = item.key ?? (item.sourceId !== undefined && item.agentId !== undefined ? { sourceId: item.sourceId, agentId: item.agentId } : item.id === undefined ? undefined : { sourceId: 'orca', agentId: item.id });
+      return itemKey?.sourceId === key.sourceId && itemKey.agentId === key.agentId;
+    }) ?? null;
+  }
+  async probe(value: AgentId | AgentKey): Promise<AgentCapabilitySnapshot> {
+    const key = lookupKey(value);
+    return this.snapshots.get(`${key.sourceId}/${key.agentId}`) ?? this.snapshots.get(key.agentId) ?? snapshot(key.agentId as string, 'unknown', { kind: 'unknown', reason: 'not-probed', observedAt: now });
   }
   adapter(): null { return null; }
 }
@@ -384,12 +395,39 @@ describe('agent scheduling CLI', () => {
     expect(Object.keys(list)).toEqual(['agents']);
     expect(Object.keys(probe)).toEqual(['agent']);
     expect(Object.keys(dry)).toEqual(['schedule', 'manifest', 'argv', 'spec', 'externalCall', 'evidence', 'timestamps']);
-    expect(Object.keys((probe.agent as Record<string, unknown>))).toEqual(['id', 'displayName', 'provider', 'level', 'version', 'probeId', 'capabilities', 'evidenceRef', 'observedAt']);
+    expect(Object.keys((probe.agent as Record<string, unknown>))).toEqual(['id', 'sourceId', 'key', 'displayName', 'provider', 'level', 'version', 'probeId', 'capabilities', 'evidenceRef', 'observedAt']);
     expect(Object.keys((dry.schedule as Record<string, unknown>))).toEqual(['scheduleId', 'agentId', 'revisionId', 'trigger', 'target', 'sessionPolicy', 'precheckRef', 'sourceContextRef', 'createdAt']);
     expect(Object.keys((dry.evidence as Record<string, unknown>))).toEqual(['agent', 'revision']);
     expect(JSON.stringify({ list, probe, dry })).not.toMatch(/prompt|task|credential|transcript|environment/i);
     const help = await run(['schedule', 'create', '--help'], overrides);
     expect(help.code).toBe(0);
     expect(existsSync(path.join(tempRoot!, 'control-plane.sqlite3'))).toBe(false);
+  });
+  test('renders source-aware Orca identity and rejects same-agentId foreign probes', () => {
+    const key: AgentKey = { sourceId: 'orca', agentId: agentId('omp') };
+    const descriptor: AgentDescriptor = { key, sourceId: key.sourceId, agentId: key.agentId, providerId: 'omp', displayName: 'OMP', evidence: ['orca:agent-context/omp'], unknownReasons: emptyUnknownReasons() };
+    const snapshot: AgentCapabilitySnapshot = { key, sourceId: key.sourceId, agentId: key.agentId, probeId: 'omp-probe', level: 'supported', version: { kind: 'known', value: '1' }, capabilities: { scheduling: 'supported' }, evidence: ['evidence://agents/omp'], observedAt: now, unknownReasons: emptyUnknownReasons() };
+    const foreign: AgentCapabilitySnapshot = { ...snapshot, key: { sourceId: 'other-source', agentId: key.agentId }, sourceId: 'other-source' };
+
+    const rendered = JSON.parse(renderAgentListJson([{ descriptor, snapshot }])) as { readonly agents: readonly Record<string, unknown>[] };
+    expect(rendered.agents[0]).toMatchObject({ id: 'omp', level: 'supported' });
+    const foreignRendered = JSON.parse(renderAgentListJson([{ descriptor, snapshot: foreign }])) as { readonly agents: readonly Record<string, unknown>[] };
+    expect(foreignRendered.agents[0]).toMatchObject({ id: 'omp', level: 'unknown', probeId: 'unknown' });
+  });
+  test('probes an explicit source-scoped agent key without cross-source fallback', async () => {
+    const key: AgentKey = { sourceId: 'other-source', agentId: agentId('omp') };
+    const sourceDescriptor: AgentDescriptor = { key, sourceId: key.sourceId, agentId: key.agentId, providerId: 'omp', displayName: 'OMP', evidence: ['evidence://inventory/other-omp'], unknownReasons: emptyUnknownReasons() };
+    const sourceSnapshot: AgentCapabilitySnapshot = { ...snapshot('omp', 'supported'), key, sourceId: key.sourceId, agentId: key.agentId };
+    const overrides = makeOverrides(new FakeRegistry([sourceDescriptor], new Map([['other-source/omp', sourceSnapshot]])), new FakeScheduler(), new FakeSchedules(), new FakeOperations());
+
+    const result = await run(['agents', 'probe', 'other-source/omp'], overrides);
+    expect(result.code).toBe(0);
+    expect(parse(result.stdout).agent).toMatchObject({ sourceId: 'other-source', key, level: 'supported' });
+    const foreign = await run(['agents', 'probe', 'orca/omp'], overrides);
+    expect(foreign.code).toBe(1);
+    expect(foreign.stderr).toContain('agent-not-found');
+    const ambiguous = await run(['agents', 'probe', 'other-source/omp/variant'], overrides);
+    expect(ambiguous.code).toBe(1);
+    expect(ambiguous.stderr).toContain('invalid-arguments');
   });
 });

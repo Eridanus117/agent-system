@@ -349,4 +349,10 @@ describe('scheduling application use cases', () => {
       expect(context.scheduler.creates).toBe(0);
     }
   });
+  test('accepts a source-aware Orca descriptor without requiring a legacy id field', async () => {
+    const context = deps();
+    context.registry.descriptor = { key: { sourceId: 'orca', agentId: AGENT }, sourceId: 'orca', agentId: AGENT, providerId: 'omp', displayName: 'OMP', evidence: [] };
+
+    await expect(createAgentSchedule(context, schedule())).resolves.toMatchObject({ agentId: AGENT, revisionId: REVISION });
+  });
 });

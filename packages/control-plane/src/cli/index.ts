@@ -19,7 +19,7 @@ import { findDenylistedForwardedArg } from '../adapters/omp/process-port';
 import { InMemoryAgentAdapterRegistry, OmpAgentAdapter, ClaudeAgentAdapter } from '../adapters/clients/agent-adapters';
 import { OrcaAgentProvider } from '../adapters/orca/agent-provider';
 import { createOrcaScheduler, buildOrcaCreateArgs, type OrcaCommandPort } from '../adapters/orca/orca-scheduler';
-import { agentId as toAgentId } from '../domain/agent';
+import { agentId as toAgentId, type AgentKey } from '../domain/agent';
 import { type AgentScheduleIntent, type ScheduleTarget, type ScheduleTrigger } from '../domain/schedule';
 import { type DispatchOperation } from '../domain/dispatch-operation';
 import { prepareActivation, confirmActivation, rejectActivation, executeActivation, recoverActivation, getActivationStatus, requestConfigurationSwitch, type ActivationDependencies } from '../application/activation';
@@ -317,17 +317,38 @@ interface AgentCommandDependencies {
   readonly registry: AgentRegistry;
 }
 
+function descriptorLookup(descriptor: Awaited<ReturnType<AgentRegistry['list']>>[number]): AgentKey | ReturnType<typeof toAgentId> {
+  if (descriptor.key !== undefined) return descriptor.key;
+  if (descriptor.sourceId !== undefined && descriptor.agentId !== undefined) return { sourceId: descriptor.sourceId, agentId: descriptor.agentId };
+  if (descriptor.id !== undefined) return descriptor.id;
+  throw new SchedulingCliError('agent-not-found', 'agent identity missing');
+}
+function parseAgentLookup(value: string): AgentKey | ReturnType<typeof toAgentId> {
+  const separator = value.indexOf('/');
+  if (separator < 0) return toAgentId(value);
+  const sourceId = value.slice(0, separator).trim();
+  const rawAgentId = value.slice(separator + 1);
+  if (sourceId.length === 0) throw new SchedulingCliError('invalid-arguments', 'agent source id is empty');
+  if (rawAgentId.includes('/')) throw new SchedulingCliError('invalid-arguments', 'slash is reserved for source-qualified agent ids');
+  try {
+    return { sourceId, agentId: toAgentId(rawAgentId) };
+  } catch {
+    throw new SchedulingCliError('invalid-arguments', 'agent id is invalid');
+  }
+}
+
+
 async function runAgentsCommand(deps: AgentCommandDependencies, args: readonly string[]): Promise<number> {
   if (args[0] === 'list' && args.length === 1) {
     const descriptors = await deps.registry.list();
-    const items = await Promise.all(descriptors.map(async (descriptor) => ({ descriptor, snapshot: await deps.registry.probe(descriptor.id) })));
+    const items = await Promise.all(descriptors.map(async (descriptor) => ({ descriptor, snapshot: await deps.registry.probe(descriptorLookup(descriptor)) })));
     console.log(renderAgentListJson(items));
     return 0;
   }
   if (args[0] === 'probe' && args.length === 2) {
-    const descriptor = await deps.registry.get(toAgentId(args[1]!));
+    const descriptor = await deps.registry.get(parseAgentLookup(args[1]!));
     if (descriptor === null) throw new SchedulingCliError('agent-not-found', 'agent not found');
-    console.log(renderAgentProbeJson(descriptor, await deps.registry.probe(descriptor.id)));
+    console.log(renderAgentProbeJson(descriptor, await deps.registry.probe(descriptorLookup(descriptor))));
     return 0;
   }
   throw new SchedulingCliError('invalid-arguments', 'agents requires list or probe <agent-id>');

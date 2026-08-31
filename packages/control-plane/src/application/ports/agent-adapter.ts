@@ -1,8 +1,8 @@
-import type { AgentCapabilitySnapshot, AgentId } from '../../domain/agent';
+import type { AgentCapabilitySnapshot, AgentId, AgentKey } from '../../domain/agent';
 import type { ConfigurationRevision } from '../../domain/configuration';
 import type { ProcessReference } from '../../domain/launch-observation';
 
-export type { AgentCapabilitySnapshot, AgentId } from '../../domain/agent';
+export type { AgentCapabilitySnapshot, AgentId, AgentKey } from '../../domain/agent';
 
 export interface PreparedActivation {
   readonly manifestHash: string;
@@ -38,6 +38,8 @@ export interface AgentAdapter {
   abort?(input: AgentAdapterInput & { readonly prepared: PreparedActivation; readonly started?: StartedProcess }): Promise<void>;
 }
 
+export type AgentAdapterLookup = AgentKey | AgentId;
+
 export interface AgentAdapterRegistry {
-  get(agentId: AgentId): AgentAdapter | null;
+  get(key: AgentAdapterLookup): AgentAdapter | null;
 }

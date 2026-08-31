@@ -118,23 +118,31 @@ function projectCapabilities(capabilities: unknown): Record<string, AgentCapabil
 }
 export function projectAgent(descriptor: AgentDescriptor, snapshot: AgentCapabilitySnapshot, preserveUnknownInventory = false): Record<string, unknown> {
   const value = typeof snapshot === 'object' && snapshot !== null ? snapshot as unknown as Record<string, unknown> : {};
-  const identityMatches = value.agentId === descriptor.id;
+  const descriptorKey = descriptor.key ?? (descriptor.sourceId !== undefined && descriptor.agentId !== undefined ? { sourceId: descriptor.sourceId, agentId: descriptor.agentId } : descriptor.id === undefined ? undefined : { sourceId: 'orca', agentId: descriptor.id });
+  const snapshotKey = snapshot.key ?? (snapshot.sourceId !== undefined && snapshot.agentId !== undefined ? { sourceId: snapshot.sourceId, agentId: snapshot.agentId } : snapshot.agentId === undefined ? undefined : { sourceId: 'orca', agentId: snapshot.agentId });
+  const identityMatches = descriptorKey !== undefined && snapshotKey !== undefined && descriptorKey.sourceId === snapshotKey.sourceId && descriptorKey.agentId === snapshotKey.agentId;
   const projectedSnapshot = identityMatches ? value : {};
   const level = typeof projectedSnapshot.level === 'string' && SUPPORT_LEVELS.has(projectedSnapshot.level as AgentCapabilitySnapshot['level']) ? projectedSnapshot.level : 'unknown';
+  const projectedId = descriptor.id ?? (descriptorKey?.sourceId === 'orca' ? descriptorKey.agentId : undefined);
+  const snapshotEvidence = Array.isArray(projectedSnapshot.evidence) ? projectedSnapshot.evidence.find((item): item is string => projectReference(item) !== null) : undefined;
+  const descriptorEvidence = Array.isArray(descriptor.evidence) ? descriptor.evidence.find((item): item is string => projectReference(item) !== null) : undefined;
   return {
-    id: projectIdentifier(descriptor.id),
+    id: projectIdentifier(projectedId),
+    sourceId: projectIdentifier(descriptorKey?.sourceId),
+    key: descriptorKey === undefined ? 'unknown' : { sourceId: projectIdentifier(descriptorKey.sourceId), agentId: projectIdentifier(descriptorKey.agentId) },
     displayName: projectLabel(descriptor.displayName),
-    provider: projectLabel(descriptor.provider),
+    provider: projectLabel(descriptor.providerId ?? descriptor.provider),
     level: preserveUnknownInventory || !identityMatches ? 'unknown' : level,
     version: projectVersion(projectedSnapshot.version, projectedSnapshot.observedAt),
     probeId: matches(projectedSnapshot.probeId, SAFE_PROBE_ID) ? projectedSnapshot.probeId : 'unknown',
     capabilities: projectCapabilities(projectedSnapshot.capabilities),
-    evidenceRef: identityMatches ? projectReference(projectedSnapshot.evidenceRef) ?? projectReference(descriptor.sourceEvidence) ?? 'unknown' : 'unknown',
+    evidenceRef: identityMatches ? projectReference(projectedSnapshot.evidenceRef) ?? projectReference(snapshotEvidence) ?? projectReference(descriptor.sourceEvidence) ?? projectReference(descriptorEvidence) ?? 'unknown' : 'unknown',
     observedAt: projectTimestamp(projectedSnapshot.observedAt),
   };
 }
 
-function hasControlledInventoryEvidence(value: unknown): value is string {
+function hasControlledInventoryEvidence(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some((item) => hasControlledInventoryEvidence(item));
   return matches(value, /^(?:evidence:\/\/[A-Za-z0-9._~/-]+|orca:[A-Za-z0-9._~:/-]+)$/);
 }
 
@@ -143,12 +151,12 @@ export function renderAgentListJson(items: readonly { readonly descriptor: Agent
     agents: items.map((item) => projectAgent(
       item.descriptor,
       item.snapshot,
-      !hasControlledInventoryEvidence(item.descriptor.sourceEvidence),
+      !hasControlledInventoryEvidence(item.descriptor.sourceEvidence ?? item.descriptor.evidence),
     )),
   });
 }
 export function renderAgentProbeJson(descriptor: AgentDescriptor, snapshot: AgentCapabilitySnapshot): string {
-  return JSON.stringify({ agent: projectAgent(descriptor, snapshot, !hasControlledInventoryEvidence(descriptor.sourceEvidence)) });
+  return JSON.stringify({ agent: projectAgent(descriptor, snapshot, !hasControlledInventoryEvidence(descriptor.sourceEvidence ?? descriptor.evidence)) });
 }
 
 

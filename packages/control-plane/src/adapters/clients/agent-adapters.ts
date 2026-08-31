@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { AgentAdapter, AgentAdapterInput, AgentAdapterRegistry, AgentCapabilitySnapshot, ObservedLaunch, PreparedActivation, StartedProcess } from '../../application/ports/agent-adapter';
 import type { ObservedText, SupportLevel } from '../../domain/agent';
-import { agentId, type AgentId } from '../../domain/agent';
+import { agentId, emptyUnknownReasons, type AgentId, type AgentKey } from '../../domain/agent';
 import type { ConfigurationRevision } from '../../domain/configuration';
 import { defaultDbPath } from '../../cli/db-path';
 import { buildOmpArgv, defaultExtensionPath } from '../omp/process-port';
@@ -28,8 +28,14 @@ function helpHasFlag(help: string, flag: string): boolean {
   return help.split(/\s+/u).some((token) => token === flag || token.startsWith(`${flag}=`) || token.startsWith(`${flag},`));
 }
 
+function adapterKey(value: AgentKey | AgentId): string {
+  const key = typeof value === 'string' ? { sourceId: 'orca', agentId: value } : value;
+  return JSON.stringify([key.sourceId, key.agentId]);
+}
+
 function capabilitySnapshot(agent: AgentId, binary: string, level: SupportLevel, version: ObservedText, capabilities: Readonly<Record<string, SupportLevel>>, evidenceRef: string): AgentCapabilitySnapshot {
-  return { probeId: `${binary}-probe`, agentId: agent, level, version, capabilities, observedAt: new Date().toISOString(), evidenceRef };
+  const key: AgentKey = { sourceId: 'orca', agentId: agent };
+  return { key, sourceId: key.sourceId, agentId: agent, probeId: `${binary}-probe`, level, version, capabilities, evidence: [evidenceRef], observedAt: new Date().toISOString(), evidenceRef, unknownReasons: emptyUnknownReasons() };
 }
 
 async function readPipe(stream: ReadableStream<Uint8Array> | null): Promise<string> {
@@ -189,11 +195,11 @@ export class ClaudeAgentAdapter extends IsolatedAgentAdapter {
 }
 
 export class InMemoryAgentAdapterRegistry implements AgentAdapterRegistry {
-  private readonly adapters = new Map<AgentId, AgentAdapter>();
+  private readonly adapters = new Map<string, AgentAdapter>();
   constructor(adapters: readonly AgentAdapter[] = [new OmpAgentAdapter(), new ClaudeAgentAdapter()]) {
-    for (const adapter of adapters) this.adapters.set(adapter.agentId, adapter);
+    for (const adapter of adapters) this.adapters.set(adapterKey({ sourceId: 'orca', agentId: adapter.agentId }), adapter);
   }
-  get(agentIdValue: AgentId): AgentAdapter | null {
-    return this.adapters.get(agentIdValue) ?? null;
+  get(key: AgentKey | AgentId): AgentAdapter | null {
+    return this.adapters.get(adapterKey(key)) ?? null;
   }
 }

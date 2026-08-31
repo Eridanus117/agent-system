@@ -4,7 +4,7 @@ import type { ConfigurationRepository } from './ports/configuration-repository';
 import type { AgentScheduleRepository } from './ports/schedule-repository';
 import type { DispatchOperationRepository } from './ports/dispatch-repository';
 import type { AgentSchedulerPort } from './ports/scheduler';
-import { agentId, validateAgentCapabilitySnapshot, type AgentId, type AgentCapabilitySnapshot, type SupportLevel } from '../domain/agent';
+import { agentId, validateAgentCapabilitySnapshot, type AgentId, type AgentCapabilitySnapshot, type AgentKey, type SupportLevel } from '../domain/agent';
 import { validateConfigurationRevision, type ConfigurationRevision } from '../domain/configuration';
 import {
   createAgentScheduleIntent,
@@ -150,9 +150,14 @@ export interface ValidatedSchedule {
   readonly snapshot: AgentCapabilitySnapshot;
 }
 
+function descriptorMatchesOrcaAgent(descriptor: { readonly key?: AgentKey; readonly sourceId?: string; readonly agentId?: AgentId; readonly id?: AgentId }, requested: AgentId): boolean {
+  if (descriptor.key !== undefined) return descriptor.key.sourceId === 'orca' && descriptor.key.agentId === requested;
+  if (descriptor.sourceId !== undefined || descriptor.agentId !== undefined) return descriptor.sourceId === 'orca' && descriptor.agentId === requested;
+  return descriptor.id === requested;
+}
 async function validateSchedule(deps: Pick<SchedulingDependencies, 'configurations' | 'registry'>, schedule: AgentScheduleIntent): Promise<ValidatedSchedule> {
   const descriptor = await deps.registry.get(schedule.agentId);
-  if (descriptor === null || descriptor.id !== schedule.agentId) throw new SchedulingError('agent-not-found', `Agent not found: ${schedule.agentId}`);
+  if (descriptor === null || !descriptorMatchesOrcaAgent(descriptor, schedule.agentId)) throw new SchedulingError('agent-not-found', `Agent not found: ${schedule.agentId}`);
   const revision = await deps.configurations.findById(schedule.revisionId);
   if (revision === null) throw new SchedulingError('revision-not-found', `revision not found: ${schedule.revisionId}`);
   try {
