@@ -29,12 +29,13 @@ function operation(overrides: Partial<DispatchOperation> = {}): DispatchOperatio
 
 describe('dispatch operation domain facts', () => {
   test('creates a planned operation with stable correlation fields', () => {
+    const target = { kind: 'workspace' as const, selector: 'workspace-1' };
     const created = createDispatchOperation({
       operationId: 'operation-1',
       scheduleId: 'schedule-1',
       agentId: agentId('omp'),
       revisionId: 'revision-1',
-      target: { kind: 'workspace', selector: 'workspace-1' },
+      target,
       manifestHash: 'sha256:manifest-1',
       createdAt,
     });
@@ -48,7 +49,56 @@ describe('dispatch operation domain facts', () => {
     expect(created.target).toEqual({ kind: 'workspace', selector: 'workspace-1' });
     expect('prompt' in created).toBe(false);
     expect('task' in created).toBe(false);
+    expect(created.target).not.toBe(target);
     expect(() => validateDispatchOperation(created)).not.toThrow();
+  });
+
+  test('allows planned precheck failure to produce skipped without an automation id', () => {
+    const planned = operation();
+    expect(() => transitionDispatchOperation(planned, { type: 'skipped', reason: 'precheck failed' })).not.toThrow();
+    const skipped = transitionDispatchOperation(planned, { type: 'skipped', reason: 'precheck failed' });
+
+    expect(skipped).toEqual({
+      ok: true,
+      operation: expect.objectContaining({
+        phase: 'skipped',
+        automationId: null,
+        terminalReason: 'precheck failed',
+      }),
+    });
+  });
+
+  test('preserves automation correlation when dispatched or observing is skipped', () => {
+    for (const phase of ['dispatched', 'observing'] as const) {
+      const result = transitionDispatchOperation(operation({ phase, automationId: 'automation-1' }), {
+        type: 'skipped',
+        reason: 'precheck failed',
+      });
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.operation.automationId).toBe('automation-1');
+    }
+  });
+
+  test('rejects skipped transitions without prior automation correlation', () => {
+    for (const phase of ['dispatched', 'observing'] as const) {
+      const operationWithoutAutomation = operation({ phase, automationId: null });
+      expect(() => transitionDispatchOperation(operationWithoutAutomation, { type: 'skipped' })).not.toThrow();
+      expect(transitionDispatchOperation(operationWithoutAutomation, { type: 'skipped' })).toEqual({
+        ok: false,
+        reason: 'invalid-operation',
+      });
+    }
+  });
+
+  test('fails closed without throwing for an operation with an injected target field', () => {
+    const polluted = operation({
+      target: { kind: 'repo', selector: 'org/repo', prompt: 'raw task' } as DispatchOperation['target'],
+    });
+    expect(() => transitionDispatchOperation(polluted, { type: 'skipped', reason: 'precheck failed' })).not.toThrow();
+    expect(transitionDispatchOperation(polluted, { type: 'skipped', reason: 'precheck failed' })).toEqual({
+      ok: false,
+      reason: 'invalid-operation',
+    });
   });
 
   test('allows the planned, dispatched, observing, and succeeded path', () => {
@@ -93,7 +143,7 @@ describe('dispatch operation domain facts', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.operation.phase).toBe(outcome.type);
-        expect(result.operation.terminalReason).toBe(outcome.reason);
+        expect(result.operation.terminalReason).toBe(outcome.reason ?? null);
         expect(isTerminalDispatchPhase(result.operation.phase)).toBe(true);
       }
     }

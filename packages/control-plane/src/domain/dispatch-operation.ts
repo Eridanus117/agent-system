@@ -50,13 +50,21 @@ const DISPATCH_PHASES: readonly DispatchOperationPhase[] = [
   'unknown',
 ];
 const TERMINAL_PHASES: readonly DispatchOperationPhase[] = ['succeeded', 'degraded', 'failed', 'skipped', 'unknown'];
+const DISPATCH_OPERATION_KEYS = ['operationId', 'scheduleId', 'agentId', 'revisionId', 'target', 'phase', 'automationId', 'manifestHash', 'createdAt', 'updatedAt', 'terminalReason'] as const;
 
 function requireNonEmptyText(value: unknown, label: string): asserts value is string {
   if (typeof value !== 'string' || value.trim().length === 0) throw new Error(`${label} must not be empty`);
 }
 
+function requireDispatchOperationKeys(operation: object): void {
+  for (const key of Object.keys(operation)) {
+    if (!(DISPATCH_OPERATION_KEYS as readonly string[]).includes(key)) throw new Error(`dispatch operation contains unknown field: ${key}`);
+  }
+}
+
 export function validateDispatchOperation(operation: DispatchOperation): void {
   if (typeof operation !== 'object' || operation === null || Array.isArray(operation)) throw new Error('dispatch operation must be an object');
+  requireDispatchOperationKeys(operation);
   requireNonEmptyText(operation.operationId, 'operation id');
   requireNonEmptyText(operation.scheduleId, 'schedule id');
   agentId(operation.agentId);
@@ -69,9 +77,19 @@ export function validateDispatchOperation(operation: DispatchOperation): void {
   validateRfc3339Timestamp(operation.updatedAt, 'updatedAt');
   if (operation.terminalReason !== null) requireNonEmptyText(operation.terminalReason, 'terminal reason');
   if (operation.phase === 'planned' && operation.automationId !== null) throw new Error('planned dispatch must not have an automation id');
-  if (['dispatched', 'observing', 'succeeded', 'degraded', 'skipped'].includes(operation.phase) && operation.automationId === null) {
+  if (['dispatched', 'observing', 'succeeded', 'degraded'].includes(operation.phase) && operation.automationId === null) {
     throw new Error(`${operation.phase} dispatch must have an automation id`);
   }
+}
+
+function normalizeDispatchTarget(target: ScheduleTarget): ScheduleTarget {
+  validateScheduleTarget(target);
+  if (target.kind === 'project') {
+    return target.host === undefined
+      ? { kind: 'project', selector: target.selector.trim() }
+      : { kind: 'project', selector: target.selector.trim(), host: target.host.trim() };
+  }
+  return { kind: target.kind, selector: target.selector.trim() };
 }
 
 export function createDispatchOperation(input: {
@@ -88,7 +106,7 @@ export function createDispatchOperation(input: {
     scheduleId: input.scheduleId.trim(),
     agentId: agentId(input.agentId),
     revisionId: input.revisionId.trim(),
-    target: input.target,
+    target: normalizeDispatchTarget(input.target),
     phase: 'planned',
     automationId: null,
     manifestHash: input.manifestHash.trim(),
@@ -104,7 +122,11 @@ export function transitionDispatchOperation(
   operation: DispatchOperation,
   event: DispatchOperationEvent,
 ): { readonly ok: true; readonly operation: DispatchOperation } | { readonly ok: false; readonly reason: string } {
-  validateDispatchOperation(operation);
+  try {
+    validateDispatchOperation(operation);
+  } catch {
+    return { ok: false, reason: 'invalid-operation' };
+  }
   const nextPhase = nextPhaseFor(operation.phase, event);
   if (nextPhase === null) return { ok: false, reason: `invalid-transition:${operation.phase}:${event.type}` };
 
@@ -128,7 +150,7 @@ export function transitionDispatchOperation(
     scheduleId: operation.scheduleId,
     agentId: operation.agentId,
     revisionId: operation.revisionId,
-    target: operation.target,
+    target: normalizeDispatchTarget(operation.target),
     phase: nextPhase,
     automationId: event.type === 'dispatched' ? event.automationId.trim() : operation.automationId,
     manifestHash: operation.manifestHash,
@@ -136,7 +158,11 @@ export function transitionDispatchOperation(
     updatedAt: new Date().toISOString(),
     terminalReason: event.type === 'observing' || event.type === 'dispatched' ? operation.terminalReason : event.reason?.trim() ?? operation.terminalReason,
   };
-  validateDispatchOperation(next);
+  try {
+    validateDispatchOperation(next);
+  } catch {
+    return { ok: false, reason: 'invalid-transition-result' };
+  }
   return { ok: true, operation: next };
 }
 
@@ -145,7 +171,7 @@ function nextPhaseFor(phase: DispatchOperationPhase, event: DispatchOperationEve
   if (phase === 'planned' && (event.type === 'failed' || event.type === 'skipped' || event.type === 'unknown')) return event.type;
   if (phase === 'dispatched' && event.type === 'observing') return 'observing';
   if (phase === 'dispatched' && (event.type === 'failed' || event.type === 'skipped' || event.type === 'unknown')) return event.type;
-  if (phase === 'observing' && (event.type === 'succeeded' || event.type === 'degraded' || event.type === 'failed' || event.type === 'unknown')) return event.type;
+  if (phase === 'observing' && (event.type === 'succeeded' || event.type === 'degraded' || event.type === 'failed' || event.type === 'skipped' || event.type === 'unknown')) return event.type;
   return null;
 }
 

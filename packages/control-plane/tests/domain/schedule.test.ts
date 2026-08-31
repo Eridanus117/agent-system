@@ -2,10 +2,13 @@ import { describe, expect, test } from 'bun:test';
 import { agentId } from '../../src/domain/agent';
 import {
   createAgentScheduleIntent,
+  createOrcaAutomationReceipt,
   validateAgentScheduleIntent,
+  validateOrcaAutomationReceipt,
   validateScheduleTarget,
   validateScheduleTrigger,
   type AgentScheduleIntent,
+  type OrcaAutomationReceipt,
   type ScheduleTarget,
   type ScheduleTrigger,
 } from '../../src/domain/schedule';
@@ -59,16 +62,91 @@ describe('schedule domain facts', () => {
     expect(() => validateScheduleTarget({ kind: 'repo', selector: ' ' })).toThrow();
     expect(() => validateScheduleTarget({ kind: 'project', selector: 'project-1', host: ' ' })).toThrow();
   });
+  test('constructs controlled nested trigger and target records', () => {
+    const trigger: ScheduleTrigger = { kind: 'cron', expression: '0 * * * *' };
+    const target: ScheduleTarget = { kind: 'project', selector: 'project-1', host: 'builder-1' };
+    const schedule = createAgentScheduleIntent(intent({ trigger, target }));
+
+    expect(schedule.trigger).toEqual(trigger);
+    expect(schedule.target).toEqual(target);
+    expect(schedule.trigger).not.toBe(trigger);
+    expect(schedule.target).not.toBe(target);
+    expect(Object.keys(schedule.trigger)).toEqual(['kind', 'expression']);
+    expect(Object.keys(schedule.target)).toEqual(['kind', 'selector', 'host']);
+  });
+
+  test('rejects unknown raw fields at every schedule and receipt boundary', () => {
+    expect(() => validateScheduleTrigger({ kind: 'cron', expression: '0 * * * *', prompt: 'raw task' } as ScheduleTrigger & { prompt: string })).toThrow();
+    expect(() => validateScheduleTarget({ kind: 'repo', selector: 'org/repo', transcript: 'raw transcript' } as ScheduleTarget & { transcript: string })).toThrow();
+    expect(() => createAgentScheduleIntent({ ...intent(), task: 'raw task' } as AgentScheduleIntent & { task: string })).toThrow();
+
+    const receipt = {
+      automationId: 'automation-1',
+      provider: 'orca',
+      target: { kind: 'repo', selector: 'org/repo', credentials: 'secret' },
+      trigger: { kind: 'preset', value: 'hourly', transcript: 'raw transcript' },
+      createdAt,
+      sourceEvidence: 'orca:automation:automation-1',
+      prompt: 'raw prompt',
+    } as unknown as OrcaAutomationReceipt;
+    expect(() => validateOrcaAutomationReceipt(receipt)).toThrow();
+  });
+
+  test('accepts controlled reference shapes and rejects raw text', () => {
+    expect(() => createAgentScheduleIntent(intent({
+      precheckRef: 'evidence://precheck-1',
+      sourceContextRef: 'context://source-1',
+    }))).not.toThrow();
+    expect(() => createAgentScheduleIntent(intent({ precheckRef: 'raw prompt text' }))).toThrow();
+    expect(() => createAgentScheduleIntent(intent({ sourceContextRef: 'credentials://token' }))).toThrow();
+    expect(() => validateOrcaAutomationReceipt({
+      automationId: 'automation-1',
+      provider: 'orca',
+      target: { kind: 'repo', selector: 'org/repo' },
+      trigger: { kind: 'preset', value: 'hourly' },
+      createdAt,
+      sourceEvidence: 'transcript://raw-content',
+    })).toThrow();
+  });
+  test('constructs a controlled automation receipt', () => {
+    const target: ScheduleTarget = { kind: 'repo', selector: 'org/repo' };
+    const trigger: ScheduleTrigger = { kind: 'preset', value: 'hourly' };
+    const receipt = createOrcaAutomationReceipt({
+      automationId: 'automation-1',
+      provider: 'orca',
+      target,
+      trigger,
+      createdAt,
+      sourceEvidence: 'orca:automation:automation-1',
+    });
+
+    expect(receipt).toEqual({
+      automationId: 'automation-1',
+      provider: 'orca',
+      target,
+      trigger,
+      createdAt,
+      sourceEvidence: 'orca:automation:automation-1',
+    });
+    expect(receipt.target).not.toBe(target);
+    expect(receipt.trigger).not.toBe(trigger);
+    expect(Object.keys(receipt)).toEqual([
+      'automationId',
+      'provider',
+      'target',
+      'trigger',
+      'createdAt',
+      'sourceEvidence',
+    ]);
+    expect(() => validateOrcaAutomationReceipt(receipt)).not.toThrow();
+  });
+
   test('preserves Agent, revision, trigger, target, policy, and controlled references', () => {
-    const input = {
-      ...intent({
-        sessionPolicy: 'reuse',
-        precheckRef: 'evidence://precheck-1',
-        sourceContextRef: 'context://source-1',
-      }),
-      prompt: 'must not persist',
-      task: 'must not persist',
-    } as AgentScheduleIntent & { readonly prompt: string; readonly task: string };
+    const input = intent({
+      sessionPolicy: 'reuse',
+      precheckRef: 'evidence://precheck-1',
+      sourceContextRef: 'context://source-1',
+    });
     const schedule = createAgentScheduleIntent(input);
 
     expect(schedule.scheduleId).toBe('schedule-1');
