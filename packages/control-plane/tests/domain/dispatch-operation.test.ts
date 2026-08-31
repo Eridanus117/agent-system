@@ -24,6 +24,7 @@ function operation(overrides: Partial<DispatchOperation> = {}): DispatchOperatio
     createdAt,
     updatedAt: createdAt,
     terminalReason: null,
+    version: 0,
     ...overrides,
   };
 }

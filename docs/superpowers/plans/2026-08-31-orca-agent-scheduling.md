@@ -414,12 +414,15 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
 - Create: `packages/control-plane/migrations/0004_agent_scheduling.sql`
 - Create: `packages/control-plane/src/adapters/sqlite/schedule-repository.ts`
 - Create: `packages/control-plane/src/adapters/sqlite/dispatch-repository.ts`
+- Create: `packages/control-plane/src/application/ports/schedule-repository.ts`
 - Modify: `packages/control-plane/src/adapters/sqlite/store.ts`
+- Modify: `packages/control-plane/src/adapters/sqlite/activation-operation-repository.ts`
+- Modify: `packages/control-plane/src/adapters/sqlite/launch-observation-repository.ts`
 - Modify: `packages/control-plane/src/application/ports/index.ts`
 - Create: `packages/control-plane/tests/integration/agent-scheduling-sqlite.test.ts`
 
 **Interfaces:**
-- Consumes: `AgentScheduleIntent`, `DispatchOperation`, existing SQLite transaction and migration patterns.
+- Consumes: `AgentScheduleIntent`, `DispatchOperation`, `OrcaAutomationReceipt`, existing SQLite transaction and migration patterns.
 - Produces:
 
   ```sql
@@ -429,33 +432,30 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
   CREATE INDEX idx_dispatch_operation_agent_updated ON dispatch_operation(agent_id, updated_at DESC);
   ```
 
-  The migration must rename `activation_operation.client_id` and `launch_observation.client_id` to `agent_id` in the canonical schema and preserve existing rows through the migration path.
+  `agent_schedule` persists explicit schedule/agent/revision/policy/reference columns and validated trigger/target JSON. `dispatch_operation` persists explicit operation/schedule/agent/revision/phase/automation/manifest/timestamps/reason/version columns plus controlled receipt evidence. The migration renames canonical `client_id` columns to `agent_id`; store legacy-copy SQL and both existing repositories use the renamed columns.
 
 - [ ] **Step 1: Write failing SQLite integration tests**
 
-  Cover insert/read round trip, duplicate schedule ID rejection, schedule-to-dispatch foreign key, idempotent receipt import by automation ID plus operation ID, preservation of Unknown evidence, and migration of existing OMP/Claude rows to `agent_id`.
-
+  Cover insert/read round trip, duplicate schedule ID rejection, schedule-to-dispatch foreign key, idempotent receipt import by automation ID plus operation ID, preservation of Unknown evidence, migration of existing OMP/Claude rows to `agent_id`, stale/duplicate conditional phase update rejection, and no raw prompt/task/credentials/transcript persistence.
 - [ ] **Step 2: Implement migration 0004**
 
-  Use the repository's transaction migration mechanism. Keep `STRICT` tables, explicit columns, parameterized SQL and WAL. Do not introduce an ORM or `SELECT *` projection path.
-
+  Use the repository's transaction migration mechanism. Keep `STRICT` tables, explicit columns, parameterized SQL and WAL. Update store migration imports/manifest/schema version, canonical-table allowlists, validation and legacy-copy SQL so renamed columns and new tables are canonical. Do not introduce an ORM or `SELECT *` projection path.
 - [ ] **Step 3: Implement repositories**
 
-  Add explicit `save`, `findById`, `listByAgent`, `updatePhase` and `appendReceipt` methods. Conditional updates must include the expected current phase/version so duplicate or stale dispatch updates fail closed.
-
+  Add explicit `save`, `findById`, `listByAgent`, `updatePhase` and `appendReceipt` methods. Conditional updates include expected current phase and version so duplicate or stale dispatch updates fail closed. Serialize only validated allowlisted fields and reconstruct domain objects through validators on reads.
 - [ ] **Step 4: Run integration tests**
 
   ```text
   bun test packages/control-plane/tests/integration/agent-scheduling-sqlite.test.ts
   bunx tsc --noEmit -p packages/control-plane/tsconfig.json
   ```
-
 - [ ] **Step 5: Commit persistence**
 
   ```text
-  git add packages/control-plane/migrations/0004_agent_scheduling.sql packages/control-plane/src/adapters/sqlite packages/control-plane/tests/integration/agent-scheduling-sqlite.test.ts
+  git add packages/control-plane/migrations/0004_agent_scheduling.sql packages/control-plane/src/adapters/sqlite packages/control-plane/src/application/ports packages/control-plane/tests/integration/agent-scheduling-sqlite.test.ts docs/superpowers/plans/2026-08-31-orca-agent-scheduling.md openspec/changes/orca-agent-scheduling/07-实施任务/实施任务.md openspec/changes/orca-agent-scheduling/task-state.json
   git commit -m "feat: 持久化 Agent 调度与派发事实"
   ```
+
 
 ### Task 7: Add scheduling application use cases and wire migrated OMP/Claude adapters
 

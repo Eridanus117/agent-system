@@ -28,6 +28,7 @@ export interface DispatchOperation {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly terminalReason: string | null;
+  readonly version: number;
 }
 
 export type DispatchOperationEvent =
@@ -50,7 +51,7 @@ const DISPATCH_PHASES: readonly DispatchOperationPhase[] = [
   'unknown',
 ];
 const TERMINAL_PHASES: readonly DispatchOperationPhase[] = ['succeeded', 'degraded', 'failed', 'skipped', 'unknown'];
-const DISPATCH_OPERATION_KEYS = ['operationId', 'scheduleId', 'agentId', 'revisionId', 'target', 'phase', 'automationId', 'manifestHash', 'createdAt', 'updatedAt', 'terminalReason'] as const;
+const DISPATCH_OPERATION_KEYS = ['operationId', 'scheduleId', 'agentId', 'revisionId', 'target', 'phase', 'automationId', 'manifestHash', 'createdAt', 'updatedAt', 'terminalReason', 'version'] as const;
 
 function requireNonEmptyText(value: unknown, label: string): asserts value is string {
   if (typeof value !== 'string' || value.trim().length === 0) throw new Error(`${label} must not be empty`);
@@ -104,6 +105,7 @@ export function validateDispatchOperation(operation: DispatchOperation): void {
   requireNonEmptyText(operation.manifestHash, 'manifest hash');
   validateRfc3339Timestamp(operation.createdAt, 'createdAt');
   validateRfc3339Timestamp(operation.updatedAt, 'updatedAt');
+  if (!Number.isInteger(operation.version) || operation.version < 0) throw new Error('dispatch version must be a non-negative integer');
   if (operation.terminalReason !== null) requireNonEmptyText(operation.terminalReason, 'terminal reason');
   if (operation.phase === 'planned' && operation.automationId !== null) throw new Error('planned dispatch must not have an automation id');
   if (['dispatched', 'observing', 'succeeded', 'degraded'].includes(operation.phase) && operation.automationId === null) {
@@ -142,6 +144,7 @@ export function createDispatchOperation(input: {
     createdAt: input.createdAt,
     updatedAt: input.createdAt,
     terminalReason: null,
+    version: 0,
   };
   validateDispatchOperation(operation);
   return operation;
@@ -188,6 +191,7 @@ export function transitionDispatchOperation(
     createdAt: operation.createdAt,
     updatedAt: new Date().toISOString(),
     terminalReason: safeEvent.type === 'observing' || safeEvent.type === 'dispatched' ? operation.terminalReason : safeEvent.reason?.trim() ?? operation.terminalReason,
+    version: operation.version + 1,
   };
   try {
     validateDispatchOperation(next);

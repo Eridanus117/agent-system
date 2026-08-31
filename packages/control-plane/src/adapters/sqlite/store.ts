@@ -5,6 +5,7 @@ import { Database } from 'bun:sqlite';
 import CANONICAL_SQL from '../../../migrations/0001_canonical.sql' with { type: 'text' };
 import LEGACY_SQL from '../../../migrations/0002_legacy_preservation.sql' with { type: 'text' };
 import SEARCH_SQL from '../../../migrations/0003_search.sql' with { type: 'text' };
+import AGENT_SCHEDULING_SQL from '../../../migrations/0004_agent_scheduling.sql' with { type: 'text' };
 import { openSqliteDatabase } from './connection';
 
 interface MigrationDefinition {
@@ -25,6 +26,7 @@ const MIGRATIONS: readonly MigrationDefinition[] = [
   { version: 1, name: 'canonical', sql: CANONICAL_SQL },
   { version: 2, name: 'legacy-preservation', sql: LEGACY_SQL },
   { version: 3, name: 'search-projection', sql: SEARCH_SQL },
+  { version: 4, name: 'agent-scheduling', sql: AGENT_SCHEDULING_SQL },
 ];
 const SQLITE_SIDECARS = ['', '-wal', '-shm'] as const;
 const SQLITE_SNAPSHOT_SIDECARS = ['', '-wal'] as const;
@@ -120,7 +122,7 @@ function legacyTableColumns(db: Database, table: string): readonly string[] {
 }
 
 function captureLegacyInventory(db: Database, discoveredAt: string): void {
-  const canonical = new Set(['schema_migrations', 'configuration', 'configuration_revision', 'activation_operation', 'launch_observation', 'legacy_schema_inventory', 'legacy_launch_plan', 'configuration_search_document', 'configuration_revision_fts']);
+  const canonical = new Set(['schema_migrations', 'configuration', 'configuration_revision', 'activation_operation', 'launch_observation', 'legacy_schema_inventory', 'legacy_launch_plan', 'configuration_search_document', 'configuration_revision_fts', 'agent_schedule', 'dispatch_operation']);
   const tables = db.query<{ name: string }, []>("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all();
   const insert = db.query('INSERT OR IGNORE INTO legacy_schema_inventory(table_name, columns_json, owner_status, discovered_at) VALUES (?, ?, ?, ?)');
   for (const table of tables) {
@@ -129,7 +131,7 @@ function captureLegacyInventory(db: Database, discoveredAt: string): void {
   }
 }
 function hasUnrecognizedTables(db: Database): boolean {
-  const canonical = new Set(['schema_migrations', 'configuration', 'configuration_revision', 'activation_operation', 'launch_observation', 'legacy_schema_inventory', 'legacy_launch_plan', 'configuration_search_document', 'configuration_revision_fts']);
+  const canonical = new Set(['schema_migrations', 'configuration', 'configuration_revision', 'activation_operation', 'launch_observation', 'legacy_schema_inventory', 'legacy_launch_plan', 'configuration_search_document', 'configuration_revision_fts', 'agent_schedule', 'dispatch_operation']);
   return db.query<{ name: string }, []>("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all().some((table) => !canonical.has(table.name) && !table.name.startsWith('configuration_revision_fts_'));
 }
 
@@ -190,7 +192,7 @@ function legacyLaunchPlanMetadata(row: Record<string, unknown>): Record<string, 
 }
 interface LegacyObservationRow {
   readonly operation_id: string;
-  readonly client_id: string;
+  readonly agent_id: string;
   readonly stage: string;
   readonly outcome: string;
   readonly process_reference_json: string | null;
@@ -287,21 +289,21 @@ function copyLegacyData(db: Database, copiedAt: string): void {
     if (revisionId === null && (phase === 'succeeded' || phase === 'degraded')) phase = 'requires-restart';
     if (phase === 'requires-restart' && reason === null) reason = 'unresolved legacy operation: phase could not be represented safely';
     const operationExists = db.query('SELECT operation_id FROM activation_operation WHERE operation_id = ?').get(operationId) !== null;
-    if (!operationExists) runStatement(db, 'INSERT INTO activation_operation(operation_id, revision_id, config_name, client_id, phase, version, plan_hash, created_at, updated_at, terminal_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [operationId, revisionId, configName, client, phase, 0, String(row.plan_hash ?? `legacy-${legacyId}`), String(row.created_at ?? copiedAt), copiedAt, reason]);
+    if (!operationExists) runStatement(db, 'INSERT INTO activation_operation(operation_id, revision_id, config_name, agent_id, phase, version, plan_hash, created_at, updated_at, terminal_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [operationId, revisionId, configName, client, phase, 0, String(row.plan_hash ?? `legacy-${legacyId}`), String(row.created_at ?? copiedAt), copiedAt, reason]);
     const outcome = row.observed_outcome_value;
     if (String(row.observed_outcome_status) === 'known' && typeof outcome === 'string' && ['succeeded', 'degraded', 'failed', 'incomplete', 'not-available'].includes(outcome)) {
       const preferredObservationId = `legacy-observation-${legacyId}`;
       const observationReason = typeof row.observed_outcome_reason === 'string' && row.observed_outcome_reason.trim().length > 0 ? 'legacy-observation-reason-preserved-in-source' : null;
       const observedAt = typeof row.observed_outcome_observed_at === 'string' && row.observed_outcome_observed_at.trim().length > 0 ? row.observed_outcome_observed_at : new Date(0).toISOString();
-      const readObservation = (observationId: string): LegacyObservationRow | null => db.query<LegacyObservationRow, [string]>('SELECT operation_id, client_id, stage, outcome, process_reference_json, reason, observed_at FROM launch_observation WHERE observation_id = ?').get(observationId);
+      const readObservation = (observationId: string): LegacyObservationRow | null => db.query<LegacyObservationRow, [string]>('SELECT operation_id, agent_id, stage, outcome, process_reference_json, reason, observed_at FROM launch_observation WHERE observation_id = ?').get(observationId);
       const existingObservation = readObservation(preferredObservationId);
-      const observationMatches = (candidate: LegacyObservationRow | null): boolean => candidate !== null && candidate.operation_id === operationId && candidate.client_id === client && candidate.stage === 'outcome-observed' && candidate.outcome === outcome && candidate.process_reference_json === null && candidate.reason === observationReason && candidate.observed_at === observedAt;
+      const observationMatches = (candidate: LegacyObservationRow | null): boolean => candidate !== null && candidate.operation_id === operationId && candidate.agent_id === client && candidate.stage === 'outcome-observed' && candidate.outcome === outcome && candidate.process_reference_json === null && candidate.reason === observationReason && candidate.observed_at === observedAt;
       const collisionObservationId = `${preferredObservationId}:migrated-${checksum(sourceJson).slice(0, 16)}`;
       const collisionMatches = observationMatches(readObservation(collisionObservationId));
       let observationId = existingObservation === null || observationMatches(existingObservation) ? preferredObservationId : collisionObservationId;
       let collisionSuffix = 2;
       while (!observationMatches(existingObservation) && !collisionMatches && readObservation(observationId) !== null) observationId = `${collisionObservationId}-${collisionSuffix++}`;
-      if (readObservation(observationId) === null) runStatement(db, 'INSERT INTO launch_observation(observation_id, operation_id, client_id, stage, outcome, process_reference_json, reason, observed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [observationId, operationId, client, 'outcome-observed', outcome, null, observationReason, observedAt]);
+      if (readObservation(observationId) === null) runStatement(db, 'INSERT INTO launch_observation(observation_id, operation_id, agent_id, stage, outcome, process_reference_json, reason, observed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [observationId, operationId, client, 'outcome-observed', outcome, null, observationReason, observedAt]);
     }
   }
 }
@@ -405,7 +407,7 @@ export class SqliteStore {
     reconcileProjection(this.db);
     validateMigratedDatabase(this.db);
     const appliedVersions = this.db.query<{ version: number }, []>('SELECT version FROM schema_migrations ORDER BY version').all().map((row) => row.version);
-    this.db.exec('PRAGMA user_version = 3');
+    this.db.exec('PRAGMA user_version = 4');
     return {
       databasePath: this.databasePath,
       appliedVersions,

@@ -5,3 +5,5 @@ export * from './agent-adapter';
 export * from './agent-registry';
 export * from './self-update';
 export * from './harness';
+export * from './schedule-repository';
+export * from './dispatch-repository';
