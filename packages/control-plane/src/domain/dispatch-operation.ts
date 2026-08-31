@@ -51,6 +51,7 @@ const DISPATCH_PHASES: readonly DispatchOperationPhase[] = [
 ];
 const TERMINAL_PHASES: readonly DispatchOperationPhase[] = ['succeeded', 'degraded', 'failed', 'skipped', 'unknown'];
 const DISPATCH_OPERATION_KEYS = ['operationId', 'scheduleId', 'agentId', 'revisionId', 'target', 'phase', 'automationId', 'manifestHash', 'createdAt', 'updatedAt', 'terminalReason'] as const;
+const DISPATCH_EVENT_TYPES: readonly DispatchOperationEvent['type'][] = ['dispatched', 'observing', 'succeeded', 'degraded', 'failed', 'skipped', 'unknown'];
 
 function requireNonEmptyText(value: unknown, label: string): asserts value is string {
   if (typeof value !== 'string' || value.trim().length === 0) throw new Error(`${label} must not be empty`);
@@ -60,6 +61,11 @@ function requireDispatchOperationKeys(operation: object): void {
   for (const key of Object.keys(operation)) {
     if (!(DISPATCH_OPERATION_KEYS as readonly string[]).includes(key)) throw new Error(`dispatch operation contains unknown field: ${key}`);
   }
+}
+function isDispatchOperationEvent(value: unknown): value is DispatchOperationEvent {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  if (Object.getPrototypeOf(value) !== Object.prototype || !('type' in value)) return false;
+  return typeof value.type === 'string' && (DISPATCH_EVENT_TYPES as readonly string[]).includes(value.type);
 }
 
 export function validateDispatchOperation(operation: DispatchOperation): void {
@@ -122,6 +128,7 @@ export function transitionDispatchOperation(
   operation: DispatchOperation,
   event: DispatchOperationEvent,
 ): { readonly ok: true; readonly operation: DispatchOperation } | { readonly ok: false; readonly reason: string } {
+  if (!isDispatchOperationEvent(event)) return { ok: false, reason: 'invalid-event' };
   try {
     validateDispatchOperation(operation);
   } catch {

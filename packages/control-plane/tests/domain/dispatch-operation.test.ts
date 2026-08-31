@@ -6,6 +6,7 @@ import {
   transitionDispatchOperation,
   validateDispatchOperation,
   type DispatchOperation,
+  type DispatchOperationEvent,
 } from '../../src/domain/dispatch-operation';
 
 const createdAt = '2026-08-31T09:00:00.000Z';
@@ -99,6 +100,15 @@ describe('dispatch operation domain facts', () => {
       ok: false,
       reason: 'invalid-operation',
     });
+  });
+  test('fails closed without throwing for malformed events', () => {
+    for (const event of [null, undefined, 'not-an-event', 42, {}] as unknown[]) {
+      expect(() => transitionDispatchOperation(operation(), event as DispatchOperationEvent)).not.toThrow();
+      expect(transitionDispatchOperation(operation(), event as DispatchOperationEvent)).toEqual({
+        ok: false,
+        reason: 'invalid-event',
+      });
+    }
   });
 
   test('allows the planned, dispatched, observing, and succeeded path', () => {

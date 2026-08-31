@@ -28,15 +28,7 @@ export interface AgentScheduleIntent {
 const PRESET_VALUES: readonly string[] = ['hourly', 'daily', 'weekdays', 'weekly'];
 const SESSION_POLICIES: readonly string[] = ['fresh', 'reuse'];
 const RFC3339_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
-const CONTROLLED_REFERENCE = /^[A-Za-z][A-Za-z0-9+.-]*:[A-Za-z0-9._~:/-]+$/;
-const FORBIDDEN_REFERENCE_SCHEMES: Record<string, true> = {
-  prompt: true,
-  task: true,
-  secret: true,
-  credential: true,
-  credentials: true,
-  transcript: true,
-};
+const CONTROLLED_REFERENCE = /^(?:(?:evidence|context):\/\/[A-Za-z0-9._~/-]+|orca:[A-Za-z0-9._~:/-]+)$/;
 const SCHEDULE_INTENT_KEYS = ['scheduleId', 'agentId', 'revisionId', 'trigger', 'target', 'sessionPolicy', 'precheckRef', 'sourceContextRef', 'createdAt'] as const;
 const PRESET_TRIGGER_KEYS = ['kind', 'value'] as const;
 const CRON_TRIGGER_KEYS = ['kind', 'expression'] as const;
@@ -66,8 +58,6 @@ function requireNonEmptyText(value: unknown, label: string): asserts value is st
 function validateControlledReference(value: unknown, label: string): asserts value is string {
   requireNonEmptyText(value, label);
   if (!CONTROLLED_REFERENCE.test(value)) throw new Error(`${label} must be a controlled reference`);
-  const scheme = value.slice(0, value.indexOf(':')).toLowerCase();
-  if (FORBIDDEN_REFERENCE_SCHEMES[scheme]) throw new Error(`${label} must be a controlled reference`);
 }
 
 export function validateRfc3339Timestamp(value: unknown, label = 'timestamp'): asserts value is string {

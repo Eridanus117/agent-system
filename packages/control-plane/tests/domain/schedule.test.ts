@@ -97,8 +97,18 @@ describe('schedule domain facts', () => {
       precheckRef: 'evidence://precheck-1',
       sourceContextRef: 'context://source-1',
     }))).not.toThrow();
+    expect(() => createAgentScheduleIntent(intent({ precheckRef: 'foo://x' }))).toThrow();
+    expect(() => createAgentScheduleIntent(intent({ sourceContextRef: 'http://x' }))).toThrow();
     expect(() => createAgentScheduleIntent(intent({ precheckRef: 'raw prompt text' }))).toThrow();
     expect(() => createAgentScheduleIntent(intent({ sourceContextRef: 'credentials://token' }))).toThrow();
+    expect(() => validateOrcaAutomationReceipt({
+      automationId: 'automation-1',
+      provider: 'orca',
+      target: { kind: 'repo', selector: 'org/repo' },
+      trigger: { kind: 'preset', value: 'hourly' },
+      createdAt,
+      sourceEvidence: 'foo://x',
+    })).toThrow();
     expect(() => validateOrcaAutomationReceipt({
       automationId: 'automation-1',
       provider: 'orca',
