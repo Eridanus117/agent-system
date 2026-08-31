@@ -17,7 +17,7 @@
 - fix round 5: `7defb82 fix: 完善 Agent 调度 CLI 最终门禁`
 - fix round 6: `ec0cc97 fix: 严格校验 Agent CLI 时间与标签`
 - fix round 7: `61b49d2 fix: 拒绝 Agent CLI 证据错配`
-- evidence sync: `59af058`, `6934959`, `e2f8222`, `ca7fb7e`, `ee2b421`, `f902a02`, `e2a1df7`
+- evidence sync: `59af058`, `6934959`, `e2f8222`, `ca7fb7e`, `ee2b421`, `f902a02`, `e2a1df7`, `3945aaa`
 ## Changed files
 
 - `packages/control-plane/src/cli/index.ts`
