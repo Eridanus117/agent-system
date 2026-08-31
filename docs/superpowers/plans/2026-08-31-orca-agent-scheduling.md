@@ -524,6 +524,7 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
 **Files:**
 - Modify: `packages/control-plane/src/cli/index.ts`
 - Modify: `packages/control-plane/src/cli/render.ts`
+- Modify: `packages/control-plane/src/application/scheduling.ts` (export pure validation/manifest seam)
 - Create: `packages/control-plane/tests/cli/agent-scheduling.test.ts`
 - Modify: `openspec/changes/orca-agent-scheduling/07-实施任务/实施任务.md`
 
@@ -539,19 +540,19 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
   configs schedule cancel <schedule-id> --yes
   ```
 
-- [ ] **Step 1: Write CLI contract tests**
+- [x] **Step 1: Write CLI contract tests**
 
   Assert stable JSON output contains only allowlisted IDs, levels, hashes, targets, trigger and evidence references. Assert `--dry-run` never calls the external Orca command port.
 
-- [ ] **Step 2: Implement agent list/probe**
+- [x] **Step 2: Implement agent list/probe**
 
   Render known, unknown and unsupported capability states distinctly. Do not list a provider as supported merely because Orca accepts the string.
 
-- [ ] **Step 3: Implement schedule dry-run and lifecycle commands**
+- [x] **Step 3: Implement schedule dry-run and lifecycle commands**
 
   `schedule create --dry-run` returns the exact Orca argv/spec without creating an automation. Non-dry-run creation remains behind the explicit user confirmation path.
 
-- [ ] **Step 4: Run CLI tests and smoke the dry-run path**
+- [x] **Step 4: Run CLI tests and smoke the dry-run path**
 
   ```text
   bun test packages/control-plane/tests/cli/agent-scheduling.test.ts
@@ -561,7 +562,8 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
 
   Expected: commands exit 0; no Orca automation, SQLite user runtime or `.orca/` mutation is created by the dry-run.
 
-- [ ] **Step 5: Commit the CLI surface**
+- [x] **Step 5: Commit the CLI surface**
+
 
   ```text
   git add packages/control-plane/src/cli packages/control-plane/tests/cli openspec/changes/orca-agent-scheduling/07-实施任务/实施任务.md

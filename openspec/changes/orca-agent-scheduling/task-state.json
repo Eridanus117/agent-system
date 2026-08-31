@@ -145,18 +145,27 @@
     },
     {
       "id": "8.1",
-      "state": "planned",
+      "state": "completed",
       "deliverables": [
         "packages/control-plane/src/cli/index.ts",
         "packages/control-plane/src/cli/render.ts",
+        "packages/control-plane/src/application/scheduling.ts",
         "packages/control-plane/tests/cli/agent-scheduling.test.ts",
         "openspec/changes/orca-agent-scheduling/07-实施任务/实施任务.md"
       ],
       "verification": [
         "agents list/probe、schedule dry-run/lifecycle CLI 合同测试和 dry-run smoke 通过",
-        "dry-run 不调用外部 Orca、不修改 .orca/"
+        "dry-run 不调用外部 Orca、不修改 .orca/",
+        "focused CLI 9 pass、CLI suite 44 pass、control-plane suite 179 pass、TypeScript typecheck 通过"
       ],
-      "evidence": [],
+      "evidence": [
+        "bun test packages/control-plane/tests/cli/agent-scheduling.test.ts",
+        "bun test packages/control-plane/tests/cli",
+        "bun test packages/control-plane/tests",
+        "bunx tsc --noEmit -p packages/control-plane/tsconfig.json",
+        "bun packages/control-plane/src/cli/index.ts agents list",
+        "bun packages/control-plane/src/cli/index.ts schedule create --help"
+      ],
       "blocker": null
     },
     {

@@ -7,16 +7,29 @@ import { CONFIGS_VERSION } from './version';
 import { readYesNo } from './confirm-prompt';
 import { t } from './i18n';
 import { readCandidateFile, readStdinText, isStdinTTY } from './candidate-source';
-import { renderConfirmationSummary, renderCompare, renderDetail, renderFailure, renderHandoffLine, renderList, renderQueryFailure, renderSearchResults, renderStatus } from './render';
+import { renderConfirmationSummary, renderCompare, renderDetail, renderFailure, renderHandoffLine, renderList, renderQueryFailure, renderSearchResults, renderStatus, renderAgentListJson, renderAgentProbeJson, renderScheduleDryRunJson, renderScheduleJson, renderSchedulingFailure } from './render';
 import { SqliteStore } from '../adapters/sqlite/store';
 import { SqliteConfigRevisionRepository } from '../adapters/sqlite/repository';
 import { SqliteConfigRevisionWriter } from '../adapters/sqlite/config-revision-writer';
 import { SqliteActivationOperationRepository } from '../adapters/sqlite/activation-operation-repository';
 import { SqliteLaunchObservationRepository } from '../adapters/sqlite/launch-observation-repository';
+import { SqliteScheduleRepository } from '../adapters/sqlite/schedule-repository';
+import { SqliteDispatchOperationRepository } from '../adapters/sqlite/dispatch-repository';
 import { findDenylistedForwardedArg } from '../adapters/omp/process-port';
 import { InMemoryAgentAdapterRegistry, OmpAgentAdapter, ClaudeAgentAdapter } from '../adapters/clients/agent-adapters';
+import { OrcaAgentProvider } from '../adapters/orca/agent-provider';
+import { createOrcaScheduler, buildOrcaCreateArgs, type OrcaCommandPort } from '../adapters/orca/orca-scheduler';
 import { agentId as toAgentId } from '../domain/agent';
+import { type AgentScheduleIntent, type ScheduleTarget, type ScheduleTrigger } from '../domain/schedule';
+import { type DispatchOperation } from '../domain/dispatch-operation';
 import { prepareActivation, confirmActivation, rejectActivation, executeActivation, recoverActivation, getActivationStatus, requestConfigurationSwitch, type ActivationDependencies } from '../application/activation';
+import { validateAgentSchedule, buildAgentScheduleManifestHash, createAgentSchedule, dispatchAgentSchedule, cancelAgentSchedule, type SchedulingDependencies } from '../application/scheduling';
+import type { AgentRegistry } from '../application/ports/agent-registry';
+import type { AgentSchedulerPort } from '../application/ports/scheduler';
+import type { AgentScheduleRepository } from '../application/ports/schedule-repository';
+import type { DispatchOperationRepository } from '../application/ports/dispatch-repository';
+import type { ConfigurationRepository, ConfigurationSearchRepository } from '../application/ports/configuration-repository';
+import { InMemoryAgentRegistry } from '../application/agent-registry';
 import { compareConfigRevisions, getConfigRevisionDetail, listConfigRevisions, rebuildConfigSearch, searchConfigRevisions } from '../application/queries';
 import { parseCandidateRevision, parseEvidenceRef, parseSupersedesRevisionId, parseTriggerCategory, InvalidCandidateError, InvalidTriggerCategoryError, MissingEvidenceError, MissingSupersedesError, NoCandidateSourceError } from '../application/establish';
 import { loadSupplyGroups, buildSupplyCandidate } from '../adapters/sources/supply-fs';
@@ -30,16 +43,47 @@ import { runTui } from './tui';
 export interface CliOverrides {
   readonly databasePath?: string;
   readonly adapters?: AgentAdapterRegistry;
+  readonly configurations?: ConfigurationRepository & ConfigurationSearchRepository;
+  readonly registry?: AgentRegistry;
+  readonly scheduler?: AgentSchedulerPort;
+  readonly schedules?: AgentScheduleRepository;
+  readonly dispatches?: DispatchOperationRepository;
+  readonly now?: () => string;
 }
-export interface FullDeps extends ActivationDependencies { readonly store: SqliteStore; readonly configurations: SqliteConfigRevisionRepository; readonly operations: SqliteActivationOperationRepository; readonly observations: SqliteLaunchObservationRepository; }
+export interface FullDeps extends Omit<ActivationDependencies, 'configurations'> {
+  readonly configurations: ConfigurationRepository & ConfigurationSearchRepository;
+  readonly store: SqliteStore;
+  readonly registry: AgentRegistry;
+  readonly schedules: AgentScheduleRepository;
+  readonly dispatches: DispatchOperationRepository;
+  readonly schedulerFactory: () => AgentSchedulerPort;
+  readonly now?: () => string;
+}
+
+function createDefaultOrcaCommand(): OrcaCommandPort {
+  return {
+    async run(args) {
+      const executable = Bun.which(args[0] ?? 'orca');
+      if (executable === null) return { exitCode: 127, stdout: '', stderr: '' };
+      const process = Bun.spawn([executable, ...args.slice(1)], { stdout: 'pipe', stderr: 'pipe' });
+      const read = async (stream: ReadableStream<Uint8Array> | null): Promise<string> => stream === null ? '' : new TextDecoder().decode(await new Response(stream).arrayBuffer());
+      const [stdout, stderr, exitCode] = await Promise.all([read(process.stdout), read(process.stderr), process.exited]);
+      return { exitCode, stdout, stderr };
+    },
+  };
+}
 
 export function openDeps(overrides: CliOverrides = {}): FullDeps {
   const store = new SqliteStore(overrides.databasePath ?? defaultDbPath());
-  const configurations = new SqliteConfigRevisionRepository(store);
+  const configurations = overrides.configurations ?? new SqliteConfigRevisionRepository(store);
   const operations = new SqliteActivationOperationRepository(store);
   const observations = new SqliteLaunchObservationRepository(store);
   const adapters = overrides.adapters ?? new InMemoryAgentAdapterRegistry([new OmpAgentAdapter(), new ClaudeAgentAdapter()]);
-  return { store, configurations, operations, observations, adapters };
+  const registry = overrides.registry ?? new InMemoryAgentRegistry({ provider: new OrcaAgentProvider({ candidateAgentIds: [toAgentId('omp'), toAgentId('claude-code')] }), adapters });
+  const schedules = overrides.schedules ?? new SqliteScheduleRepository(store);
+  const dispatches = overrides.dispatches ?? new SqliteDispatchOperationRepository(store);
+  const schedulerFactory = () => overrides.scheduler ?? createOrcaScheduler(createDefaultOrcaCommand());
+  return { store, configurations, operations, observations, adapters, registry, schedules, dispatches, schedulerFactory, now: overrides.now };
 }
 
 function closeDeps(deps: FullDeps): void { deps.store.close(); }
@@ -173,6 +217,146 @@ async function runEstablish(deps: FullDeps | null, args: string[], mode: 'establ
   }
 }
 
+class SchedulingCliError extends Error {
+  readonly code: string;
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'SchedulingCliError';
+    this.code = code;
+  }
+}
+
+function flagValue(args: readonly string[], flag: string): string {
+  const index = args.indexOf(flag);
+  if (index === -1 || args[index + 1] === undefined || args[index + 1]!.startsWith('--')) throw new SchedulingCliError('invalid-arguments', `${flag} requires a value`);
+  return args[index + 1]!;
+}
+
+function parseScheduleTrigger(value: string): ScheduleTrigger {
+  const separator = value.indexOf(':');
+  if (separator <= 0) throw new SchedulingCliError('invalid-trigger', 'trigger must use kind:value');
+  const kind = value.slice(0, separator);
+  const item = value.slice(separator + 1);
+  if (kind === 'preset' && ['hourly', 'daily', 'weekdays', 'weekly'].includes(item)) return { kind: 'preset', value: item as 'hourly' | 'daily' | 'weekdays' | 'weekly' };
+  if (kind === 'cron' && item.trim().length > 0) return { kind: 'cron', expression: item };
+  if (kind === 'rrule' && item.trim().length > 0) return { kind: 'rrule', value: item };
+  throw new SchedulingCliError('invalid-trigger', 'trigger must be preset, cron or rrule');
+}
+
+function parseScheduleTarget(value: string): ScheduleTarget {
+  const separator = value.indexOf(':');
+  if (separator <= 0) throw new SchedulingCliError('invalid-target', 'target must use kind:value');
+  const kind = value.slice(0, separator);
+  const selector = value.slice(separator + 1).trim();
+  if (selector.length === 0 || !['repo', 'workspace', 'project', 'runtime'].includes(kind)) throw new SchedulingCliError('invalid-target', 'target must be repo, workspace, project or runtime');
+  return { kind: kind as ScheduleTarget['kind'], selector } as ScheduleTarget;
+}
+
+interface ParsedScheduleOptions {
+  readonly scheduleId: string;
+  readonly agentId: string;
+  readonly revisionId: string;
+  readonly trigger: ScheduleTrigger;
+  readonly target: ScheduleTarget;
+  readonly sessionPolicy: AgentScheduleIntent['sessionPolicy'];
+  readonly precheckRef: string | null;
+  readonly sourceContextRef: string | null;
+  readonly dryRun: boolean;
+  readonly yes: boolean;
+  readonly createdAt: string;
+}
+
+function parseScheduleOptions(args: readonly string[], now: string): ParsedScheduleOptions {
+  const allowedFlags = new Set(['--schedule-id', '--agent', '--revision', '--trigger', '--target', '--session-policy', '--precheck', '--source-context', '--dry-run', '--yes']);
+  const valueFlags = new Set(['--schedule-id', '--agent', '--revision', '--trigger', '--target', '--session-policy', '--precheck', '--source-context']);
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index]!;
+    if (!arg.startsWith('--')) throw new SchedulingCliError('invalid-arguments', 'schedule options must use named flags');
+    if (!allowedFlags.has(arg)) throw new SchedulingCliError('invalid-arguments', 'unknown schedule option');
+    if (valueFlags.has(arg)) index += 1;
+  }
+  const agent = flagValue(args, '--agent');
+  const revision = flagValue(args, '--revision');
+  const trigger = parseScheduleTrigger(flagValue(args, '--trigger'));
+  const target = parseScheduleTarget(flagValue(args, '--target'));
+  const sessionPolicy = flagValue(args, '--session-policy');
+  if (sessionPolicy !== 'fresh' && sessionPolicy !== 'reuse') throw new SchedulingCliError('invalid-session-policy', 'session policy must be fresh or reuse');
+  const scheduleId = args.includes('--schedule-id') ? flagValue(args, '--schedule-id') : `schedule-${Date.now()}`;
+  return {
+    scheduleId, agentId: agent, revisionId: revision, trigger, target,
+    sessionPolicy, precheckRef: args.includes('--precheck') ? flagValue(args, '--precheck') : null,
+    sourceContextRef: args.includes('--source-context') ? flagValue(args, '--source-context') : null,
+    dryRun: args.includes('--dry-run'), yes: args.includes('--yes'), createdAt: now,
+  };
+}
+
+function schedulingDependencies(deps: FullDeps): SchedulingDependencies {
+  return { configurations: deps.configurations, registry: deps.registry, scheduler: deps.schedulerFactory(), schedules: deps.schedules, operations: deps.dispatches, now: deps.now };
+}
+
+async function runAgentsCommand(deps: FullDeps, args: readonly string[]): Promise<number> {
+  if (args[0] === 'list' && args.length === 1) {
+    const descriptors = await deps.registry.list();
+    const items = await Promise.all(descriptors.map(async (descriptor) => ({ descriptor, snapshot: await deps.registry.probe(descriptor.id) })));
+    console.log(renderAgentListJson(items));
+    return 0;
+  }
+  if (args[0] === 'probe' && args.length === 2) {
+    const descriptor = await deps.registry.get(toAgentId(args[1]!));
+    if (descriptor === null) throw new SchedulingCliError('agent-not-found', 'agent not found');
+    console.log(renderAgentProbeJson(descriptor, await deps.registry.probe(descriptor.id)));
+    return 0;
+  }
+  throw new SchedulingCliError('invalid-arguments', 'agents requires list or probe <agent-id>');
+}
+
+async function findScheduleOperation(deps: FullDeps, schedule: AgentScheduleIntent): Promise<DispatchOperation | null> {
+  const operations = await deps.dispatches.listByAgent(schedule.agentId);
+  return operations.find((operation) => operation.scheduleId === schedule.scheduleId) ?? null;
+}
+
+async function runScheduleCommand(deps: FullDeps, args: readonly string[]): Promise<number> {
+  const subcommand = args[0];
+  if (subcommand === 'create') {
+    if (args.includes('--help')) {
+      console.log('configs schedule create --agent <agent-id> --revision <revision-id> --trigger <kind:value> --target <kind:selector> --session-policy <fresh|reuse> --dry-run');
+      return 0;
+    }
+    const parsed = parseScheduleOptions(args.slice(1), deps.now?.() ?? new Date().toISOString());
+    if (!parsed.dryRun && !parsed.yes) throw new SchedulingCliError('confirmation-required', 'non-dry-run schedule creation requires --yes');
+    const validated = await validateAgentSchedule({ configurations: deps.configurations, registry: deps.registry }, parsed);
+    const manifestHash = buildAgentScheduleManifestHash(validated.schedule, validated.revision);
+    const argv = buildOrcaCreateArgs(validated.schedule);
+    if (parsed.dryRun) {
+      console.log(renderScheduleDryRunJson(validated, manifestHash, argv));
+      return 0;
+    }
+    const scheduleDeps = schedulingDependencies(deps);
+    const schedule = await createAgentSchedule(scheduleDeps, parsed);
+    const operation = await dispatchAgentSchedule(scheduleDeps, { scheduleId: schedule.scheduleId });
+    console.log(renderScheduleJson(schedule, operation));
+    return 0;
+  }
+  if (subcommand === 'show' && args.length === 2) {
+    const schedule = await deps.schedules.findById(args[1]!);
+    if (schedule === null) throw new SchedulingCliError('schedule-not-found', 'schedule not found');
+    console.log(renderScheduleJson(schedule, await findScheduleOperation(deps, schedule)));
+    return 0;
+  }
+  if (subcommand === 'cancel' && (args.length === 2 || args.length === 3)) {
+    if (!args.includes('--yes')) throw new SchedulingCliError('confirmation-required', 'schedule cancellation requires --yes');
+    const schedule = await deps.schedules.findById(args[1]!);
+    if (schedule === null) throw new SchedulingCliError('schedule-not-found', 'schedule not found');
+    const operation = await findScheduleOperation(deps, schedule);
+    if (operation === null) throw new SchedulingCliError('operation-not-found', 'operation not found');
+    const scheduleDeps = schedulingDependencies(deps);
+    const cancelled = await cancelAgentSchedule(scheduleDeps, { scheduleId: schedule.scheduleId, operationId: operation.operationId });
+    console.log(renderScheduleJson(schedule, cancelled));
+    return 0;
+  }
+  throw new SchedulingCliError('invalid-arguments', 'schedule requires create, show or cancel');
+}
+
 export async function main(argv: readonly string[] = process.argv.slice(2), overrides: CliOverrides = {}): Promise<number> {
   const command = argv[0];
   if (command === undefined) return runTui(overrides);
@@ -193,6 +377,19 @@ export async function main(argv: readonly string[] = process.argv.slice(2), over
   }
   if (command === '--version') { console.log(CONFIGS_VERSION); return 0; }
   validateCommandBeforeStore(command, argv.slice(1));
+  if (command === 'agents' || command === 'schedule') {
+    const deps = openDeps(overrides);
+    try {
+      return command === 'agents'
+        ? await runAgentsCommand(deps, argv.slice(1))
+        : await runScheduleCommand(deps, argv.slice(1));
+    } catch (error) {
+      console.error(renderSchedulingFailure(error));
+      return 1;
+    } finally {
+      closeDeps(deps);
+    }
+  }
   const deps = openDeps(overrides);
   try {
     if (command === 'list') {

@@ -31,6 +31,11 @@ export interface SchedulingDependencies {
   readonly now?: () => string;
 }
 
+export interface ScheduleValidationDependencies {
+  readonly configurations: ConfigurationRepository;
+  readonly registry: AgentRegistry;
+}
+
 export interface CreateAgentScheduleInput {
   readonly scheduleId: string;
   readonly agentId: string;
@@ -111,7 +116,7 @@ function providerMatchesAgent(provider: string, requestedAgent: AgentId): boolea
     && (requestedAgent === 'claude' || requestedAgent === 'claude-code');
 }
 
-function manifestHash(schedule: AgentScheduleIntent, revision: { readonly revisionId: string; readonly capabilities: readonly unknown[] }): string {
+export function buildAgentScheduleManifestHash(schedule: AgentScheduleIntent, revision: { readonly revisionId: string; readonly capabilities: readonly unknown[] }): string {
   return createHash('sha256').update(JSON.stringify({
     agentId: schedule.agentId,
     revisionId: revision.revisionId,
@@ -123,10 +128,11 @@ function manifestHash(schedule: AgentScheduleIntent, revision: { readonly revisi
 }
 
 function requireManifestHash(value: string | undefined, schedule: AgentScheduleIntent, revision: { readonly revisionId: string; readonly capabilities: readonly unknown[] }): string {
-  if (value === undefined) return manifestHash(schedule, revision);
+  if (value === undefined) return buildAgentScheduleManifestHash(schedule, revision);
   if (value.trim().length === 0) throw new SchedulingError('correlation-mismatch', 'manifest hash must not be empty');
   return value.trim();
 }
+
 
 function assertSupportedCapability(snapshot: AgentCapabilitySnapshot, schedule: AgentScheduleIntent): void {
   if (snapshot.agentId !== schedule.agentId) throw new SchedulingError('agent-capability-unsupported', 'capability snapshot Agent mismatch');
@@ -137,13 +143,14 @@ function assertSupportedCapability(snapshot: AgentCapabilitySnapshot, schedule: 
   const schedulingLevel = snapshot.capabilities.scheduling;
   if (schedulingLevel !== 'supported') throw new SchedulingError('agent-capability-unsupported', `scheduling capability is ${schedulingLevel ?? 'unknown'}`);
 }
-interface ValidatedSchedule {
+
+export interface ValidatedSchedule {
   readonly schedule: AgentScheduleIntent;
   readonly revision: ConfigurationRevision;
   readonly snapshot: AgentCapabilitySnapshot;
 }
 
-async function validateSchedule(deps: SchedulingDependencies, schedule: AgentScheduleIntent): Promise<ValidatedSchedule> {
+async function validateSchedule(deps: Pick<SchedulingDependencies, 'configurations' | 'registry'>, schedule: AgentScheduleIntent): Promise<ValidatedSchedule> {
   const descriptor = await deps.registry.get(schedule.agentId);
   if (descriptor === null || descriptor.id !== schedule.agentId) throw new SchedulingError('agent-not-found', `Agent not found: ${schedule.agentId}`);
   const revision = await deps.configurations.findById(schedule.revisionId);
@@ -169,6 +176,21 @@ async function validateSchedule(deps: SchedulingDependencies, schedule: AgentSch
     if (level !== 'supported') throw new SchedulingError('agent-capability-unsupported', `capability ${capability.name} is ${level ?? 'unknown'}`);
   }
   return { schedule, revision, snapshot };
+}
+
+export async function validateAgentSchedule(deps: ScheduleValidationDependencies, input: CreateAgentScheduleInput): Promise<ValidatedSchedule> {
+  const schedule = createAgentScheduleIntent({
+    scheduleId: input.scheduleId,
+    agentId: agentId(input.agentId),
+    revisionId: input.revisionId,
+    trigger: input.trigger,
+    target: input.target,
+    sessionPolicy: input.sessionPolicy,
+    precheckRef: input.precheckRef ?? null,
+    sourceContextRef: input.sourceContextRef ?? null,
+    createdAt: input.createdAt ?? new Date().toISOString(),
+  });
+  return validateSchedule(deps, schedule);
 }
 
 async function transitionAndPersist(
