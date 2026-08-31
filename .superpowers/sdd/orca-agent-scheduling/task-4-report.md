@@ -9,6 +9,7 @@ completed
 - `db38bd6` — `feat: 建立 Agent 调度与派发领域事实`
 - `7c8f1b2` — `fix: 收紧 Agent 调度领域事实边界`
 - `d6fe87e` — `fix: 收紧 Agent 调度引用与事件边界`
+- `c810113` — `fix: 防御恶意调度事件对象`
 
 ## changed files
 
@@ -135,3 +136,36 @@ completed
 - malformed event 在 `nextPhaseFor` 前被拦截，不会因 `event.type` 解引用向调用方抛出 TypeError。
 - controlled reference 只接受 positive scheme allowlist；未知 `foo`/`http` scheme、空格和 raw forbidden scheme 被拒绝。
 - 前一轮 planned→skipped 无 automationId、dispatched/observing correlation、nested allowlist/clone 与 receipt validator 行为保持通过。
+
+## fix round 3
+
+### status
+
+completed
+
+### commit
+
+- `c810113` — `fix: 防御恶意调度事件对象`
+
+### changed files
+
+- `packages/control-plane/src/domain/dispatch-operation.ts`
+  - 事件 runtime shape 读取统一经过 try/catch 和 plain-object 检查，并复制为安全事件快照；revoked Proxy、throwing getter/has trap 等 hostile event 失败关闭为 `invalid-event`。
+- `packages/control-plane/tests/domain/dispatch-operation.test.ts`
+  - 新增 throwing getter 与 revoked Proxy focused boundary tests。
+
+### commands and observed outputs
+
+1. `bun test packages/control-plane/tests/domain/schedule.test.ts packages/control-plane/tests/domain/dispatch-operation.test.ts`
+   - RED：`18 pass, 1 fail`；throwing getter 在原事件 guard 外抛出 `hostile getter`。
+2. `bun run --cwd packages/control-plane typecheck`
+   - GREEN：`tsc --noEmit` 成功，无 diagnostics。
+3. `bun test packages/control-plane/tests/domain/schedule.test.ts packages/control-plane/tests/domain/dispatch-operation.test.ts`
+   - GREEN：`19 pass, 0 fail, 117 expect() calls`。
+4. `git diff --check`
+   - 通过，无 whitespace 错误。
+
+### invariant/test evidence
+
+- malformed event 的 prototype、`in` 检查、getter 和 event field 读取均在安全边界内；任何读取异常返回 `{ ok: false, reason: 'invalid-event' }`。
+- 前两轮 planned→skipped、automation correlation、nested allowlist/clone、receipt validator 和 positive reference allowlist focused tests 继续通过。
