@@ -44,22 +44,45 @@ import type { AgentScheduleIntent } from '../domain/schedule';
 import type { DispatchOperation } from '../domain/dispatch-operation';
 import type { ValidatedSchedule } from '../application/scheduling';
 
-const SAFE_REFERENCE = /^(?:[A-Za-z0-9._~:/-]){1,256}$/;
+const CONTROLLED_REFERENCE = /^(?:evidence:\/\/[A-Za-z0-9._~/-]+|context:\/\/[A-Za-z0-9._~/-]+|orca:[A-Za-z0-9._~:/-]+)$/;
 const SAFE_LABEL = /^[A-Za-z0-9._ ()/:-]{1,128}$/;
+const SAFE_SELECTOR = /^[A-Za-z0-9._~:/\\ -]{1,256}$/;
+const SAFE_CRON = /^[0-9*/?, -]{1,128}$/;
+const SAFE_RRULE = /^[A-Za-z0-9_=;,+*/? -]{1,256}$/;
 
 function projectReference(value: string | undefined | null): string | null {
-  if (value === null || value === undefined || !SAFE_REFERENCE.test(value)) return null;
+  if (value === null || value === undefined || !CONTROLLED_REFERENCE.test(value)) return null;
   return value;
 }
 
 function projectLabel(value: string): string {
-  return SAFE_LABEL.test(value) ? value : 'unknown';
+  return SAFE_LABEL.test(value) && !value.includes('://') && !value.includes('=') ? value : 'unknown';
 }
-
 function projectVersion(version: AgentCapabilitySnapshot['version'], observedAt: string): Record<string, string> {
-  if (version.kind === 'known' && SAFE_LABEL.test(version.value)) return { kind: 'known', value: version.value };
+  if (version.kind === 'known' && projectLabel(version.value) !== 'unknown') return { kind: 'known', value: version.value };
   if (version.kind === 'unknown') return { kind: 'unknown', reason: projectLabel(version.reason), observedAt: version.observedAt };
   return { kind: 'unknown', reason: 'version-evidence-invalid', observedAt };
+}
+
+function projectTrigger(trigger: unknown): Record<string, string> {
+  if (typeof trigger !== 'object' || trigger === null || Array.isArray(trigger)) return { kind: 'unknown' };
+  const value = trigger as Record<string, unknown>;
+  if (value.kind === 'preset' && typeof value.value === 'string' && ['hourly', 'daily', 'weekdays', 'weekly'].includes(value.value)) return { kind: 'preset', value: value.value };
+  if (value.kind === 'cron' && typeof value.expression === 'string' && SAFE_CRON.test(value.expression)) return { kind: 'cron', expression: value.expression };
+  if (value.kind === 'rrule' && typeof value.value === 'string' && SAFE_RRULE.test(value.value)) return { kind: 'rrule', value: value.value };
+  return { kind: 'unknown' };
+}
+
+function projectTarget(target: unknown): Record<string, string> {
+  if (typeof target !== 'object' || target === null || Array.isArray(target)) return { kind: 'unknown' };
+  const value = target as Record<string, unknown>;
+  if (!['repo', 'workspace', 'project', 'runtime'].includes(String(value.kind)) || typeof value.selector !== 'string' || !SAFE_SELECTOR.test(value.selector)) return { kind: 'unknown' };
+  const result: Record<string, string> = { kind: String(value.kind), selector: value.selector };
+  if (value.kind === 'project' && value.host !== undefined) {
+    if (typeof value.host !== 'string' || !SAFE_SELECTOR.test(value.host)) return { kind: 'unknown' };
+    result.host = value.host;
+  }
+  return result;
 }
 
 function projectCapabilities(capabilities: Readonly<Record<string, AgentCapabilitySnapshot['level']>>): Record<string, AgentCapabilitySnapshot['level']> {
@@ -94,13 +117,19 @@ function projectSchedule(schedule: AgentScheduleIntent): Record<string, unknown>
     scheduleId: schedule.scheduleId,
     agentId: schedule.agentId,
     revisionId: schedule.revisionId,
-    trigger: schedule.trigger,
-    target: schedule.target,
+    trigger: projectTrigger(schedule.trigger),
+    target: projectTarget(schedule.target),
     sessionPolicy: schedule.sessionPolicy,
     precheckRef: projectReference(schedule.precheckRef),
     sourceContextRef: projectReference(schedule.sourceContextRef),
     createdAt: schedule.createdAt,
   };
+}
+
+function projectReason(reason: string | null): string | null {
+  if (reason === null) return null;
+  const known = ['cancelled', 'precheck-failed', 'scheduler-failure', 'correlation-mismatch', 'unknown', 'incomplete'];
+  return known.find((code) => reason === code || reason.startsWith(`${code}:`)) ?? 'unknown';
 }
 
 function projectOperation(operation: DispatchOperation | null): Record<string, unknown> | null {
@@ -110,15 +139,16 @@ function projectOperation(operation: DispatchOperation | null): Record<string, u
     scheduleId: operation.scheduleId,
     agentId: operation.agentId,
     revisionId: operation.revisionId,
-    target: operation.target,
+    target: projectTarget(operation.target),
     phase: operation.phase,
-    automationId: operation.automationId,
-    manifestHash: operation.manifestHash,
-    terminalReason: projectReference(operation.terminalReason),
+    automationId: projectReference(operation.automationId),
+    manifestHash: /^[a-f0-9]{64}$/i.test(operation.manifestHash) ? operation.manifestHash : null,
+    terminalReason: projectReason(operation.terminalReason),
     createdAt: operation.createdAt,
     updatedAt: operation.updatedAt,
   };
 }
+
 
 export function renderScheduleDryRunJson(validated: ValidatedSchedule, manifestHash: string, argv: readonly string[]): string {
   return JSON.stringify({
@@ -139,7 +169,7 @@ export function renderScheduleJson(schedule: AgentScheduleIntent, operation: Dis
   return JSON.stringify({
     schedule: projectSchedule(schedule),
     operation: projectOperation(operation),
-    evidence: { manifestHash: operation?.manifestHash ?? null },
+    evidence: { manifestHash: operation === null || !/^[a-f0-9]{64}$/i.test(operation.manifestHash) ? null : operation.manifestHash },
     timestamps: {
       scheduleCreatedAt: schedule.createdAt,
       operationCreatedAt: operation?.createdAt ?? null,
@@ -149,9 +179,8 @@ export function renderScheduleJson(schedule: AgentScheduleIntent, operation: Dis
 }
 
 export function renderSchedulingFailure(error: unknown): string {
-  if (error instanceof Error && 'code' in error && typeof error.code === 'string' && SAFE_REFERENCE.test(error.code)) {
-    return `schedule error: ${error.code}`;
-  }
+  const knownCodes = ['invalid-arguments', 'invalid-trigger', 'invalid-target', 'invalid-session-policy', 'confirmation-required', 'agent-not-found', 'schedule-not-found', 'operation-not-found', 'agent-capability-unsupported', 'revision-not-found', 'revision-agent-mismatch', 'scheduler-failure', 'correlation-mismatch', 'automation-missing'];
+  if (error instanceof Error && 'code' in error && typeof error.code === 'string' && knownCodes.includes(error.code)) return `schedule error: ${error.code}`;
   return 'schedule error: scheduler-failure';
 }
 export function renderHandoffLine(): string { return 'handing off to agent process'; }

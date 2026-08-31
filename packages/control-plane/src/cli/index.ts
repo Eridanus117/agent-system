@@ -48,6 +48,7 @@ export interface CliOverrides {
   readonly scheduler?: AgentSchedulerPort;
   readonly schedules?: AgentScheduleRepository;
   readonly dispatches?: DispatchOperationRepository;
+  readonly readOnly?: boolean;
   readonly now?: () => string;
 }
 export interface FullDeps extends Omit<ActivationDependencies, 'configurations'> {
@@ -73,13 +74,18 @@ function createDefaultOrcaCommand(): OrcaCommandPort {
   };
 }
 
+function createAgentRegistry(overrides: CliOverrides): AgentRegistry {
+  const adapters = overrides.adapters ?? new InMemoryAgentAdapterRegistry([new OmpAgentAdapter(), new ClaudeAgentAdapter()]);
+  return overrides.registry ?? new InMemoryAgentRegistry({ provider: new OrcaAgentProvider({ candidateAgentIds: [toAgentId('omp'), toAgentId('claude-code')] }), adapters });
+}
+
 export function openDeps(overrides: CliOverrides = {}): FullDeps {
-  const store = new SqliteStore(overrides.databasePath ?? defaultDbPath());
+  const store = new SqliteStore(overrides.databasePath ?? defaultDbPath(), { readOnly: overrides.readOnly });
   const configurations = overrides.configurations ?? new SqliteConfigRevisionRepository(store);
   const operations = new SqliteActivationOperationRepository(store);
   const observations = new SqliteLaunchObservationRepository(store);
   const adapters = overrides.adapters ?? new InMemoryAgentAdapterRegistry([new OmpAgentAdapter(), new ClaudeAgentAdapter()]);
-  const registry = overrides.registry ?? new InMemoryAgentRegistry({ provider: new OrcaAgentProvider({ candidateAgentIds: [toAgentId('omp'), toAgentId('claude-code')] }), adapters });
+  const registry = createAgentRegistry(overrides);
   const schedules = overrides.schedules ?? new SqliteScheduleRepository(store);
   const dispatches = overrides.dispatches ?? new SqliteDispatchOperationRepository(store);
   const schedulerFactory = () => overrides.scheduler ?? createOrcaScheduler(createDefaultOrcaCommand());
@@ -294,7 +300,11 @@ function schedulingDependencies(deps: FullDeps): SchedulingDependencies {
   return { configurations: deps.configurations, registry: deps.registry, scheduler: deps.schedulerFactory(), schedules: deps.schedules, operations: deps.dispatches, now: deps.now };
 }
 
-async function runAgentsCommand(deps: FullDeps, args: readonly string[]): Promise<number> {
+interface AgentCommandDependencies {
+  readonly registry: AgentRegistry;
+}
+
+async function runAgentsCommand(deps: AgentCommandDependencies, args: readonly string[]): Promise<number> {
   if (args[0] === 'list' && args.length === 1) {
     const descriptors = await deps.registry.list();
     const items = await Promise.all(descriptors.map(async (descriptor) => ({ descriptor, snapshot: await deps.registry.probe(descriptor.id) })));
@@ -308,6 +318,20 @@ async function runAgentsCommand(deps: FullDeps, args: readonly string[]): Promis
     return 0;
   }
   throw new SchedulingCliError('invalid-arguments', 'agents requires list or probe <agent-id>');
+}
+
+async function runScheduleDryRun(
+  configurations: ConfigurationRepository,
+  registry: AgentRegistry,
+  args: readonly string[],
+  now: string,
+): Promise<number> {
+  const parsed = parseScheduleOptions(args, now);
+  if (!parsed.dryRun) throw new SchedulingCliError('invalid-arguments', 'dry-run command requires --dry-run');
+  const validated = await validateAgentSchedule({ configurations, registry }, parsed);
+  const manifestHash = buildAgentScheduleManifestHash(validated.schedule, validated.revision);
+  console.log(renderScheduleDryRunJson(validated, manifestHash, buildOrcaCreateArgs(validated.schedule)));
+  return 0;
 }
 
 async function findScheduleOperation(deps: FullDeps, schedule: AgentScheduleIntent): Promise<DispatchOperation | null> {
@@ -376,13 +400,41 @@ export async function main(argv: readonly string[] = process.argv.slice(2), over
     return 0;
   }
   if (command === '--version') { console.log(CONFIGS_VERSION); return 0; }
-  validateCommandBeforeStore(command, argv.slice(1));
-  if (command === 'agents' || command === 'schedule') {
+  if (command === 'agents') {
+    try {
+      return await runAgentsCommand({ registry: createAgentRegistry(overrides) }, argv.slice(1));
+    } catch (error) {
+      console.error(renderSchedulingFailure(error));
+      return 1;
+    }
+  }
+  if (command === 'schedule' && argv[1] === 'create' && argv.includes('--help')) {
+    console.log('configs schedule create --agent <agent-id> --revision <revision-id> --trigger <kind:value> --target <kind:selector> --session-policy <fresh|reuse> --dry-run');
+    return 0;
+  }
+  if (command === 'schedule' && argv[1] === 'create' && argv.includes('--dry-run') && overrides.configurations !== undefined) {
+    try {
+      return await runScheduleDryRun(overrides.configurations, createAgentRegistry(overrides), argv.slice(2), overrides.now?.() ?? new Date().toISOString());
+    } catch (error) {
+      console.error(renderSchedulingFailure(error));
+      return 1;
+    }
+  }
+  if (command === 'schedule' && argv[1] === 'create' && argv.includes('--dry-run')) {
+    const deps = openDeps({ ...overrides, readOnly: true });
+    try {
+      return await runScheduleCommand(deps, argv.slice(1));
+    } catch (error) {
+      console.error(renderSchedulingFailure(error));
+      return 1;
+    } finally {
+      closeDeps(deps);
+    }
+  }
+  if (command === 'schedule') {
     const deps = openDeps(overrides);
     try {
-      return command === 'agents'
-        ? await runAgentsCommand(deps, argv.slice(1))
-        : await runScheduleCommand(deps, argv.slice(1));
+      return await runScheduleCommand(deps, argv.slice(1));
     } catch (error) {
       console.error(renderSchedulingFailure(error));
       return 1;

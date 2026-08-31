@@ -525,6 +525,8 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
 - Modify: `packages/control-plane/src/cli/index.ts`
 - Modify: `packages/control-plane/src/cli/render.ts`
 - Modify: `packages/control-plane/src/application/scheduling.ts` (export pure validation/manifest seam)
+- Modify: `packages/control-plane/src/adapters/sqlite/connection.ts` (read-only database open)
+- Modify: `packages/control-plane/src/adapters/sqlite/store.ts` (read-only store mode)
 - Create: `packages/control-plane/tests/cli/agent-scheduling.test.ts`
 - Modify: `openspec/changes/orca-agent-scheduling/07-实施任务/实施任务.md`
 
@@ -535,14 +537,14 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
   ```text
   configs agents list
   configs agents probe <agent-id>
-  configs schedule create --agent <agent-id> --revision <revision-id> --trigger <preset|cron|rrule> --target <selector> --session-policy <fresh|reuse> --dry-run
+  configs schedule create --agent <agent-id> --revision <revision-id> --trigger <kind:value> --target <kind:selector> --session-policy <fresh|reuse> --dry-run
   configs schedule show <schedule-id>
   configs schedule cancel <schedule-id> --yes
   ```
 
 - [x] **Step 1: Write CLI contract tests**
 
-  Assert stable JSON output contains only allowlisted IDs, levels, hashes, targets, trigger and evidence references. Assert `--dry-run` never calls the external Orca command port.
+  Assert stable allowlist projections, strict controlled evidence refs and exact argv/spec arrays. Assert `--dry-run` never calls the external Orca command port or creates a database through injected composition.
 
 - [x] **Step 2: Implement agent list/probe**
 
@@ -560,14 +562,13 @@ Codex、Pi、Grok、Hermes 和后续 Orca provider 的 native assembly 作为独
   bun packages/control-plane/src/cli/index.ts schedule create --help
   ```
 
-  Expected: commands exit 0; no Orca automation, SQLite user runtime or `.orca/` mutation is created by the dry-run.
+  Expected: commands exit 0; no Orca automation, SQLite user runtime or `.orca/` mutation is created by the dry-run; help/agents fast paths avoid store creation.
 
 - [x] **Step 5: Commit the CLI surface**
 
 
   ```text
-  git add packages/control-plane/src/cli packages/control-plane/tests/cli openspec/changes/orca-agent-scheduling/07-实施任务/实施任务.md
-  git commit -m "feat: 增加 Agent 调度 CLI dry-run"
+  git add packages/control-plane/src/cli packages/control-plane/src/application/scheduling.ts packages/control-plane/src/adapters/sqlite packages/control-plane/tests/cli openspec/changes/orca-agent-scheduling/07-实施任务/实施任务.md
   ```
 
 ### Task 9: Verify the support matrix and define provider follow-up plans

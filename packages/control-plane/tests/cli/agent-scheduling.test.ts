@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { existsSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -83,10 +84,16 @@ let originalError: typeof console.error;
 let logs: string[];
 let errors: string[];
 
-function makeOverrides(registry: AgentRegistry, scheduler: AgentSchedulerPort, schedules: FakeSchedules, operations: FakeOperations): CliOverrides {
+function makeOverrides(
+  registry: AgentRegistry,
+  scheduler: AgentSchedulerPort,
+  schedules: FakeSchedules,
+  operations: FakeOperations,
+  configurations: ConfigurationRepository = new FakeConfigurations(),
+): CliOverrides {
   return {
     databasePath: path.join(tempRoot!, 'control-plane.sqlite3'),
-    configurations: new FakeConfigurations(), registry, scheduler, schedules, dispatches: operations,
+    configurations: configurations as CliOverrides['configurations'], registry, scheduler, schedules, dispatches: operations,
     now: () => now,
   };
 }
@@ -125,6 +132,7 @@ describe('agent scheduling CLI', () => {
       expect.objectContaining({ id: 'hermes', level: 'unknown' }),
       expect.objectContaining({ id: 'claude-code', level: 'unsupported' }),
     ]) }));
+    expect(existsSync(path.join(tempRoot!, 'control-plane.sqlite3'))).toBe(false);
   });
 
   test('agents probe returns allowlisted JSON and unknown agent is a contained failure', async () => {
@@ -139,6 +147,23 @@ describe('agent scheduling CLI', () => {
     expect(failure.stderr).not.toContain('raw');
   });
 
+  test('projections strictly redact uncontrolled evidence, target, trigger and terminal values', async () => {
+    const registry = new FakeRegistry(
+      [{ id: agentId('omp'), displayName: 'safe', provider: 'credentials://provider-secret', sourceEvidence: 'transcript://private' }],
+      new Map([['omp', { ...snapshot('omp', 'supported'), evidenceRef: 'credentials://agent-secret', version: { kind: 'known', value: 'prompt=hidden' } }]]),
+    );
+    const result = await run(['agents', 'probe', 'omp'], makeOverrides(registry, new FakeScheduler(), new FakeSchedules(), new FakeOperations()));
+    expect(result.code).toBe(0);
+    expect(result.stdout).not.toContain('credentials://');
+    expect(result.stdout).not.toContain('transcript://');
+    expect(result.stdout).not.toContain('prompt=');
+    const dryRun = await run(['schedule', 'create', '--schedule-id', 'safe', '--agent', 'omp', '--revision', 'rev-1', '--trigger', 'preset:hourly', '--target', 'repo:src', '--session-policy', 'fresh', '--dry-run'], makeOverrides(registry, new FakeScheduler(), new FakeSchedules(), new FakeOperations(), new FakeConfigurations({ ...revision(), evidenceRef: 'credentials://revision-secret' })));
+    expect(dryRun.code).toBe(0);
+    expect(dryRun.stdout).not.toContain('credentials://');
+    expect(dryRun.stdout).not.toContain('transcript://');
+    expect(dryRun.stdout).not.toContain('prompt=');
+  });
+
   test('schedule dry-run normalizes every trigger and target kind without persistence or Orca calls', async () => {
     const registry = new FakeRegistry([descriptor('omp', 'evidence://inventory/omp')], new Map([['omp', snapshot('omp', 'supported')]]));
     const scheduler = new FakeScheduler();
@@ -146,20 +171,27 @@ describe('agent scheduling CLI', () => {
     const operations = new FakeOperations();
     const overrides = makeOverrides(registry, scheduler, schedules, operations);
     const cases = [
-      ['preset:hourly', 'repo:src', 'fresh'], ['cron:0 9 * * 1', 'workspace:dev', 'reuse'],
-      ['rrule:FREQ=DAILY', 'project:demo', 'fresh'], ['preset:weekly', 'runtime:local', 'reuse'],
+      { trigger: 'preset:hourly', target: 'repo:src', policy: 'fresh', scheduleId: 'schedule-hourly', triggerArg: 'hourly', targetArgs: ['--repo', 'src'] },
+      { trigger: 'cron:0 9 * * 1', target: 'workspace:dev', policy: 'reuse', scheduleId: 'schedule-cron', triggerArg: '0 9 * * 1', targetArgs: ['--workspace', 'dev'] },
+      { trigger: 'rrule:FREQ=DAILY', target: 'project:demo', policy: 'fresh', scheduleId: 'schedule-rrule', triggerArg: 'FREQ=DAILY', targetArgs: ['--project', 'demo'] },
+      { trigger: 'preset:weekly', target: 'runtime:local', policy: 'reuse', scheduleId: 'schedule-runtime', triggerArg: 'weekly', targetArgs: ['--host', 'local'] },
     ] as const;
-    for (const [trigger, target, policy] of cases) {
-      const result = await run(['schedule', 'create', '--agent', 'omp', '--revision', 'rev-1', '--trigger', trigger, '--target', target, '--session-policy', policy, '--dry-run'], overrides);
+    for (const item of cases) {
+      const result = await run(['schedule', 'create', '--schedule-id', item.scheduleId, '--agent', 'omp', '--revision', 'rev-1', '--trigger', item.trigger, '--target', item.target, '--session-policy', item.policy, '--dry-run'], overrides);
       expect(result.code).toBe(0);
       const output = parse(result.stdout);
       expect(output.externalCall).toBe(false);
-      expect(output).toHaveProperty('argv');
-      expect(output).toHaveProperty('spec');
-      expect((output.schedule as Record<string, unknown>).trigger).toEqual(expect.objectContaining({ kind: trigger.split(':', 1)[0] }));
+      const schedule = output.schedule as Record<string, unknown>;
+      expect(schedule.trigger).toEqual(item.trigger.startsWith('preset:') ? { kind: 'preset', value: item.trigger.slice(7) } : item.trigger.startsWith('cron:') ? { kind: 'cron', expression: item.trigger.slice(5) } : { kind: 'rrule', value: item.trigger.slice(6) });
+      expect(schedule.target).toEqual({ kind: item.target.split(':', 1)[0], selector: item.target.slice(item.target.indexOf(':') + 1) });
+      expect(schedule.sessionPolicy).toBe(item.policy);
+      const expectedArgv = ['orca', 'automations', 'create', '--name', item.scheduleId, '--trigger', item.triggerArg, '--provider', 'omp', ...item.targetArgs, item.policy === 'fresh' ? '--fresh-session' : '--reuse-session', '--json'];
+      expect(output.argv).toEqual(expectedArgv);
+      expect(output.spec).toEqual({ argv: expectedArgv });
     }
     expect(scheduler.creates).toBe(0);
     expect(schedules.saves).toBe(0);
+    expect(existsSync(path.join(tempRoot!, 'control-plane.sqlite3'))).toBe(false);
     expect(operations.saves).toBe(0);
   });
 
@@ -167,13 +199,19 @@ describe('agent scheduling CLI', () => {
     const registry = new FakeRegistry([descriptor('omp', 'evidence://inventory/omp')], new Map([['omp', snapshot('omp', 'unknown')]]));
     const scheduler = new FakeScheduler();
     const overrides = makeOverrides(registry, scheduler, new FakeSchedules(), new FakeOperations());
-    for (const args of [
-      ['--trigger', 'bad:value'], ['--target', 'bad:value'], ['--revision', 'missing'], ['--agent', 'missing'],
-    ]) {
-      const result = await run(['schedule', 'create', '--agent', 'omp', '--revision', 'rev-1', '--trigger', 'preset:hourly', '--target', 'repo:x', '--session-policy', 'fresh', '--dry-run', ...args], overrides);
+    const cases: readonly (readonly string[])[] = [
+      ['--agent', 'omp', '--revision', 'rev-1', '--trigger', 'bad:value', '--target', 'repo:x', '--session-policy', 'fresh', '--dry-run'],
+      ['--agent', 'omp', '--revision', 'rev-1', '--trigger', 'preset:hourly', '--target', 'bad:value', '--session-policy', 'fresh', '--dry-run'],
+      ['--agent', 'omp', '--revision', 'missing', '--trigger', 'preset:hourly', '--target', 'repo:x', '--session-policy', 'fresh', '--dry-run'],
+      ['--agent', 'missing', '--revision', 'rev-1', '--trigger', 'preset:hourly', '--target', 'repo:x', '--session-policy', 'fresh', '--dry-run'],
+    ];
+    for (const args of cases) {
+      const result = await run(['schedule', 'create', ...args], overrides);
       expect(result.code).toBe(1);
+      expect(result.stderr).not.toContain('secret');
     }
     expect(scheduler.creates).toBe(0);
+    expect(existsSync(path.join(tempRoot!, 'control-plane.sqlite3'))).toBe(false);
   });
 
   test('non-dry-run create refuses without yes and never creates automation', async () => {
@@ -191,13 +229,20 @@ describe('agent scheduling CLI', () => {
       scheduleId: 'schedule-1', agentId: agentId('omp'), revisionId: 'rev-1', trigger: { kind: 'preset', value: 'hourly' },
       target: { kind: 'repo', selector: 'src' }, sessionPolicy: 'fresh', precheckRef: null, sourceContextRef: null, createdAt: now,
     });
+    Object.assign(schedules.values.get('schedule-1')!.trigger, { prompt: 'secret task' });
+    Object.assign(schedules.values.get('schedule-1')!.target, { credential: 'secret' });
     operations.values.set('operation-schedule-1', {
       operationId: 'operation-schedule-1', scheduleId: 'schedule-1', agentId: agentId('omp'), revisionId: 'rev-1', target: { kind: 'repo', selector: 'src' },
       phase: 'unknown', automationId: null, manifestHash: 'hash', createdAt: now, updatedAt: now, terminalReason: 'unknown:provider', version: 1,
     });
+    Object.assign(operations.values.get('operation-schedule-1')!.target, { transcript: 'private' });
     const result = await run(['schedule', 'show', 'schedule-1'], makeOverrides(new FakeRegistry([descriptor('omp', 'evidence://inventory/omp')], new Map()), new FakeScheduler(), schedules, operations));
-    expect(result.code).toBe(0);
-    expect(parse(result.stdout)).toEqual(expect.objectContaining({ schedule: expect.objectContaining({ scheduleId: 'schedule-1' }), operation: expect.objectContaining({ phase: 'unknown' }) }));
+    const output = parse(result.stdout);
+    expect(Object.keys(output)).toEqual(['schedule', 'operation', 'evidence', 'timestamps']);
+    expect(Object.keys(output.schedule as object)).toEqual(['scheduleId', 'agentId', 'revisionId', 'trigger', 'target', 'sessionPolicy', 'precheckRef', 'sourceContextRef', 'createdAt']);
+    expect(Object.keys(output.operation as object)).toEqual(['operationId', 'scheduleId', 'agentId', 'revisionId', 'target', 'phase', 'automationId', 'manifestHash', 'terminalReason', 'createdAt', 'updatedAt']);
+    expect((output.operation as Record<string, unknown>).phase).toBe('unknown');
+    expect(JSON.stringify(output)).not.toMatch(/prompt|task|credential|transcript|environment/i);
   });
 
   test('schedule cancel requires yes, uses exact automation id and is idempotent', async () => {
@@ -213,8 +258,16 @@ describe('agent scheduling CLI', () => {
     const scheduler = new FakeScheduler();
     const overrides = makeOverrides(new FakeRegistry([descriptor('omp', 'evidence://inventory/omp')], new Map()), scheduler, schedules, operations);
     expect((await run(['schedule', 'cancel', 'schedule-1'], overrides)).code).toBe(1);
-    expect((await run(['schedule', 'cancel', 'schedule-1', '--yes'], overrides)).code).toBe(0);
-    expect((await run(['schedule', 'cancel', 'schedule-1', '--yes'], overrides)).code).toBe(0);
+    const cancelled = await run(['schedule', 'cancel', 'schedule-1', '--yes'], overrides);
+    expect(cancelled.code).toBe(0);
+    const output = parse(cancelled.stdout);
+    expect(Object.keys(output)).toEqual(['schedule', 'operation', 'evidence', 'timestamps']);
+    expect((output.operation as Record<string, unknown>).phase).toBe('skipped');
+    expect((output.operation as Record<string, unknown>).automationId).toBe(null);
+    expect(JSON.stringify(output)).not.toMatch(/prompt|task|credential|transcript|environment/i);
+    const repeated = await run(['schedule', 'cancel', 'schedule-1', '--yes'], overrides);
+    expect(repeated.code).toBe(0);
+    expect(Object.keys(parse(repeated.stdout))).toEqual(['schedule', 'operation', 'evidence', 'timestamps']);
     expect(scheduler.cancellations).toEqual(['automation-exact']);
   });
 
@@ -242,5 +295,12 @@ describe('agent scheduling CLI', () => {
     expect(Object.keys(list)).toEqual(['agents']);
     expect(Object.keys(probe)).toEqual(['agent']);
     expect(Object.keys(dry)).toEqual(['schedule', 'manifest', 'argv', 'spec', 'externalCall', 'evidence', 'timestamps']);
+    expect(Object.keys((probe.agent as Record<string, unknown>))).toEqual(['id', 'displayName', 'provider', 'level', 'version', 'capabilities', 'evidenceRef', 'observedAt']);
+    expect(Object.keys((dry.schedule as Record<string, unknown>))).toEqual(['scheduleId', 'agentId', 'revisionId', 'trigger', 'target', 'sessionPolicy', 'precheckRef', 'sourceContextRef', 'createdAt']);
+    expect(Object.keys((dry.evidence as Record<string, unknown>))).toEqual(['agent', 'revision']);
+    expect(JSON.stringify({ list, probe, dry })).not.toMatch(/prompt|task|credential|transcript|environment/i);
+    const help = await run(['schedule', 'create', '--help'], overrides);
+    expect(help.code).toBe(0);
+    expect(existsSync(path.join(tempRoot!, 'control-plane.sqlite3'))).toBe(false);
   });
 });

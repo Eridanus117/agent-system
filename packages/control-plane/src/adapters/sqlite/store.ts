@@ -6,7 +6,7 @@ import CANONICAL_SQL from '../../../migrations/0001_canonical.sql' with { type: 
 import LEGACY_SQL from '../../../migrations/0002_legacy_preservation.sql' with { type: 'text' };
 import SEARCH_SQL from '../../../migrations/0003_search.sql' with { type: 'text' };
 import AGENT_SCHEDULING_SQL from '../../../migrations/0004_agent_scheduling.sql' with { type: 'text' };
-import { openSqliteDatabase } from './connection';
+import { openReadonlySqliteDatabase, openSqliteDatabase } from './connection';
 
 interface MigrationDefinition {
   readonly version: number;
@@ -345,11 +345,33 @@ function validateMigratedDatabase(db: Database): void {
   if (revisions !== documents) throw new Error('search projection count does not match revisions');
 }
 
+function readonlyManifest(db: Database, databasePath: string): MigrationManifest {
+  const appliedVersions = db.query<{ version: number }, []>('SELECT version FROM schema_migrations ORDER BY version').all().map((row) => row.version);
+  const count = (table: string): number => Number(db.query<{ count: number }, []>(`SELECT COUNT(*) AS count FROM ${table}`).get()?.count ?? 0);
+  return {
+    databasePath,
+    appliedVersions,
+    validation: { foreignKeys: true, projectionConsistent: true },
+    legacyBootstrap: false,
+    canonicalCounts: { configurations: count('configuration'), revisions: count('configuration_revision'), operations: count('activation_operation'), observations: count('launch_observation') },
+  };
+}
+
 export class SqliteStore {
   readonly db: Database;
   readonly manifest: MigrationManifest;
 
-  constructor(readonly databasePath: string) {
+  constructor(readonly databasePath: string, options: { readonly readOnly?: boolean } = {}) {
+    if (options.readOnly) {
+      this.db = openReadonlySqliteDatabase(databasePath);
+      try {
+        this.manifest = readonlyManifest(this.db, databasePath);
+      } catch (error) {
+        this.db.close();
+        throw error;
+      }
+      return;
+    }
     if (databasePath === ':memory:') {
       this.db = openSqliteDatabase(databasePath);
       try {

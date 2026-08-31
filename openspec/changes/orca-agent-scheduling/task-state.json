@@ -150,13 +150,14 @@
         "packages/control-plane/src/cli/index.ts",
         "packages/control-plane/src/cli/render.ts",
         "packages/control-plane/src/application/scheduling.ts",
+        "packages/control-plane/src/adapters/sqlite/connection.ts",
+        "packages/control-plane/src/adapters/sqlite/store.ts",
         "packages/control-plane/tests/cli/agent-scheduling.test.ts",
         "openspec/changes/orca-agent-scheduling/07-实施任务/实施任务.md"
       ],
       "verification": [
-        "agents list/probe、schedule dry-run/lifecycle CLI 合同测试和 dry-run smoke 通过",
-        "dry-run 不调用外部 Orca、不修改 .orca/",
-        "focused CLI 9 pass、CLI suite 44 pass、control-plane suite 179 pass、TypeScript typecheck 通过"
+        "安全 controlled-ref/污染 projection、精确 argv/spec、known/unknown/unsupported 和生命周期 CLI 合同通过",
+        "help/agents 无 store 快路径；默认 dry-run 只打开现有数据库，禁止迁移/写入"
       ],
       "evidence": [
         "bun test packages/control-plane/tests/cli/agent-scheduling.test.ts",

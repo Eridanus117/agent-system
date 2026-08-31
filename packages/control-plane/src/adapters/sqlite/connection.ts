@@ -51,3 +51,10 @@ export function openSqliteDatabase(dbPath: string): Database {
   db.exec('PRAGMA foreign_keys = ON;');
   return db;
 }
+
+export function openReadonlySqliteDatabase(dbPath: string): Database {
+  const db = new Database(dbPath, { readonly: true, create: false });
+  db.exec(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS};`);
+  db.exec('PRAGMA foreign_keys = ON;');
+  return db;
+}
