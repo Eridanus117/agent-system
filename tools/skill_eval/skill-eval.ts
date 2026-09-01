@@ -369,7 +369,10 @@ function main(): void {
     const resultDir = resolve(firstPath);
     const runs = RUN_MODES.flatMap((mode) => {
       const path = join(resultDir, `${mode}.json`);
-      return existsSync(path) ? [readJson(path)] : [];
+      if (!existsSync(path)) return [];
+      const run = readJson(path);
+      if (!isRecord(run) || run.mode !== mode) fail(`${path}: run.mode must match filename ${mode}`);
+      return [run];
     });
     const summary = summarizeResultSet(document, runs);
     process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
