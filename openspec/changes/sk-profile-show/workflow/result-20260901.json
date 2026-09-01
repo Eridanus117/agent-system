@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "matterId": "sk-profile-show",
+  "profileId": "light-change",
+  "profileVersion": "v1.0.0",
+  "status": "waiting_human_judgment",
+  "currentStageId": "verification",
+  "nextStageId": null,
+  "outputs": {
+    "completedStages": [
+      "intake",
+      "implementation"
+    ],
+    "publishedInputs": {}
+  },
+  "reason": "阶段 verification 需要人工判断"
+}

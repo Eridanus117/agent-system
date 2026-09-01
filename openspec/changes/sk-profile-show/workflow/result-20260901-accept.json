@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "matterId": "sk-profile-show",
+  "profileId": "light-change",
+  "profileVersion": "v1.0.0",
+  "status": "completed",
+  "currentStageId": "verification",
+  "nextStageId": null,
+  "outputs": {
+    "completedStages": [
+      "intake",
+      "implementation",
+      "verification"
+    ],
+    "publishedInputs": {},
+    "completedStage": "verification"
+  },
+  "reason": null
+}
