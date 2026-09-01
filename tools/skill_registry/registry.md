@@ -30,7 +30,7 @@
 
 ## 当前缺口
 
-共 63 个 Skill / 10 个组，递归维护面 857,015 字节。
+共 63 个 Skill / 10 个组，递归维护面 859,734 字节。
 
 | 缺口 | 数量 | 含义 |
 | --- | ---: | --- |
@@ -50,15 +50,15 @@
 | 组 | 成员 | 维护面 | 占比 | 版本 | Claude 打包 | 服务事项 | 来源 | 本地改动 |
 | --- | ---: | ---: | ---: | --- | --- | --- | --- | --- |
 | **Issue 与 PR** `github-collaboration` | 6 | 124.1 KB | 14.8% | 0.3.18 | 是 | E3 推进仓库事项 | own | — |
-| **问题求解治理** `adaptive-problem-solving` | 1 | 133.8 KB | 16.0% | 0.2.13 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
+| **问题求解治理** `adaptive-problem-solving` | 1 | 133.8 KB | 15.9% | 0.2.13 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
 | **多席协作** `orchestrated-collaboration` | 1 | 50.2 KB | 6.0% | 0.2.7 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
 | **资源观测** `resource-observability` | 1 | 9.7 KB | 1.2% | 0.2.4 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
 | **自我改进** `self-improvement` | 1 | 16.0 KB | 1.9% | 0.1.7 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
-| **Skill 维护** `skill-maintenance` | 1 | 3.8 KB | 0.5% | 0.1.0 | 是 | E4 管 Skill 本身 | own | — |
+| **Skill 维护** `skill-maintenance` | 1 | 6.5 KB | 0.8% | 0.1.1 | 是 | E4 管 Skill 本身 | own | — |
 | **Skill 鉴别** `skill-appraisal` | 1 | 10.2 KB | 1.2% | 0.2.0 | 是 | E4 管 Skill 本身 | own | — |
 | **知识维护** `knowledge-maintenance` | 1 | 6.3 KB | 0.8% | 0.1.3 | 是 | E4 管 Skill 本身 | own | — |
 | **盘问** `grilling` | 1 | 3.9 KB | 0.5% | 0.1.2 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | **vendor** 84fdeffd12f2ee307994d1eb6feb48173b6e0502（2026-08-06） | **1 处** |
-| `bmad` | 49 | 478.8 KB | 57.2% | **无** | **否** | E2 造软件、E5 想清楚一件事 | **fork** v6.11.0（2026-08-24 核实为上游当前最新版） | 零 |
+| `bmad` | 49 | 478.8 KB | 57.0% | **无** | **否** | E2 造软件、E5 想清楚一件事 | **fork** v6.11.0（2026-08-24 核实为上游当前最新版） | 零 |
 
 来源三分：`own` 我们自己写的，随便改，没有上游；`fork` 从外部拿来直接用，承诺零本地改动，更新＝拉上游新版；`vendor` 从外部拿来但打了补丁，必须登记每处改动，上游更新后需重新打补丁。kind 与 dependsOn 是两回事：一个 own 组可以依赖外部工具版本（如 openspec 组依赖 @fission-ai/openspec 1.9.0）。dependsOn 的 updateTrigger 是该组的失效条件之一，与 kind 无关。
 
@@ -112,11 +112,11 @@
 
 ### Skill 维护 · skill-maintenance
 
-服务事项 **E4** 管 Skill 本身　来源 `own`　已打包 v0.1.0
+服务事项 **E4** 管 Skill 本身　来源 `own`　已打包 v0.1.1
 
 | Skill | 位置 | L1 | L2 | L3 | 上次复核 | 失效条件 | 最少复核步骤 |
 | --- | --- | ---: | ---: | ---: | --- | --- | --- |
-| `skill-maintenance` | `plugins/skill-maintenance/skills/skill-maintenance` | 334 B | 3.8 KB | 0.0 KB | 2026-08-16 | 有 | 有 |
+| `skill-maintenance` | `plugins/skill-maintenance/skills/skill-maintenance` | 334 B | 4.3 KB | 2.2 KB | 2026-08-16 | 有 | 有 |
 
 ### Skill 鉴别 · skill-appraisal
 
@@ -344,9 +344,9 @@
 
 单个 Skill · 组 `skill-maintenance`｜来源 `plugins/tests/workflow-routing.json`｜上次复核 2026-08-16
 
-**什么会让它失效** Skill 的发现入口、版本声明、复杂度预算、生成物或发布／退役工具发生变化，使正文盘点面和 clean cutover 步骤不再覆盖真实运行路径。
+**什么会让它失效** Skill 的发现入口、版本声明、复杂度预算、生成物、评估合同／校验汇总工具或发布／退役工具发生变化，使正文盘点面和 clean cutover 步骤不再覆盖真实运行路径。
 
-**下次最少复核步骤** 选择一个当前 Skill 做不写入审计，逐项确认行为合同、全部调用者、两端发现入口、版本、生成物、预算和独立审查出口仍能按正文定位。
+**下次最少复核步骤** 选择一个当前 Skill 做不写入审计，逐项确认行为合同、全部调用者、两端发现入口、版本、生成物、预算、评估合同和独立审查出口仍能按正文定位。
 
 ## 认知来源
 

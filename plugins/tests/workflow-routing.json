@@ -134,8 +134,8 @@
         "suspect": false
       },
       "skill-maintenance": {
-        "invalidatedWhen": "Skill 的发现入口、版本声明、复杂度预算、生成物或发布／退役工具发生变化，使正文盘点面和 clean cutover 步骤不再覆盖真实运行路径。",
-        "minimalRecheck": "选择一个当前 Skill 做不写入审计，逐项确认行为合同、全部调用者、两端发现入口、版本、生成物、预算和独立审查出口仍能按正文定位。",
+        "invalidatedWhen": "Skill 的发现入口、版本声明、复杂度预算、生成物、评估合同／校验汇总工具或发布／退役工具发生变化，使正文盘点面和 clean cutover 步骤不再覆盖真实运行路径。",
+        "minimalRecheck": "选择一个当前 Skill 做不写入审计，逐项确认行为合同、全部调用者、两端发现入口、版本、生成物、预算、评估合同和独立审查出口仍能按正文定位。",
         "lastVerified": "2026-08-16",
         "suspect": false
       },
@@ -220,9 +220,9 @@
         "workingSignals": "纠正落到某个持久载体，而不只是当次口头改了。"
       },
       "skill-maintenance": {
-        "forYou": "创建、审计、拆分、升级或退役 Skill 时，把行为合同、调用者、版本、预算和验证一次维护完整。",
+        "forYou": "创建、审计、拆分、升级或退役 Skill 时，把行为合同、调用者、版本、预算、评估和验证一次维护完整。",
         "whenToUse": "已经确定要维护某个 Skill 时；尚未决定行为该放哪里时不用。",
-        "workingSignals": "改动前有行为判据，改动后没有旧调用者，版本、生成物、预算、验证和独立审查能相互对上。"
+        "workingSignals": "改动前有行为判据和必要时的配对评估，改动后没有旧调用者，版本、生成物、预算、验证和独立审查能相互对上。"
       },
       "knowledge-maintenance": {
         "forYou": "知识准入：价值门、可信门、失效条件与下次最少复核步骤。",
@@ -309,7 +309,7 @@
   "pluginVersions": {
     "grilling": "0.1.2",
     "self-improvement": "0.1.7",
-    "skill-maintenance": "0.1.0",
+    "skill-maintenance": "0.1.1",
     "knowledge-maintenance": "0.1.3",
     "orchestrated-collaboration": "0.2.7",
     "adaptive-problem-solving": "0.2.13",

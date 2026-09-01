@@ -1,0 +1,59 @@
+{
+  "skill_name": "skill-maintenance",
+  "evals": [
+    {
+      "id": "explicit-skill-maintenance",
+      "name": "Explicit Skill maintenance request",
+      "kind": "behavior",
+      "prompt": "审计现有 Skill 的触发描述和调用者，给出最小修正方案。",
+      "expected_trigger": true,
+      "expected_output": "进入 Skill 维护流程，先绑定行为合同和授权，再给出最小修正与验证步骤。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "contract-first",
+          "description": "先说明行为合同、授权和验证边界，再提出修改。"
+        },
+        {
+          "name": "minimal-change",
+          "description": "方案不把普通业务代码或承载位置选择纳入 Skill 维护。"
+        }
+      ]
+    },
+    {
+      "id": "new-skill-from-workflow",
+      "name": "New Skill from a repeated workflow",
+      "kind": "behavior",
+      "prompt": "把这个重复的 Agent 工作流程做成一个可安装 Skill，并说明何时触发。",
+      "expected_trigger": true,
+      "expected_output": "进入新 Skill 设计与维护流程，明确交付面、触发线索、输出和评估用例。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "trigger-contract",
+          "description": "给出具体触发线索和相邻场景的 NOT 边界。"
+        }
+      ]
+    },
+    {
+      "id": "formatting-only-near-miss",
+      "name": "Formatting-only near miss",
+      "kind": "trigger",
+      "prompt": "只把这份 Skill 的 Markdown 标题和空行格式化，不改变任何行为。",
+      "expected_trigger": false,
+      "expected_output": "不启动行为评估或 Skill 维护流程。",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": "business-debugging-near-miss",
+      "name": "Ordinary business debugging near miss",
+      "kind": "trigger",
+      "prompt": "修复订单服务里的金额计算错误，并补一个单元测试。",
+      "expected_trigger": false,
+      "expected_output": "路由到普通业务代码调试，不启动 Skill 维护。",
+      "files": [],
+      "assertions": []
+    }
+  ]
+}

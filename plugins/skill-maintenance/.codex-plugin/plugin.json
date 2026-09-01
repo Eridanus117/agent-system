@@ -1,6 +1,6 @@
 {
   "name": "skill-maintenance",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Maintain Skill behavior contracts, callers, versions, budgets, generated surfaces, and clean cutovers.",
   "author": {
     "name": "Eridanus117"

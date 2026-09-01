@@ -101,6 +101,12 @@ git -C <repo-root> worktree add <worktree-root>/<分支> -b <分支>
 
 数量门继续要求「加」伴随「换」。移动文字只有在正文保留明确按需路由时才可能降低运行成本，且不降低维护复杂度；真正优化优先删除行为、状态机、依赖和重复调用者。历史 12→13 授权与已退役字节门继续留在声明中供审计，不构成把当前上限从 7 调回 13 的授权。
 
+### 3. Skill 评估资产
+
+`evals/evals.json` 和外部结果包属于 Skill 的可复核维护面，不属于运行端装配状态。行为、核心流程或 description 触发面发生变化时，使用正例与 near-miss 负例做配对评估；纯格式、版本同步和生成物重建不单独要求新评估。
+
+评估工具只校验合同并汇总 `baseline`、`with_skill`、`old_skill` 结果。缺失、失败和 `unknown` 不得被当作成功；评估通过也不能替代版本递增、Marketplace 安装、缓存回读或真实新会话验证。
+
 ## 四、写作判据
 
 采自 [`agent-control/learning/skills-study/mattpocock.md`](https://github.com/Eridanus117/agent-control/blob/main/learning/skills-study/mattpocock.md) 的复核结论，**只采一条**：

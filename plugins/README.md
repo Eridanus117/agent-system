@@ -29,8 +29,9 @@
 本批按 clean-slate 迁仓修正发布身份：仓库所有权由 `Eridanus117` 迁至 `Eridanus117`，七个 Plugin 的 `author.name` 与 `repository` 字段、两份 Marketplace（Claude 与 Codex）、符合性版本声明与 README 版本总览同步更新，七个 Plugin 各递增一个修订号。**运行端重装与三端指纹验收必须在本版进入 `main` 后另行完成，不能由源仓合并推定。**
 
 以下发布记录保留迁移前编号以便仓库维护者溯源；其中私有链接对公共协作者不可用，只是可选历史来源。当前行为、贡献要求和验收必须在本仓公开内容中自足表达。
+仓库目前包含九个可安装 Plugin：`grilling` `0.1.2`、`self-improvement` `0.1.7`、`skill-maintenance` `0.1.1`、`knowledge-maintenance` `0.1.3`、`orchestrated-collaboration` `0.2.7`、`adaptive-problem-solving` `0.2.13`、`resource-observability` `0.2.4`、`github-collaboration` `0.3.18`、`skill-appraisal` `0.2.0`。
 
-仓库目前包含九个可安装 Plugin：`grilling` `0.1.2`、`self-improvement` `0.1.7`、`skill-maintenance` `0.1.0`、`skill-appraisal` `0.2.0`、`knowledge-maintenance` `0.1.3`、`orchestrated-collaboration` `0.2.7`、`adaptive-problem-solving` `0.2.13`、`resource-observability` `0.2.4` 与 `github-collaboration` `0.3.18`。
+`skill-maintenance` `0.1.1` 在明确创建、审计、修正、拆分、升级、迁移或退役 Skill 时进入：先绑定当前行为合同与授权，预注册行为判据，再同步主合同、按需 reference、全部调用者、双端发现入口、版本、生成物和复杂度预算；安全门零回退，调用者 clean cutover，方案／实施同源时必须独立审查。它不维护普通业务代码，也不替 `self-improvement` 决定一次纠正应该落到哪里。
 
 仓库资产、Marketplace 可安装目录和当前默认装配是三个不同状态：`plugins/` 保存可发布资产，两份 Marketplace 只声明可安装来源，当前 profile 只按 `plugins/skill-imports.toml` 显式装配（此前由已退役的 `.cap/skill-imports.toml` 承载，见 Epic 4 Story 4.7）。`github-collaboration` 与 `self-improvement` 同级，都是仓内可安装资产；二者不会因为出现在 Marketplace 或插件目录中就自动进入当前 profile。
 
@@ -50,7 +51,7 @@
 
 `self-improvement` `0.1.7` 把承载位置已确定为 Skill 的纠正交给 `skill-maintenance`，自己只负责停止漂移、诊断根因、判断长期价值和选择持久载体，不再复制来源盘点、预算、版本、clean cutover 或审查协议。
 
-`skill-maintenance` `0.1.0` 在明确创建、审计、修正、拆分、升级、迁移或退役 Skill 时进入：先绑定当前行为合同与授权，预注册行为判据，再同步主合同、按需 reference、全部调用者、双端发现入口、版本、生成物和复杂度预算；安全门零回退，调用者 clean cutover，方案／实施同源时必须独立审查。它不维护普通业务代码，也不替 `self-improvement` 决定一次纠正应该落到哪里。
+`skill-maintenance` `0.1.1` 在明确创建、审计、修正、拆分、升级、迁移或退役 Skill 时进入：先绑定当前行为合同与授权，预注册行为判据，再同步主合同、按需 reference、全部调用者、双端发现入口、版本、生成物和复杂度预算；影响行为或 description 时增加配对评估，安全门零回退，调用者 clean cutover，方案／实施同源时必须独立审查。它不维护普通业务代码，也不替 `self-improvement` 决定一次纠正应该落到哪里。
 
 `skill-appraisal` `0.2.0` 判定一个 Skill **组**该不该收进当前体系：五道门依次是组边界（成员互相调用就不许拆）、事项归属（可跨多个）、净增量（不允许两个组覆盖同一个决定）、路由（组内每个成员的 `description` 单独可判）、来源与移植（`own`／`fork`／`vendor`，`fork` 的零改动必须可机械验证）。已收组到节拍时走复核路径而不是重判：只重跑被失效条件命中的那道门。每次判定必须留下失效条件与下次最少复核步骤，否则等于制造一个下次从零重做的负担。它只产出判定，不安装、不写配置、不改 profile；判定为「改造后收」时把执行交给 `skill-maintenance`。
 
@@ -151,6 +152,8 @@ claude plugin install resource-observability@agent-plugins --scope user
 ## 检查
 
 ```powershell
+bun test tools/skill_eval/tests/skill-eval.test.ts plugins/tests/skill-evaluation.test.ts
+bun tools/skill_eval/skill-eval.ts validate plugins/skill-maintenance/skills/skill-maintenance/evals/evals.json
 node plugins/tests/workflow-routing.test.ts
 node plugins/orchestrated-collaboration/tests/verify-three-party-review.test.ts
 ```
@@ -177,6 +180,17 @@ node plugins/orchestrated-collaboration/tests/verify-three-party-review.test.ts
 - 当前 profile 装配：读取 `plugins/skill-imports.toml`，只有显式列出的 Skill 会进入该 profile；
 - **每个 Skill 替你做什么、什么时候用，以及 L1／L2／L3 与递归维护面实测：[`docs/skills-overview.md`](docs/skills-overview.md)**（生成产物，符合性测试钉住它不会漂）；
 - 「装了才算数」的部署方式、Skill 的失效条件、最少复核、退役路径与复杂度管理：[`docs/lifecycle.md`](docs/lifecycle.md)。其中「必须声明失效条件与最少复核步骤」「Skill 数量门」「分层体积必须递归、可复现」由本仓 CI 强制；
+
+### Skill 评估闭环
+
+参考 Anthropic `skill-creator` 的 with/without Skill 对照方法，本仓将评估作为 `skill-maintenance` 的按需分支，而不是新增 Plugin。影响新能力、核心行为或 description 触发面的变更，可在 Skill 目录提供 `evals/evals.json`，并用以下命令做确定性合同校验：
+
+```text
+bun tools/skill_eval/skill-eval.ts validate plugins/skill-maintenance/skills/skill-maintenance/evals/evals.json
+bun tools/skill_eval/skill-eval.ts summarize <result-dir> --evals <skill-dir>/evals/evals.json
+```
+
+工具只校验和汇总外部运行结果，不调用模型、不读取凭据、不证明 Skill 已安装或生效。结果包中的 `baseline`、`with_skill`、`old_skill`、`unknown` 和成本差异必须如实保留；真实客户端和新会话仍按 [生命周期文档](docs/lifecycle.md) 单独验收。
 - [方法资产模型](docs/asset-model.md)、[符合性检查](docs/conformance.md)、旧 Issue 和 `codex-work`：只作为历史或待核验材料，不默认指导新工作。
 
 不要从旧交付顺序、私有历史或开放状态自行恢复工作。跨仓项目调用本仓 Plugin 时，以调用方公开合同和本仓当前可用接口的交集为边界。
