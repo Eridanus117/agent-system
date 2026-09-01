@@ -104,7 +104,7 @@ function markdownBytesRecursively(root: string): number {
   return total;
 }
 
-// 两处来源的 frontmatter 写法不统一：plugins 用折叠标量；.agents（bmad）三种混用
+// 各来源的 frontmatter 写法不统一：plugins 用折叠标量；历史来源三种混用
 // ——单引号并以 '' 转义、裸标量、双引号并以 \" 转义。全部归一到运行端实际看到的
 // 一行。（原注释把裸标量的来源记作 .cap 与 deliverables：.cap 已随 Story 4.7 退役
 // 删除，deliverables 不在 scanRoots 里；裸标量今天来自 .agents。）
@@ -294,7 +294,7 @@ export function render(today: Date = new Date()): string {
     '',
     decl.displayNameNote,
     '',
-    '一个组可以服务多个事项（`bmad` 同时覆盖 E2 与 E5），因此不按 Skill 逐个归属事项——',
+    '一个组可以服务多个事项（`openspec` 同时覆盖 E1 与 E2），因此不按 Skill 逐个归属事项——',
     '组内互相调用，拆组会拆断。',
     '',
     '## 边界',
@@ -439,7 +439,7 @@ export function render(today: Date = new Date()): string {
   // 复核要便宜，人就必须读得到步骤本身。表格只标有无，步骤正文在这里展开——
   // 这正是选型面缺的那一环：minimalRecheck 在 workflow-routing.json 里一直存在，
   // 却从未被渲染到任何人读得到的地方，于是每次复核都退化成重判。
-  // 组级认知只渲染一次，不按成员重复——bmad 一条认知覆盖 49 个成员，
+  // 组级认知只渲染一次，不按成员重复——vendored 组一条认知覆盖全部成员，
   // 逐个渲染就是 49 份相同正文，正是组这一层要消除的东西。
   type RecheckEntry = { title: string; scope: string; c: Partial<Cognition>; source: string };
   const entries: RecheckEntry[] = [];
@@ -504,7 +504,7 @@ export function render(today: Date = new Date()): string {
     '归组是判断而非推导（`plugins/` 下目录名即组名除外）；工具只套用已声明的规则，',
     '套不上就标未归组，不猜。',
     '',
-    '**失效条件应挂在组上，不是逐个 Skill。** vendored 组（如 `bmad` 49 个成员）的失效',
+    '**失效条件应挂在组上，不是逐个 Skill。** vendored 组（曾如 `bmad` 49 个成员）的失效',
     '来自上游版本，全组共享同一条失效条件与同一次复核——写一次，不是写 49 次。',
     '当前 `skillLifecycle` 仍是逐 Skill 结构，这是已知的建模落后项。',
     '',

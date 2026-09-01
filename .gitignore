@@ -17,8 +17,6 @@ node_modules/
 WATCHDOG.yml
 
 # OpenSpec CLI-generated client projections; canonical contracts live in .cap.
-vendor/bmad/skills/.openspec-target
-vendor/bmad/skills/openspec-*/
 .claude/commands/opsx/
 .omp/skills/openspec-*/
 .qoder/commands/opsx/
@@ -28,12 +26,8 @@ vendor/bmad/skills/openspec-*/
 # 由 runtime-link.ts apply 从 pinned submodule 复制出真实文件并逐文件哈希校验，
 # 必须跟踪；继续忽略会让 runtime-check 在他人 clone 上因投影缺失而 fail-closed。
 
-# 第三方 Skill 组（当前唯一实例 bmad）作为 vendor 内容跟踪在
-# vendor/bmad/skills/ 下，一份，不再按客户端投影成两份。理由：负责人
-# 2026-08-25 裁定，本仓要的是「clone 下来就能用、不依赖任何安装步骤」，
-# 而不是「不在 git 里存第三方字节」；vendor 一份同时满足零安装与不重复。
-# configs 是唯一装配路径，客户端原生发现目录不再承载字节。
-# *.user.toml（安装器管理的个人态）仍不跟踪。
+# 2026-09-01 负责人裁定 bmad 退库，vendor/bmad 及其忽略规则已随之移除；
+# _bmad-output（历史规划产物）仍在库，其 *.user.toml（安装器管理的个人态）不跟踪。
 _bmad/**/*.user.toml
 
 # Claude Code / agent runtime-local session state -- never shared, unlike

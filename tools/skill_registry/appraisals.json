@@ -2,13 +2,6 @@
   "comment": "plugins/ 之外的判定认知。plugins/ 内 13 个 Skill 的同类字段由 plugins/tests/workflow-routing.json 的 skillLifecycle 承载，不在此重复——每个 Skill 只有一个来源，避免两处漂移。",
   "groupComment": "组级认知优先：vendored 或 fork 组的失效来自上游版本，全组共享同一条失效条件与同一次复核，写一次而不是逐个成员写。skills 里的逐个条目只用于组内确实需要单独判定的成员，会覆盖组级值。",
   "groups": {
-    "bmad": {
-      "invalidatedWhen": "上游 bmad-code-org/BMAD-METHOD 发布高于 v6.11.0 的版本；或本仓再次出现对 vendor/bmad/skills 的本地改动（fork 承诺零改动，一旦有改动即降级为 vendor）。",
-      "minimalRecheck": "① 对 vendor/bmad/skills 与上游 v6.11.0 的内容做比对，有差异即 fork 承诺已破（此前的「两份副本互比」判据已随单份 vendor 化于 2026-08-25 退役）。② 查 https://github.com/bmad-code-org/BMAD-METHOD/releases 是否有高于 v6.11.0 的版本。③ 升级后跑 uv run vendor/bmad/skills/bmad-retrospective/scripts/tests/test_sprint_status.py，Windows 基线为 87 passed / 4 failed；那 4 个失败（atomic_write_preserves_mode、unreadable_target、symlinked_target、write_failure_restore）全部源于 Windows 没有 POSIX 权限语义，与本仓无关，多出任何失败才需下钻。",
-      "lastVerified": "2026-08-24",
-      "suspect": false,
-      "evidence": "2026-08-24 核实：epic-1-retro-item-5 声称的『无法写入 epic 级状态』不成立。sprint_plan.py（bmad-sprint-planning，epic 键的真正属主）自 v6.11.0 起就有 generate --set KEY=STATUS，docstring 明写 the repair path is allowed to downgrade，_parse_sets 用 classify_key + RANKS[kind] 按 epic 词表校验。已 dry-run 验证 --set epic-3=done 返回 explicit_set 且零写入。此前加在 sprint_status.py（bmad-retrospective）的 65 行是功能重复且放错脚本，已于本次全部回退。注意：generate --set 会从 epics.md 重新生成，当前会 drop 5 条 epics.md 未覆盖的 story 键——那是本仓 epics.md 与 sprint-status.yaml 的漂移，不是 bmad 的问题。"
-    },
     "cap-assembly": {
       "invalidatedWhen": "CAP 退役（Epic 4 Story 4-6）落地，或 .cap 的 manifest／profile／lock 语义变更。",
       "minimalRecheck": "读 _bmad-output/implementation-artifacts/sprint-status.yaml 的 4-6-退役-cap-本体 状态；仍为 backlog 则本组结论继续成立。",
@@ -23,23 +16,5 @@
     }
   },
   "skills": {},
-  "overlaps": {
-    "E5-方法治理与方法执行": {
-      "comment": "2026-08-25 用 skill-appraisal 做的第一次实战判定。进入类型：补判——三个组都早已在用，从未被判定过。",
-      "groups": [
-        "adaptive-problem-solving",
-        "bmad",
-        "grilling"
-      ],
-      "kind": "跨层重叠，不是同层",
-      "finding": "adaptive-problem-solving 是方法治理层：归型 P1–P8、选卡、定 ROI 与停止条件；它的 30 张方法卡承载的是方法的进入条件、硬门、成本画像与退出条件，不是执行流程。bmad 的 brainstorming／advanced-elicitation／forge-idea／party-mode／deep-recon 是执行流程本身。grilling 由 APS 显式 drive 并服从其明示同意门。三者替不同的人做不同的决定，因此不是冗余而是分层——按同层重叠处置（退役其一）会砍掉本该配合的能力。",
-      "gateFailed": "门 4 路由。bmad 那 6 个的 description 全部缺「不适用边界」与「与相邻 Skill 的职责分界」；APS 此前也缺后者。具体误触发：用户说「帮我 pre-mortem 一下」，bmad-advanced-elicitation 的触发词直接命中，同时 APS 的 premortem 卡在 P4 候选里，两者都会起来且都没写何时让位。",
-      "disposition": "甲＋乙：甲在装配层用白名单声明（OMP 侧 skills.includeSkills，不是 ignoredSkills——黑名单堵不住上游新增）；乙在 APS 侧补分界，已落地：description 增加「方法的执行流程若已由装配内其他 Skill 承载则本 Skill 只负责归型、进入与退出条件、成本与停止，不重复执行」，INDEX 增加「与装配内其他 Skill 的分界」表与逐条对应。bmad 侧未改也不能改——它是 fork，零改动承诺。APS 版本 0.2.12 → 0.2.13。",
-      "notDone": "甲尚未落地：当前没有任何装配声明包含 bmad（.cap/skill-imports.toml 只引入 grilling），因此误触发在当前装配下并不实际发生。等 configs 的 client adapter（Epic 4）能投影 includeSkills 时再落。",
-      "invalidatedWhen": "bmad 升级后那 6 个的 description 触发面发生变化；或 APS 的方法卡从 M0／M1 升到 M2 以上——那时它有资格默认触发，重叠性质从跨层变为可能同层，须重判。",
-      "minimalRecheck": "① grep -l 'pre-mortem\\|red team\\|brainstorm' vendor/bmad/skills/bmad-*/SKILL.md，命中集与本次一致则触发面未变。② 读 method-registry/INDEX.md 第一行的证据分布，仍是「M0 18 张、M1 12 张，M2–M4 0 张」则本判定继续成立。",
-      "lastVerified": "2026-08-25",
-      "readScope": "读了：APS 主合同全文、method-registry/INDEX.md、5 张重叠卡全文；grilling 全文与 UPSTREAM.md；bmad 6 个 E5 技能的 description。未读：APS 另外 25 张卡与 5 份分支协议 reference；bmad 6 个的正文。足以回答全部门，不足以判定卡的内容质量。"
-    }
-  }
+  "overlaps": {}
 }

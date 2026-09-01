@@ -1,13 +1,10 @@
 name: Skill asset checks
 
-# 守两条不变量，都只校验版本化来源，不代表任何运行端已安装或生效：
-#   1. Skill 资产面（tools/skill_registry）与选型面（plugins/docs/skills-overview.md）
-#      对同一批 Skill 的 L1 读数一致，且 registry.md 与其来源没有漂移；
-#
-# 原第 2 条不变量「两份 IDE 副本逐字节相同」已于 2026-08-25 退役：负责人裁定
-# 第三方 Skill 组按 vendor 内容跟踪一份（vendor/bmad/skills/），不再按客户端
-# 投影成两份，因此不存在可分叉的第二份，该门失去对象。装配改由 configs 承担
-# （AD-22：configs 的修订是唯一装配权威），客户端原生发现目录不再承载字节。
+# 守一条不变量，只校验版本化来源，不代表任何运行端已安装或生效：
+#   Skill 资产面（tools/skill_registry）与选型面（plugins/docs/skills-overview.md）
+#   对同一批 Skill 的 L1 读数一致，且 registry.md 与其来源没有漂移。
+# 原「两份 IDE 副本逐字节相同」不变量已于 2026-08-25 退役；
+# vendor/bmad 已于 2026-09-01 随负责人裁定整组退库。
 
 on:
   pull_request:
@@ -16,7 +13,6 @@ on:
     paths:
       - "tools/skill_registry/**"
       - "plugins/**"
-      - "vendor/bmad/skills/**"
       - ".github/workflows/skill-asset-checks.yml"
   push:
     branches:
@@ -24,7 +20,6 @@ on:
     paths:
       - "tools/skill_registry/**"
       - "plugins/**"
-      - "vendor/bmad/skills/**"
       - ".github/workflows/skill-asset-checks.yml"
 
 permissions:
