@@ -1,0 +1,160 @@
+name: Release sk CLI
+
+# Third-party actions are pinned to reviewed immutable commits. These SHAs
+# resolve the official refs shown here and must be updated deliberately.
+# actions/checkout@v7 -> 3d3c42e5aac5ba805825da76410c181273ba90b1
+# oven-sh/setup-bun@v2 -> 0c5077e51419868618aeaa5fe8019c62421857d6
+# actions/attest-build-provenance@v2 tag object 96b4a1ef7235a096b17240c259729fdd70c83d45 -> peeled commit e8998f949152b193b063cb0ec769d69d929409be
+on:
+  push:
+    tags:
+      - 'sk-v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-release:
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/sk
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: 1.3.14
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Type check
+        run: bunx tsc --noEmit
+      - name: Run tests
+        run: bun test
+
+  release:
+    if: github.event_name == 'push'
+    permissions:
+      attestations: write
+      contents: write
+      id-token: write
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/sk
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Type check
+        run: bunx tsc --noEmit
+
+      - name: Run tests
+        # Gate before cross-compiling/publishing -- a tagged commit that was
+        # never actually verified (or a broken build) must never ship as a
+        # public release.
+        run: bun test
+
+      - name: Validate release tag and package version
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#sk-v}"
+          [[ "$GITHUB_REF_NAME" == sk-v* ]] || { echo "::error::release workflow requires a sk-v* tag" >&2; exit 1; }
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::tag version must be MAJOR.MINOR.PATCH, got '$VERSION'" >&2; exit 1; }
+          PACKAGE_VERSION="$(bun -e 'const packageJSON = JSON.parse(await Bun.file("package.json").text()); console.log(packageJSON.version)')"
+          [ "$PACKAGE_VERSION" = "$VERSION" ] || { echo "::error::tag version $VERSION does not match package.json $PACKAGE_VERSION" >&2; exit 1; }
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::tag commit is not reachable from main" >&2; exit 1; }
+
+      - name: Inject version from tag
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#sk-v}"
+          [ -n "$VERSION" ] || { echo "::error::empty version derived from tag $GITHUB_REF_NAME" >&2; exit 1; }
+          # Tag names can contain single quotes, backticks, `$()`, etc. --
+          # never interpolate the raw value into a string literal. Let
+          # `JSON.stringify` produce a properly escaped, syntactically
+          # valid TS string literal regardless of what characters
+          # `$VERSION` contains.
+          VERSION_LITERAL="$(bun -e 'console.log(JSON.stringify(process.argv[1]))' "$VERSION")"
+          printf 'export const SK_VERSION = %s;\n' "$VERSION_LITERAL" > src/version.ts
+          cat src/version.ts
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Cross-compile standalone binaries
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          declare -A targets=(
+            [bun-windows-x64]=sk-windows-x64.exe
+            [bun-linux-x64]=sk-linux-x64
+            [bun-darwin-x64]=sk-darwin-x64
+            [bun-darwin-arm64]=sk-darwin-arm64
+          )
+          for target in "${!targets[@]}"; do
+            outfile="dist/${targets[$target]}"
+            bun build ./src/cli.ts --compile --target="$target" --outfile "$outfile"
+          done
+
+      - name: Smoke-test compiled binary
+        # The ubuntu-latest runner can natively execute the bun-linux-x64
+        # target (it's the host platform) -- actually run it rather than
+        # just trusting the version injection worked.
+        run: |
+          set -euo pipefail
+          actual="$(./dist/sk-linux-x64 version)"
+          if [ "$actual" != "$VERSION" ]; then
+            echo "::error::compiled binary reported version '$actual', expected '$VERSION'" >&2
+            exit 1
+          fi
+          echo "smoke test OK: $actual"
+
+          # `version` never touches the library root, so it can't catch a
+          # broken root-resolution or profile path in the compiled binary.
+          # Run real commands against a fresh, isolated library root.
+          export SK_ROOT="$(mktemp -d)"
+          mkdir -p "$SK_ROOT/plugins/g1/skills/probe"
+          printf -- '---\ndescription: smoke probe\n---\n# probe\n' > "$SK_ROOT/plugins/g1/skills/probe/SKILL.md"
+          ./dist/sk-linux-x64 list | grep -q "共 1 个技能"
+          ./dist/sk-linux-x64 new smoke
+          ./dist/sk-linux-x64 add smoke probe | grep -q "新增 1"
+          echo "smoke test OK: list/new/add ran against a fresh library root"
+
+      - name: Generate deterministic SHA256SUMS.txt
+        run: |
+          set -euo pipefail
+          cd dist
+          LC_ALL=C sha256sum sk-darwin-arm64 sk-darwin-x64 sk-linux-x64 sk-windows-x64.exe > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Generate build provenance attestations
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        with:
+          subject-path: packages/sk/dist/*
+
+      - name: Publish GitHub Release
+        # Overrides the job-level `working-directory: packages/sk` default
+        # back to the repo root -- this step's asset glob is intentionally
+        # the full `packages/sk/dist/*` path.
+        working-directory: ${{ github.workspace }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME" packages/sk/dist/*
+          --title "$GITHUB_REF_NAME" --generate-notes

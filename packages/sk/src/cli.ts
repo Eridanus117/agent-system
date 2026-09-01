@@ -1,21 +1,58 @@
 #!/usr/bin/env bun
 // sk — skills profile 管理与启动薄层（提案：desk/提案/2026-08-26-Skills管理工具.md）
-// profile = profiles/<名>/ 文件夹：skills/ 内是指回库的 junction，文件夹即配置。
+// profile = <库根>/profiles/<名>/ 文件夹：skills/ 内是指回库的 junction，文件夹即配置。
 // plugin.json / overlay.yml / manifest.json 均由 sync 派生，勿手改。
-// 运行：bun tools/sk/sk.ts（或 node --experimental-strip-types，本文件只用可擦除 TS 语法）。
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { SK_VERSION } from "./version.ts";
 
 interface Skill { name: string; group: string; dir: string; desc: string; }
 interface ProfileEntry { name: string; link: string; target: string | null; alive: boolean; }
 interface ManifestSkill { name: string; target: string; }
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+// 技能库根的解析顺序：SK_ROOT 环境变量 → 从源码位置上溯 → 从编译后可执行文件位置上溯。
+// 判定标准：目录下存在 plugins/ 或 vendor/（技能库的扫描根）。
+function isLibraryRoot(dir: string): boolean {
+  return fs.existsSync(path.join(dir, "plugins")) || fs.existsSync(path.join(dir, "vendor"));
+}
+
+function walkUp(start: string): string | null {
+  let dir = start;
+  for (let i = 0; i < 8; i++) {
+    if (isLibraryRoot(dir)) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
+
+function resolveRoot(): string {
+  const env = process.env.SK_ROOT;
+  if (env) {
+    if (isLibraryRoot(env)) return fs.realpathSync(env);
+    die(`SK_ROOT 指向的目录里找不到 plugins/ 或 vendor/：${env}`);
+  }
+  const fromSource = walkUp(path.dirname(fileURLToPath(import.meta.url)));
+  if (fromSource) return fs.realpathSync(fromSource);
+  const fromExe = walkUp(path.dirname(process.execPath));
+  if (fromExe) return fs.realpathSync(fromExe);
+  die("找不到技能库根：请设置 SK_ROOT 环境变量指向 agent-system 仓库根目录。");
+
+}
+
+const ROOT = resolveRoot();
 const PROFILES = path.join(ROOT, "profiles");
 // 库的扫描根：<根>/<组>/skills/<技能>/SKILL.md
 const SCAN_ROOTS = [path.join(ROOT, "plugins"), path.join(ROOT, "vendor")];
+
+// junction/symlink 的摘除：Windows junction 用 rmdir，POSIX symlink 用 unlink。
+// 两者都只摘链接本身，不碰目标目录。
+function removeLink(link: string): void {
+  try { fs.rmdirSync(link); } catch { fs.unlinkSync(link); }
+}
 
 function listGroups(): { group: string; dir: string }[] {
   const groups: { group: string; dir: string }[] = [];
@@ -34,15 +71,15 @@ function frontmatter(file: string): Record<string, string> {
   const text = fs.readFileSync(file, "utf8");
   const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   const fm: Record<string, string> = {};
-  if (m) {
+  if (m && m[1] !== undefined) {
     const lines = m[1].split(/\r?\n/);
     for (let i = 0; i < lines.length; i++) {
-      const kv = lines[i].match(/^(\w[\w-]*):\s*(.*)$/);
-      if (!kv) continue;
+      const kv = (lines[i] ?? "").match(/^(\w[\w-]*):\s*(.*)$/);
+      if (!kv || kv[1] === undefined || kv[2] === undefined) continue;
       let val = kv[2].trim();
       if (val === "" || /^[>|][+-]?$/.test(val)) { // 块标量：收接下来的缩进行
         const parts: string[] = [];
-        while (i + 1 < lines.length && /^\s+\S/.test(lines[i + 1])) parts.push(lines[++i].trim());
+        while (i + 1 < lines.length && /^\s+\S/.test(lines[i + 1] ?? "")) parts.push((lines[++i] ?? "").trim());
         val = parts.join(" ");
       }
       fm[kv[1]] = val;
@@ -58,7 +95,7 @@ function inventory(): Skill[] {
       if (!s.isDirectory()) continue;
       const skillMd = path.join(dir, s.name, "SKILL.md");
       if (!fs.existsSync(skillMd)) continue;
-      skills.push({ name: s.name, group, dir: path.join(dir, s.name), desc: frontmatter(skillMd).description ?? "" });
+      skills.push({ name: s.name, group, dir: path.join(dir, s.name), desc: frontmatter(skillMd)["description"] ?? "" });
     }
   }
   return skills;
@@ -113,7 +150,7 @@ function groupOfEntry(e: ProfileEntry): string | null {
   try {
     const rel = path.relative(ROOT, fs.realpathSync(e.link));
     const seg = rel.split(path.sep);
-    return seg.length >= 3 ? seg[1] : null;
+    return seg.length >= 3 ? (seg[1] ?? null) : null;
   } catch { return null; }
 }
 
@@ -136,7 +173,7 @@ function sync(name: string, allowEmpty = false): number {
     die(`拒绝把 ${name} 的 manifest 覆盖为空：技能链接全部缺失（多半是新 clone）。先执行 sk restore ${name}。`);
   }
   for (const e of entries.filter(e => !e.alive)) {
-    fs.rmdirSync(e.link); // junction：只摘链接，不碰目标
+    removeLink(e.link);
     console.log(`已清除失效链接：${name}/${e.name}`);
   }
   fs.writeFileSync(path.join(dir, ".claude-plugin", "plugin.json"), JSON.stringify({
@@ -169,7 +206,7 @@ function cmdAdd(name: string | undefined, patterns: string[]): void {
   for (const s of matchSkills(patterns)) {
     if (existing.has(s.name)) continue;
     const deadLink = dead.get(s.name);
-    if (deadLink) fs.rmdirSync(deadLink);
+    if (deadLink) removeLink(deadLink);
     fs.symlinkSync(s.dir, path.join(skillsDirOf(name!), s.name), "junction");
     added++;
   }
@@ -183,7 +220,7 @@ function cmdRm(name: string | undefined, patterns: string[]): void {
   for (const e of profileSkills(name!)) {
     const hit = patterns.some(p => p.startsWith("@") ? groupOfEntry(e) === p.slice(1) : globToRe(p).test(e.name));
     if (hit) {
-      fs.rmdirSync(e.link); // junction：只摘链接，不碰目标
+      removeLink(e.link);
       removed++;
     }
   }
@@ -240,7 +277,7 @@ function resolveExecutable(cmd: string): string {
     }
   }
   die(`找不到可执行文件：${cmd}（确认已安装并在 PATH 中）`);
-  return ""; // 不可达，安抚类型检查
+
 }
 
 // Windows 命令行参数转义（CommandLineToArgvW 规则）：引号包裹、反斜杠翻倍、内嵌引号转 \"
@@ -284,8 +321,9 @@ switch (cmd) {
   case "sync": rest[0] ? console.log(`${rest[0]}：现共 ${sync(rest[0])} 个技能`) : die("用法：sk sync <profile>"); break;
   case "restore": cmdRestore(rest[0]); break;
   case "run": cmdRun(rest[0], rest[1], rest.slice(2)); break;
+  case "version": case "--version": console.log(SK_VERSION); break;
   default:
-    console.log(`sk — skills profile 管理与启动
+    console.log(`sk — skills profile 管理与启动（v${SK_VERSION}）
   sk list                       库存清单（含同名冲突标记）
   sk profiles                   已有 profile 一览
   sk new <profile>              新建空 profile
@@ -293,5 +331,7 @@ switch (cmd) {
   sk rm <profile> <模式...>     移除技能（同样支持 glob 与 @组名）
   sk sync <profile>             重新生成派生文件、清理失效链接
   sk restore <profile>          按 manifest 重建链接（新 clone 后用）
-  sk run <profile> omp|claude [参数...]   按 profile 启动 session`);
+  sk run <profile> omp|claude [参数...]   按 profile 启动 session
+  sk version                    版本
+技能库根：SK_ROOT 环境变量，或从 sk 所在位置向上查找 plugins/、vendor/。`);
 }
