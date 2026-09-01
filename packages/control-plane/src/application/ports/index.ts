@@ -7,3 +7,4 @@ export * from './self-update';
 export * from './harness';
 export * from './schedule-repository';
 export * from './dispatch-repository';
+export * from './ingest';

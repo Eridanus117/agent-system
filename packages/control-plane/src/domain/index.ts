@@ -4,3 +4,4 @@ export * from './activation-operation';
 export * from './launch-observation';
 export * from './agent';
 export * from './errors';
+export * from './ingest';
