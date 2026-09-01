@@ -363,7 +363,7 @@ switch (cmd) {
   sk profiles                   已有 profile 一览
   sk show <profile>             查看 profile 当前配置（组、技能、描述、链接健康度）
   sk new <profile>              新建空 profile
-  sk add <profile> <模式...>    加技能（glob 或 @组名，如 sk add 写作 grilling '@bmad'）
+  sk add <profile> <模式...>    加技能（glob 或 @组名，如 sk add 写作 grilling '@openspec'）
   sk rm <profile> <模式...>     移除技能（同样支持 glob 与 @组名）
   sk sync <profile>             重新生成派生文件、清理失效链接
   sk restore <profile>          按 manifest 重建链接（新 clone 后用）

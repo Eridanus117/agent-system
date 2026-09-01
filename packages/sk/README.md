@@ -32,7 +32,7 @@ sk list                       库存清单（含同名冲突标记）
 sk profiles                   profile 一览
 sk show <profile>             查看 profile 当前配置（组、技能、描述、链接健康度；链接全缺时按 manifest 展示并提示 restore）
 sk new <profile>              新建空 profile
-sk add <profile> <模式...>    加技能（技能名 glob 或 @组名，如 sk add 写作 grilling @bmad）
+sk add <profile> <模式...>    加技能（技能名 glob 或 @组名，如 sk add 写作 grilling @openspec）
 sk rm <profile> <模式...>     移除技能（同样支持 glob 与 @组名）
 sk sync <profile>             重生成派生文件、清理失效链接
 sk restore <profile>          按 manifest 重建 junction（新 clone 后执行）
@@ -43,7 +43,7 @@ sk version                    版本（release 产物显示 tag 版本，源码�
 ## 约定
 
 - 特殊 profile：`all`（全部技能）、`general`（通用兜底，由主人策展）。
-- bmad、speckit 这类成套框架按原子组进出（`@bmad`），不单挑。
+- 成套框架类技能组按原子组进出（`@组名`），不单挑。
 - junction 与 overlay.yml 不入 git（`profiles/.gitignore`）；manifest.json 入 git，换机器后 `sk restore <profile>`——`sk run` 检测到链接全缺且 manifest 非空时也会自动 restore，绝不静默清空 manifest。
 - 同名冲突：`sk add` 遇到跨组同名技能会拒绝并列出双方，`sk list` 会标记 ⚠。
 - 测试：`bun test`（`tests/sk.test.ts`，在临时库根上跑真实 CLI 进程）。

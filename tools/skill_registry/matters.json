@@ -1,5 +1,5 @@
 {
-  "comment": "事项与组的声明来源。组是第一结构：装卸、版本、发现、判定、复核都以组为单位。事项是组的属性，一个组可以服务多个事项（如 bmad 同时覆盖 E2 与 E5），因此不按 Skill 逐个归属事项——那会把组拆断。修改本文件等于修改事项划分或组边界，属于产品政策级判断，需负责人确认。",
+  "comment": "事项与组的声明来源。组是第一结构：装卸、版本、发现、判定、复核都以组为单位。事项是组的属性，一个组可以服务多个事项（如 openspec 同时覆盖 E1 与 E2），因此不按 Skill 逐个归属事项——那会把组拆断。修改本文件等于修改事项划分或组边界，属于产品政策级判断，需负责人确认。",
   "recheckStaleDays": 30,
 
   "confirmed": {
@@ -13,7 +13,7 @@
     ]
   },
 
-  "displayNameNote": "组的中文名只用于人读表面（资产面、对话）；机器名保持 kebab-case ASCII——三端按名路由，且 .cap 要求稳定机器 id、路径、命令与配置键保持规范形式。bmad 与 openspec 是上游产品专名，不译：译了会让人对不上上游文档与 release notes。Codex 端的对应显示名在各 skill 的 agents/openai.yaml 的 interface.display_name。",
+  "displayNameNote": "组的中文名只用于人读表面（资产面、对话）；机器名保持 kebab-case ASCII——三端按名路由，且 .cap 要求稳定机器 id、路径、命令与配置键保持规范形式。openspec 这类上游产品专名不译：译了会让人对不上上游文档与 release notes。Codex 端的对应显示名在各 skill 的 agents/openai.yaml 的 interface.display_name。",
 
   "assemblyAuthority": {
     "comment": "装配面是绝对权威：每个装配显式声明它要哪些 Skill，没声明的就不存在。这是白名单，不是黑名单——黑名单只排除已知的坏的，上游下次新增就自动漏进来；白名单则新增默认不存在，要进必须显式加。资产面（本文件与 registry.md）只登记仓库里有什么，不决定任一装配里有什么；两者不得互相冒充。",
@@ -114,21 +114,6 @@
       "note": "外来组登记得最完整的一个——有上游 pin、逐文件 Git blob 与 SHA-256、许可证本地副本、逐条改造记录和回顾规则。可作为 vendor 组的模板。"
     },
 
-    "bmad": {
-      "displayName": "bmad",
-      "matters": ["E2", "E5"],
-      "packagedForClaude": false,
-      "origin": {
-        "kind": "fork",
-        "upstream": "https://github.com/bmad-code-org/BMAD-METHOD",
-        "ref": "v6.11.0（2026-08-24 核实为上游当前最新版）",
-        "installedAt": "2026-08-21",
-        "lastSynced": "2026-08-22",
-        "localChanges": "none",
-        "updateTrigger": "上游发布高于 v6.11.0 的版本。零改动承诺成立，可直接拉新版，不需要重打补丁。"
-      },
-      "note": "跨两个事项：造软件主链在 E2，brainstorming／deep-recon／forge-idea／prfaq／advanced-elicitation／party-mode 属 E5。不按 Skill 拆——组内互相调用（bmad-help 路由、deprecated 转发），拆组会拆断。2026-08-24 撤回了此前唯一一处本地改动（sprint_status.py 的 --set-epic-status，65 行）：该能力上游本就有，在 sprint_plan.py generate --set KEY=STATUS，此前查错了脚本；回退后与安装态一字不差。2026-08-25 起按 vendor 内容跟踪一份于 vendor/bmad/skills/（49 个 Skill、243 个文件），不再按客户端投影成两份：负责人裁定本仓要的是「clone 即可用、不依赖安装步骤」，vendor 一份同时满足零安装与不重复；装配由 configs 承担，客户端原生发现目录不再承载字节。"
-    },
     "openspec": {
       "displayName": "openspec",
       "matters": ["E1", "E2"],
@@ -142,7 +127,7 @@
           "updateTrigger": "各 SKILL.md 的 compatibility 字段：仅兼容 OpenSpec CLI 1.9.0，升级 CLI 时必须复核本合同"
         }
       },
-      "note": "6 个 openspec-* 是本仓自己写的中文项目内适配（见各 SKILL.md 的 source 字段），不是上游文件副本；上游 OpenSpec 是 npm 依赖，由 package.json 锁版本。vendor/bmad/skills/openspec-*/ 是 CLI 生成的安装副本，已在 .gitignore 排除。变更方法包，服务于任何要做变更的事项。当前 openspec/config.yaml 绑死 .cap（三处），提取时必须换掉，尤其归档门。"
+      "note": "6 个 openspec-* 是本仓自己写的中文项目内适配（见各 SKILL.md 的 source 字段），不是上游文件副本；上游 OpenSpec 是 npm 依赖，由 package.json 锁版本。变更方法包，服务于任何要做变更的事项。当前 openspec/config.yaml 绑死 .cap（三处），提取时必须换掉，尤其归档门。"
     },
     "cap-assembly": {
       "displayName": "CAP 装配",
@@ -156,14 +141,12 @@
   "groupRules": {
     "comment": "Skill 到组的映射。plugins/ 下 plugin 目录名即组名，机械可推。其余按位置＋名称前缀声明。",
     "byLocation": [
-      { "prefix": "vendor/bmad/skills", "namePrefix": "bmad-", "group": "bmad" },
       { "prefix": ".cap/capabilities/skills", "namePrefix": "openspec-", "group": "openspec" },
       { "prefix": ".cap/capabilities/skills", "group": "cap-assembly" }
     ]
   },
 
   "scanRoots": [
-    { "path": "plugins", "shape": "plugin" },
-    { "path": "vendor/bmad/skills", "shape": "flat" }
+    { "path": "plugins", "shape": "plugin" }
   ]
 }
