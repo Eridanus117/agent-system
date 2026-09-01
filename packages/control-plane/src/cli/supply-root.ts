@@ -18,7 +18,7 @@ import { defaultDbPath } from './db-path';
  *
  * | Scenario                   | Where the supply library is                      | How the root is obtained                     |
  * | -------------------------- | ------------------------------------------------ | -------------------------------------------- |
- * | 本仓自我开发               | 就是本仓库（`plugins/`、canonical `_bmad/`）     | `CONTROL_PLANE_SUPPLY_ROOT` 指向仓库根       |
+ * | 本仓自我开发               | 就是本仓库（`plugins/`）                         | `CONTROL_PLANE_SUPPLY_ROOT` 指向仓库根       |
  * | 发行版 `configs` 用户      | 那台机器上根本没有「本仓库」这个东西             | 下面的默认值                                 |
  *
  * 默认值只服务第二种场景。它刻意**不**从仓库根派生：编译后的二进制没有仓库可

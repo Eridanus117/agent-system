@@ -26,9 +26,6 @@ WATCHDOG.yml
 # 由 runtime-link.ts apply 从 pinned submodule 复制出真实文件并逐文件哈希校验，
 # 必须跟踪；继续忽略会让 runtime-check 在他人 clone 上因投影缺失而 fail-closed。
 
-# 2026-09-01 负责人裁定 bmad 退库，vendor/bmad 及其忽略规则已随之移除；
-# _bmad-output（历史规划产物）仍在库，其 *.user.toml（安装器管理的个人态）不跟踪。
-_bmad/**/*.user.toml
 
 # Claude Code / agent runtime-local session state -- never shared, unlike
 # the skill content above.

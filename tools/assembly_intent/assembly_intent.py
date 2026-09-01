@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """从既有权威推导本仓装配意图，并用真实的 `configs supply` 校验其一致性。
 
-本仓**不存在**装配声明文件，本模块也不新增一个。装配意图从仓内两处已有、
-且各因别的理由存在的权威推导出来：
+本仓**不存在**装配声明文件，本模块也不新增一个。装配意图从仓内一处已有、
+且因别的理由存在的权威推导出来：
 
-1. `entrypoints/agent-system.md`——仓库规则本体。凡是散文里写「加载可用的
-   ``<名>`` Skill」的地方，都是规则**强制**该 Skill 当场可用；每个这样的名字
-   推出一个组 `plugins/<名>`（本仓 plugin 目录与其 Skill 同名的既有命名）。
-2. `_bmad/_config/skill-manifest.csv`（配 `manifest.yaml` 里的 `installation.version`
-   作为 pin）——BMad 安装器清单。它声明本仓装了哪些 bmad Skill；这批 Skill 在
-   仓内的落点是组 `.agents`。
+`entrypoints/agent-system.md`——仓库规则本体。凡是散文里写「加载可用的
+``<名>`` Skill」的地方，都是规则**强制**该 Skill 当场可用；每个这样的名字
+推出一个组 `plugins/<名>`（本仓 plugin 目录与其 Skill 同名的既有命名）。
+（此前还有第二处权威 `_bmad/_config/skill-manifest.csv`，已随 2026-09-01
+bmad 整组退库一并移除。）
 
 推导出组集合以后，本模块**调用真实的 `configs supply` 子进程**去解析它们，再断言
 每一个被点名／被清单声明的 Skill 确实落在 `supply` 的产出里。检查侧刻意不实现
@@ -52,18 +51,9 @@ NAMED_SKILL_PATTERN = re.compile(r"加载可用的\s*`([^`\n]+)`\s*Skill")
 #: 那属于提取故障，要当场红，不能悄悄推出一个荒唐的组。
 SKILL_NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
-#: `manifest.yaml` 里 bmad 安装的 pin。刻意用窄正则而不是引入 PyYAML 依赖——
-#: 本仓其余 repo 级检查都只用标准库。
-BMAD_PIN_BLOCK_PATTERN = re.compile(r"^installation:[ \t]*$(?:\n[ \t]+.*$)*", re.MULTILINE)
-BMAD_PIN_VERSION_PATTERN = re.compile(r"^[ \t]+version:[ \t]*(\S+)[ \t]*$", re.MULTILINE)
-
 ENTRYPOINT_RELATIVE_PATH = "entrypoints/agent-system.md"
-BMAD_SKILL_MANIFEST_RELATIVE_PATH = "_bmad/_config/skill-manifest.csv"
-BMAD_INSTALL_MANIFEST_RELATIVE_PATH = "_bmad/_config/manifest.yaml"
 CLI_RELATIVE_PATH = "packages/control-plane/src/cli/index.ts"
 
-#: bmad 安装器清单声明的那批 Skill 在本仓的落点组。
-BMAD_GROUP = "vendor/bmad"
 #: 入口点名的 Skill 所在的组前缀。
 PLUGIN_GROUP_PREFIX = "plugins/"
 
@@ -100,8 +90,6 @@ class AssemblyIntent:
     expectations: tuple[Expectation, ...]
     entrypoint_named_skills: tuple[str, ...]
     entrypoint_hits: int
-    bmad_skill_names: tuple[str, ...]
-    bmad_pin: str
 
     def describe_groups(self) -> str:
         return "\n".join(
@@ -235,38 +223,9 @@ def extract_named_skills(text: str) -> list[tuple[str, int]]:
     return hits
 
 
-def read_bmad_skill_names(path: Path) -> list[str]:
-    text = read_text(path, "bmad 安装器 Skill 清单")
-    reader = csv.DictReader(text.splitlines())
-    if reader.fieldnames is None or "name" not in reader.fieldnames:
-        raise AssemblyIntentError(f"bmad 安装器 Skill 清单没有 `name` 列：{path}")
-    names: list[str] = []
-    for row in reader:
-        name = (row.get("name") or "").strip()
-        if not name:
-            continue
-        names.append(name)
-    if not names:
-        raise AssemblyIntentError(f"bmad 安装器 Skill 清单一条记录都没有：{path}")
-    return names
-
-
-def read_bmad_pin(path: Path) -> str:
-    """`installation.version`——bmad 组的 pin（AD-22：每个 fork 组都要有被跟踪的 pin）。"""
-    text = read_text(path, "bmad 安装器清单")
-    block = BMAD_PIN_BLOCK_PATTERN.search(text)
-    if block is None:
-        raise AssemblyIntentError(f"bmad 安装器清单没有 `installation:` 段：{path}")
-    version = BMAD_PIN_VERSION_PATTERN.search(block.group(0))
-    if version is None:
-        raise AssemblyIntentError(
-            f"bmad 安装器清单的 `installation:` 段没有 `version:`（组 {BMAD_GROUP} 缺 pin）：{path}"
-        )
-    return version.group(1).strip().strip("'\"")
-
 
 def derive_intent(repository_root: Path) -> AssemblyIntent:
-    """从两处既有权威推导装配意图。不读、也不写任何装配声明文件。"""
+    """从既有权威推导装配意图。不读、也不写任何装配声明文件。"""
     entrypoint_path = repository_root / ENTRYPOINT_RELATIVE_PATH
     entrypoint_text = read_text(entrypoint_path, "仓库入口规则")
     hits = extract_named_skills(entrypoint_text)
@@ -284,21 +243,8 @@ def derive_intent(repository_root: Path) -> AssemblyIntent:
     for name, line_number in hits:
         named_lines.setdefault(name, []).append(line_number)
 
-    bmad_skill_manifest = repository_root / BMAD_SKILL_MANIFEST_RELATIVE_PATH
-    bmad_install_manifest = repository_root / BMAD_INSTALL_MANIFEST_RELATIVE_PATH
-    bmad_names = read_bmad_skill_names(bmad_skill_manifest)
-    bmad_pin = read_bmad_pin(bmad_install_manifest)
-
-    group_sources: dict[str, str] = {
-        BMAD_GROUP: (
-            f"{BMAD_SKILL_MANIFEST_RELATIVE_PATH}（{len(bmad_names)} 个 Skill，"
-            f"pin {BMAD_INSTALL_MANIFEST_RELATIVE_PATH} installation.version={bmad_pin}）"
-        )
-    }
-    expectations: list[Expectation] = [
-        Expectation(skill=name, group=BMAD_GROUP, source=BMAD_SKILL_MANIFEST_RELATIVE_PATH)
-        for name in sorted(dict.fromkeys(bmad_names))
-    ]
+    group_sources: dict[str, str] = {}
+    expectations: list[Expectation] = []
 
     for name in sorted(named_lines):
         group = f"{PLUGIN_GROUP_PREFIX}{name}"
@@ -315,8 +261,6 @@ def derive_intent(repository_root: Path) -> AssemblyIntent:
         expectations=tuple(expectations),
         entrypoint_named_skills=tuple(sorted(named_lines)),
         entrypoint_hits=len(hits),
-        bmad_skill_names=tuple(bmad_names),
-        bmad_pin=bmad_pin,
     )
 
 
@@ -427,12 +371,6 @@ def check_assembly_intent(
                 "match_count": intent.entrypoint_hits,
                 "named_skills": list(intent.entrypoint_named_skills),
             },
-            "bmad_installer": {
-                "skill_manifest": BMAD_SKILL_MANIFEST_RELATIVE_PATH,
-                "install_manifest": BMAD_INSTALL_MANIFEST_RELATIVE_PATH,
-                "pin": intent.bmad_pin,
-                "declared_skill_count": len(intent.bmad_skill_names),
-            },
         },
         "groups": [
             {
@@ -450,7 +388,6 @@ def check_assembly_intent(
 
 def render_text(report: dict[str, Any]) -> str:
     entrypoint = report["sources"]["entrypoint"]
-    bmad = report["sources"]["bmad_installer"]
     lines = [
         f"Repository: {report['repository_root']}",
         (
@@ -458,10 +395,6 @@ def render_text(report: dict[str, Any]) -> str:
             f"{entrypoint['match_count']} 处「加载可用的」命中，"
             f"{len(entrypoint['named_skills'])} 个不重复 Skill "
             f"({', '.join(entrypoint['named_skills'])})"
-        ),
-        (
-            f"BMad installer: {bmad['skill_manifest']} -- "
-            f"{bmad['declared_skill_count']} 个 Skill，pin {bmad['pin']}"
         ),
         f"Derived groups ({len(report['groups'])}):",
     ]
