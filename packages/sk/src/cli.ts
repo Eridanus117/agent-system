@@ -256,6 +256,40 @@ function cmdList(): void {
   console.log(`\n共 ${inv.length} 个技能，${listGroups().length} 个组（@组名 可整组引用）`);
 }
 
+// 只读展示单个 profile 的当前配置：组、技能名、描述、链接健康度。
+// 未 restore 的 clone（链接全缺但 manifest 非空）回退按 manifest 展示，不改任何盘上状态。
+function cmdShow(name: string | undefined): void {
+  if (!name) die("用法：sk show <profile>");
+  if (!fs.existsSync(profileDir(name!))) die(`profile 不存在：${name}（sk profiles 查看）`);
+  const entries = profileSkills(name!);
+  const live = entries.filter(e => e.alive);
+  if (entries.length === 0) {
+    const manifest = readManifest(name!);
+    if (manifest.length > 0) {
+      console.log(`${name}：技能链接全部缺失（多半是新 clone），以下按 manifest.json 展示；sk restore ${name} 可重建。`);
+      for (const s of [...manifest].sort((a, b) => a.name.localeCompare(b.name))) {
+        // manifest 的 target 形如 plugins/<组>/skills/<技能>，第二段即组名
+        const group = s.target.split("/")[1] ?? "?";
+        console.log(`${group.padEnd(24)} ${s.name.padEnd(40)} ${s.target}`);
+      }
+      console.log(`\n共 ${manifest.length} 个技能（按 manifest）`);
+      return;
+    }
+    console.log(`${name}：（空 profile，sk add ${name} <模式...> 加技能）`);
+    return;
+  }
+  const rows = entries.map(e => ({ e, group: groupOfEntry(e) ?? "?" }))
+    .sort((a, b) => a.group.localeCompare(b.group) || a.e.name.localeCompare(b.e.name));
+  for (const { e, group } of rows) {
+    const info = e.alive
+      ? (frontmatter(path.join(e.link, "SKILL.md"))["description"] ?? "").slice(0, 60)
+      : `⚠ 链接失效（sk sync ${name} 清理）`;
+    console.log(`${group.padEnd(24)} ${e.name.padEnd(40)} ${info}`);
+  }
+  const dead = entries.length - live.length;
+  console.log(`\n共 ${entries.length} 个技能${dead ? `（${dead} 个链接失效）` : ""}`);
+}
+
 function cmdProfiles(): void {
   if (!fs.existsSync(PROFILES)) { console.log("（还没有 profile）"); return; }
   for (const d of fs.readdirSync(PROFILES, { withFileTypes: true })) {
@@ -315,6 +349,7 @@ const [cmd, ...rest] = process.argv.slice(2);
 switch (cmd) {
   case "list": cmdList(); break;
   case "profiles": cmdProfiles(); break;
+  case "show": cmdShow(rest[0]); break;
   case "new": cmdNew(rest[0]); break;
   case "add": cmdAdd(rest[0], rest.slice(1)); break;
   case "rm": cmdRm(rest[0], rest.slice(1)); break;
@@ -326,6 +361,7 @@ switch (cmd) {
     console.log(`sk — skills profile 管理与启动（v${SK_VERSION}）
   sk list                       库存清单（含同名冲突标记）
   sk profiles                   已有 profile 一览
+  sk show <profile>             查看 profile 当前配置（组、技能、描述、链接健康度）
   sk new <profile>              新建空 profile
   sk add <profile> <模式...>    加技能（glob 或 @组名，如 sk add 写作 grilling '@bmad'）
   sk rm <profile> <模式...>     移除技能（同样支持 glob 与 @组名）

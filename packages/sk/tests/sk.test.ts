@@ -87,6 +87,47 @@ describe("manifest 防清空与 restore", () => {
   });
 });
 
+describe("show 查看 profile 配置", () => {
+  test("show 列出组、技能名与描述", () => {
+    expect(sk("new", "s1").status).toBe(0);
+    expect(sk("add", "s1", "alpha", "@g2").status).toBe(0);
+    const r = sk("show", "s1");
+    expect(r.status).toBe(0);
+    expect(r.out).toContain("g1");
+    expect(r.out).toContain("alpha");
+    expect(r.out).toContain("测试技能 alpha");
+    expect(r.out).toContain("gamma");
+    expect(r.out).toContain("共 2 个技能");
+  });
+
+  test("show 对不存在的 profile 报错", () => {
+    const r = sk("show", "no-such-profile");
+    expect(r.status).toBe(1);
+    expect(r.out).toContain("不存在");
+  });
+
+  test("链接全缺时 show 回退读 manifest 并提示 restore，不改盘", () => {
+    expect(sk("new", "s2").status).toBe(0);
+    expect(sk("add", "s2", "beta").status).toBe(0);
+    fs.rmSync(path.join(root, "profiles", "s2", "skills"), { recursive: true, force: true });
+    const r = sk("show", "s2");
+    expect(r.status).toBe(0);
+    expect(r.out).toContain("beta");
+    expect(r.out).toContain("restore");
+    // 只读：show 不得顺手重建 skills/ 或清空 manifest
+    expect(fs.existsSync(path.join(root, "profiles", "s2", "skills"))).toBe(false);
+    const manifest = JSON.parse(fs.readFileSync(path.join(root, "profiles", "s2", "manifest.json"), "utf8"));
+    expect(manifest.skills.length).toBe(1);
+  });
+
+  test("空 profile 提示为空而非报错", () => {
+    expect(sk("new", "s3").status).toBe(0);
+    const r = sk("show", "s3");
+    expect(r.status).toBe(0);
+    expect(r.out).toContain("空 profile");
+  });
+});
+
 describe("失效链接与路径安全", () => {
   test("同名失效链接不再挡住重新 add", () => {
     expect(sk("new", "p3").status).toBe(0);

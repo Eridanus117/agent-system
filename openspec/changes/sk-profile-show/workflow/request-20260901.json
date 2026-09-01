@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "matterId": "sk-profile-show",
+  "binding": { "schemaVersion": 1, "profileId": "light-change", "profileVersion": "v1.0.0" },
+  "inputs": {
+    "request": "openspec/intake/INT-20260901-001-sk-profile-show.md 原始问题与 Disposition；范围与验收目标见 openspec/changes/sk-profile-show/01-原始需求/原始需求索引.md",
+    "implementation": "packages/sk/src/cli.ts 新增 cmdShow（sk show <profile>）；packages/sk/tests/sk.test.ts 新增 4 例；packages/sk/README.md 命令清单更新。未扩大范围。",
+    "verification": "openspec/changes/sk-profile-show/自验证据.md：bun test 13 pass / 0 fail；tsc --noEmit 无错误；实机验证 manifest 回退与空 profile 分支。待维护者验收。"
+  },
+  "judgments": {},
+  "completedStages": ["intake", "implementation"]
+}

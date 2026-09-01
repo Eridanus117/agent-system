@@ -30,6 +30,7 @@ cd packages/sk && bun run build   # 产出 dist/sk（Windows 为 dist/sk.exe）
 ```
 sk list                       库存清单（含同名冲突标记）
 sk profiles                   profile 一览
+sk show <profile>             查看 profile 当前配置（组、技能、描述、链接健康度；链接全缺时按 manifest 展示并提示 restore）
 sk new <profile>              新建空 profile
 sk add <profile> <模式...>    加技能（技能名 glob 或 @组名，如 sk add 写作 grilling @bmad）
 sk rm <profile> <模式...>     移除技能（同样支持 glob 与 @组名）
