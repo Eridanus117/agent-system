@@ -100,6 +100,9 @@ describe('validateDocument', () => {
 
     const onlyPositive = baseDocument();
     onlyPositive.evals[1].expected_trigger = true;
+    const emptyBehavior = baseDocument();
+    emptyBehavior.evals[0].assertions = [];
+    expect(() => validateDocument(emptyBehavior)).toThrow('at least one behavior gate');
     expect(() => validateDocument(onlyPositive)).toThrow('positive and negative trigger cases');
   });
 

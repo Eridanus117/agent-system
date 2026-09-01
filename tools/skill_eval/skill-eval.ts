@@ -148,6 +148,9 @@ function validateEvalCase(value: unknown, index: number): EvalCase {
   }
   const kindValue = record.kind;
   if (kindValue !== 'trigger' && kindValue !== 'behavior') fail(`${prefix}.kind must be trigger or behavior`);
+  if (kindValue === 'behavior' && assertions.length === 0) {
+    fail(`${prefix}.assertions must contain at least one behavior gate`);
+  }
   return {
     id: requiredString(record.id, `${prefix}.id`),
     name: requiredString(record.name, `${prefix}.name`),
