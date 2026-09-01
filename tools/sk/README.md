@@ -2,6 +2,16 @@
 
 背景与全部裁决史：`C:\Workspace\desk\提案\2026-08-26-Skills管理工具.md`。
 
+## 安装（本机一次性）
+
+实现是 TypeScript（`sk.ts`），由 bun 直接执行；本仓不提交 Batch 启动器（仓规：持久脚本只用 Go/Python/TypeScript/Rust）。想要 `sk` 短命令，把 `tools/sk` 加入 PATH 后，在该目录用一次性命令生成本机 launcher（已 gitignore，不入库）：
+
+```powershell
+Set-Content sk.cmd '@bun "%~dp0sk.ts" %*'
+```
+
+或者不装 launcher，直接 `bun tools/sk/sk.ts <命令>`。
+
 ## 模型
 
 - **库** = 本仓 `plugins/<组>/skills/<技能>/` 与 `vendor/<组>/skills/<技能>/`（Agent Skills 标准格式，SKILL.md）。
