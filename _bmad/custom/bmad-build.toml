@@ -1,8 +1,0 @@
-# Team override for bmad-build.
-# See {project-root}/vendor/bmad/skills/bmad-build/customize.toml for the base defaults.
-
-[workflow]
-
-persistent_facts = [
-  "写 spec 时，在 step-02 报告 token 数超过 1600 并让人类在 [S]/[K] 之间选择之前，先做一次结构性压缩尝试：检查 Code Map 与 Tasks & Acceptance 两节是否重复列出了同一批文件的路径/行号/复用点；如有重复，合并去重——Tasks 只保留“做什么”，不重复 Code Map 已给出的行号与复用点注释。合并后重新计数，仍然超限才进入 [S]/[K] 询问。",
-]

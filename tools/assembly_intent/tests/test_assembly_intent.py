@@ -1,4 +1,4 @@
-"""覆盖 spec-3-6 的 I/O 与边界矩阵六行。
+"""覆盖 spec-3-6 的 I/O 与边界矩阵（bmad 清单行已随 2026-09-01 bmad 退库移除）。
 
 全部用夹具目录，不碰真实仓库：真实仓的一次绿只能证明「今天恰好一致」，
 而这些用例要证明的是「不一致时它一定红」。`configs supply` 默认用假实现
@@ -58,24 +58,12 @@ DRIFTED_ENTRYPOINT = """# 仓库工作入口
 准备作出第一项实质路径选择时，请参考 `adaptive-problem-solving` 的做法。
 """
 
-INSTALL_MANIFEST = """installation:
-  version: 6.11.0
-  installDate: 2026-08-21T12:34:30.500Z
-modules:
-  - name: core
-    version: 6.11.0
-"""
-
-
 def write_fixture_repository(
     root: Path,
     *,
     entrypoint: str | None = None,
-    bmad_skills: Sequence[str] = ("bmad-alpha", "bmad-beta"),
-    with_skill_manifest: bool = True,
-    with_install_manifest: bool = True,
 ) -> Path:
-    """造一个只含推导所需两处权威的最小夹具仓。"""
+    """造一个只含推导所需权威（入口散文）的最小夹具仓。"""
     (root / "entrypoints").mkdir(parents=True, exist_ok=True)
     (root / "entrypoints" / "agent-system.md").write_text(
         entrypoint
@@ -85,19 +73,6 @@ def write_fixture_repository(
         ),
         encoding="utf-8",
     )
-    config_dir = root / "_bmad" / "_config"
-    config_dir.mkdir(parents=True, exist_ok=True)
-    if with_skill_manifest:
-        rows = ["canonicalId,name,description,module,path"]
-        rows.extend(
-            f'"{name}","{name}","desc","core","_bmad/core/{name}/SKILL.md"'
-            for name in bmad_skills
-        )
-        (config_dir / "skill-manifest.csv").write_text(
-            "\n".join(rows) + "\n", encoding="utf-8"
-        )
-    if with_install_manifest:
-        (config_dir / "manifest.yaml").write_text(INSTALL_MANIFEST, encoding="utf-8")
     return root
 
 
@@ -182,12 +157,12 @@ class TempRepositoryTestCase(unittest.TestCase):
 
 
 class DeriveIntentTests(TempRepositoryTestCase):
-    def test_derives_three_groups_from_two_authorities(self) -> None:
+    def test_derives_groups_from_entrypoint(self) -> None:
         write_fixture_repository(self.root)
         intent = assembly_intent.derive_intent(self.root)
         self.assertEqual(
             intent.groups,
-            ("plugins/adaptive-problem-solving", "plugins/orchestrated-collaboration", "vendor/bmad"),
+            ("plugins/adaptive-problem-solving", "plugins/orchestrated-collaboration"),
         )
         # 同一个名字被点名两次只推一个组，但两处行号都要记进来源。
         self.assertEqual(intent.entrypoint_hits, 3)
@@ -196,8 +171,7 @@ class DeriveIntentTests(TempRepositoryTestCase):
             ("adaptive-problem-solving", "orchestrated-collaboration"),
         )
         self.assertIn("9,13", intent.group_sources["plugins/adaptive-problem-solving"])
-        self.assertEqual(intent.bmad_pin, "6.11.0")
-        self.assertEqual(len(intent.expectations), 4)
+        self.assertEqual(len(intent.expectations), 2)
 
     def test_rejects_capture_that_is_not_a_skill_name(self) -> None:
         write_fixture_repository(
@@ -216,7 +190,6 @@ class MatrixRowConsistentTests(TempRepositoryTestCase):
         write_fixture_repository(self.root)
         runner = FakeSupplyRunner(
             supplied={
-                "vendor/bmad": ("bmad-alpha", "bmad-beta"),
                 "plugins/adaptive-problem-solving": ("adaptive-problem-solving",),
                 "plugins/orchestrated-collaboration": ("orchestrated-collaboration",),
             }
@@ -230,32 +203,28 @@ class MatrixRowConsistentTests(TempRepositoryTestCase):
                     (
                         "plugins/adaptive-problem-solving",
                         "plugins/orchestrated-collaboration",
-                        "vendor/bmad",
                     ),
                 )
             ],
         )
-        self.assertEqual(report["supplied_skill_count"], 4)
+        self.assertEqual(report["supplied_skill_count"], 2)
         self.assertEqual(report["unattributed_skill_count"], 0)
-        self.assertEqual(report["verified_expectation_count"], 4)
+        self.assertEqual(report["verified_expectation_count"], 2)
         self.assertEqual(
             {row["group"]: row["supplied_skill_count"] for row in report["groups"]},
             {
-                "vendor/bmad": 2,
                 "plugins/adaptive-problem-solving": 1,
                 "plugins/orchestrated-collaboration": 1,
             },
         )
         rendered = assembly_intent.render_text(report)
-        self.assertIn("Derived groups (3)", rendered)
-        self.assertIn("vendor/bmad  [2 skills]", rendered)
+        self.assertIn("Derived groups (2)", rendered)
 
     def test_exit_code_zero_through_main(self) -> None:
         write_fixture_repository(self.root)
         write_fixture_supply_library(
             self.root,
             {
-                "vendor/bmad": ("bmad-alpha", "bmad-beta"),
                 "plugins/adaptive-problem-solving": ("adaptive-problem-solving",),
                 "plugins/orchestrated-collaboration": ("orchestrated-collaboration",),
             },
@@ -265,7 +234,6 @@ class MatrixRowConsistentTests(TempRepositoryTestCase):
             self.root,
             FakeSupplyRunner(
                 supplied={
-                    "vendor/bmad": ("bmad-alpha", "bmad-beta"),
                     "plugins/adaptive-problem-solving": ("adaptive-problem-solving",),
                     "plugins/orchestrated-collaboration": ("orchestrated-collaboration",),
                 }
@@ -281,7 +249,6 @@ class MatrixRowNamedSkillNotSuppliedTests(TempRepositoryTestCase):
         write_fixture_repository(self.root)
         runner = FakeSupplyRunner(
             supplied={
-                "vendor/bmad": ("bmad-alpha", "bmad-beta"),
                 "plugins/adaptive-problem-solving": ("adaptive-problem-solving",),
                 # 组存在但里面装的是别的 Skill：清单式检查看不出来，只有比对真实产出才行。
                 "plugins/orchestrated-collaboration": ("something-else",),
@@ -313,20 +280,6 @@ class MatrixRowNamedSkillNotSuppliedTests(TempRepositoryTestCase):
         self.assertIn("点名的 Skill", message)
         self.assertIn("供给库内不存在组", message)
 
-    def test_bmad_manifest_skill_missing_from_group(self) -> None:
-        write_fixture_repository(self.root, bmad_skills=("bmad-alpha", "bmad-gone"))
-        runner = FakeSupplyRunner(
-            supplied={
-                "vendor/bmad": ("bmad-alpha",),
-                "plugins/adaptive-problem-solving": ("adaptive-problem-solving",),
-                "plugins/orchestrated-collaboration": ("orchestrated-collaboration",),
-            }
-        )
-        with self.assertRaises(AssemblyIntentError) as caught:
-            assembly_intent.check_assembly_intent(self.root, runner)
-        message = str(caught.exception)
-        self.assertIn("bmad-gone", message)
-        self.assertIn("vendor/bmad", message)
 
 
 class MatrixRowWordingDriftTests(TempRepositoryTestCase):
@@ -334,7 +287,7 @@ class MatrixRowWordingDriftTests(TempRepositoryTestCase):
 
     def test_zero_extraction_fails_loudly(self) -> None:
         write_fixture_repository(self.root, entrypoint=DRIFTED_ENTRYPOINT)
-        runner = FakeSupplyRunner(supplied={"vendor/bmad": ("bmad-alpha", "bmad-beta")})
+        runner = FakeSupplyRunner(supplied={"plugins/adaptive-problem-solving": ("adaptive-problem-solving",)})
         with self.assertRaises(AssemblyIntentError) as caught:
             assembly_intent.check_assembly_intent(self.root, runner)
         self.assertIn("提取数为 0", str(caught.exception))
@@ -358,7 +311,7 @@ class MatrixRowGroupResolutionFailureTests(TempRepositoryTestCase):
             returncode=1,
             stderr=(
                 "supply 失败\n"
-                "原因：组 `vendor/bmad` 下不存在 `skills` 目录（SupplyGroupNotFoundError）\n"
+                "原因：组 `plugins/orchestrated-collaboration` 下不存在 `skills` 目录（SupplyGroupNotFoundError）\n"
                 "建议：确认 CONTROL_PLANE_SUPPLY_ROOT 指向的库"
             ),
         )
@@ -380,34 +333,6 @@ class MatrixRowGroupResolutionFailureTests(TempRepositoryTestCase):
             assembly_intent.check_assembly_intent(self.root, GarbageRunner())
         self.assertIn("不是 JSON", str(caught.exception))
 
-
-class MatrixRowBmadManifestMissingTests(TempRepositoryTestCase):
-    """矩阵第 5 行：bmad 清单缺失 -> 非 0，指出该来源缺失。"""
-
-    def test_skill_manifest_missing(self) -> None:
-        write_fixture_repository(self.root, with_skill_manifest=False)
-        runner = FakeSupplyRunner()
-        with self.assertRaises(AssemblyIntentError) as caught:
-            assembly_intent.check_assembly_intent(self.root, runner)
-        message = str(caught.exception)
-        self.assertIn("skill-manifest.csv", message)
-        self.assertIn("缺失", message)
-        self.assertEqual(runner.calls, [])
-
-    def test_install_manifest_missing_means_group_has_no_pin(self) -> None:
-        write_fixture_repository(self.root, with_install_manifest=False)
-        with self.assertRaises(AssemblyIntentError) as caught:
-            assembly_intent.derive_intent(self.root)
-        self.assertIn("manifest.yaml", str(caught.exception))
-
-    def test_install_manifest_without_version_is_rejected(self) -> None:
-        write_fixture_repository(self.root)
-        (self.root / "_bmad" / "_config" / "manifest.yaml").write_text(
-            "installation:\n  installDate: 2026-08-21T12:34:30.500Z\n", encoding="utf-8"
-        )
-        with self.assertRaises(AssemblyIntentError) as caught:
-            assembly_intent.derive_intent(self.root)
-        self.assertIn("缺 pin", str(caught.exception))
 
 
 class MatrixRowSupplyUnavailableTests(TempRepositoryTestCase):
@@ -480,13 +405,12 @@ class RealSupplySubprocessTests(TempRepositoryTestCase):
         write_fixture_supply_library(
             self.root,
             {
-                "vendor/bmad": ("bmad-alpha", "bmad-beta"),
                 "plugins/adaptive-problem-solving": ("adaptive-problem-solving",),
                 "plugins/orchestrated-collaboration": ("orchestrated-collaboration",),
             },
         )
         report = assembly_intent.check_assembly_intent(self.root, self._runner())
-        self.assertEqual(report["supplied_skill_count"], 4)
+        self.assertEqual(report["supplied_skill_count"], 2)
         self.assertEqual(report["unattributed_skill_count"], 0)
 
     def test_real_supply_failure_is_passed_through(self) -> None:
@@ -495,7 +419,6 @@ class RealSupplySubprocessTests(TempRepositoryTestCase):
         write_fixture_supply_library(
             self.root,
             {
-                "vendor/bmad": ("bmad-alpha", "bmad-beta"),
                 "plugins/adaptive-problem-solving": ("adaptive-problem-solving",),
             },
         )
