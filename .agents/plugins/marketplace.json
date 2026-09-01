@@ -58,7 +58,7 @@
     },
     {
       "name": "adaptive-problem-solving",
-      "version": "0.2.13",
+      "version": "0.2.14",
       "source": {
         "source": "local",
         "path": "./plugins/adaptive-problem-solving"

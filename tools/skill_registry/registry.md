@@ -30,7 +30,7 @@
 
 ## 当前缺口
 
-共 14 个 Skill / 9 个组，递归维护面 369,402 字节。
+共 14 个 Skill / 9 个组，递归维护面 369,139 字节。
 
 | 缺口 | 数量 | 含义 |
 | --- | ---: | --- |
@@ -50,7 +50,7 @@
 | 组 | 成员 | 维护面 | 占比 | 版本 | Claude 打包 | 服务事项 | 来源 | 本地改动 |
 | --- | ---: | ---: | ---: | --- | --- | --- | --- | --- |
 | **Issue 与 PR** `github-collaboration` | 6 | 124.1 KB | 34.4% | 0.3.18 | 是 | E3 推进仓库事项 | own | — |
-| **问题求解治理** `adaptive-problem-solving` | 1 | 133.8 KB | 37.1% | 0.2.13 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
+| **问题求解治理** `adaptive-problem-solving` | 1 | 133.6 KB | 37.1% | 0.2.14 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
 | **多席协作** `orchestrated-collaboration` | 1 | 50.2 KB | 13.9% | 0.2.7 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
 | **资源观测** `resource-observability` | 1 | 9.7 KB | 2.7% | 0.2.4 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
 | **自我改进** `self-improvement` | 1 | 16.0 KB | 4.4% | 0.1.7 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
@@ -79,11 +79,11 @@
 
 ### 问题求解治理 · adaptive-problem-solving
 
-服务事项 **X** 横切面（不满足独立验收判据，不单独立事项）　来源 `own`　已打包 v0.2.13
+服务事项 **X** 横切面（不满足独立验收判据，不单独立事项）　来源 `own`　已打包 v0.2.14
 
 | Skill | 位置 | L1 | L2 | L3 | 上次复核 | 失效条件 | 最少复核步骤 |
 | --- | --- | ---: | ---: | ---: | --- | --- | --- |
-| `adaptive-problem-solving` | `plugins/adaptive-problem-solving/skills/adaptive-problem-solving` | 946 B | 9.2 KB | 124.6 KB | 2026-08-25 | 有 | 有 |
+| `adaptive-problem-solving` | `plugins/adaptive-problem-solving/skills/adaptive-problem-solving` | 870 B | 9.2 KB | 124.4 KB | 2026-08-25 | 有 | 有 |
 
 ### 多席协作 · orchestrated-collaboration
 
@@ -163,7 +163,7 @@
 
 单个 Skill · 组 `adaptive-problem-solving`｜来源 `plugins/tests/workflow-routing.json`｜上次复核 2026-08-25
 
-**什么会让它失效** 方法登记面的证据等级分布与登记面 README 声明不符；或三端 description 可见预算的实测基线（2026-08-11 测得 1000 UTF-8 字节）被新的实测推翻；或 INDEX 的「与装配内其他 Skill 的分界」表所列执行流程承载者（bmad-brainstorming、bmad-advanced-elicitation、bmad-forge-idea、bmad-party-mode、bmad-deep-recon、grilling）的 description 触发面发生变化，使该表的对应关系不再成立。
+**什么会让它失效** 方法登记面的证据等级分布与登记面 README 声明不符；或三端 description 可见预算的实测基线（2026-08-11 测得 1000 UTF-8 字节）被新的实测推翻；或 INDEX 的「与装配内其他 Skill 的分界」表所列执行流程承载者（grilling；bmad-* 五项已随 2026-09-01 bmad 退库移除）的 description 触发面发生变化，使该表的对应关系不再成立。
 
 **下次最少复核步骤** 逐卡取当前能力证据等级，与登记面 README 的 M0／M1 计数比对。再对 INDEX 分界表逐行确认对方Skill 仍存在且其 description 仍覆盖该方法（grep 触发词即可），不需要读正文。三端 description 回显需要交互式观察运行端目录，不在本步内：预算门本身已由符合性测试守住，重测只在怀疑运行端截断行为变化时才做。
 

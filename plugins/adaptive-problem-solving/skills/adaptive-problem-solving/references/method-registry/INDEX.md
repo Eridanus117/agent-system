@@ -36,13 +36,9 @@ P6 不改变 P1–P5 的主分类骨架，但获得可直接首跳的补充出�
 
 | 本登记面的卡 | 执行流程承载者 |
 | --- | --- |
-| `structured-brainstorming` | `bmad-brainstorming` |
-| `premortem`、`red-team-analysis` | `bmad-advanced-elicitation` |
-| `devils-advocacy`、`grilling-decision-tree` | `bmad-forge-idea`、`grilling` |
-| `team-a-team-b`、`multi-perspective-adversarial-review` | `bmad-party-mode` |
-| `aps-bounded-research` | `bmad-deep-recon` |
+| `devils-advocacy`、`grilling-decision-tree` | `grilling` |
 
-**在不在装配内由装配声明决定，不由资产是否存在决定。** 仓库里有 `bmad` 不等于当前装配里有它——装配是白名单，没声明即不存在。因此本表不是无条件生效的路由，而是"若命中且对方在装配内"的分界规则。
+**在不在装配内由装配声明决定，不由资产是否存在决定。** 仓库里有某个组不等于当前装配里有它——装配是白名单，没声明即不存在。因此本表不是无条件生效的路由，而是"若命中且对方在装配内"的分界规则。（曾列 bmad-* 五项承载者，已随 2026-09-01 bmad 整组退库移除。）
 
 对方不在装配内时，按卡片的执行定义直接做，不因为表里列了它就等待或降级。
 

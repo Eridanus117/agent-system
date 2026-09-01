@@ -6,13 +6,13 @@
 这是给人看的入口：每个 Skill 替你做什么、什么时候会用到、你怎么看出它在起作用，
 以及它在不同加载层和维护面上的实测体积。`SKILL.md` 是给 Agent 执行的行为合同，优先保证触发、硬门、分支和退出完整，不是按顺序阅读的教程；只有维护或审查行为时才需要下钻。
 
-当前 14 个 Skill：L1 descriptions 8,727 字节；L2 主合同 160,949 字节；L3 按需 references 208,453 字节；递归维护面合计 369,402 字节。
+当前 14 个 Skill：L1 descriptions 8,651 字节；L2 主合同 160,873 字节；L3 按需 references 208,266 字节；递归维护面合计 369,139 字节。
 
 L1 受每项 1000 UTF-8 字节可见性门约束；L2 只在选择 Skill 后加载；L3 只在正文明确路由后按需加载。三者不是同一个运行上下文预算。维护面递归计量全部可执行 Markdown，但不设置会诱导搬运文字的字节上限。
 
 | Skill | 版本 | L1 描述 | L2 主合同 | L3 引用 | 维护面占比 | 上次复核 |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
-| [adaptive-problem-solving](#adaptive-problem-solving) | 0.2.13 | 946 B | 9.2 KB | 124.6 KB | 37.1% | 2026-08-25 |
+| [adaptive-problem-solving](#adaptive-problem-solving) | 0.2.14 | 870 B | 9.2 KB | 124.4 KB | 37.1% | 2026-08-25 |
 | [issue-workflow](#issue-workflow) | 0.3.18 | 658 B | 23.6 KB | 36.5 KB | 16.7% | 2026-08-15 |
 | [orchestrated-collaboration](#orchestrated-collaboration) | 0.2.7 | 876 B | 21.3 KB | 28.9 KB | 13.9% | 2026-08-15 |
 | [self-improvement](#self-improvement) | 0.1.7 | 673 B | 8.8 KB | 7.2 KB | 4.4% | 2026-08-15 |
@@ -35,9 +35,9 @@ L1 受每项 1000 UTF-8 字节可见性门约束；L2 只在选择 Skill 后加�
 
 **你怎么知道它在起作用** 方向变了会明确说出来；没变就直接继续，不额外汇报。
 
-**什么会让它失效** 方法登记面的证据等级分布与登记面 README 声明不符；或三端 description 可见预算的实测基线（2026-08-11 测得 1000 UTF-8 字节）被新的实测推翻；或 INDEX 的「与装配内其他 Skill 的分界」表所列执行流程承载者（bmad-brainstorming、bmad-advanced-elicitation、bmad-forge-idea、bmad-party-mode、bmad-deep-recon、grilling）的 description 触发面发生变化，使该表的对应关系不再成立。
+**什么会让它失效** 方法登记面的证据等级分布与登记面 README 声明不符；或三端 description 可见预算的实测基线（2026-08-11 测得 1000 UTF-8 字节）被新的实测推翻；或 INDEX 的「与装配内其他 Skill 的分界」表所列执行流程承载者（grilling；bmad-* 五项已随 2026-09-01 bmad 退库移除）的 description 触发面发生变化，使该表的对应关系不再成立。
 
-所属 Plugin `adaptive-problem-solving` `0.2.13`｜L1 946 B｜L2 9.2 KB｜L3 124.6 KB｜递归维护面 133.8 KB（占总维护面 37.1%）｜Agent 行为合同（维护／审查时读取）[`plugins/adaptive-problem-solving/skills/adaptive-problem-solving/SKILL.md`](../adaptive-problem-solving/skills/adaptive-problem-solving/SKILL.md)
+所属 Plugin `adaptive-problem-solving` `0.2.14`｜L1 870 B｜L2 9.2 KB｜L3 124.4 KB｜递归维护面 133.6 KB（占总维护面 37.1%）｜Agent 行为合同（维护／审查时读取）[`plugins/adaptive-problem-solving/skills/adaptive-problem-solving/SKILL.md`](../adaptive-problem-solving/skills/adaptive-problem-solving/SKILL.md)
 
 ## issue-workflow
 

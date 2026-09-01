@@ -1,7 +1,7 @@
 ---
 name: adaptive-problem-solving
 description: >-
-  用于问题含糊、关键路径选择、波次／里程碑反思、高成本或难回退动作、范围／成本变化、停滞、恢复／交接／验收／长期收口，或检查方向、方法、ROI、模型、上下文、工具、环境与 Agent 组合。恢复原问题和主瓶颈，比较普通路径与方法后组合、换路或退出，区分证据来源、实验与完整交付，并核对父目标和能力回退；跳过低风险易回退步骤。方法的执行流程若已由装配内其他 Skill 承载（如 bmad 的 brainstorming、advanced-elicitation、forge-idea、party-mode、deep-recon），本 Skill 只负责归型、进入与退出条件、成本与停止，不重复执行。Use for ambiguity, consequential choices, milestones, stalls, handoffs, acceptance, or execution review. Restore the problem and bottleneck, compare methods, and verify evidence, parent goals, and regressions; skip low-risk reversible work.
+  用于问题含糊、关键路径选择、波次／里程碑反思、高成本或难回退动作、范围／成本变化、停滞、恢复／交接／验收／长期收口，或检查方向、方法、ROI、模型、上下文、工具、环境与 Agent 组合。恢复原问题和主瓶颈，比较普通路径与方法后组合、换路或退出，区分证据来源、实验与完整交付，并核对父目标和能力回退；跳过低风险易回退步骤。方法的执行流程若已由装配内其他 Skill 承载（如 grilling），本 Skill 只负责归型、进入与退出条件、成本与停止，不重复执行。Use for ambiguity, consequential choices, milestones, stalls, handoffs, acceptance, or execution review. Restore the problem and bottleneck, compare methods, and verify evidence, parent goals, and regressions; skip low-risk reversible work.
 ---
 
 # 自适应问题求解
