@@ -49,3 +49,8 @@ _bmad/**/*.user.toml
 **/.claude/agent-memory-local
 **/.claude/first-run
 **/.claude/assistant-daemon-state.json
+
+# 本地工具二进制：sk.exe 约 94 MiB，逼近平台单文件上限，而且一旦提交就会永久
+# 留在 git 历史里，谁都删不掉，此后每次 clone 都要拖一份。该目录按维护者
+# 2026-09-01 的决定不进 git，需要用的人从外部渠道获取。
+tools/sk/
