@@ -6,25 +6,26 @@
 这是给人看的入口：每个 Skill 替你做什么、什么时候会用到、你怎么看出它在起作用，
 以及它在不同加载层和维护面上的实测体积。`SKILL.md` 是给 Agent 执行的行为合同，优先保证触发、硬门、分支和退出完整，不是按顺序阅读的教程；只有维护或审查行为时才需要下钻。
 
-当前 14 个 Skill：L1 descriptions 8,651 字节；L2 主合同 160,873 字节；L3 按需 references 208,266 字节；递归维护面合计 369,139 字节。
+当前 15 个 Skill：L1 descriptions 9,557 字节；L2 主合同 167,335 字节；L3 按需 references 208,266 字节；递归维护面合计 375,601 字节。
 
 L1 受每项 1000 UTF-8 字节可见性门约束；L2 只在选择 Skill 后加载；L3 只在正文明确路由后按需加载。三者不是同一个运行上下文预算。维护面递归计量全部可执行 Markdown，但不设置会诱导搬运文字的字节上限。
 
 | Skill | 版本 | L1 描述 | L2 主合同 | L3 引用 | 维护面占比 | 上次复核 |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
-| [adaptive-problem-solving](#adaptive-problem-solving) | 0.2.14 | 870 B | 9.2 KB | 124.4 KB | 37.1% | 2026-08-25 |
-| [issue-workflow](#issue-workflow) | 0.3.18 | 658 B | 23.6 KB | 36.5 KB | 16.7% | 2026-08-15 |
-| [orchestrated-collaboration](#orchestrated-collaboration) | 0.2.7 | 876 B | 21.3 KB | 28.9 KB | 13.9% | 2026-08-15 |
+| [adaptive-problem-solving](#adaptive-problem-solving) | 0.2.14 | 870 B | 9.2 KB | 124.4 KB | 36.4% | 2026-08-25 |
+| [issue-workflow](#issue-workflow) | 0.3.18 | 658 B | 23.6 KB | 36.5 KB | 16.4% | 2026-08-15 |
+| [orchestrated-collaboration](#orchestrated-collaboration) | 0.2.7 | 876 B | 21.3 KB | 28.9 KB | 13.7% | 2026-08-15 |
 | [self-improvement](#self-improvement) | 0.1.7 | 673 B | 8.8 KB | 7.2 KB | 4.4% | 2026-08-15 |
 | [pr-integration](#pr-integration) | 0.3.18 | 581 B | 15.6 KB | 0.0 KB | 4.3% | 2026-08-15 |
-| [issue-delivery](#issue-delivery) | 0.3.18 | 554 B | 15.2 KB | 0.0 KB | 4.2% | 2026-08-15 |
+| [issue-delivery](#issue-delivery) | 0.3.18 | 554 B | 15.2 KB | 0.0 KB | 4.1% | 2026-08-15 |
 | [objective-to-issues](#objective-to-issues) | 0.3.18 | 491 B | 13.0 KB | 0.0 KB | 3.6% | 2026-08-15 |
-| [operating-ledger-maintenance](#operating-ledger-maintenance) | 0.3.18 | 749 B | 11.5 KB | 0.0 KB | 3.2% | 2026-08-15 |
+| [operating-ledger-maintenance](#operating-ledger-maintenance) | 0.3.18 | 749 B | 11.5 KB | 0.0 KB | 3.1% | 2026-08-15 |
 | [skill-appraisal](#skill-appraisal) | 0.2.0 | 781 B | 10.2 KB | 0.0 KB | 2.8% | 2026-08-25 |
-| [resource-observability](#resource-observability) | 0.2.4 | 608 B | 5.6 KB | 4.1 KB | 2.7% | 2026-08-15 |
+| [resource-observability](#resource-observability) | 0.2.4 | 608 B | 5.6 KB | 4.1 KB | 2.6% | 2026-08-15 |
 | [issue-contract-compaction](#issue-contract-compaction) | 0.3.18 | 481 B | 8.6 KB | 0.0 KB | 2.4% | 2026-08-15 |
 | [skill-maintenance](#skill-maintenance) | 0.1.1 | 334 B | 4.3 KB | 2.2 KB | 1.8% | 2026-08-16 |
-| [knowledge-maintenance](#knowledge-maintenance) | 0.1.3 | 644 B | 6.3 KB | 0.0 KB | 1.8% | 2026-08-15 |
+| [knowledge-maintenance](#knowledge-maintenance) | 0.1.3 | 644 B | 6.3 KB | 0.0 KB | 1.7% | 2026-08-15 |
+| [clarify](#clarify) | 0.1.0 | 906 B | 6.3 KB | 0.0 KB | 1.7% | **从未** |
 | [grilling](#grilling) | 0.1.2 | 351 B | 3.9 KB | 0.0 KB | 1.1% | 2026-08-15 |
 
 ## adaptive-problem-solving
@@ -37,7 +38,7 @@ L1 受每项 1000 UTF-8 字节可见性门约束；L2 只在选择 Skill 后加�
 
 **什么会让它失效** 方法登记面的证据等级分布与登记面 README 声明不符；或三端 description 可见预算的实测基线（2026-08-11 测得 1000 UTF-8 字节）被新的实测推翻；或 INDEX 的「与装配内其他 Skill 的分界」表所列执行流程承载者（grilling；bmad-* 五项已随 2026-09-01 bmad 退库移除）的 description 触发面发生变化，使该表的对应关系不再成立。
 
-所属 Plugin `adaptive-problem-solving` `0.2.14`｜L1 870 B｜L2 9.2 KB｜L3 124.4 KB｜递归维护面 133.6 KB（占总维护面 37.1%）｜Agent 行为合同（维护／审查时读取）[`plugins/adaptive-problem-solving/skills/adaptive-problem-solving/SKILL.md`](../adaptive-problem-solving/skills/adaptive-problem-solving/SKILL.md)
+所属 Plugin `adaptive-problem-solving` `0.2.14`｜L1 870 B｜L2 9.2 KB｜L3 124.4 KB｜递归维护面 133.6 KB（占总维护面 36.4%）｜Agent 行为合同（维护／审查时读取）[`plugins/adaptive-problem-solving/skills/adaptive-problem-solving/SKILL.md`](../adaptive-problem-solving/skills/adaptive-problem-solving/SKILL.md)
 
 ## issue-workflow
 
@@ -49,7 +50,7 @@ L1 受每项 1000 UTF-8 字节可见性门约束；L2 只在选择 Skill 后加�
 
 **什么会让它失效** GitHub Issue 子树生命周期、负责人决定、关闭授权或 Project 投影的权威规则变化，使本 Skill 的唯一生命周期决定者边界不再成立。
 
-所属 Plugin `github-collaboration` `0.3.18`｜L1 658 B｜L2 23.6 KB｜L3 36.5 KB｜递归维护面 60.1 KB（占总维护面 16.7%）｜Agent 行为合同（维护／审查时读取）[`plugins/github-collaboration/skills/issue-workflow/SKILL.md`](../github-collaboration/skills/issue-workflow/SKILL.md)
+所属 Plugin `github-collaboration` `0.3.18`｜L1 658 B｜L2 23.6 KB｜L3 36.5 KB｜递归维护面 60.1 KB（占总维护面 16.4%）｜Agent 行为合同（维护／审查时读取）[`plugins/github-collaboration/skills/issue-workflow/SKILL.md`](../github-collaboration/skills/issue-workflow/SKILL.md)
 
 ## orchestrated-collaboration
 
@@ -61,7 +62,7 @@ L1 受每项 1000 UTF-8 字节可见性门约束；L2 只在选择 Skill 后加�
 
 **什么会让它失效** 所选协调后端（当前 orca orchestration）的 Run／Task／Dispatch 语义或标准释放回执格式变化；或其唯一原则源 agent-control/authority/05-resource-operations.md 的资源投入原则变化，使 R1–R6 派发门失去依据。
 
-所属 Plugin `orchestrated-collaboration` `0.2.7`｜L1 876 B｜L2 21.3 KB｜L3 28.9 KB｜递归维护面 50.2 KB（占总维护面 13.9%）｜Agent 行为合同（维护／审查时读取）[`plugins/orchestrated-collaboration/skills/orchestrated-collaboration/SKILL.md`](../orchestrated-collaboration/skills/orchestrated-collaboration/SKILL.md)
+所属 Plugin `orchestrated-collaboration` `0.2.7`｜L1 876 B｜L2 21.3 KB｜L3 28.9 KB｜递归维护面 50.2 KB（占总维护面 13.7%）｜Agent 行为合同（维护／审查时读取）[`plugins/orchestrated-collaboration/skills/orchestrated-collaboration/SKILL.md`](../orchestrated-collaboration/skills/orchestrated-collaboration/SKILL.md)
 
 ## self-improvement
 
@@ -97,7 +98,7 @@ L1 受每项 1000 UTF-8 字节可见性门约束；L2 只在选择 Skill 后加�
 
 **什么会让它失效** Draft PR、证据评论、分支所有权或 GitHub 交付复核语义变化，使单个已就绪 Issue 不能按合同形成可独立核验交付物。
 
-所属 Plugin `github-collaboration` `0.3.18`｜L1 554 B｜L2 15.2 KB｜L3 0.0 KB｜递归维护面 15.2 KB（占总维护面 4.2%）｜Agent 行为合同（维护／审查时读取）[`plugins/github-collaboration/skills/issue-delivery/SKILL.md`](../github-collaboration/skills/issue-delivery/SKILL.md)
+所属 Plugin `github-collaboration` `0.3.18`｜L1 554 B｜L2 15.2 KB｜L3 0.0 KB｜递归维护面 15.2 KB（占总维护面 4.1%）｜Agent 行为合同（维护／审查时读取）[`plugins/github-collaboration/skills/issue-delivery/SKILL.md`](../github-collaboration/skills/issue-delivery/SKILL.md)
 
 ## objective-to-issues
 
@@ -121,7 +122,7 @@ L1 受每项 1000 UTF-8 字节可见性门约束；L2 只在选择 Skill 后加�
 
 **什么会让它失效** 经营总账 Project、Status 字段、负责人动作投影或跨 Session 观察面规则变化，使本 Skill 不能只维护观察面而不成为权威源。
 
-所属 Plugin `github-collaboration` `0.3.18`｜L1 749 B｜L2 11.5 KB｜L3 0.0 KB｜递归维护面 11.5 KB（占总维护面 3.2%）｜Agent 行为合同（维护／审查时读取）[`plugins/github-collaboration/skills/operating-ledger-maintenance/SKILL.md`](../github-collaboration/skills/operating-ledger-maintenance/SKILL.md)
+所属 Plugin `github-collaboration` `0.3.18`｜L1 749 B｜L2 11.5 KB｜L3 0.0 KB｜递归维护面 11.5 KB（占总维护面 3.1%）｜Agent 行为合同（维护／审查时读取）[`plugins/github-collaboration/skills/operating-ledger-maintenance/SKILL.md`](../github-collaboration/skills/operating-ledger-maintenance/SKILL.md)
 
 ## skill-appraisal
 
@@ -145,7 +146,7 @@ L1 受每项 1000 UTF-8 字节可见性门约束；L2 只在选择 Skill 后加�
 
 **什么会让它失效** orca account list --json 的返回结构变化：顶层 ok、result.rateLimits.claude／codex 的 status 与 updatedAt，或 usedPercent／windowMinutes／resetsAt／rateLimitResetCredits 这些窗口字段不再按 Skill 正文描述提供。
 
-所属 Plugin `resource-observability` `0.2.4`｜L1 608 B｜L2 5.6 KB｜L3 4.1 KB｜递归维护面 9.7 KB（占总维护面 2.7%）｜Agent 行为合同（维护／审查时读取）[`plugins/resource-observability/skills/resource-observability/SKILL.md`](../resource-observability/skills/resource-observability/SKILL.md)
+所属 Plugin `resource-observability` `0.2.4`｜L1 608 B｜L2 5.6 KB｜L3 4.1 KB｜递归维护面 9.7 KB（占总维护面 2.6%）｜Agent 行为合同（维护／审查时读取）[`plugins/resource-observability/skills/resource-observability/SKILL.md`](../resource-observability/skills/resource-observability/SKILL.md)
 
 ## issue-contract-compaction
 
@@ -181,7 +182,19 @@ L1 受每项 1000 UTF-8 字节可见性门约束；L2 只在选择 Skill 后加�
 
 **什么会让它失效** agent-control/authority/01-knowledge.md 的两道准入门或可信门八项条件发生变化。
 
-所属 Plugin `knowledge-maintenance` `0.1.3`｜L1 644 B｜L2 6.3 KB｜L3 0.0 KB｜递归维护面 6.3 KB（占总维护面 1.8%）｜Agent 行为合同（维护／审查时读取）[`plugins/knowledge-maintenance/skills/knowledge-maintenance/SKILL.md`](../knowledge-maintenance/skills/knowledge-maintenance/SKILL.md)
+所属 Plugin `knowledge-maintenance` `0.1.3`｜L1 644 B｜L2 6.3 KB｜L3 0.0 KB｜递归维护面 6.3 KB（占总维护面 1.7%）｜Agent 行为合同（维护／审查时读取）[`plugins/knowledge-maintenance/skills/knowledge-maintenance/SKILL.md`](../knowledge-maintenance/skills/knowledge-maintenance/SKILL.md)
+
+## clarify
+
+**它替你做什么** 把「我想建个 X」翻回「我到底有什么问题」，判断该不该做。
+
+**什么时候用** 念头还没成型、还没有任务的时候。已成型的计划求压测归 grilling；任务已开跑归 adaptive-problem-solving；bug 类不适用。
+
+**你怎么知道它在起作用** 输出是三行（真正的问题／值不值得解／往哪个方向解），且全程没有产出任何需要归档的文件。
+
+**什么会让它失效** 相邻 Skill 的触发合同变化（grilling 从「须显式请求」放宽、adaptive-problem-solving 把「动手之前」纳入其范围），或全局立项流程改为在判断前落盘——任一都会让本 Skill 的路由边界或「不产出文件」铁律失效。
+
+所属 Plugin `clarify` `0.1.0`｜L1 906 B｜L2 6.3 KB｜L3 0.0 KB｜递归维护面 6.3 KB（占总维护面 1.7%）｜Agent 行为合同（维护／审查时读取）[`plugins/clarify/skills/clarify/SKILL.md`](../clarify/skills/clarify/SKILL.md)
 
 ## grilling
 

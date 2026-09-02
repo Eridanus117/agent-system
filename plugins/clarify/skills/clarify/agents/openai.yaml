@@ -1,0 +1,6 @@
+interface:
+  display_name: "把念头变成判断"
+  short_description: "把「我想建个 X」翻回问题，判断该不该做"
+
+policy:
+  allow_implicit_invocation: true

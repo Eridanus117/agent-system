@@ -1,0 +1,11 @@
+{
+  "name": "clarify",
+  "version": "0.1.0",
+  "description": "Turn an itch stated as a solution back into a problem, then judge whether it is worth solving.",
+  "author": {
+    "name": "Eridanus117"
+  },
+  "repository": "https://github.com/Eridanus117/agent-system",
+  "license": "MIT",
+  "skills": "./skills/"
+}

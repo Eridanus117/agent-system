@@ -31,7 +31,7 @@
 以下发布记录保留迁移前编号以便仓库维护者溯源；其中私有链接对公共协作者不可用，只是可选历史来源。当前行为、贡献要求和验收必须在本仓公开内容中自足表达。
 `adaptive-problem-solving` `0.2.14` 随 2026-09-01 负责人裁定的 bmad 整组退库清理引用：description 与方法登记面 INDEX 的「与装配内其他 Skill 的分界」表不再列 bmad-* 执行流程承载者（仅保留 `grilling`），失效条款同步；行为合同与方法卡内容不变。
 
-仓库目前包含九个可安装 Plugin：`grilling` `0.1.2`、`self-improvement` `0.1.7`、`skill-maintenance` `0.1.1`、`knowledge-maintenance` `0.1.3`、`orchestrated-collaboration` `0.2.7`、`adaptive-problem-solving` `0.2.14`、`resource-observability` `0.2.4`、`github-collaboration` `0.3.18`、`skill-appraisal` `0.2.0`。
+仓库目前包含十个可安装 Plugin：`grilling` `0.1.2`、`self-improvement` `0.1.7`、`skill-maintenance` `0.1.1`、`knowledge-maintenance` `0.1.3`、`orchestrated-collaboration` `0.2.7`、`adaptive-problem-solving` `0.2.14`、`resource-observability` `0.2.4`、`github-collaboration` `0.3.18`、`skill-appraisal` `0.2.0`、`clarify` `0.1.0`。
 
 `skill-maintenance` `0.1.1` 在明确创建、审计、修正、拆分、升级、迁移或退役 Skill 时进入：先绑定当前行为合同与授权，预注册行为判据，再同步主合同、按需 reference、全部调用者、双端发现入口、版本、生成物和复杂度预算；安全门零回退，调用者 clean cutover，方案／实施同源时必须独立审查。它不维护普通业务代码，也不替 `self-improvement` 决定一次纠正应该落到哪里。
 

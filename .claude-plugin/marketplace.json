@@ -7,14 +7,24 @@
   },
   "plugins": [
     {
+      "name": "adaptive-problem-solving",
+      "version": "0.2.14",
+      "source": "./plugins/adaptive-problem-solving"
+    },
+    {
+      "name": "clarify",
+      "version": "0.1.0",
+      "source": "./plugins/clarify"
+    },
+    {
+      "name": "github-collaboration",
+      "version": "0.3.18",
+      "source": "./plugins/github-collaboration"
+    },
+    {
       "name": "grilling",
       "version": "0.1.2",
       "source": "./plugins/grilling"
-    },
-    {
-      "name": "self-improvement",
-      "version": "0.1.7",
-      "source": "./plugins/self-improvement"
     },
     {
       "name": "knowledge-maintenance",
@@ -27,14 +37,15 @@
       "source": "./plugins/orchestrated-collaboration"
     },
     {
-      "name": "adaptive-problem-solving",
-      "version": "0.2.14",
-      "source": "./plugins/adaptive-problem-solving"
+      "name": "resource-observability",
+      "version": "0.2.4",
+      "description": "只读的 Codex／Claude 账户容量与单会话 Token 回执；不负责调度。",
+      "source": "./plugins/resource-observability"
     },
     {
-      "name": "skill-maintenance",
-      "version": "0.1.1",
-      "source": "./plugins/skill-maintenance"
+      "name": "self-improvement",
+      "version": "0.1.7",
+      "source": "./plugins/self-improvement"
     },
     {
       "name": "skill-appraisal",
@@ -42,15 +53,9 @@
       "source": "./plugins/skill-appraisal"
     },
     {
-      "name": "resource-observability",
-      "version": "0.2.4",
-      "description": "只读的 Codex／Claude 账户容量与单会话 Token 回执；不负责调度。",
-      "source": "./plugins/resource-observability"
-    },
-    {
-      "name": "github-collaboration",
-      "version": "0.3.18",
-      "source": "./plugins/github-collaboration"
+      "name": "skill-maintenance",
+      "version": "0.1.1",
+      "source": "./plugins/skill-maintenance"
     }
   ]
 }

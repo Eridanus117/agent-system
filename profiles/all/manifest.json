@@ -5,6 +5,10 @@
       "target": "plugins/adaptive-problem-solving/skills/adaptive-problem-solving"
     },
     {
+      "name": "clarify",
+      "target": "plugins/clarify/skills/clarify"
+    },
+    {
       "name": "grilling",
       "target": "plugins/grilling/skills/grilling"
     },
