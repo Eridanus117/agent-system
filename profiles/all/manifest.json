@@ -13,40 +13,12 @@
       "target": "plugins/grilling/skills/grilling"
     },
     {
-      "name": "issue-contract-compaction",
-      "target": "plugins/github-collaboration/skills/issue-contract-compaction"
-    },
-    {
-      "name": "issue-delivery",
-      "target": "plugins/github-collaboration/skills/issue-delivery"
-    },
-    {
-      "name": "issue-workflow",
-      "target": "plugins/github-collaboration/skills/issue-workflow"
-    },
-    {
       "name": "knowledge-maintenance",
       "target": "plugins/knowledge-maintenance/skills/knowledge-maintenance"
     },
     {
-      "name": "objective-to-issues",
-      "target": "plugins/github-collaboration/skills/objective-to-issues"
-    },
-    {
-      "name": "operating-ledger-maintenance",
-      "target": "plugins/github-collaboration/skills/operating-ledger-maintenance"
-    },
-    {
       "name": "orchestrated-collaboration",
       "target": "plugins/orchestrated-collaboration/skills/orchestrated-collaboration"
-    },
-    {
-      "name": "pr-integration",
-      "target": "plugins/github-collaboration/skills/pr-integration"
-    },
-    {
-      "name": "resource-observability",
-      "target": "plugins/resource-observability/skills/resource-observability"
     },
     {
       "name": "self-improvement",

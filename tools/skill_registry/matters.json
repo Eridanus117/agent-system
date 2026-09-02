@@ -47,12 +47,6 @@
   },
 
   "groups": {
-    "github-collaboration": {
-      "displayName": "Issue 与 PR",
-      "matters": ["E3"],
-      "packagedForClaude": true,
-      "origin": { "kind": "own" }
-    },
     "adaptive-problem-solving": {
       "displayName": "问题求解治理",
       "matters": ["X"],
@@ -61,12 +55,6 @@
     },
     "orchestrated-collaboration": {
       "displayName": "多席协作",
-      "matters": ["X"],
-      "packagedForClaude": true,
-      "origin": { "kind": "own" }
-    },
-    "resource-observability": {
-      "displayName": "资源观测",
       "matters": ["X"],
       "packagedForClaude": true,
       "origin": { "kind": "own" }

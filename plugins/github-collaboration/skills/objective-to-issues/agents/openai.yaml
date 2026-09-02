@@ -1,6 +1,0 @@
-interface:
-  display_name: "目标拆成 Issue"
-  short_description: "把长程目标拆成父子 Issue 图"
-
-policy:
-  allow_implicit_invocation: true

@@ -1,6 +1,0 @@
-interface:
-  display_name: "Issue 推进"
-  short_description: "把一个 Issue 子树推进到下一段"
-
-policy:
-  allow_implicit_invocation: true

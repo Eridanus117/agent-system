@@ -44,67 +44,6 @@
     "grilling": {
       "plugin": "grilling"
     },
-    "resource-observability": {
-      "plugin": "resource-observability"
-    },
-    "issue-workflow": {
-      "plugin": "github-collaboration",
-      "drive": [
-        "issue-delivery",
-        "issue-contract-compaction",
-        "objective-to-issues",
-        "adaptive-problem-solving",
-        "orchestrated-collaboration"
-      ],
-      "reference": [
-        "pr-integration",
-        "operating-ledger-maintenance",
-        "self-improvement"
-      ]
-    },
-    "issue-delivery": {
-      "plugin": "github-collaboration",
-      "drive": [
-        "adaptive-problem-solving",
-        "orchestrated-collaboration",
-        "knowledge-maintenance"
-      ],
-      "reference": [
-        "issue-workflow",
-        "pr-integration",
-        "objective-to-issues"
-      ]
-    },
-    "issue-contract-compaction": {
-      "plugin": "github-collaboration"
-    },
-    "objective-to-issues": {
-      "plugin": "github-collaboration",
-      "return": [
-        "issue-workflow"
-      ],
-      "reference": [
-        "orchestrated-collaboration",
-        "operating-ledger-maintenance"
-      ]
-    },
-    "operating-ledger-maintenance": {
-      "plugin": "github-collaboration",
-      "drive": [
-        "objective-to-issues",
-        "issue-workflow"
-      ]
-    },
-    "pr-integration": {
-      "plugin": "github-collaboration",
-      "drive": [
-        "adaptive-problem-solving",
-        "orchestrated-collaboration"
-      ],
-      "return": [
-        "issue-workflow"
-      ]
-    },
     "skill-appraisal": {
       "plugin": "skill-appraisal",
       "drive": [
@@ -151,48 +90,6 @@
       "grilling": {
         "invalidatedWhen": "明示同意门被取消，或运行端改为按关键词自动进入长期盘问。",
         "minimalRecheck": "确认触发路径仍要求用户直接请求或明确接受建议，且因剩余价值低或成本过高的退出门仍在。",
-        "lastVerified": "2026-08-15",
-        "suspect": false
-      },
-      "resource-observability": {
-        "invalidatedWhen": "orca account list --json 的返回结构变化：顶层 ok、result.rateLimits.claude／codex 的 status 与 updatedAt，或 usedPercent／windowMinutes／resetsAt／rateLimitResetCredits 这些窗口字段不再按 Skill 正文描述提供。",
-        "minimalRecheck": "跑一次 orca account list --json，确认 ok 为真、两个 Provider 的 status 与 updatedAt 可读、上述窗口字段仍存在且量纲未变。",
-        "lastVerified": "2026-08-15",
-        "suspect": false
-      },
-      "issue-workflow": {
-        "invalidatedWhen": "GitHub Issue 子树生命周期、负责人决定、关闭授权或 Project 投影的权威规则变化，使本 Skill 的唯一生命周期决定者边界不再成立。",
-        "minimalRecheck": "用一个真实或夹具 Issue 子树核对叶子判定、段结果返回、负责人动作消费、关闭授权和父级回收仍只由 issue-workflow 判定。",
-        "lastVerified": "2026-08-15",
-        "suspect": false
-      },
-      "issue-delivery": {
-        "invalidatedWhen": "Draft PR、证据评论、分支所有权或 GitHub 交付复核语义变化，使单个已就绪 Issue 不能按合同形成可独立核验交付物。",
-        "minimalRecheck": "对一个已就绪 Issue 复核范围恢复、分支所有权、Draft PR 或证据评论创建、远端回读和交付事实返回仍完整可执行。",
-        "lastVerified": "2026-08-15",
-        "suspect": false
-      },
-      "issue-contract-compaction": {
-        "invalidatedWhen": "GitHub Issue 正文、评论、updatedAt 或恢复快照语义变化，使写前快照、最终重读或正文排他所有权不能可靠防止覆盖当前合同。",
-        "minimalRecheck": "选择一条有评论的 Issue，演练只读压缩计划：确认当前正文、全部评论、恢复快照载体、最终重读字段和八项保留项仍可定位。",
-        "lastVerified": "2026-08-15",
-        "suspect": false
-      },
-      "objective-to-issues": {
-        "invalidatedWhen": "GitHub 原生 sub-issue、label、ProjectV2 item 或任务图分类规则变化，使父子图创建和分类投影不能按正文复核。",
-        "minimalRecheck": "用一个目标 Issue 只读核对标题前缀、类型 label、父子关系、Project 条目与状态字段的现行 API 和正文映射仍一致。",
-        "lastVerified": "2026-08-15",
-        "suspect": false
-      },
-      "operating-ledger-maintenance": {
-        "invalidatedWhen": "经营总账 Project、Status 字段、负责人动作投影或跨 Session 观察面规则变化，使本 Skill 不能只维护观察面而不成为权威源。",
-        "minimalRecheck": "读取当前经营总账 Project 和一条代表 Issue，确认诉求、计划、交付、等待负责人和完成状态的投影仍能按现行规则只读复核。",
-        "lastVerified": "2026-08-15",
-        "suspect": false
-      },
-      "pr-integration": {
-        "invalidatedWhen": "GitHub PR 的 draft、review、required checks、merge state、评论主体或合并授权语义变化，使当前 head 绑定和整合门不再可靠。",
-        "minimalRecheck": "对一个 PR 读取当前 head、Draft 状态、审查、required checks、冲突、mergeability 和评论作者类型，确认整合判断字段仍可获得。",
         "lastVerified": "2026-08-15",
         "suspect": false
       },
@@ -243,41 +140,6 @@
         "whenToUse": "你直接要求，或明确接受建议时。它不会因为任务复杂就自动开始。",
         "workingSignals": "你会被连续追问，且随时可以喊停或换普通路径。"
       },
-      "resource-observability": {
-        "forYou": "分开看两件事：账户还剩多少额度何时恢复，和这次工作实际花了多少。",
-        "whenToUse": "准备扩大并发、资源接近耗尽，或你问额度时。",
-        "workingSignals": "给出带时间戳的读数；取不到就明说未知，不猜。"
-      },
-      "issue-workflow": {
-        "forYou": "把一个 GitHub Issue 子树推进到下一段：选叶子、派交付、消费负责人决定并回收父级。",
-        "whenToUse": "有明确 Issue、父级缺口或负责人短回复需要推进时；普通问答和无 Issue 工作不用。",
-        "workingSignals": "远端 Issue 上出现可恢复的段结果、负责人动作状态、关闭授权判断和下一责任人。"
-      },
-      "issue-delivery": {
-        "forYou": "把一个已就绪 GitHub Issue 交付成 Draft PR 或自足证据评论，并留下验证事实。",
-        "whenToUse": "范围、授权、成功条件和交付形态已在 Issue 合同里明确时。",
-        "workingSignals": "有稳定 PR 或评论 URL、当前 head、实际验证记录和未运行项说明。"
-      },
-      "issue-contract-compaction": {
-        "forYou": "把过长或漂移的 GitHub Issue 正文压回当前合同，同时保留评论审计轨迹。",
-        "whenToUse": "正文落后于评论、准备派发或跨 Session 交接时；短讨论不触发。",
-        "workingSignals": "正文有八项当前合同，恢复快照评论可重读，写后远端状态被复核。"
-      },
-      "objective-to-issues": {
-        "forYou": "把已授权的长程目标拆成 GitHub 原生父子 Issue 图，写清依赖、所有权和交付合同。",
-        "whenToUse": "目标已对齐且持久任务图会改善并行、恢复或依赖管理时。",
-        "workingSignals": "子 Issue、label、原生父子关系、Project 条目和状态都能从远端回读。"
-      },
-      "operating-ledger-maintenance": {
-        "forYou": "维护跨 Session 经营总账观察面：诉求、计划、交付、负责人等待和状态投影。",
-        "whenToUse": "需要把当前事实登记到经营总账，或用户明确要求维护总账时。",
-        "workingSignals": "Project 条目和字段只反映已核验远端事实，不替代 Issue 合同或负责人决定。"
-      },
-      "pr-integration": {
-        "forYou": "按当前 head 验收、修复、转 ready 或合并 GitHub PR，并区分检查、审查和授权。",
-        "whenToUse": "已有 PR 需要整合、Draft 转 ready、处理审查／CI／冲突或执行明确合并授权时。",
-        "workingSignals": "回执绑定当前 head，列出 checks、review、merge state、授权来源和合并后复核。"
-      },
       "skill-appraisal": {
         "forYou": "判定一个 Skill 组该不该进当前装配、归哪些事项、与谁重叠，并留下下次复核的最小步骤。",
         "whenToUse": "有候选组要决定收不收、组早已在用却从未判定过、怀疑与现有组重叠，或已判定过的组到了复核节拍时。",
@@ -327,8 +189,6 @@
     "knowledge-maintenance": "0.1.3",
     "orchestrated-collaboration": "0.2.7",
     "adaptive-problem-solving": "0.2.14",
-    "resource-observability": "0.2.4",
-    "github-collaboration": "0.3.18",
     "skill-appraisal": "0.2.0",
     "clarify": "0.1.0"
   },

@@ -1,6 +1,0 @@
-interface:
-  display_name: "资源观测"
-  short_description: "读取账户容量与单会话 Token 回执"
-
-policy:
-  allow_implicit_invocation: true

@@ -4,7 +4,7 @@
 # Skill 资产面
 
 **组是第一结构。** 装卸、版本、发现、判定、复核都以组为单位，不以 Skill 为单位——
-15 个 Skill 实际是 10 个组，判定 10 次，不是 15 次。
+8 个 Skill 实际是 8 个组，判定 8 次，不是 8 次。
 
 ## 组的形态
 
@@ -30,7 +30,7 @@
 
 ## 当前缺口
 
-共 15 个 Skill / 10 个组，递归维护面 375,601 字节。
+共 8 个 Skill / 8 个组，递归维护面 238,583 字节。
 
 | 缺口 | 数量 | 含义 |
 | --- | ---: | --- |
@@ -49,34 +49,19 @@
 
 | 组 | 成员 | 维护面 | 占比 | 版本 | Claude 打包 | 服务事项 | 来源 | 本地改动 |
 | --- | ---: | ---: | ---: | --- | --- | --- | --- | --- |
-| **Issue 与 PR** `github-collaboration` | 6 | 124.1 KB | 33.8% | 0.3.18 | 是 | E3 推进仓库事项 | own | — |
-| **问题求解治理** `adaptive-problem-solving` | 1 | 133.6 KB | 36.4% | 0.2.14 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
-| **多席协作** `orchestrated-collaboration` | 1 | 50.2 KB | 13.7% | 0.2.7 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
-| **资源观测** `resource-observability` | 1 | 9.7 KB | 2.6% | 0.2.4 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
-| **自我改进** `self-improvement` | 1 | 16.0 KB | 4.4% | 0.1.7 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
-| **Skill 维护** `skill-maintenance` | 1 | 6.5 KB | 1.8% | 0.1.1 | 是 | E4 管 Skill 本身 | own | — |
-| **Skill 鉴别** `skill-appraisal` | 1 | 10.2 KB | 2.8% | 0.2.0 | 是 | E4 管 Skill 本身 | own | — |
-| **知识维护** `knowledge-maintenance` | 1 | 6.3 KB | 1.7% | 0.1.3 | 是 | E4 管 Skill 本身 | own | — |
-| **盘问** `grilling` | 1 | 3.9 KB | 1.1% | 0.1.2 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | **vendor** 84fdeffd12f2ee307994d1eb6feb48173b6e0502（2026-08-06） | **1 处** |
-| **把念头变成判断** `clarify` | 1 | 6.3 KB | 1.7% | 0.1.0 | 是 | E5 想清楚一件事 | own | — |
+| **问题求解治理** `adaptive-problem-solving` | 1 | 133.6 KB | 57.3% | 0.2.14 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
+| **多席协作** `orchestrated-collaboration` | 1 | 50.2 KB | 21.5% | 0.2.7 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
+| **自我改进** `self-improvement` | 1 | 16.0 KB | 6.9% | 0.1.7 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
+| **Skill 维护** `skill-maintenance` | 1 | 6.5 KB | 2.8% | 0.1.1 | 是 | E4 管 Skill 本身 | own | — |
+| **Skill 鉴别** `skill-appraisal` | 1 | 10.2 KB | 4.4% | 0.2.0 | 是 | E4 管 Skill 本身 | own | — |
+| **知识维护** `knowledge-maintenance` | 1 | 6.3 KB | 2.7% | 0.1.3 | 是 | E4 管 Skill 本身 | own | — |
+| **盘问** `grilling` | 1 | 3.9 KB | 1.7% | 0.1.2 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | **vendor** 84fdeffd12f2ee307994d1eb6feb48173b6e0502（2026-08-06） | **1 处** |
+| **把念头变成判断** `clarify` | 1 | 6.3 KB | 2.7% | 0.1.0 | 是 | E5 想清楚一件事 | own | — |
 
 来源三分：`own` 我们自己写的，随便改，没有上游；`fork` 从外部拿来直接用，承诺零本地改动，更新＝拉上游新版；`vendor` 从外部拿来但打了补丁，必须登记每处改动，上游更新后需重新打补丁。kind 与 dependsOn 是两回事：一个 own 组可以依赖外部工具版本（如 openspec 组依赖 @fission-ai/openspec 1.9.0）。dependsOn 的 updateTrigger 是该组的失效条件之一，与 kind 无关。
 
 **`fork` 的零改动是可机械验证的，不是一句声明**：内容指纹与上游 ref 不符即承诺已破，
 必须转 `vendor` 或把改动推回上游。名义 fork、实际改过的组，下次升级一定丢改动且无人知晓。
-
-### Issue 与 PR · github-collaboration
-
-服务事项 **E3** 推进仓库事项　来源 `own`　已打包 v0.3.18
-
-| Skill | 位置 | L1 | L2 | L3 | 上次复核 | 失效条件 | 最少复核步骤 |
-| --- | --- | ---: | ---: | ---: | --- | --- | --- |
-| `issue-contract-compaction` | `plugins/github-collaboration/skills/issue-contract-compaction` | 481 B | 8.6 KB | 0.0 KB | 2026-08-15 | 有 | 有 |
-| `issue-delivery` | `plugins/github-collaboration/skills/issue-delivery` | 554 B | 15.2 KB | 0.0 KB | 2026-08-15 | 有 | 有 |
-| `issue-workflow` | `plugins/github-collaboration/skills/issue-workflow` | 658 B | 23.6 KB | 36.5 KB | 2026-08-15 | 有 | 有 |
-| `objective-to-issues` | `plugins/github-collaboration/skills/objective-to-issues` | 491 B | 13.0 KB | 0.0 KB | 2026-08-15 | 有 | 有 |
-| `operating-ledger-maintenance` | `plugins/github-collaboration/skills/operating-ledger-maintenance` | 749 B | 11.5 KB | 0.0 KB | 2026-08-15 | 有 | 有 |
-| `pr-integration` | `plugins/github-collaboration/skills/pr-integration` | 581 B | 15.6 KB | 0.0 KB | 2026-08-15 | 有 | 有 |
 
 ### 问题求解治理 · adaptive-problem-solving
 
@@ -93,14 +78,6 @@
 | Skill | 位置 | L1 | L2 | L3 | 上次复核 | 失效条件 | 最少复核步骤 |
 | --- | --- | ---: | ---: | ---: | --- | --- | --- |
 | `orchestrated-collaboration` | `plugins/orchestrated-collaboration/skills/orchestrated-collaboration` | 876 B | 21.3 KB | 28.9 KB | 2026-08-15 | 有 | 有 |
-
-### 资源观测 · resource-observability
-
-服务事项 **X** 横切面（不满足独立验收判据，不单独立事项）　来源 `own`　已打包 v0.2.4
-
-| Skill | 位置 | L1 | L2 | L3 | 上次复核 | 失效条件 | 最少复核步骤 |
-| --- | --- | ---: | ---: | ---: | --- | --- | --- |
-| `resource-observability` | `plugins/resource-observability/skills/resource-observability` | 608 B | 5.6 KB | 4.1 KB | 2026-08-15 | 有 | 有 |
 
 ### 自我改进 · self-improvement
 
@@ -168,7 +145,7 @@
 
 ## 复核依据
 
-15 条复核依据，覆盖 15/15 个 Skill。复核按下列步骤做，不重判。
+8 条复核依据，覆盖 8/8 个 Skill。复核按下列步骤做，不重判。
 
 ### adaptive-problem-solving
 
@@ -194,30 +171,6 @@
 
 **下次最少复核步骤** 确认触发路径仍要求用户直接请求或明确接受建议，且因剩余价值低或成本过高的退出门仍在。
 
-### issue-contract-compaction
-
-单个 Skill · 组 `github-collaboration`｜来源 `plugins/tests/workflow-routing.json`｜上次复核 2026-08-15
-
-**什么会让它失效** GitHub Issue 正文、评论、updatedAt 或恢复快照语义变化，使写前快照、最终重读或正文排他所有权不能可靠防止覆盖当前合同。
-
-**下次最少复核步骤** 选择一条有评论的 Issue，演练只读压缩计划：确认当前正文、全部评论、恢复快照载体、最终重读字段和八项保留项仍可定位。
-
-### issue-delivery
-
-单个 Skill · 组 `github-collaboration`｜来源 `plugins/tests/workflow-routing.json`｜上次复核 2026-08-15
-
-**什么会让它失效** Draft PR、证据评论、分支所有权或 GitHub 交付复核语义变化，使单个已就绪 Issue 不能按合同形成可独立核验交付物。
-
-**下次最少复核步骤** 对一个已就绪 Issue 复核范围恢复、分支所有权、Draft PR 或证据评论创建、远端回读和交付事实返回仍完整可执行。
-
-### issue-workflow
-
-单个 Skill · 组 `github-collaboration`｜来源 `plugins/tests/workflow-routing.json`｜上次复核 2026-08-15
-
-**什么会让它失效** GitHub Issue 子树生命周期、负责人决定、关闭授权或 Project 投影的权威规则变化，使本 Skill 的唯一生命周期决定者边界不再成立。
-
-**下次最少复核步骤** 用一个真实或夹具 Issue 子树核对叶子判定、段结果返回、负责人动作消费、关闭授权和父级回收仍只由 issue-workflow 判定。
-
 ### knowledge-maintenance
 
 单个 Skill · 组 `knowledge-maintenance`｜来源 `plugins/tests/workflow-routing.json`｜上次复核 2026-08-15
@@ -226,22 +179,6 @@
 
 **下次最少复核步骤** 读一次该权威，逐条比对价值门与可信门八项和正文引用是否一致。
 
-### objective-to-issues
-
-单个 Skill · 组 `github-collaboration`｜来源 `plugins/tests/workflow-routing.json`｜上次复核 2026-08-15
-
-**什么会让它失效** GitHub 原生 sub-issue、label、ProjectV2 item 或任务图分类规则变化，使父子图创建和分类投影不能按正文复核。
-
-**下次最少复核步骤** 用一个目标 Issue 只读核对标题前缀、类型 label、父子关系、Project 条目与状态字段的现行 API 和正文映射仍一致。
-
-### operating-ledger-maintenance
-
-单个 Skill · 组 `github-collaboration`｜来源 `plugins/tests/workflow-routing.json`｜上次复核 2026-08-15
-
-**什么会让它失效** 经营总账 Project、Status 字段、负责人动作投影或跨 Session 观察面规则变化，使本 Skill 不能只维护观察面而不成为权威源。
-
-**下次最少复核步骤** 读取当前经营总账 Project 和一条代表 Issue，确认诉求、计划、交付、等待负责人和完成状态的投影仍能按现行规则只读复核。
-
 ### orchestrated-collaboration
 
 单个 Skill · 组 `orchestrated-collaboration`｜来源 `plugins/tests/workflow-routing.json`｜上次复核 2026-08-15
@@ -249,22 +186,6 @@
 **什么会让它失效** 所选协调后端（当前 orca orchestration）的 Run／Task／Dispatch 语义或标准释放回执格式变化；或其唯一原则源 agent-control/authority/05-resource-operations.md 的资源投入原则变化，使 R1–R6 派发门失去依据。
 
 **下次最少复核步骤** 对一个真实 Run 取一次 task-list 与 worker-list，确认派发合同字段与释放证明可取；并读一次 authority/05 的资源投入原则，确认 R1–R6 投影仍成立且链接指向当前仓而非已冻结的老仓。
-
-### pr-integration
-
-单个 Skill · 组 `github-collaboration`｜来源 `plugins/tests/workflow-routing.json`｜上次复核 2026-08-15
-
-**什么会让它失效** GitHub PR 的 draft、review、required checks、merge state、评论主体或合并授权语义变化，使当前 head 绑定和整合门不再可靠。
-
-**下次最少复核步骤** 对一个 PR 读取当前 head、Draft 状态、审查、required checks、冲突、mergeability 和评论作者类型，确认整合判断字段仍可获得。
-
-### resource-observability
-
-单个 Skill · 组 `resource-observability`｜来源 `plugins/tests/workflow-routing.json`｜上次复核 2026-08-15
-
-**什么会让它失效** orca account list --json 的返回结构变化：顶层 ok、result.rateLimits.claude／codex 的 status 与 updatedAt，或 usedPercent／windowMinutes／resetsAt／rateLimitResetCredits 这些窗口字段不再按 Skill 正文描述提供。
-
-**下次最少复核步骤** 跑一次 orca account list --json，确认 ok 为真、两个 Provider 的 status 与 updatedAt 可读、上述窗口字段仍存在且量纲未变。
 
 ### self-improvement
 

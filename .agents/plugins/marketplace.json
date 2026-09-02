@@ -31,19 +31,6 @@
       "category": "Productivity"
     },
     {
-      "name": "github-collaboration",
-      "version": "0.3.18",
-      "source": {
-        "source": "local",
-        "path": "./plugins/github-collaboration"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
       "name": "grilling",
       "version": "0.1.2",
       "source": {
@@ -75,20 +62,6 @@
       "source": {
         "source": "local",
         "path": "./plugins/orchestrated-collaboration"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
-      "name": "resource-observability",
-      "version": "0.2.4",
-      "description": "只读的 Codex／Claude 账户容量与单会话 Token 回执；不负责调度。",
-      "source": {
-        "source": "local",
-        "path": "./plugins/resource-observability"
       },
       "policy": {
         "installation": "AVAILABLE",
