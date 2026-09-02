@@ -1,24 +1,16 @@
 {
   "skills": [
     {
-      "name": "adaptive-problem-solving",
-      "target": "plugins/adaptive-problem-solving/skills/adaptive-problem-solving"
+      "name": "clarify",
+      "target": "plugins/clarify/skills/clarify"
     },
     {
       "name": "evidence-regression",
       "target": "plugins/workcoding/skills/evidence-regression"
     },
     {
-      "name": "grilling",
-      "target": "plugins/grilling/skills/grilling"
-    },
-    {
       "name": "integration",
       "target": "plugins/workcoding/skills/integration"
-    },
-    {
-      "name": "knowledge-maintenance",
-      "target": "plugins/knowledge-maintenance/skills/knowledge-maintenance"
     },
     {
       "name": "legacy-change",
@@ -27,10 +19,6 @@
     {
       "name": "note",
       "target": "plugins/note/skills/note"
-    },
-    {
-      "name": "orchestrated-collaboration",
-      "target": "plugins/orchestrated-collaboration/skills/orchestrated-collaboration"
     },
     {
       "name": "release-observe",
@@ -43,18 +31,6 @@
     {
       "name": "requirement-translation",
       "target": "plugins/workcoding/skills/requirement-translation"
-    },
-    {
-      "name": "self-improvement",
-      "target": "plugins/self-improvement/skills/self-improvement"
-    },
-    {
-      "name": "skill-appraisal",
-      "target": "plugins/skill-appraisal/skills/skill-appraisal"
-    },
-    {
-      "name": "skill-maintenance",
-      "target": "plugins/skill-maintenance/skills/skill-maintenance"
     },
     {
       "name": "system-analysis",
