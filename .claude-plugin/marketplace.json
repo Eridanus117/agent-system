@@ -45,6 +45,16 @@
       "name": "skill-maintenance",
       "version": "0.1.1",
       "source": "./plugins/skill-maintenance"
+    },
+    {
+      "name": "workcoding",
+      "version": "0.1.0",
+      "source": "./plugins/workcoding"
+    },
+    {
+      "name": "note",
+      "version": "0.1.0",
+      "source": "./plugins/note"
     }
   ]
 }

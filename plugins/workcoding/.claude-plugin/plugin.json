@@ -1,0 +1,11 @@
+{
+  "name": "workcoding",
+  "version": "0.1.0",
+  "description": "主人改既有系统的工作方法：workcoding 路由加七条规程（需求洞察、需求翻译、系统分析、遗留代码修改、集成、发布与观测、证据回归）。",
+  "author": {
+    "name": "Eridanus117"
+  },
+  "repository": "https://github.com/Eridanus117/agent-system",
+  "license": "MIT",
+  "skills": "./skills/"
+}

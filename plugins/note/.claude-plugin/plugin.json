@@ -1,0 +1,11 @@
+{
+  "name": "note",
+  "version": "0.1.0",
+  "description": "把当前对话的探索结论沉淀进本地 Markdown 知识库。",
+  "author": {
+    "name": "Eridanus117"
+  },
+  "repository": "https://github.com/Eridanus117/agent-system",
+  "license": "MIT",
+  "skills": "./skills/"
+}

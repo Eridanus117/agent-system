@@ -1,3 +1,5 @@
+> **2026-09-02 负责人裁定：旧治理退库。** 路由声明（tests/workflow-routing.json）、生命周期表、三句说明、skill_registry 组登记与资产面、Codex 端 manifest 要求已全部移除；仓储只留五样：一个 skill 一个目录加 SKILL.md、evals/、自动生成的目录页 docs/skills-overview.md、sk 的 profile 装配、一条检查目录页没漂的测试（tests/skills.test.ts）。下文中涉及旧治理的段落为历史描述。
+
 # Agent System plugins
 
 `agent-plugins` 是公开的 Codex／Claude Plugin 源码仓，保存可版本化、可审阅、可回滚的 Plugin、Skill、双端发现清单和来源符合性检查。仓库内容只证明源码状态；不证明任何机器已经安装或正在使用它。
