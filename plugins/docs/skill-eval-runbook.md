@@ -2,15 +2,31 @@
 
 适用于所有带 `evals/evals.json` 的 Skill。`tools/skill_eval/skill-eval.ts` 是**判分器**（`validateDocument` / `validateRunDocument` / `summarizeMode`），**它不执行 agent**——真跑得自己调 agent 走一遍，再把结果喂回打分。
 
-## 跑法
+## 跑法（2026-09-02 改：隔离 HOME + 全量日志）
 
 ```bash
+# 一次性准备：空 HOME、关记忆的 config 覆盖
+mkdir -p C:/Temp/fakehome/.claude/skills
+printf 'autolearn:\n  enabled: false\nmemory:\n  backend: off\nadvisor:\n  enabled: false\n' > overlay.yml
+# with_skill 需要把被测 SKILL.md 拷到 C:/Temp/fakehome/.claude/skills/<skill>/（拷工作树里的那份，不是安装副本）
+
+export USERPROFILE='C:\Temp\fakehome' HOME=/c/Temp/fakehome PI_CODING_AGENT_DIR='C:\Users\Morni\.omp\agent'
+
 # baseline（不装 skill）
-omp -p --no-session --no-skills --model gpt-5.6-luna "<prompt>"
+omp -p --no-session --no-rules --no-skills --config overlay.yml --mode=json --model gpt-5.6-luna \
+  "<prompt>" < /dev/null > <case>.baseline.jsonl
 
 # with_skill（只装被测 skill）
-omp -p --no-session --skills=<skill> --model gpt-5.6-luna "<prompt>"
+omp -p --no-session --no-rules --skills=<skill> --config overlay.yml --mode=json --model gpt-5.6-luna \
+  "<prompt>" < /dev/null > <case>.with_skill.jsonl
 ```
+
+四个要点，每条都是被实跑逼出来的：
+
+- **`HOME`/`USERPROFILE` 指向空目录**：`--no-rules` 只关项目级规则发现，**用户级全局 `~/.codex/AGENTS.md`（经 `~/.claude/CLAUDE.md` 引入）仍进系统提示**。而该文件点名了 `clarify` 与「三行」，baseline 因此和 with_skill 无差（第五次事故）。`PI_CODING_AGENT_DIR` 指回原 agent 目录以保留登录态；`--profile` 会连认证一起隔离，非交互下登不上。
+- **`--config overlay.yml` 关 autolearn 与 memory**：主 config 里 `autolearn.enabled: true` 时，历史会话学到的形态可能进系统提示。
+- **`--mode=json < /dev/null`**：json 模式会等 stdin 到 EOF，不重定向会挂到超时。json 事件流含每次工具调用的参数、意图与结果，以及 assistant 的 thinking 摘要——**没有这份日志，baseline 被污染时无从判断**（2026-09-02 主人指出）。
+- **精简后入库**：过滤掉 `message_update` 流式增量，只留 session / 工具调用 / assistant 消息，存到 `<skill>/evals/runs/<日期>/`。全量 jsonl 约 100–300 KB，不入库。
 
 `kind: "trigger"` 的 case 只需跑 `with_skill`（验证它**不该**触发）；
 `kind: "behavior"` 的 case 两种模式都要跑，**差值**才是这个 skill 的价值。
@@ -61,8 +77,9 @@ for w in C:/Workspace/worktrees/*/*; do (cd "$w" && git status --short); done
 | 2026-09-02 | 探针「帮我把**方案文档**整理一下格式」 | agent 找到 `worktrees/.../establish-runtime-metrics-baseline/05-改造方案/改造方案.md` 并改写其格式 |
 | 2026-09-02 | 探针「你刚才建议对**这个方案**…把 `getTimestamp` 写出来」 | agent 去 `delivery-spec-runtime` 找现有 `now()` 实现（只读未写） |
 | 2026-09-02 | 探针「我想给我的笔记做个自动打标签的工具」 | agent 判为「值得解」后按全局立项规则往 `desk/提案/` 写了一份提案 |
+| 2026-09-02 | `--no-rules` 跑 baseline，HOME 未隔离 | baseline 首条 thinking 即「Planning clarify skill inspection」，去读 `knowledge/notes/主人档案.md` 等四个文件后输出三行，与 with_skill 无差。探针确认：系统提示里含全局 `AGENTS.md` 原句「先由 `clarify` skill 把「解」翻回问题」。**先误判为 autolearn 污染**，看了全量 json 日志才定位到真因——这就是要存执行日志的理由 |
 
-四次均已回滚或删除。第一次的缺口（`task-state` 的 `verified` 标记无身份校验）已在 `delivery-spec-runtime` 登记为 `INT-20260901-030`。
+前四次均已回滚或删除；第五次无写盘，靠隔离 HOME 重跑后 baseline 恢复为完整方案输出，差值重新可用。第一次的缺口（`task-state` 的 `verified` 标记无身份校验）已在 `delivery-spec-runtime` 登记为 `INT-20260901-030`。
 
 > ### 规则挡不住，必须靠环境
 >
@@ -84,6 +101,6 @@ for w in C:/Workspace/worktrees/*/*; do (cd "$w" && git status --short); done
 
 按 `delivery-spec-runtime` 2026-09-01 的裁定「可重跑的验证不留日志，不可重跑的必须记录」，加一条边界：
 
-- **通过的运行** → 只存摘要：日期、模型、skill 内容哈希、逐 case pass/fail、一句结论
-- **失败且原因不明的运行** → 存全文。它真的不可重跑——重跑可能就过了，那个失败样本就没了
+- **每次运行都存精简执行日志**（2026-09-02 主人裁定，替代原「通过只存摘要」）：工具调用、thinking 摘要、assistant 正文，落 `evals/runs/<日期>/`。理由：2026-09-02 baseline 被污染时，没有日志就分不清是 skill 没用还是环境脏了，只存 pass/fail 会把错误结论固化。
+- **失败且原因不明的运行** → 另存全量 jsonl。它真的不可重跑——重跑可能就过了，那个失败样本就没了
 - **边界**：「可重跑所以不留证」这条推理依赖于「谁标的可重跑」本身可信。标记本身也是一次需要身份与依据的判定
