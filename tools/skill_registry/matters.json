@@ -113,6 +113,17 @@
       },
       "note": "外来组登记得最完整的一个——有上游 pin、逐文件 Git blob 与 SHA-256、许可证本地副本、逐条改造记录和回顾规则。可作为 vendor 组的模板。"
     },
+    "clarify": {
+      "displayName": "把念头变成判断",
+      "matters": [
+        "E5"
+      ],
+      "packagedForClaude": true,
+      "origin": {
+        "kind": "own"
+      },
+      "note": "2026-09-01 新增，负责人当轮指示迁入（源自主会话对谈，首版由对谈过程记录而成，非设计产物）。承接 E5「想清楚一件事」——该事项此前由 bmad 组覆盖，bmad 整组退库（PR #25）后此处接手。首版已有行为评测（evals/，7 个 case）但判分仍靠人读；首次走通的执行者即设计者，样本量 1。"
+    },
 
     "openspec": {
       "displayName": "openspec",

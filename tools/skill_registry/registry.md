@@ -4,7 +4,7 @@
 # Skill 资产面
 
 **组是第一结构。** 装卸、版本、发现、判定、复核都以组为单位，不以 Skill 为单位——
-14 个 Skill 实际是 9 个组，判定 9 次，不是 14 次。
+15 个 Skill 实际是 10 个组，判定 10 次，不是 15 次。
 
 ## 组的形态
 
@@ -30,7 +30,7 @@
 
 ## 当前缺口
 
-共 14 个 Skill / 9 个组，递归维护面 369,139 字节。
+共 15 个 Skill / 10 个组，递归维护面 375,601 字节。
 
 | 缺口 | 数量 | 含义 |
 | --- | ---: | --- |
@@ -49,15 +49,16 @@
 
 | 组 | 成员 | 维护面 | 占比 | 版本 | Claude 打包 | 服务事项 | 来源 | 本地改动 |
 | --- | ---: | ---: | ---: | --- | --- | --- | --- | --- |
-| **Issue 与 PR** `github-collaboration` | 6 | 124.1 KB | 34.4% | 0.3.18 | 是 | E3 推进仓库事项 | own | — |
-| **问题求解治理** `adaptive-problem-solving` | 1 | 133.6 KB | 37.1% | 0.2.14 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
-| **多席协作** `orchestrated-collaboration` | 1 | 50.2 KB | 13.9% | 0.2.7 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
-| **资源观测** `resource-observability` | 1 | 9.7 KB | 2.7% | 0.2.4 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
+| **Issue 与 PR** `github-collaboration` | 6 | 124.1 KB | 33.8% | 0.3.18 | 是 | E3 推进仓库事项 | own | — |
+| **问题求解治理** `adaptive-problem-solving` | 1 | 133.6 KB | 36.4% | 0.2.14 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
+| **多席协作** `orchestrated-collaboration` | 1 | 50.2 KB | 13.7% | 0.2.7 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
+| **资源观测** `resource-observability` | 1 | 9.7 KB | 2.6% | 0.2.4 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
 | **自我改进** `self-improvement` | 1 | 16.0 KB | 4.4% | 0.1.7 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | own | — |
 | **Skill 维护** `skill-maintenance` | 1 | 6.5 KB | 1.8% | 0.1.1 | 是 | E4 管 Skill 本身 | own | — |
 | **Skill 鉴别** `skill-appraisal` | 1 | 10.2 KB | 2.8% | 0.2.0 | 是 | E4 管 Skill 本身 | own | — |
-| **知识维护** `knowledge-maintenance` | 1 | 6.3 KB | 1.8% | 0.1.3 | 是 | E4 管 Skill 本身 | own | — |
+| **知识维护** `knowledge-maintenance` | 1 | 6.3 KB | 1.7% | 0.1.3 | 是 | E4 管 Skill 本身 | own | — |
 | **盘问** `grilling` | 1 | 3.9 KB | 1.1% | 0.1.2 | 是 | X 横切面（不满足独立验收判据，不单独立事项） | **vendor** 84fdeffd12f2ee307994d1eb6feb48173b6e0502（2026-08-06） | **1 处** |
+| **把念头变成判断** `clarify` | 1 | 6.3 KB | 1.7% | 0.1.0 | 是 | E5 想清楚一件事 | own | — |
 
 来源三分：`own` 我们自己写的，随便改，没有上游；`fork` 从外部拿来直接用，承诺零本地改动，更新＝拉上游新版；`vendor` 从外部拿来但打了补丁，必须登记每处改动，上游更新后需重新打补丁。kind 与 dependsOn 是两回事：一个 own 组可以依赖外部工具版本（如 openspec 组依赖 @fission-ai/openspec 1.9.0）。dependsOn 的 updateTrigger 是该组的失效条件之一，与 kind 无关。
 
@@ -155,9 +156,19 @@
 | --- | --- | ---: | ---: | ---: | --- | --- | --- |
 | `grilling` | `plugins/grilling/skills/grilling` | 351 B | 3.9 KB | 0.0 KB | 2026-08-15 | 有 | 有 |
 
+### 把念头变成判断 · clarify
+
+服务事项 **E5** 想清楚一件事　来源 `own`　已打包 v0.1.0
+
+> 2026-09-01 新增，负责人当轮指示迁入（源自主会话对谈，首版由对谈过程记录而成，非设计产物）。承接 E5「想清楚一件事」——该事项此前由 bmad 组覆盖，bmad 整组退库（PR #25）后此处接手。首版已有行为评测（evals/，7 个 case）但判分仍靠人读；首次走通的执行者即设计者，样本量 1。
+
+| Skill | 位置 | L1 | L2 | L3 | 上次复核 | 失效条件 | 最少复核步骤 |
+| --- | --- | ---: | ---: | ---: | --- | --- | --- |
+| `clarify` | `plugins/clarify/skills/clarify` | 906 B | 6.3 KB | 0.0 KB | **从未** | 有 | 有 |
+
 ## 复核依据
 
-14 条复核依据，覆盖 14/14 个 Skill。复核按下列步骤做，不重判。
+15 条复核依据，覆盖 15/15 个 Skill。复核按下列步骤做，不重判。
 
 ### adaptive-problem-solving
 
@@ -166,6 +177,14 @@
 **什么会让它失效** 方法登记面的证据等级分布与登记面 README 声明不符；或三端 description 可见预算的实测基线（2026-08-11 测得 1000 UTF-8 字节）被新的实测推翻；或 INDEX 的「与装配内其他 Skill 的分界」表所列执行流程承载者（grilling；bmad-* 五项已随 2026-09-01 bmad 退库移除）的 description 触发面发生变化，使该表的对应关系不再成立。
 
 **下次最少复核步骤** 逐卡取当前能力证据等级，与登记面 README 的 M0／M1 计数比对。再对 INDEX 分界表逐行确认对方Skill 仍存在且其 description 仍覆盖该方法（grep 触发词即可），不需要读正文。三端 description 回显需要交互式观察运行端目录，不在本步内：预算门本身已由符合性测试守住，重测只在怀疑运行端截断行为变化时才做。
+
+### clarify
+
+单个 Skill · 组 `clarify`｜来源 `plugins/tests/workflow-routing.json`｜上次复核 从未
+
+**什么会让它失效** 相邻 Skill 的触发合同变化（grilling 从「须显式请求」放宽、adaptive-problem-solving 把「动手之前」纳入其范围），或全局立项流程改为在判断前落盘——任一都会让本 Skill 的路由边界或「不产出文件」铁律失效。
+
+**下次最少复核步骤** 跑一遍 evals/evals.json 的 4 个 trigger case（须全部不触发），并重读 grilling 与 adaptive-problem-solving 的 description 确认边界表述未变。
 
 ### grilling
 

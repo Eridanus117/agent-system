@@ -5,11 +5,11 @@
   },
   "plugins": [
     {
-      "name": "grilling",
-      "version": "0.1.2",
+      "name": "adaptive-problem-solving",
+      "version": "0.2.14",
       "source": {
         "source": "local",
-        "path": "./plugins/grilling"
+        "path": "./plugins/adaptive-problem-solving"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -18,11 +18,37 @@
       "category": "Productivity"
     },
     {
-      "name": "self-improvement",
-      "version": "0.1.7",
+      "name": "clarify",
+      "version": "0.1.0",
       "source": {
         "source": "local",
-        "path": "./plugins/self-improvement"
+        "path": "./plugins/clarify"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "github-collaboration",
+      "version": "0.3.18",
+      "source": {
+        "source": "local",
+        "path": "./plugins/github-collaboration"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "grilling",
+      "version": "0.1.2",
+      "source": {
+        "source": "local",
+        "path": "./plugins/grilling"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -57,11 +83,12 @@
       "category": "Productivity"
     },
     {
-      "name": "adaptive-problem-solving",
-      "version": "0.2.14",
+      "name": "resource-observability",
+      "version": "0.2.4",
+      "description": "只读的 Codex／Claude 账户容量与单会话 Token 回执；不负责调度。",
       "source": {
         "source": "local",
-        "path": "./plugins/adaptive-problem-solving"
+        "path": "./plugins/resource-observability"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -70,11 +97,11 @@
       "category": "Productivity"
     },
     {
-      "name": "skill-maintenance",
-      "version": "0.1.1",
+      "name": "self-improvement",
+      "version": "0.1.7",
       "source": {
         "source": "local",
-        "path": "./plugins/skill-maintenance"
+        "path": "./plugins/self-improvement"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -96,25 +123,11 @@
       "category": "Productivity"
     },
     {
-      "name": "resource-observability",
-      "version": "0.2.4",
-      "description": "只读的 Codex／Claude 账户容量与单会话 Token 回执；不负责调度。",
+      "name": "skill-maintenance",
+      "version": "0.1.1",
       "source": {
         "source": "local",
-        "path": "./plugins/resource-observability"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
-      "name": "github-collaboration",
-      "version": "0.3.18",
-      "source": {
-        "source": "local",
-        "path": "./plugins/github-collaboration"
+        "path": "./plugins/skill-maintenance"
       },
       "policy": {
         "installation": "AVAILABLE",

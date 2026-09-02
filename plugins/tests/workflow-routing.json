@@ -110,6 +110,9 @@
       "drive": [
         "skill-maintenance"
       ]
+    },
+    "clarify": {
+      "plugin": "clarify"
     }
   },
   "skillLifecycle": {
@@ -198,6 +201,12 @@
         "minimalRecheck": "① 读 tools/skill_registry/matters.json 的 assemblyAuthority 与 formNote，确认装配仍是白名单、且 OMP 实测结论仍与 omp config 的 skills.* 键一致。② 对任意一个 fork 组跑一次它自己的最少复核步骤，确认零改动仍可机械判定。两步都通过则本 Skill 的三种进入、五道门与处置顺序继续成立。",
         "lastVerified": "2026-08-25",
         "suspect": false
+      },
+      "clarify": {
+        "invalidatedWhen": "相邻 Skill 的触发合同变化（grilling 从「须显式请求」放宽、adaptive-problem-solving 把「动手之前」纳入其范围），或全局立项流程改为在判断前落盘——任一都会让本 Skill 的路由边界或「不产出文件」铁律失效。",
+        "minimalRecheck": "跑一遍 evals/evals.json 的 4 个 trigger case（须全部不触发），并重读 grilling 与 adaptive-problem-solving 的 description 确认边界表述未变。",
+        "lastVerified": null,
+        "suspect": false
       }
     }
   },
@@ -273,6 +282,11 @@
         "forYou": "判定一个 Skill 组该不该进当前装配、归哪些事项、与谁重叠，并留下下次复核的最小步骤。",
         "whenToUse": "有候选组要决定收不收、组早已在用却从未判定过、怀疑与现有组重叠，或已判定过的组到了复核节拍时。",
         "workingSignals": "给出的是判定与证据，不是安装动作；重叠优先在装配层处置而不是退役；每次判定都带失效条件和下次最少复核步骤。"
+      },
+      "clarify": {
+        "forYou": "把「我想建个 X」翻回「我到底有什么问题」，判断该不该做。",
+        "whenToUse": "念头还没成型、还没有任务的时候。已成型的计划求压测归 grilling；任务已开跑归 adaptive-problem-solving；bug 类不适用。",
+        "workingSignals": "输出是三行（真正的问题／值不值得解／往哪个方向解），且全程没有产出任何需要归档的文件。"
       }
     }
   },
@@ -315,7 +329,8 @@
     "adaptive-problem-solving": "0.2.14",
     "resource-observability": "0.2.4",
     "github-collaboration": "0.3.18",
-    "skill-appraisal": "0.2.0"
+    "skill-appraisal": "0.2.0",
+    "clarify": "0.1.0"
   },
   "descriptionBudget": {
     "comment": "2026-08-11 用同一份 1906 UTF-8 字节描述对普通 Codex、Orca Codex 与 Claude Code 运行面目录做回显；两种 Codex 均在句中截断，Claude 完整可见。共同机械门取低于三端实测可见前缀的 1000 UTF-8 字节；70-D 已消费，adaptive-problem-solving 也必须满足共同门。",

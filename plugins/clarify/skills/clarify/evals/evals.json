@@ -1,0 +1,150 @@
+{
+  "skill_name": "clarify",
+  "evals": [
+    {
+      "id": "build-x-itch",
+      "name": "以「我想建个 X」形式出现的痒点",
+      "kind": "behavior",
+      "prompt": "我想给知识库做个自动打标签的工具。",
+      "expected_trigger": true,
+      "expected_output": "不直接开建。先把「自动打标签工具」翻回问题（上次为标签卡住是什么时候？现在怎么忍的？不做会怎样？），再判断值不值得，最后收口为三行。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "no-implementation-start",
+          "description": "没有开始写代码、建目录、建文件，也没有直接给实现方案。"
+        },
+        {
+          "name": "solution-to-problem",
+          "description": "把「工具」这个解翻译成了一个问题陈述，而不是接受它作为既定目标。"
+        },
+        {
+          "name": "asks-history-not-opinion",
+          "description": "问的是历史行为（上次怎么办的、现在怎么忍的），不是「你觉得需要什么功能」这类意见题。"
+        },
+        {
+          "name": "assertive-draft",
+          "description": "以断言式草案呈现（「你的问题是 X」），而不是把开放问句抛回给用户。"
+        },
+        {
+          "name": "three-line-close",
+          "description": "收口为三行：真正的问题 / 值不值得解 / 往哪个方向解。"
+        },
+        {
+          "name": "no-artifact-written",
+          "description": "全程没有产出需要归档的文件，没有开 change，没有列 task。"
+        }
+      ]
+    },
+    {
+      "id": "restructure-proposal",
+      "name": "以「要不要改成 X」形式出现的改造提议",
+      "kind": "behavior",
+      "prompt": "这个仓的 skill 我觉得应该按 SDLC 阶段重新分组存放，如何？",
+      "expected_trigger": true,
+      "expected_output": "识别「按阶段分组」是解不是问题，翻出背后的真实需求（可能是要一个视图而非搬迁），泼冷水列出会怎么砸，查现有分组，收口三行。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "solution-to-problem",
+          "description": "指出「重新分组存放」是候选解，并给出对真实问题的断言式草案。"
+        },
+        {
+          "name": "premortem-present",
+          "description": "列出这个方案半年后失败的具体死法，按可信度排序。"
+        },
+        {
+          "name": "checks-existing",
+          "description": "先查了仓里已有的分组/索引机制，而不是从零设计。"
+        },
+        {
+          "name": "three-line-close",
+          "description": "收口为三行，第三行含被排除的方向及原因。"
+        }
+      ]
+    },
+    {
+      "id": "vague-discomfort",
+      "name": "说不清的别扭感",
+      "kind": "behavior",
+      "prompt": "我们这个流程好烦，每次都要走一堆步骤。",
+      "expected_trigger": true,
+      "expected_output": "不直接提优化方案。先问历史（上一次觉得烦是哪一步、当时怎么绕过去的），把「流程烦」翻成具体问题，再判断值不值得改。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "no-premature-fix",
+          "description": "没有直接给出精简流程的方案。"
+        },
+        {
+          "name": "asks-history-not-opinion",
+          "description": "问的是具体哪一次、哪一步、当时怎么处理的，不是「你希望流程是什么样」。"
+        },
+        {
+          "name": "assertive-draft",
+          "description": "给出对「真正烦的是什么」的断言式草案供纠偏。"
+        }
+      ]
+    },
+    {
+      "id": "formed-plan-stress-test",
+      "name": "近似案例：压测已成型的计划（应由 grilling 承担）",
+      "kind": "trigger",
+      "prompt": "我在做一个叫 fizzbuzz-report 的小工具，取时间有两条路：接外部时间 API，或者用本地时钟。我已经定了走本地时钟。帮我盘问一下这个决定有什么漏洞。",
+      "expected_trigger": false,
+      "expected_output": "不进入 clarify。对象是已成型的计划且用户显式请求盘问，属于 grilling 的边界。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "routes-to-grilling",
+          "description": "不启动「把解翻回问题」的流程；识别出对象已成型且已显式请求压测。"
+        }
+      ]
+    },
+    {
+      "id": "mid-execution-stall",
+      "name": "近似案例：执行途中的停滞（应由 adaptive-problem-solving 承担）",
+      "kind": "trigger",
+      "prompt": "我在做一个叫 fizzbuzz-report 的小工具，计划分五步，前两步已完成，第三步（接入外部时间 API）的集成测试连续三次超时失败。要不要放弃这条路，改用本地时钟？",
+      "expected_trigger": false,
+      "expected_output": "不进入 clarify。任务已经开跑，属于执行途中的路径选择，是 adaptive-problem-solving 的边界。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "routes-to-aps",
+          "description": "不把已在执行的任务重新拉回「该不该做」的判断。"
+        }
+      ]
+    },
+    {
+      "id": "bug-annoyance",
+      "name": "近似案例：bug 类痒点（明确在边界外）",
+      "kind": "trigger",
+      "prompt": "我写的一个 sum 函数，传入空数组时返回 undefined 而不是 0，每次都能复现。帮我看一下。",
+      "expected_trigger": false,
+      "expected_output": "不进入 clarify。SKILL.md 的边界节明确排除 bug 类痒点，直接进入排查。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "no-forced-fit",
+          "description": "不把 bug 硬套进「这个问题值不值得解」的流程。"
+        }
+      ]
+    },
+    {
+      "id": "already-decided-implementation",
+      "name": "近似案例：已决定后的实施指令（不得拦路）",
+      "kind": "trigger",
+      "prompt": "方案已经定了：用本地时钟替代外部时间 API。现在按这个方案把 getTimestamp 函数实现出来。",
+      "expected_trigger": false,
+      "expected_output": "不进入 clarify。判断已经做完，此时提问是倒退。直接实施。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "no-relitigation",
+          "description": "不重新质疑已经做出的决定，不要求重走一遍该不该做。"
+        }
+      ]
+    }
+  ]
+}
