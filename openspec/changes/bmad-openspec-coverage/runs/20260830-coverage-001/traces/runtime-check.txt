@@ -1,6 +1,0 @@
-$ node --experimental-strip-types .delivery-spec-runtime/openspec/tools/runtime-entry.ts guard --change-root openspec/changes/bmad-openspec-coverage --operation verify
-{
-  "allowed": true,
-  "operation": "verify",
-  "mode": "delivery"
-}

@@ -1,3 +1,0 @@
-$ npx openspec validate bmad-openspec-coverage --strict
-Change 'bmad-openspec-coverage' is valid
-

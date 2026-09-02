@@ -1,8 +1,0 @@
-$ npx openspec schemas
-Available schemas:
-
-  delivery-change (project)
-    Artifacts: raw-requirements → specs → business-current → technical-current → change-plan → test-plan → tasks → acceptance → release
-
-  spec-driven
-    Artifacts: proposal → specs → design → tasks
