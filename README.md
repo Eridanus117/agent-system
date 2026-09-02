@@ -26,7 +26,7 @@
 
 ## 开始工作
 
-> **权威变更（2026-08-22，负责人确认；2026-08-23 物理归档）：** `authority/`（含 `00-map.md`）、`src/agent_system/`（Python 实现）、`docs/`、`knowledge/` 均已降级为历史资产，只作证据参考，不再定义当前产品政策、需求、架构或范围；并已于 2026-08-23 物理搬迁到 `_archive/` 同名子路径（如 `_archive/authority/00-map.md`），git 历史随 `git mv` 保留。当前唯一权威来源是 BMad 工作流产出：[`_bmad-output/specs/spec-agent-system/SPEC.md`](./_bmad-output/specs/spec-agent-system/SPEC.md)（含 companions）、[`_bmad-output/planning-artifacts/epics.md`](./_bmad-output/planning-artifacts/epics.md)、`_bmad-output/planning-artifacts/architecture/**/ARCHITECTURE-SPINE.md`、[`_bmad-output/implementation-artifacts/sprint-status.yaml`](./_bmad-output/implementation-artifacts/sprint-status.yaml)。详见 [`AGENTS.md` 的同名章节](./AGENTS.md#当前权威声明2026-08-22负责人确认)。下方"读取 `authority/00-map.md` 再分流"的流程本身（GitHub Issue 授权边界、避免恢复迁移事项等）仍然适用，只是不再从 `authority/00-map.md` 加载产品政策正文。
+> **权威变更（2026-08-22，负责人确认；2026-08-23 物理归档）：** `authority/`（含 `00-map.md`）、`src/agent_system/`（Python 实现）、`docs/`、`knowledge/` 均已降级为历史资产，只作证据参考，不再定义当前产品政策、需求、架构或范围；并已于 2026-08-23 物理搬迁到 `_archive/` 同名子路径（如 `_archive/authority/00-map.md`），git 历史随 `git mv` 保留。~~当前唯一权威来源是 BMad 工作流产出（`_bmad-output/` 下的 SPEC、epics、ARCHITECTURE-SPINE、sprint-status）。~~ **2026-09-02 更新：`_bmad-output/` 已整体删除**（先于 2026-09-01 降级为非权威，负责人判其「有大量错误」），当前权威结构见 [`AGENTS.md` 的当前权威声明](./AGENTS.md) 与 [`entrypoints/agent-system.md`](./entrypoints/agent-system.md) 的三层目标结构。下方"读取 `authority/00-map.md` 再分流"的流程本身（GitHub Issue 授权边界、避免恢复迁移事项等）仍然适用，只是不再从 `authority/00-map.md` 加载产品政策正文。
 
 每个新的 Session 先读取 [`_archive/authority/00-map.md`](./_archive/authority/00-map.md)（现仅作历史索引，产品政策正文改读上方 BMad 产出），再按本次请求分流：
 
@@ -55,7 +55,7 @@ Session 的职责由负责人当前明确指令、公开自足的 Issue 合同�
 ## 文件职责
 
 - `_archive/`：历史资产归档根，2026-08-23 起承载已降级但仍保留证据价值的旧目录，各子路径与原根路径同名（`_archive/authority/`、`_archive/knowledge/`、`_archive/docs/`、`_archive/src/agent_system/`），git 历史随 `git mv` 保留；
-- `_archive/authority/`：**历史资产（2026-08-22 起降级，见上方"开始工作"的权威变更；2026-08-23 起物理归档于此）**，曾保存版本化产品政策；正文不再是当前产品政策来源，只作历史证据；当前产品政策见 BMad 产出（`_bmad-output/`）；
+- `_archive/authority/`：**历史资产（2026-08-22 起降级，见上方"开始工作"的权威变更；2026-08-23 起物理归档于此）**，曾保存版本化产品政策；正文不再是当前产品政策来源，只作历史证据；当前产品政策见 `AGENTS.md` 的当前权威声明（`_bmad-output/` 已于 2026-09-02 删除）；
 - `_archive/knowledge/`：**历史资产（2026-08-22 起降级；2026-08-23 起物理归档于此）**，通过价值门与可信门的公共知识包与检索卡，覆盖 Windows 运维（长路径、文件锁）、GitHub 引用与 PowerShell 多行正文等已验证陷阱；技术性内容仍可参考，但不再作为产品政策或流程权威；入口表见 [`_archive/knowledge/README.md`](./_archive/knowledge/README.md)；
 - `work/records/`：保存非权威、可追溯的研发过程；默认不读取，只在当前任务明确链接时按需读取；
 - `work/history/`：已退出当前工作面的旧候选、调研与决策记录；历史记录不是当前指令。2026-08-23 起，此前长期堆在 `work/` 根目录的 `configuration-inventory.md`、`current-monitoring-directive.md`、`knowledge-mvp-proposal.md`、`knowledge-mvp-boundary-candidate.md`、`knowledge-mvp-decision.md`、`permission-strategy-research.md` 与 `knowledge-trial/project-instructions.md` 已按本节既有规则移入 `work/history/`（含 `work/history/knowledge-trial/`）；
@@ -63,7 +63,7 @@ Session 的职责由负责人当前明确指令、公开自足的 Issue 合同�
 - `entrypoints/agent-system.md`：本仓项目级 Agent 行为入口；不作为用户级全局提示词安装源；
 - `AGENTS.md`：Codex 的最小仓库入口，只保留仓库增量并回指 `entrypoints/agent-system.md`；公共系统规则的唯一版本化正文由后者承载；
 - `CLAUDE.md`：Claude Code 导入同一份入口规则，并在本仓内加载 `entrypoints/agent-system.md`；用户级入口只保留与任务无关的锚点，本仓正文不进全局常驻面；
-- [`_archive/src/agent_system/`](./_archive/src/agent_system/)：**历史资产（2026-08-22 起降级；2026-08-23 起已废弃并物理归档于此）**，此前的 profile、CAP、OMP 与 Claude Python 实现；不再是新开发的基线或约定来源（BMad 架构已 `[ADOPTED]` 外部 TypeScript/Bun control plane，见 `_bmad-output/planning-artifacts/architecture/**/ARCHITECTURE-SPINE.md` AD-2），仅作 Bad Case 证据保留；对应的 `_archive/tests/{cap,omp,profile}/`、`_archive/pyproject.toml`、`_archive/uv.lock` 一并归档，`.github/workflows/cross-host-checks.yml` 已删除，`repository-checks.yml` 中依赖它的步骤已下线；接口边界历史记录见 [`_archive/docs/profile.md`](./_archive/docs/profile.md) 和 [`_archive/docs/maintenance.zh-CN.md`](./_archive/docs/maintenance.zh-CN.md)（同为历史资产）。
+- [`_archive/src/agent_system/`](./_archive/src/agent_system/)：**历史资产（2026-08-22 起降级；2026-08-23 起已废弃并物理归档于此）**，此前的 profile、CAP、OMP 与 Claude Python 实现；不再是新开发的基线或约定来源（BMad 架构曾 `[ADOPTED]` 外部 TypeScript/Bun control plane；原始记录随 `_bmad-output/` 于 2026-09-02 删除，可经 git 历史查阅），仅作 Bad Case 证据保留；对应的 `_archive/tests/{cap,omp,profile}/`、`_archive/pyproject.toml`、`_archive/uv.lock` 一并归档，`.github/workflows/cross-host-checks.yml` 已删除，`repository-checks.yml` 中依赖它的步骤已下线；接口边界历史记录见 [`_archive/docs/profile.md`](./_archive/docs/profile.md) 和 [`_archive/docs/maintenance.zh-CN.md`](./_archive/docs/maintenance.zh-CN.md)（同为历史资产）。
 - `_archive/docs/cap-guide.zh-CN.md`：**历史资产（2026-08-22 起降级；2026-08-23 起物理归档于此）**，此前面向使用者的 CAP 中文入门、日常命令、资产范围和故障排查路径；当前实现基线见 `packages/control-plane/`。
 
 私有旧仓、迁移索引、历史记录、分析和实验只提供来源；公共产品政策必须在本仓自足表达，历史材料不能反向产生当前授权。
