@@ -4,7 +4,7 @@
   "groups": {
     "cap-assembly": {
       "invalidatedWhen": "CAP 退役（Epic 4 Story 4-6）落地，或 .cap 的 manifest／profile／lock 语义变更。",
-      "minimalRecheck": "读 _bmad-output/implementation-artifacts/sprint-status.yaml 的 4-6-退役-cap-本体 状态；仍为 backlog 则本组结论继续成立。",
+      "minimalRecheck": "原判据「读 _bmad-output 的 sprint-status.yaml 4-6-退役-cap-本体 状态」已随 _bmad-output 于 2026-09-02 整体删除而失效。改判据：读本仓 openspec/specs/ 与 profiles/ 是否已出现替代 cap 装配面的长期规范；未出现则本组结论继续成立。",
       "lastVerified": "2026-08-24",
       "suspect": false
     },

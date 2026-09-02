@@ -1,4 +1,0 @@
-$ git diff --name-only -- _bmad-output openspec/specs entrypoints packages _archive
-
-结果：无输出。上述 BMad、live specs、入口、产品源码和 archive 未产生工作树 diff。
-本次新增内容仅限 openspec/changes/bmad-openspec-coverage/ 及其已声明的运行证据。

@@ -1,5 +1,0 @@
-$ npx openspec validate --specs --strict
-✓ spec/agent-behavior-evaluation
-✓ spec/agent-skill-design
-✓ spec/research-first-assembly
-Totals: 3 passed, 0 failed (3 items)
