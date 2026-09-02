@@ -42,7 +42,7 @@
 | same-object-no-jargon | 通过——三行全程谈「知识库、标签、Markdown/frontmatter」，无占位符与自造词 |
 | asks-history-not-opinion | 部分通过（单轮局限，同首轮） |
 
-**baseline 被污染**：`--no-skills --no-rules` 下 baseline 也输出了三行收口格式（真正的问题 / 值不值得解 / 往哪个方向解），与 skill 产出几乎无差。首轮 baseline 是完整方案加四选一，本轮不是。怀疑是 omp `autolearn` 从历史 session 学到了本 skill 的产出形态。**这轮的 with_skill 与 baseline 差值不可用**，只能当作「改写没把行为改坏」的证据，不能当作「skill 有价值」的证据。已记为 runbook 候选事项：跑 baseline 时需关 autolearn 或用隔离 `--profile`。
+**baseline 曾被污染，已定位真因并重跑**：第一次跑时 `--no-skills --no-rules` 的 baseline 也输出了三行。agent 先误判为 omp autolearn 所致；主人要求存执行日志后改用 `--mode=json` 重跑，日志显示 baseline 首条 thinking 就是「Planning clarify skill inspection」，探针确认系统提示里含全局 `~/.codex/AGENTS.md` 原句（它点名 clarify 与三行）。`--no-rules` 不剥离用户级全局规则。改为 `HOME` 指向空目录后重跑：baseline 输出完整 MVP 方案、架构图与 CLI，**没有三行**；with_skill 只读 skill 后输出三行。差值恢复。四次运行的精简日志见 `runs/2026-09-02/`。
 
 一句结论：铁律 2 改写后单轮行为未变坏；铁律 2 本身（多轮纠偏里不失联）单轮测不到，判据仍是主人下一次真实使用。
 
