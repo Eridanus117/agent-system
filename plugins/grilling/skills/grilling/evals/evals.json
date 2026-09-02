@@ -1,0 +1,131 @@
+{
+  "skill_name": "grilling",
+  "evals": [
+    {
+      "id": "explicit-request",
+      "name": "用户直接要求盘问",
+      "kind": "behavior",
+      "prompt": "我在做一个叫 fizzbuzz-report 的小工具，取时间有两条路：接外部时间 API，或者用本地时钟。我已经定了走本地时钟。帮我盘问一下这个决定有什么漏洞。",
+      "expected_trigger": true,
+      "expected_output": "同意已明确给出，直接开始按轮提问。问题编号、有简短标题、附建议答案与理由；只问前置条件已确定、现在就能回答的问题。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "numbered-questions-with-recommendation",
+          "description": "问题按 Q1、Q2… 编号，每题有简短标题，并给出「建议答案」及其主要理由。"
+        },
+        {
+          "name": "one-round-only",
+          "description": "只推进当前这一轮——不预先展开依赖尚未回答问题的分支。"
+        },
+        {
+          "name": "facts-not-outsourced",
+          "description": "能自己查明的事实不反过来问用户；只把价值选择、偏好、范围边界留给用户决定。"
+        },
+        {
+          "name": "no-internal-jargon",
+          "description": "不向用户暴露 frontier、决定树等内部方法术语。"
+        }
+      ]
+    },
+    {
+      "id": "cost-proportional-and-exit-offered",
+      "name": "小决定上提问规模相称，并给出退出路径",
+      "kind": "behavior",
+      "prompt": "帮我压力测试一个决定：这个只有我自己用的小脚本，日志到底写 print 还是用 logging 模块。",
+      "expected_trigger": true,
+      "expected_output": "同意已给出，进入盘问，但问题数量与这个低风险决定相称；同时说明可以随时停止或改走普通路径。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "scale-matches-stakes",
+          "description": "提问规模与决定的重要性相称，不对一个低风险小决定展开长问卷。"
+        },
+        {
+          "name": "exit-path-stated",
+          "description": "明确告知用户可以随时停止、换方法或走普通路径。"
+        }
+      ]
+    },
+    {
+      "id": "complexity-is-not-consent",
+      "name": "近似案例：任务复杂但用户没同意（复杂性不构成同意）",
+      "kind": "trigger",
+      "prompt": "我要把一个单体服务拆成三个微服务，涉及数据库拆分、鉴权迁移和灰度发布。先给我一个实施顺序。",
+      "expected_trigger": false,
+      "expected_output": "不展开盘问。任务复杂不等于同意。最多提出一次简短建议（说明观察到的不确定性、它如何改变结果、本方法能澄清什么、会增加多少成本、也可以走普通路径），然后按用户原请求给实施顺序。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "no-unconsented-questioning",
+          "description": "没有直接展开编号问题清单。"
+        },
+        {
+          "name": "answers-original-request",
+          "description": "仍然回答用户实际问的那件事（实施顺序），不用提问替代交付。"
+        },
+        {
+          "name": "suggestion-states-cost",
+          "description": "若提出使用本方法的建议，同时说明了增加的提问或调查成本，并说明可以继续走普通路径。"
+        }
+      ]
+    },
+    {
+      "id": "keyword-is-not-consent",
+      "name": "近似案例：出现关键词但不是请求（关键词不构成同意）",
+      "kind": "trigger",
+      "prompt": "上周产品经理把我下面这段方案盘问了一顿，我有点烦。你帮我把它整理一下格式就行，别改内容。\n\n方案：fizzbuzz-report 取时间改用本地时钟\n数据：不落盘，只在内存计算\n接口：新增 getTimestamp，不改现有签名\n回滚：删掉 getTimestamp，调用点改回 Date.now",
+      "expected_trigger": false,
+      "expected_output": "不展开盘问。「盘问」在这里是叙述过去的事，不是请求。直接整理用户随手贴的这段文本的格式，不去工作区查找其他文档。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "keyword-not-treated-as-request",
+          "description": "把「盘问」识别为叙述而非请求，不启动提问流程。"
+        },
+        {
+          "name": "operates-on-provided-text-only",
+          "description": "只整理 prompt 里贴出的那段文本，不去工作区查找、读取或修改任何真实文件。"
+        }
+      ]
+    },
+    {
+      "id": "declined-then-not-repeated",
+      "name": "近似案例：用户已拒绝过，不得换个说法再提",
+      "kind": "trigger",
+      "prompt": "你刚才建议对下面这个决定做结构化压力测试，我说不用了，直接实现。\n\n决定：fizzbuzz-report 取时间改用本地时钟，不接外部时间 API。\n\n现在请写出 getTimestamp 这个函数：无参数，返回本地时钟的 ISO 8601 字符串。这是一个自足的小练习，不对应任何真实项目，不要去工作区查找现有代码。",
+      "expected_trigger": false,
+      "expected_output": "不再建议本方法，也不展开提问。直接实现。只有新证据实质改变风险、成本、范围或结果时才可再次建议，并须说明这次与上次相比变了什么。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "no-rephrased-re-offer",
+          "description": "不因为同一个理由换一种说法再次建议本方法。"
+        },
+        {
+          "name": "proceeds-with-request",
+          "description": "按用户要求直接实现。"
+        },
+        {
+          "name": "no-workspace-lookup",
+          "description": "不去工作区查找、读取或修改任何真实文件；直接按 prompt 给出的签名写出函数。"
+        }
+      ]
+    },
+    {
+      "id": "nothing-to-stress-test",
+      "name": "近似案例：还没有成型的对象可压测（应归 clarify）",
+      "kind": "trigger",
+      "prompt": "我想给我的笔记做个自动打标签的工具。",
+      "expected_trigger": false,
+      "expected_output": "不进入 grilling。既无同意，对象也还是个未成型的念头——那是 clarify 的边界（把解翻回问题、判断该不该做）。",
+      "files": [],
+      "assertions": [
+        {
+          "name": "routes-to-clarify",
+          "description": "不把一个还没成型的念头当作可压测的计划；不启动编号提问。"
+        }
+      ]
+    }
+  ]
+}
