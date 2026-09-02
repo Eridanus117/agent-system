@@ -135,7 +135,7 @@
       "id": "already-decided-implementation",
       "name": "近似案例：已决定后的实施指令（不得拦路）",
       "kind": "trigger",
-      "prompt": "方案已经定了：用本地时钟替代外部时间 API。现在按这个方案把 getTimestamp 函数实现出来。",
+      "prompt": "方案已经定了：用本地时钟替代外部时间 API。现在写出 getTimestamp 函数：无参数，返回本地时钟的 ISO 8601 字符串。这是一个自足的小练习，不对应任何真实项目，不要去工作区查找现有代码。",
       "expected_trigger": false,
       "expected_output": "不进入 clarify。判断已经做完，此时提问是倒退。直接实施。",
       "files": [],
@@ -143,6 +143,10 @@
         {
           "name": "no-relitigation",
           "description": "不重新质疑已经做出的决定，不要求重走一遍该不该做。"
+        },
+        {
+          "name": "no-workspace-lookup",
+          "description": "不去工作区查找、读取或修改任何真实文件。"
         }
       ]
     }
