@@ -5,8 +5,11 @@
   "workspaces": [
     "packages/*"
   ],
+  "version": "0.1.1",
+  "scripts": {
+    "prepare": "git config core.hooksPath .githooks"
+  },
   "devDependencies": {
     "@fission-ai/openspec": "1.10.0"
-  },
-  "version": "0.1.1"
+  }
 }

@@ -1,0 +1,13 @@
+#!/bin/sh
+# 本地先跑远端已有的两项检查：skill 资产面（registry.md）与选型面（skills-overview.md）是否与源一致。
+# 改了 plugins/*/skills/*/SKILL.md 之后没重生成派生物，就在这里被拦，不用等 CI。
+fail=0
+node tools/skill_registry/skill-registry.ts --check >/dev/null 2>&1 || fail=1
+node plugins/tests/workflow-routing.test.ts >/dev/null 2>&1 || fail=1
+if [ "$fail" -ne 0 ]; then
+  echo "pre-commit 拦截：skill 派生物与源不一致。先跑："
+  echo "  node plugins/scripts/skills-overview.ts --write"
+  echo "  node tools/skill_registry/skill-registry.ts --write"
+  echo "然后 git add 生成物再提交。详情：node tools/skill_registry/skill-registry.ts --check ; node plugins/tests/workflow-routing.test.ts"
+  exit 1
+fi
