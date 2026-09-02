@@ -51,6 +51,7 @@ Session 的职责由负责人当前明确指令、公开自足的 Issue 合同�
 - 本仓不提供仓内“当前运行状态”文件；当前工作、授权和验收存在于公开 Issue／PR，过程执行态存在于实际运行后端。
 - [`tools/worker_snapshot/`](./tools/worker_snapshot/)、[`tools/ops-metrics/`](./tools/ops-metrics/) 和 [`tools/ops-console/`](./tools/ops-console/) 是可选观察工具；生成的 `current.md` 只是带新鲜度边界的本机快照，不是公共产品状态、授权源或等待清单。
 - 迁移前的私有 Project 和运营台只作历史证据，不是本公共仓的当前入口。
+- 本地提交闸门：`bun install`（或 `npm install`）会把 `core.hooksPath` 指向 `.githooks/`，之后每次 `git commit` 先跑 skill 派生物一致性检查（与 CI 的 Skill asset checks / Plugin conformance checks 同源）；改了 `plugins/*/skills/*/SKILL.md` 没重生成 `plugins/docs/skills-overview.md` 与 `tools/skill_registry/registry.md` 会在本地被拦并提示命令。
 
 ## 文件职责
 
