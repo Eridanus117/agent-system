@@ -17,11 +17,6 @@
       "source": "./plugins/clarify"
     },
     {
-      "name": "github-collaboration",
-      "version": "0.3.18",
-      "source": "./plugins/github-collaboration"
-    },
-    {
       "name": "grilling",
       "version": "0.1.2",
       "source": "./plugins/grilling"
@@ -35,12 +30,6 @@
       "name": "orchestrated-collaboration",
       "version": "0.2.7",
       "source": "./plugins/orchestrated-collaboration"
-    },
-    {
-      "name": "resource-observability",
-      "version": "0.2.4",
-      "description": "只读的 Codex／Claude 账户容量与单会话 Token 回执；不负责调度。",
-      "source": "./plugins/resource-observability"
     },
     {
       "name": "self-improvement",

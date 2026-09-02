@@ -1,6 +1,0 @@
-interface:
-  display_name: "Issue 合同压缩"
-  short_description: "把漂移的 Issue 正文压回当前合同"
-
-policy:
-  allow_implicit_invocation: true

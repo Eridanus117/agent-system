@@ -136,7 +136,6 @@ assert.deepEqual(
   Object.keys(config.pluginVersions).sort(),
   'pluginVersions 必须恰好覆盖当前 Plugin 目录',
 );
-assert.ok(pluginNames.includes('github-collaboration'), 'GitHub 协作 Plugin 必须作为可发布资产保留');
 assert.ok(
   !existsSync(join(repoRoot, 'docs', 'issue-workflow-walkthrough.md')),
   '退役工作流的当前走读不得保留',
@@ -184,7 +183,6 @@ for (const [name, marketplace] of [
   for (const entry of entries) {
     assert.equal(entry.version, config.pluginVersions[entry.name], `${name} ${entry.name}: 版本漂移`);
   }
-  assert.ok(entries.some((entry) => entry.name === 'github-collaboration'), `${name}: GitHub 协作 Plugin 未列为可安装资产`);
 }
 
 // ---------- 2. description、路由边与剩余行为合同 ----------
@@ -193,7 +191,6 @@ const requiredDescriptionTriggers: Record<string, string[]> = {
   'grilling': ['用户直接要求', '明确接受建议', '复杂性、关键词或 Agent 偏好不构成同意'],
   'knowledge-maintenance': ['多来源调研', '可重复实验', '价值门和可信门', '低成本一次性事实'],
   'orchestrated-collaboration': ['明确要求多 Agent／多 Session／跨 Provider 协作', '排他所有权', '不要因复杂、额度或空闲 Agent 擅自并行'],
-  'resource-observability': ['账户额度', '重置时间', '单 Session Token', '轮询、自动调度／消费权益'],
   'self-improvement': ['Agent 漂移、误解、重复犯错', '持久记录纠正', '普通一次性错误'],
   'skill-maintenance': ['创建、审计、修正、拆分、升级、迁移或退役 Skill', '普通业务维护', '承载位置未定'],
 };
@@ -202,7 +199,6 @@ const requiredBodyMarkers: Record<string, string[]> = {
   'grilling': ['先确认是否得到同意', '用户随时可以选择', '任务很复杂'],
   'knowledge-maintenance': ['价值门', '可信门', '失效条件', '下次最少复核'],
   'orchestrated-collaboration': ['写入所有权', '独立验收', '动态读取', '返回原始任务'],
-  'resource-observability': ['时间戳', '未知', '不得输出', '不要为取得样本制造任务'],
   'self-improvement': ['当前任务', '系统提示词', 'Skill', '返回原始任务'],
   'skill-maintenance': ['clean cutover', '调用者', '生成物', '独立审查'],
 };
@@ -390,14 +386,8 @@ assert.ok(
   readme.includes('仓库资产、Marketplace 可安装目录和当前默认装配是三个不同状态') &&
     readme.includes('`plugins/skill-imports.toml`') &&
     profileSkillImports.includes('source = "plugins/grilling/skills/grilling"') &&
-    !profileSkillImports.includes('plugins/github-collaboration/skills') &&
     !profileSkillImports.includes('plugins/self-improvement/skills'),
   'README 与 skill imports 必须明确区分可安装资产和当前 profile 装配',
-);
-assert.ok(
-  readme.includes('`github-collaboration` 与 `self-improvement` 同级') &&
-    readme.includes('自动进入当前 profile'),
-  'README 必须记录 GitHub 协作与自改进同级但不自动装配',
 );
 
 console.log(`PASS: ${declared.length} 个 Skill、${pluginNames.length} 个 Plugin、${config.scenarios.length} 个验收场景`);

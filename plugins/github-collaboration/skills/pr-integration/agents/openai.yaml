@@ -1,6 +1,0 @@
-interface:
-  display_name: "PR 整合"
-  short_description: "按当前 head 验收、修复、转 ready 或合并"
-
-policy:
-  allow_implicit_invocation: true

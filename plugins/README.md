@@ -31,13 +31,21 @@
 以下发布记录保留迁移前编号以便仓库维护者溯源；其中私有链接对公共协作者不可用，只是可选历史来源。当前行为、贡献要求和验收必须在本仓公开内容中自足表达。
 `adaptive-problem-solving` `0.2.14` 随 2026-09-01 负责人裁定的 bmad 整组退库清理引用：description 与方法登记面 INDEX 的「与装配内其他 Skill 的分界」表不再列 bmad-* 执行流程承载者（仅保留 `grilling`），失效条款同步；行为合同与方法卡内容不变。
 
-仓库目前包含十个可安装 Plugin：`grilling` `0.1.2`、`self-improvement` `0.1.7`、`skill-maintenance` `0.1.1`、`knowledge-maintenance` `0.1.3`、`orchestrated-collaboration` `0.2.7`、`adaptive-problem-solving` `0.2.14`、`resource-observability` `0.2.4`、`github-collaboration` `0.3.18`、`skill-appraisal` `0.2.0`、`clarify` `0.1.0`。
+仓库目前包含八个可安装 Plugin：`grilling` `0.1.2`、`self-improvement` `0.1.7`、`skill-maintenance` `0.1.1`、`knowledge-maintenance` `0.1.3`、`orchestrated-collaboration` `0.2.7`、`adaptive-problem-solving` `0.2.14`、`skill-appraisal` `0.2.0`、`clarify` `0.1.0`。
+
+**2026-09-02 负责人裁定退库两组**：`github-collaboration`（六个 Skill）与 `resource-observability`。理由见下方「已退库」。此前写进符合性门禁的「GitHub 协作 Plugin 必须作为可发布资产保留」一条同时作废，已从 `plugins/tests/workflow-routing.test.ts` 移除。
 
 `skill-maintenance` `0.1.1` 在明确创建、审计、修正、拆分、升级、迁移或退役 Skill 时进入：先绑定当前行为合同与授权，预注册行为判据，再同步主合同、按需 reference、全部调用者、双端发现入口、版本、生成物和复杂度预算；安全门零回退，调用者 clean cutover，方案／实施同源时必须独立审查。它不维护普通业务代码，也不替 `self-improvement` 决定一次纠正应该落到哪里。
 
-仓库资产、Marketplace 可安装目录和当前默认装配是三个不同状态：`plugins/` 保存可发布资产，两份 Marketplace 只声明可安装来源，当前 profile 只按 `plugins/skill-imports.toml` 显式装配（此前由已退役的 `.cap/skill-imports.toml` 承载，见 Epic 4 Story 4.7）。`github-collaboration` 与 `self-improvement` 同级，都是仓内可安装资产；二者不会因为出现在 Marketplace 或插件目录中就自动进入当前 profile。
+仓库资产、Marketplace 可安装目录和当前默认装配是三个不同状态：`plugins/` 保存可发布资产，两份 Marketplace 只声明可安装来源，当前 profile 只按 `plugins/skill-imports.toml` 显式装配（此前由已退役的 `.cap/skill-imports.toml` 承载，见 Epic 4 Story 4.7）。仓内可安装资产不会因为出现在 Marketplace 或插件目录中就自动进入当前 profile。
 
-`github-collaboration` 提供六个 GitHub 协作 Skill：`issue-workflow` 推进一棵 Issue 子树并消费负责人动作；`issue-delivery` 把已就绪 Issue 交付成 Draft PR 或自足证据评论；`issue-contract-compaction` 压缩漂移的 Issue 正文；`objective-to-issues` 建立原生父子 Issue 图；`operating-ledger-maintenance` 维护经营总账观察面；`pr-integration` 按当前 head 整合 PR。
+## 已退库（2026-09-02）
+
+`github-collaboration`（`issue-workflow` / `issue-delivery` / `issue-contract-compaction` / `objective-to-issues` / `operating-ledger-maintenance` / `pr-integration` 六个 Skill，合计约 156 KB）与 `resource-observability` 于 2026-09-02 经负责人裁定整组退库。git 历史保留，`git log --diff-filter=D -- plugins/github-collaboration plugins/resource-observability` 可复原。
+
+退库依据：两组都写得出行为评测，但**都跑不起来**——GitHub 六个需要一个专用的 fixture 仓才能验证（在真仓跑会污染，2026-09-01 已有事故先例）；`resource-observability` 依赖 Orca 账户接口与固定版本 `ccusage`，而 Orca 那套仍是停靠中的 change。跑不起来的评测等于没有评测。此外六个 GitHub Skill 属于「补充知识」类（教 agent 用 `gh` 与一套 Issue 生命周期约定），该类正被模型自身能力吃掉：2026-09-02 当天在不加载它们的情况下完成了四个仓的分支、PR、CI 核对、分支保护调整与合并全流程。
+
+**连带后果（如实记录）**：事项 `E3 推进仓库事项` 现在无任何组覆盖，与 `E5` 在 bmad 退库后的处境相同。若日后确认需要，重新覆盖时应先写得出可跑的评测再进库。
 
 `orchestrated-collaboration` `0.2.7` 删除两个对未装配 Issue 驱动资产的直接调用：任务子树由当前合同和写入所有权确定驱动者，`worker_done` 只触发远端来源核验并把事实交回当前合同持有者；它不接管 Issue 生命周期。
 
@@ -65,7 +73,6 @@
 
 `adaptive-problem-solving` `0.2.13` 将主 `SKILL.md` 收敛为进入／退出、问题恢复、类型路由、共用安全门指针与结果返回；受限调研、攻防、最小实验、G1–G3 和长程验收分别移入命中条件明确的 `references/`。主控制合同从 22,537 UTF-8 字节降为 8,812 字节，五份分支协议与主合同合计仍低于拆分前基线；未命中分支不加载，授权、同意、写入所有权、M0／M1 选择资格、攻防四席下限和产品证据等级不变。
 
-`resource-observability` 在用户询问账户容量、重置时间、Codex 重置券或单 Session Token，或者高成本／多 Agent 工作需要资源决定时，按需组合两种现有来源：账户层读取 `orca account list --json`，会话层通过固定 `ccusage` `20.0.19` 生成 Token 回执。Skill 只保留负责人需要的窗口、时间、权益、来源和失败，不输出账户标识、凭据、原始正文、路径或 stderr。`0.2.1` 将会话薄门面和直接耦合的验证资产迁移到 TypeScript，由 Node 直接运行 `.ts` 源码，保持原协议、退出码、超时、输出上限、Windows npm shim 和脱敏边界。该门面只服务会话协议，不代表完整产品。它不建设监控、轮询、自动停止、计费推断或调度，也不自动消费重置券；Orca 只是当前可替换来源，不因此成为长期依赖。
 
 仓库分别维护两端的原生发现清单：Codex 使用 `.agents/plugins/marketplace.json`，Claude 使用 `.claude-plugin/marketplace.json`。Plugin 正文可以共享，但不能因为两端都叫 Marketplace 就假设清单格式相同。
 
@@ -140,15 +147,6 @@ codex plugin add adaptive-problem-solving@agent-plugins --json
 claude plugin install adaptive-problem-solving@agent-plugins --scope user
 ```
 
-
-安装 `resource-observability`：
-
-```powershell
-codex plugin add resource-observability@agent-plugins --json
-claude plugin install resource-observability@agent-plugins --scope user
-```
-
-显式入口是 Codex 的 `$resource-observability` 与 Claude 的 `/resource-observability:resource-observability`。账户层由 Skill 调用 `orca account list --json` 并只整理 Claude／Codex 窗口与 Codex 重置券；会话层继续使用内置 TypeScript CLI 的 `session --provider codex|claude --id <id> --json|--summary`，JSON 标准输出恰好一个回执且自带 `summary_zh`。Node 直接运行该 `.ts` 入口，CLI 默认调用 `ccusage` 并固定验证 `20.0.19`，测试或非标准安装可用显式 `--ccusage-command`。当前仓库交付不自动安装、升级或移除 Orca、Node 或 `ccusage`；账户来源不可用时明确失败，不读取凭据或改走内部 HTTP。
 
 
 ## 检查
