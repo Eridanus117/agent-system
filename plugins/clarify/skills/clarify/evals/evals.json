@@ -33,6 +33,10 @@
         {
           "name": "no-artifact-written",
           "description": "全程没有产出需要归档的文件，没有开 change，没有列 task。"
+        },
+        {
+          "name": "same-object-no-jargon",
+          "description": "草案直接谈用户原话里的对象（知识库、标签、打标签），不用 X/Z 一类占位符，不用自造词或流程代号；每句用户都能对照自己的原话判对错。（2026-09-02 铁律 2 改写后新增）"
         }
       ]
     },
