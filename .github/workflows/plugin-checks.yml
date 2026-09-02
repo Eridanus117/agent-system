@@ -25,8 +25,8 @@ jobs:
         with:
           node-version: "24"
 
-      - name: Check cross-skill routing and asset consistency
-        run: node plugins/tests/workflow-routing.test.ts
+      - name: Check skill store structure and overview freshness
+        run: node plugins/tests/skills.test.ts
 
       - name: Check three-party review validator contract
         run: node plugins/orchestrated-collaboration/tests/verify-three-party-review.test.ts
