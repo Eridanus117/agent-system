@@ -9,13 +9,11 @@ on:
     branches:
       - main
     paths-ignore:
-      - "_bmad-output/**"
       - ".github/workflows/control-plane-checks.yml"
   push:
     branches:
       - main
     paths-ignore:
-      - "_bmad-output/**"
       - ".github/workflows/control-plane-checks.yml"
 
 permissions:
