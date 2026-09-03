@@ -1,0 +1,86 @@
+{
+  "skill_name": "requirement-translation",
+  "evals": [
+    {
+      "id": "translate-closed-requirement",
+      "name": "收口后的需求翻成 EARS 句加例子",
+      "kind": "behavior",
+      "prompt": "需求洞察做完、我否过了。定稿：问题是偏远省份运费缺口由人工补；方向是省级附加表；判据是新疆单不再进补贴导表连续两周。原话是产品 A 提的「运费模板要支持按省份设偏远附加」，验收人是业务 B。现在把需求写清楚。你看不到代码；能告诉你的只有模板现在的字段：基础运费、首重、续重、区域加价（只到大区）。",
+      "expected_trigger": true,
+      "expected_output": "抄原话标提与验；判拆不拆；每条规则一句 EARS（当/若…系统应…），每句配一条入参加期望输出；名词只用原话与给定字段；请主人逐句否；不写文件、不写测试、不给实现。",
+      "files": [],
+      "assertions": [
+        { "name": "verbatim-with-source-and-acceptor", "description": "原话「运费模板要支持按省份设偏远附加」一字不改，标了产品 A 与业务 B。" },
+        { "name": "split-decision", "description": "写了拆不拆及理由（一个使用者一个目标）。" },
+        { "name": "ears-one-rule-per-sentence", "description": "每句是 EARS 形态（当/若…系统应…），一句只说一件事。" },
+        { "name": "example-per-sentence", "description": "每句下面都有一条具体入参加期望输出的例子，没有一句没例子。" },
+        { "name": "no-invented-nouns", "description": "句子里的名词来自原话或给定字段（模板、省份、偏远附加、基础运费、首重、续重、区域加价），没有类名、表名、字段名一类实现词，也没有自造词。" },
+        { "name": "asks-line-by-line-veto", "description": "明确请主人逐句否，并说被否的句子不覆盖。" },
+        { "name": "no-tests-no-files", "description": "没有写测试代码、没有写文件、没有给实现方案。" }
+      ]
+    },
+    {
+      "id": "big-requirement-split",
+      "name": "装不下一句话的大需求先拆用例",
+      "kind": "behavior",
+      "prompt": "路线确认过了，拆一下这个需求。产品 C 提的：「运费模板支持多仓发货：下单时按收货地址就近选仓，各仓用自己的运费模板算运费，仓无货时自动改仓并重算运费，商家后台能看每单的选仓原因」。验收人是业务 B。你看不到代码。",
+      "expected_trigger": true,
+      "expected_output": "判为多个目标或多个使用者，先拆成用例（至少：就近选仓算运费、无货改仓重算、商家查看选仓原因），每个用例标使用者与目标；再对用例出 EARS 句加例子（至少第一个用例出全）；请主人否。",
+      "files": [],
+      "assertions": [
+        { "name": "splits-into-use-cases", "description": "识别出多个目标或使用者，拆成 2 个以上用例，每个用例标了使用者与目标。" },
+        { "name": "ears-with-examples", "description": "至少对一个用例给出了 EARS 句，且每句配了入参加期望输出。" },
+        { "name": "asks-veto", "description": "请主人否（拆法或句子），没有直接进入实现。" },
+        { "name": "no-tests-no-files", "description": "没有写测试代码、没有写文件。" }
+      ]
+    },
+    {
+      "id": "not-yet-closed",
+      "name": "近似案例：需求还没收口（应由 requirement-insight 承担）",
+      "kind": "trigger",
+      "prompt": "来了个需求，产品 A 说「运费模板要支持按省份设偏远附加」。这个需求到底要什么？你看不到代码。",
+      "expected_trigger": false,
+      "expected_output": "不直接翻 EARS 句：三行加一句还没有，问的是「到底要什么」，那是洞察的事。",
+      "files": [],
+      "assertions": [
+        { "name": "no-premature-translation", "description": "没有直接输出一组 EARS 句加例子当作最终翻译；要么指出先要洞察或问提出方，要么按普通作答。" }
+      ]
+    },
+    {
+      "id": "plain-question",
+      "name": "讲解 EARS 本身的知识问答不触发",
+      "kind": "trigger",
+      "prompt": "EARS 需求句式有哪五种模板？",
+      "expected_trigger": false,
+      "expected_output": "直接回答，不进入规程。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://requirement-translation。" }
+      ]
+    },
+    {
+      "id": "after-acceptance-integrate",
+      "name": "近似案例：例子已变测试并通过，要接进系统（应由 integration 承担）",
+      "kind": "trigger",
+      "prompt": "偏远附加的三句需求和例子我都否过了，例子已经变成测试并且全过了。现在把这个改动接进运费服务：先列集成面。你看不到代码，按你知道的说。",
+      "expected_trigger": false,
+      "expected_output": "不重新翻需求：不再输出 EARS 句清单让主人否。",
+      "files": [],
+      "assertions": [
+        { "name": "no-relitigation", "description": "没有重新写 EARS 句加例子让主人逐句否。" }
+      ]
+    },
+    {
+      "id": "direct-code-change",
+      "name": "近似案例：直接要改代码（应由 workcoding / legacy-change 承担）",
+      "kind": "trigger",
+      "prompt": "帮我改一下 FreightCalc.calc：目的地是新疆或西藏时加一笔偏远附加。这个类在我们的运费服务里，你现在看不到代码。",
+      "expected_trigger": false,
+      "expected_output": "不进需求翻译：输入是改代码指令，不是需求句翻译。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://requirement-translation，没有输出 EARS 句清单。" }
+      ]
+    }
+  ]
+}
