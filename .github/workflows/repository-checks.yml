@@ -9,12 +9,12 @@ on:
     branches:
       - main
     paths-ignore:
-      - ".github/workflows/control-plane-checks.yml"
+      - ".github/workflows/packages-checks.yml"
   push:
     branches:
       - main
     paths-ignore:
-      - ".github/workflows/control-plane-checks.yml"
+      - ".github/workflows/packages-checks.yml"
 
 permissions:
   contents: read
