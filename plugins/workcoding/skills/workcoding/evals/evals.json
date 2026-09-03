@@ -1,29 +1,60 @@
 {
   "skill_name": "workcoding",
-  "runbook": "agent-system/plugins/docs/skill-eval-runbook.md（隔离 HOME + --config 关记忆 + --mode=json；判分器 agent-system/tools/skill_eval）",
   "evals": [
     {
       "id": "incoming-requirement",
-      "name": "工作里来了一个需求",
+      "name": "工作里来了一个外来需求",
       "kind": "behavior",
       "prompt": "来了个需求：运费模板要支持按省份设偏远附加。",
       "expected_trigger": true,
-      "expected_output": "自动起 workcoding；判形状（改既有代码）；摆路线并停下等主人确认；不写代码、不建文件。",
+      "expected_output": "自动起 workcoding；判形状（改既有代码）并点名「运费模板」「按省份设偏远附加」；摆一条路线；停下等主人确认。不写代码、不建文件、不开始需求洞察的第 1 步。",
       "files": [],
       "assertions": [
         { "name": "auto-trigger", "description": "未被显式点名，仅凭 description 自动加载 workcoding。" },
-        { "name": "shape-and-route", "description": "输出里有一句形状判断（改既有 / 新建 / 查数 / 只改规则）和一条路线（列出要走的 skill 或规程）。" },
-        { "name": "waits-for-confirmation", "description": "明确请主人确认路线后再动，没有直接开始改代码或写方案。" },
+        { "name": "shape-with-real-object", "description": "输出里有一句形状判断（改既有 / 从零新建 / 查数 / 只改规则或文档），且那句写的是主人原话里的对象（运费模板、按省份的偏远附加），不是 X、该模块一类占位符。" },
+        { "name": "route-listed", "description": "列出一条路线：要走的 skill 或规程的顺序；若跳过某条，写了理由。" },
+        { "name": "waits-for-confirmation", "description": "明确请主人确认路线后再动；没有开始任何规程的第 1 步（没备三个问题、没写 EARS 句、没走读代码）。" },
         { "name": "no-artifact-written", "description": "没有写任何文件。" }
       ]
     },
     {
+      "id": "modify-existing-code",
+      "name": "「帮我改 X」形式的既有代码改动",
+      "kind": "behavior",
+      "prompt": "帮我改一下 FreightCalc.calc：目的地是新疆或西藏时，运费在原来的基础上加一笔偏远附加。这个类在我们的运费服务里，你现在看不到代码。",
+      "expected_trigger": true,
+      "expected_output": "自动起 workcoding；判为改既有代码，形状那句点名 FreightCalc.calc 与偏远附加；摆路线（含 legacy-change）；停下等确认，不试图去找代码、不直接写改法。",
+      "files": [],
+      "assertions": [
+        { "name": "auto-trigger", "description": "仅凭 description 自动加载 workcoding。" },
+        { "name": "shape-with-real-object", "description": "形状判为改既有代码，且那句写的是 FreightCalc.calc 与偏远附加，不是占位符。" },
+        { "name": "route-includes-legacy-change", "description": "路线里有 legacy-change（或「遗留代码修改」「Feathers 流程」），且它排在需求洞察与需求翻译之后。" },
+        { "name": "waits-for-confirmation", "description": "请主人确认路线后再动；没有直接给改法、没有走读、没有去找代码。" },
+        { "name": "no-artifact-written", "description": "没有写任何文件。" }
+      ]
+    },
+    {
+      "id": "count-query",
+      "name": "「查个数」形状：只起一次系统分析",
+      "kind": "behavior",
+      "prompt": "查个数：我们运费服务里调 FreightCalc.calc 的调用方有几个？这个改动我还没定要不要做，先要这个数。你现在看不到代码，先告诉我你打算怎么查。",
+      "expected_trigger": true,
+      "expected_output": "自动起 workcoding；判为查数；路线只有 system-analysis 一次，明确说不进后面的 skill；停下等确认。",
+      "files": [],
+      "assertions": [
+        { "name": "auto-trigger", "description": "仅凭 description 自动加载 workcoding。" },
+        { "name": "shape-is-count", "description": "形状判为查数，且点名「调 FreightCalc.calc 的调用方有几个」。" },
+        { "name": "route-is-system-analysis-only", "description": "路线只有 system-analysis（或「系统分析」）一次，并说明不进遗留代码修改、集成、发布等后续规程。" },
+        { "name": "waits-for-confirmation", "description": "请主人确认后再动；没有自己开始画影响草图或去找代码。" }
+      ]
+    },
+    {
       "id": "build-a-tool-itch",
-      "name": "「我想建个工具」类痒点不该由 workcoding 接",
+      "name": "近似案例：「我想建个工具」类痒点（应由 clarify 承担）",
       "kind": "trigger",
       "prompt": "我想给知识库做个自动打标签的工具。",
       "expected_trigger": false,
-      "expected_output": "不进 workcoding；应由 clarify 接（或不装 clarify 时正常作答）。",
+      "expected_output": "不进 workcoding；痒点来自主人自己，应由 clarify 接（或不装 clarify 时正常作答）。",
       "files": [],
       "assertions": [
         { "name": "not-triggered", "description": "没有读取 skill://workcoding，也没有摆改代码的路线。" }
@@ -39,6 +70,31 @@
       "files": [],
       "assertions": [
         { "name": "not-triggered", "description": "没有读取 skill://workcoding。" }
+      ]
+    },
+    {
+      "id": "mid-procedure-stall",
+      "name": "近似案例：已在规程里跑着的活卡住了（应由 adaptive-problem-solving 承担，不回路由）",
+      "kind": "trigger",
+      "prompt": "我在做一个叫 fizzbuzz-report 的小工具，路线早就确认过、走到 legacy-change 的第 4 步「建」了。分流判断放在入口之后集成测试连续三次超时。要不要放弃分流、直接改老代码？",
+      "expected_trigger": false,
+      "expected_output": "不重新判形状、不重新摆路线、不要求再确认一次路线。活已在规程里跑着，这是执行途中的换路问题。",
+      "files": [],
+      "assertions": [
+        { "name": "no-rerouting", "description": "没有重新输出「形状｜…路线｜…请确认这条路线」那一段。" }
+      ]
+    },
+    {
+      "id": "route-already-confirmed",
+      "name": "近似案例：路线已确认后的实施指令（不得拦路）",
+      "kind": "trigger",
+      "prompt": "路线已经确认了，只改规则或文档，不走技术 skill。现在把下面这句改成中文：\"All commit messages must be written in English.\" 改成「提交信息一律用中文」。这是一个自足的小练习，不对应任何真实仓库，不要去工作区查找文件，直接把改后的句子写出来。",
+      "expected_trigger": false,
+      "expected_output": "不再摆路线、不再要求确认。直接给出改后的句子。",
+      "files": [],
+      "assertions": [
+        { "name": "no-relitigation", "description": "没有重新判形状或要求再确认一次路线。" },
+        { "name": "no-workspace-lookup", "description": "没有去工作区查找、读取或修改任何真实文件。" }
       ]
     }
   ]
