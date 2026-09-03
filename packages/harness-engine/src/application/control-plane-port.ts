@@ -1,52 +1,22 @@
-export interface ControlPlaneUnknown {
-  readonly kind: 'unknown';
-  readonly reasonCode: string;
-  readonly observedAt: string;
-  readonly recovery: string;
-}
+// 控制面合同的真源是 @agent-system/control-plane 的 ports/harness.ts（经 public-entry 发布）。
+// 本文件只做类型别名，不再手抄一份接口：此前的手抄副本在控制面把 client 改名为 agent
+// （提交 6556d8c）后没有跟上，导致 host-smoke 无法通过类型检查。
+import type {
+  HarnessAgentCapability,
+  HarnessAgentId,
+  HarnessAssemblyManifestRef,
+  HarnessConfigRevisionRef,
+  HarnessControlPlanePort,
+  HarnessLaunchPlanRef,
+  HarnessProbeAgentId,
+  HarnessUnknown,
+} from '@agent-system/control-plane/application/public-entry';
 
-export interface ConfigRevisionRef {
-  readonly revisionId: string;
-  readonly schemaVersion: number;
-  readonly clientId: 'omp' | 'claude';
-  readonly source: string;
-  readonly sourceVersion: string;
-  readonly observedAt: string;
-}
-
-export interface AssemblyManifestRef {
-  readonly revisionId: string;
-  readonly clientId: 'omp' | 'claude';
-  readonly manifestDigest: string;
-  readonly itemCount: number;
-  readonly source: string;
-  readonly sourceVersion: string;
-  readonly observedAt: string;
-}
-
-export interface ClientCapability {
-  readonly clientId: 'omp' | 'claude' | 'codex' | 'opencode';
-  readonly clientVersion: string;
-  readonly status: 'supported' | 'degraded' | 'unsupported' | 'unknown';
-  readonly source: string;
-  readonly sourceVersion: string;
-  readonly reasonCode?: string;
-  readonly observedAt: string;
-}
-
-export interface LaunchPlanRef {
-  readonly revisionId: string;
-  readonly clientId: 'omp' | 'claude';
-  readonly planDigest: string;
-  readonly launchBoundary: 'invocation-scoped';
-  readonly source: string;
-  readonly sourceVersion: string;
-  readonly observedAt: string;
-}
-
-export interface ControlPlaneFacade {
-  readConfigRevision(revisionId: string, clientId: 'omp' | 'claude'): Promise<ConfigRevisionRef | ControlPlaneUnknown>;
-  readAssemblyManifest(revisionId: string, clientId: 'omp' | 'claude'): Promise<AssemblyManifestRef | ControlPlaneUnknown>;
-  probeClient(clientId: 'omp' | 'claude' | 'codex' | 'opencode'): Promise<ClientCapability | ControlPlaneUnknown>;
-  prepareLaunch(revisionId: string, clientId: 'omp' | 'claude'): Promise<LaunchPlanRef | ControlPlaneUnknown>;
-}
+export type ControlPlaneUnknown = HarnessUnknown;
+export type ConfigRevisionRef = HarnessConfigRevisionRef;
+export type AssemblyManifestRef = HarnessAssemblyManifestRef;
+export type AgentCapability = HarnessAgentCapability;
+export type LaunchPlanRef = HarnessLaunchPlanRef;
+export type AgentId = HarnessAgentId;
+export type ProbeAgentId = HarnessProbeAgentId;
+export type ControlPlaneFacade = HarnessControlPlanePort;
