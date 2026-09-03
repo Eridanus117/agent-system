@@ -1,0 +1,85 @@
+{
+  "skill_name": "integration",
+  "evals": [
+    {
+      "id": "wire-in-after-build",
+      "name": "建完之后接进系统：列集成面、变没变、顺序、联调",
+      "kind": "behavior",
+      "prompt": "路线确认了，legacy-change 建完了，现在走集成。改动：偏远附加按省份查表，新方法 calcRemoteFee 在 FreightCalc.calc 入口一处分流，分流开关叫 remote_fee_by_province，查表读新表 remote_fee（新增 province 列）。我能告诉你的：调 calc 的有 OrderService、QuoteService、BatchCalc（BatchCalc 直接调 calcInner 绕过 calc）；预发和生产共库。需求翻译的例子：模板 1032 新疆 3.2kg 期望 26；模板 1032 广东 3.2kg 期望 18。你看不到代码，按规程写。",
+      "expected_trigger": true,
+      "expected_output": "集成面：上游三个调用方、下游 remote_fee 表与模板配置、开关；每个边界写变没变（calc 签名不变；BatchCalc 绕过入口要单独接或标出；remote_fee 加列旧列保留）；顺序：加列 → 注册开关关着 → 合代码 → 预发联调 → 灰度归 release-observe，每步写退法；联调跑两条例子加老路径，共库只读；请主人否。不合分支不动表。",
+      "files": [],
+      "assertions": [
+        { "name": "all-boundaries-listed", "description": "集成面列了上游（OrderService、QuoteService、BatchCalc）、下游（remote_fee 表、模板配置）、开关（remote_fee_by_province）；把「别人同时在改的代码」标为配置管理或说明不在此处。" },
+        { "name": "changed-or-unchanged-per-boundary", "description": "每个边界都写了变没变，没变的明确写「不变」，变了的写了变什么、谁要知道；BatchCalc 绕过 calc 这条被单独指出。" },
+        { "name": "order-each-step-undoable", "description": "接入顺序为表或配置先扩 → 开关注册且关着 → 合代码 → 下游 → 上游（或等价），每步写了退法。" },
+        { "name": "smoke-with-examples-readonly", "description": "联调用需求翻译的例子（新疆 26、广东 18）沿真实调用链跑，再跑一条老路径例子，并标明共库只读。" },
+        { "name": "waits-for-veto", "description": "请主人否集成面与顺序；没有合分支、没有写迁移脚本、没有写文件。" }
+      ]
+    },
+    {
+      "id": "data-change-expand-contract",
+      "name": "带数据变更的接入：先扩后缩",
+      "kind": "behavior",
+      "prompt": "走集成。改动要把运费模板里的「区域加价」从按大区改成按省份：新建 province_surcharge 表，老的 region_surcharge 表还有报表任务在读。调用方只有 FreightCalc.calc 一个。怎么接进去？你看不到代码，按规程写。",
+      "expected_trigger": true,
+      "expected_output": "集成面含老表的报表任务读者；变没变里 region_surcharge 写「不变、保留」；顺序是先扩（新表并存）→ 开关关着 → 合代码 → 联调 → 灰度之后再缩（删旧表另起一步）；每步退法；联调跑一条新一条老；请主人否。",
+      "files": [],
+      "assertions": [
+        { "name": "expand-before-contract", "description": "顺序里新表先建、旧表保留并存，删旧表放在灰度之后另起一步，不在本次顺序里直接删。" },
+        { "name": "report-reader-as-boundary", "description": "把读 region_surcharge 的报表任务列为一个边界，写了变没变与谁要知道。" },
+        { "name": "order-each-step-undoable", "description": "每步写了退法。" },
+        { "name": "waits-for-veto", "description": "请主人否；没有写迁移脚本、没有写文件。" }
+      ]
+    },
+    {
+      "id": "rollout-question",
+      "name": "近似案例：问的是放量与回滚（应由 release-observe 承担）",
+      "kind": "trigger",
+      "prompt": "偏远附加的改动已经合进预发联调过了。怎么灰度？第一档放谁、放多久、出问题怎么回滚？你看不到代码。",
+      "expected_trigger": false,
+      "expected_output": "不进集成：集成面与顺序已经走完，问的是放量三档与回滚点。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://integration，没有重新列集成面与接入顺序。" }
+      ]
+    },
+    {
+      "id": "merge-conflict",
+      "name": "近似案例：合分支解冲突（归配置管理，不在集成规程里）",
+      "kind": "trigger",
+      "prompt": "我的分支和同事的分支都改了 FreightCalc.java，合并时冲突了。这是自足练习，下面是冲突块，帮我看该保留哪边：\n\n```\n<<<<<<< mine\n    if (r.cod) fee += 2;\n=======\n    if (r.cod) fee += 3;\n>>>>>>> theirs\n```\n\n不要去工作区找文件。",
+      "expected_trigger": false,
+      "expected_output": "直接就冲突块作答，不列集成面、不定接入顺序。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://integration，没有输出集成面 / 变没变 / 顺序清单。" },
+        { "name": "no-workspace-lookup", "description": "没有去工作区查找、读取或修改任何真实文件。" }
+      ]
+    },
+    {
+      "id": "incoming-requirement",
+      "name": "近似案例：外来需求（应由 requirement-insight 承担）",
+      "kind": "trigger",
+      "prompt": "来了个需求，产品 A 说「运费模板要支持按省份设偏远附加」。这个需求到底要什么？你看不到代码。",
+      "expected_trigger": false,
+      "expected_output": "不进集成。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://integration。" }
+      ]
+    },
+    {
+      "id": "plain-question",
+      "name": "讲解并行修改模式本身的知识问答不触发",
+      "kind": "trigger",
+      "prompt": "Fowler 说的 Parallel Change（expand / contract）是什么？",
+      "expected_trigger": false,
+      "expected_output": "直接回答，不进入规程。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://integration。" }
+      ]
+    }
+  ]
+}

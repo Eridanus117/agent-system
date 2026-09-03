@@ -1,0 +1,86 @@
+{
+  "skill_name": "system-analysis",
+  "evals": [
+    {
+      "id": "count-with-decision",
+      "name": "路线已确认的「查个数」，数挂着一个决定",
+      "kind": "behavior",
+      "prompt": "路线确认了，走系统分析。查个数：运费服务里调 FreightCalc.calc 的调用方有几个？这个数是为了定「偏远附加的分流开关放 calc 入口还是放更里面」。你看不到代码也跑不了 Arthas，按规程把能写的写出来，要主人做的写清楚。",
+      "expected_trigger": true,
+      "expected_output": "六行形态：问（挂决定「开关放哪」）、假设单列、草图两跳并指出拿不准的边、证据写成要主人在工作机上跑的 Arthas 命令、结论行写待核实并带置信度、留。不扩成全量调用图，不改代码。",
+      "files": [],
+      "assertions": [
+        { "name": "tied-to-decision", "description": "第一行写明这个数进哪个决定（分流开关放哪）。" },
+        { "name": "assumptions-separate", "description": "假设单独成行（例如「所有运费计算都走 calc」），没有当事实写进结论。" },
+        { "name": "two-hop-sketch", "description": "草图只列两跳（谁调 calc、calc 调谁）并指出拿不准的边，没有扩成全量调用图。" },
+        { "name": "evidence-only-uncertain", "description": "运行证据只针对拿不准的边，写成 Arthas trace/stack 抓一条真实请求，或写成要主人在工作机上做的事。" },
+        { "name": "one-line-conclusion-with-confidence", "description": "结论是一行，带置信度和未验证的假设；看不到代码时写待核实。" },
+        { "name": "no-code-no-plan", "description": "没有改代码、没有写方案、没有做压测方案、没有写文件。" }
+      ]
+    },
+    {
+      "id": "stuck-in-change-plan",
+      "name": "摆改法时卡住：新路径慢多少",
+      "kind": "behavior",
+      "prompt": "走系统分析，帮我定一个判断：偏远附加改成按省份查表之后，运费计算的新路径比老路径慢多少？这个判断决定灰度第一档要不要只放测试模板。你看不到代码也跑不了 Arthas，按规程写。",
+      "expected_trigger": true,
+      "expected_output": "六行形态：问挂决定「灰度第一档放谁」、假设（例如查表走本地缓存）、草图两跳、证据写成 Arthas trace 对比两条真实请求耗时的做法、结论待核实带置信度、留。",
+      "files": [],
+      "assertions": [
+        { "name": "tied-to-decision", "description": "写明这个判断进哪个决定（灰度第一档放谁）。" },
+        { "name": "assumptions-separate", "description": "假设单独成行。" },
+        { "name": "evidence-is-one-real-request", "description": "证据是用 Arthas trace 抓一条真实请求带回耗时（新老各一条），不是压测。" },
+        { "name": "one-line-conclusion-with-confidence", "description": "结论一行，带置信度与未验证假设。" },
+        { "name": "no-code-no-plan", "description": "没有改代码、没有写方案、没有写文件。" }
+      ]
+    },
+    {
+      "id": "incoming-requirement",
+      "name": "近似案例：外来需求（应由 requirement-insight 承担）",
+      "kind": "trigger",
+      "prompt": "来了个需求，产品 A 说「运费模板要支持按省份设偏远附加」。这个需求到底要什么？你看不到代码。",
+      "expected_trigger": false,
+      "expected_output": "不进系统分析：输入是需求，不是缺一个数。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://system-analysis，没有输出问/假设/草图/证据/结论六行。" }
+      ]
+    },
+    {
+      "id": "direct-code-change",
+      "name": "近似案例：直接要改代码（应由 workcoding / legacy-change 承担）",
+      "kind": "trigger",
+      "prompt": "帮我改一下 FreightCalc.calc：目的地是新疆或西藏时加一笔偏远附加。这个类在我们的运费服务里，你现在看不到代码。",
+      "expected_trigger": false,
+      "expected_output": "不进系统分析。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://system-analysis，没有输出六行。" }
+      ]
+    },
+    {
+      "id": "plain-question",
+      "name": "讲解 Arthas 本身的知识问答不触发",
+      "kind": "trigger",
+      "prompt": "Arthas 的 trace 和 stack 命令有什么区别？",
+      "expected_trigger": false,
+      "expected_output": "直接回答，不进入规程。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://system-analysis。" }
+      ]
+    },
+    {
+      "id": "load-test-request",
+      "name": "近似案例：要的是压测方案（6.4.9 性能测试，不是系统分析）",
+      "kind": "trigger",
+      "prompt": "帮我出一份运费计算接口的压测方案：并发多少、跑多久、看哪些指标。这是自足的练习，不对应真实系统。",
+      "expected_trigger": false,
+      "expected_output": "不进系统分析；直接给压测方案或说明那是性能测试。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://system-analysis，没有把压测改写成「一条 trace」。" }
+      ]
+    }
+  ]
+}

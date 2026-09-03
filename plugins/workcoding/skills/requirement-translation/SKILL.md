@@ -1,7 +1,7 @@
 ---
 name: requirement-translation
 description: >-
-  把一个已经收口（有三行加一句）的外来需求翻成可验证表述时用：大需求先按用例拆，再每句 EARS 加一条真实入参与期望输出，主人逐句否，例子最后原样变测试即自测验收。触发语「把需求写清楚」「拆一下这个需求」「这个需求怎么验收」。由 workcoding 确认路线、requirement-insight 收口后进入；主人逐句否之前不落盘、不写测试。不用于还没收口的需求（那是 requirement-insight），不用于讲解 EARS 或用例本身的知识问答。Translate a closed incoming requirement into verifiable statements: split big ones into use cases, write one EARS sentence per rule with one real example each, let the owner veto line by line, then turn the examples into tests. Writes nothing before the veto.
+  把一个已经收口（有三行加一句）的外来需求翻成可验证表述时用：大需求先按用例拆，再每句 EARS 加一条真实入参与期望输出，主人逐句否，例子最后原样变测试即自测验收。触发语「把需求写清楚」「拆一下这个需求」「这个需求怎么验收」。由 workcoding 确认路线、requirement-insight 收口后进入；主人逐句否之前不落盘、不写测试。不用于还没收口的需求（那是 requirement-insight），不用于「帮我改 X」类改代码指令（那是 workcoding 路由），不用于例子已变测试之后的集成与发布，不用于讲解 EARS 或用例本身的知识问答。Translate a closed incoming requirement into verifiable statements: split big ones into use cases, write one EARS sentence per rule with one real example each, let the owner veto line by line, then turn the examples into tests. Writes nothing before the veto.
 ---
 
 # 需求翻译：一句一例，主人逐句否

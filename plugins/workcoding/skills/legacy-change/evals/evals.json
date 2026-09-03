@@ -1,0 +1,86 @@
+{
+  "skill_name": "legacy-change",
+  "evals": [
+    {
+      "id": "walkthrough-and-plan",
+      "name": "带真实入参走读并摆改法，等主人否",
+      "kind": "behavior",
+      "prompt": "路线确认了，走 legacy-change。要加的逻辑：目的地是新疆或西藏时，运费加一笔偏远附加 8 元。下面是 FreightCalc.calc 的全部代码（自足练习，工作区里没有别的文件，不要去找）：\n\n```java\n// 运费计算：首重 + 续重（按 0.5kg 进位），vip 免续重，再加区域加价\npublic int calc(Req r) {\n    int fee = tpl(r.tplId).first;                 // 首重价\n    if (r.weight > 1.0) {\n        int extra = (int) Math.ceil(r.weight - 1.0); // 向上取整到 1kg\n        int unit = tpl(r.tplId).next;\n        if (r.vip) unit = unit / 2;\n        fee += extra * unit;\n    }\n    if (region(r.province) != null) {\n        fee += region(r.province).surcharge;\n    } else {\n        fee += 0;\n    }\n    if (r.cod) fee += 2;\n    return fee;\n}\n```\n\n真实入参：模板 1032（first=18，next=4），目的地新疆，weight=3.2，vip=false，cod=false。region(新疆) 返回西北大区，surcharge=3。",
+      "expected_trigger": true,
+      "expected_output": "走读清单逐步：看 weight=3.2 进续重分支、ceil(2.2)=3、3×4=12 → 30（注释说按 0.5kg 进位，实现是 1kg 取整）；看 vip=false 跳过（注释说免续重，实现是打五折）；看 region 西北 → +3 → 33；cod=false 不加；结果 33。走读写成特征化测试（每个 expect 一行中文注释）或清单。改法三句：新逻辑放新方法、目的地省份为新疆西藏的请求走新入口、其余照旧。请主人否。不改老代码。",
+      "files": [],
+      "assertions": [
+        { "name": "step-format-with-fields", "description": "走读每一步写了看哪个入参字段、进/跳过哪个分支、数值怎么变；对象是 weight、vip、region、cod 这些真实字段，不是占位符。" },
+        { "name": "comment-vs-code-flagged", "description": "至少标出一处注释与实现的出入（0.5kg 进位 vs 1kg 取整；vip 免续重 vs 打五折），并以实现为准。" },
+        { "name": "correct-result", "description": "对这条入参算出老代码结果 33（18 + 3×4 + 3）。" },
+        { "name": "characterization-test-or-list", "description": "走读以特征化测试（每个 expect 带中文注释）或逐行清单形式给出，不是时序图。" },
+        { "name": "change-plan-three-sentences", "description": "改法整句写了三件事：新逻辑放哪个新入口、哪种请求（看哪个字段）走新入口、其余照旧。" },
+        { "name": "waits-for-veto-no-code", "description": "请主人否走读和改法；没有写新代码、没有改老方法体、没有写文件。" }
+      ]
+    },
+    {
+      "id": "build-after-veto",
+      "name": "主人否过之后的「建」：只新增、入口一处分流、老路径 diff 为零",
+      "kind": "behavior",
+      "prompt": "走读和改法我否过了，定稿：新逻辑放新方法 calcRemoteFee；目的地省份为新疆或西藏的请求（看 r.province）走新入口；其余照旧。现在做 legacy-change 第 4、5 步。老方法如下（自足练习，工作区没有别的文件）：\n\n```java\npublic int calc(Req r) {\n    int fee = tpl(r.tplId).first;\n    if (r.weight > 1.0) {\n        int extra = (int) Math.ceil(r.weight - 1.0);\n        int unit = tpl(r.tplId).next;\n        if (r.vip) unit = unit / 2;\n        fee += extra * unit;\n    }\n    if (region(r.province) != null) fee += region(r.province).surcharge;\n    if (r.cod) fee += 2;\n    return fee;\n}\n```\n\n偏远附加 8 元。用走读那条入参（模板 1032 first=18 next=4，新疆，3.2kg，vip=false，cod=false，老结果 33）配一条测试。直接把代码写出来给我看。",
+      "expected_trigger": true,
+      "expected_output": "老方法体一字不动；新增 calcRemoteFee（或等价新方法）；分流判断只在入口一处、放在老逻辑之前；一条测试用那条入参：老路径 33、新路径 41；说明老文件 diff 为零与静态验方式。",
+      "files": [],
+      "assertions": [
+        { "name": "old-path-zero-diff", "description": "老方法的既有语句一句没改；新逻辑全在新增方法里。" },
+        { "name": "single-branch-at-entry", "description": "分流判断只出现在一处，位于入口、先于任何既有分支。" },
+        { "name": "test-uses-walkthrough-input", "description": "配了一条测试用走读那条入参，期望老路径 33、新路径 41（或说明新路径期望值来源）。" },
+        { "name": "no-relitigation", "description": "没有重新走读、没有重新要求主人否改法。" }
+      ]
+    },
+    {
+      "id": "greenfield-new-class",
+      "name": "近似案例：纯新增、没有既有路径要动（不是 Feathers，不得套「萌芽」）",
+      "kind": "trigger",
+      "prompt": "从零写一个新类 RemoteFeeLookup：输入省份名，返回偏远附加金额，新疆和西藏返回 8，其余返回 0。没有任何既有代码，这是自足练习，不要去工作区找文件，直接写出来。",
+      "expected_trigger": false,
+      "expected_output": "直接写类；不走读不存在的代码，不用「萌芽」「分流」「老路径 diff 为零」这些词。",
+      "files": [],
+      "assertions": [
+        { "name": "no-forced-feathers", "description": "没有对不存在的既有代码做走读，没有用萌芽方法、入口分流、老路径 diff 为零这些说法。" },
+        { "name": "no-workspace-lookup", "description": "没有去工作区查找、读取或修改任何真实文件。" }
+      ]
+    },
+    {
+      "id": "incoming-requirement",
+      "name": "近似案例：外来需求（应由 requirement-insight 承担）",
+      "kind": "trigger",
+      "prompt": "来了个需求，产品 A 说「运费模板要支持按省份设偏远附加」。这个需求到底要什么？你看不到代码。",
+      "expected_trigger": false,
+      "expected_output": "不进遗留代码修改：没有代码可走读，输入是需求。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://legacy-change，没有输出走读清单或改法三句。" }
+      ]
+    },
+    {
+      "id": "count-query",
+      "name": "近似案例：要的是一个数（应由 system-analysis 承担）",
+      "kind": "trigger",
+      "prompt": "查个数：我们运费服务里调 FreightCalc.calc 的调用方有几个？你现在看不到代码，先说你打算怎么查。",
+      "expected_trigger": false,
+      "expected_output": "不进遗留代码修改。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://legacy-change。" }
+      ]
+    },
+    {
+      "id": "plain-question",
+      "name": "讲解 Feathers 概念的知识问答不触发",
+      "kind": "trigger",
+      "prompt": "Feathers 说的接缝（seam）是什么意思？",
+      "expected_trigger": false,
+      "expected_output": "直接回答，不进入规程。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://legacy-change。" }
+      ]
+    }
+  ]
+}
