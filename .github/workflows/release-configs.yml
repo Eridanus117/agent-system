@@ -44,7 +44,7 @@ jobs:
 
       - name: Run tests
         # Gate before cross-compiling/publishing -- a tagged commit that
-        # was never actually verified by control-plane-checks.yml (or a
+        # was never actually verified by packages-checks.yml (or a
         # broken build) must never ship as a public release.
         run: bun test
 
