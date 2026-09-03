@@ -11,6 +11,10 @@ const correlation = {
   source: 'local-preflight', sourceVersion: '1', observedAt: '2026-08-28T00:00:00.000Z',
 };
 
+// 下面三条实跑测试只登记了 cmd.exe（见 src/smoke/evidence.ts 的 READ_ONLY_SUBCOMMANDS 白名单），
+// 非 Windows 平台没有 cmd.exe，按平台跳过；不为测试放宽产品侧白名单。
+const windowsOnly = test.skipIf(process.platform !== 'win32');
+
 describe('Stage 4 real smoke evidence', () => {
   test('returns not-available without invoking a transport when prerequisites are missing', async () => {
     let invoked = false;
@@ -64,7 +68,7 @@ describe('Stage 4 real smoke evidence', () => {
     expect(() => normalizeWindowsPath('C:\\work\\..\\..\\secret')).toThrow('escape');
   });
 
-  test('runs an allowlisted read-only command and preserves non-zero exit', async () => {
+  windowsOnly('runs an allowlisted read-only command and preserves non-zero exit', async () => {
     const result = await runReadOnlyProcess(['cmd.exe', '/d', '/c', 'exit /b 3']);
     expect(result.exitCode).toBe(3);
     expect(result.timedOut).toBe(false);
@@ -81,12 +85,12 @@ describe('Stage 4 real smoke evidence', () => {
     expect(() => runReadOnlyProcess(['powershell.exe', '-NoProfile', '-Command', 'Remove-Item file'])).toThrow('allowlist');
   });
 
-  test('redacts unknown process output instead of returning raw content', async () => {
+  windowsOnly('redacts unknown process output instead of returning raw content', async () => {
     const result = await runReadOnlyProcess(['cmd.exe', '/d', '/c', 'echo unknown payload']);
     expect(result.stdoutSummary).toBe('[redacted]');
   });
 
-  test('terminates an allowlisted timed-out command without shell injection', async () => {
+  windowsOnly('terminates an allowlisted timed-out command without shell injection', async () => {
     const result = await runReadOnlyProcess(['cmd.exe', '/d', '/c', 'timeout /t 1 /nobreak'], { timeoutMs: 10 });
     expect(result.timedOut).toBe(true);
     expect(result.exitCode).toBeNull();
