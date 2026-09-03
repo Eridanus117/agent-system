@@ -1,0 +1,87 @@
+{
+  "skill_name": "requirement-insight",
+  "evals": [
+    {
+      "id": "product-requirement",
+      "name": "产品提的外来需求，路线已确认",
+      "kind": "behavior",
+      "prompt": "路线已经确认了，走需求洞察。来了个需求，产品 A 说：「运费模板要支持按省份设偏远附加」。这个需求到底要什么？你现在看不到我们的代码和配置。",
+      "expected_trigger": true,
+      "expected_output": "抄原话并标提出方；判它是解，写断言草案「真正的问题是 P 不是 X」；备三个问历史行为的问题让主人去问产品 A；查现成写「未查到」或假设；收口三行加一句判据；停下等主人带答案回来。不写文件、不翻 EARS 句。",
+      "files": [],
+      "assertions": [
+        { "name": "verbatim-with-source", "description": "原话「运费模板要支持按省份设偏远附加」一字不改地出现，并标了「产品 A」。" },
+        { "name": "solution-to-problem-assertive", "description": "判它是解，并以断言形式写出真正的问题（「真正的问题是…不是…」），不是把开放问句抛给主人。" },
+        { "name": "three-history-questions", "description": "给了三个让主人去问提出方的问题，全部问历史行为（上次怎么办、现在怎么忍、不做会怎样），没有「你想要什么功能」类意见题。" },
+        { "name": "existing-capability-honest", "description": "查现成一栏写的是「未查到」或明确标为假设，没有把没查过的东西写成断言「没有」。" },
+        { "name": "three-lines-plus-cue", "description": "收口为三行（真正的问题 / 值不值得改 / 往哪个方向改）加一句「解到什么样算解了」的可观察判据。" },
+        { "name": "stops-no-translation", "description": "停下等主人带答案回来；没有写 EARS 句、没有拆用例、没有写文件。" }
+      ]
+    },
+    {
+      "id": "colleague-vague-request",
+      "name": "同事口头提的模糊要求",
+      "kind": "behavior",
+      "prompt": "路线确认过了，先做需求洞察。同事 B 今天找我说：「导出运费那个 Excel，能不能加一列『附加费明细』」。你看不到我们的代码。",
+      "expected_trigger": true,
+      "expected_output": "抄原话标同事 B；判是解，断言真正的问题（比如导出后有人要手工核附加费）；三个历史行为问题；查现成写未查到；三行加一句；停住。",
+      "files": [],
+      "assertions": [
+        { "name": "verbatim-with-source", "description": "原话一字不改，标了同事 B。" },
+        { "name": "solution-to-problem-assertive", "description": "「加一列」被判为解，给出断言式的真正问题草案。" },
+        { "name": "three-history-questions", "description": "三个问题全是历史行为，不是意见题。" },
+        { "name": "three-lines-plus-cue", "description": "三行加一句判据齐。" },
+        { "name": "stops-no-translation", "description": "没有写 EARS 句、没有给实现方案、没有写文件。" }
+      ]
+    },
+    {
+      "id": "build-a-tool-itch",
+      "name": "近似案例：主人自己的「我想建个工具」痒点（应由 clarify 承担）",
+      "kind": "trigger",
+      "prompt": "我想给知识库做个自动打标签的工具。",
+      "expected_trigger": false,
+      "expected_output": "不进需求洞察：痒点来自主人自己，没有提出方，没有人可以去问。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://requirement-insight，没有备「问提出方」的三个问题。" }
+      ]
+    },
+    {
+      "id": "already-closed-translate",
+      "name": "近似案例：三行加一句已定，要翻 EARS（应由 requirement-translation 承担）",
+      "kind": "trigger",
+      "prompt": "需求洞察已经做完、我否过了。定稿是：问题是偏远省份运费缺口由人工补；值得改；方向是省级附加表；判据是新疆单不再进补贴导表连续两周。现在把它翻成 EARS 句，每句配一个例子。这是自足的练习，不要去工作区找文件。",
+      "expected_trigger": false,
+      "expected_output": "不重做需求洞察：不重新备三个问题、不重新写三行。直接给 EARS 句加例子。",
+      "files": [],
+      "assertions": [
+        { "name": "no-relitigation", "description": "没有重新备三个问提出方的问题，也没有重写三行加一句。" },
+        { "name": "no-workspace-lookup", "description": "没有去工作区查找、读取或修改任何真实文件。" }
+      ]
+    },
+    {
+      "id": "plain-question",
+      "name": "普通知识问答不触发",
+      "kind": "trigger",
+      "prompt": "JTBD 的切换访谈（switch interview）是什么？",
+      "expected_trigger": false,
+      "expected_output": "直接回答，不进入规程。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://requirement-insight。" }
+      ]
+    },
+    {
+      "id": "count-query",
+      "name": "近似案例：要的是一个数（应由 system-analysis 承担）",
+      "kind": "trigger",
+      "prompt": "查个数：我们运费服务里调 FreightCalc.calc 的调用方有几个？你现在看不到代码，先说你打算怎么查。",
+      "expected_trigger": false,
+      "expected_output": "不进需求洞察：输入要的是一个数，不是需求。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://requirement-insight，没有备问提出方的问题。" }
+      ]
+    }
+  ]
+}

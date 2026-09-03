@@ -1,0 +1,84 @@
+{
+  "skill_name": "evidence-regression",
+  "evals": [
+    {
+      "id": "prove-old-path-unchanged",
+      "name": "改代码之前：怎么证明老流程没变",
+      "kind": "behavior",
+      "prompt": "路线确认了，走证据回归。改动还没开始写：偏远附加按省份查表，新逻辑将在 FreightCalc.calc 入口分流。老路径的主要分支：首重、续重（按 1kg 取整）、vip 续重打五折、区域加价、货到付款加 2 元。需求句：1 当目的地省份在偏远省份表中时加该省附加（例：模板 1032 新疆 3.2kg → 26）；2 不在表中不加（例：模板 1032 广东 3.2kg → 18）。工作机上有 Arthas，返回值里有 traceId 和 calcTime。怎么证明改完之后老流程一点没变、新流程是对的？你看不到代码，按规程写。",
+      "expected_trigger": true,
+      "expected_output": "样本清单覆盖两条需求句和五个老路径分支，每条标场景名并分新老类别；改前用 Arthas 采集，规整掉 traceId、calcTime；仓内布局 request/approved 一对一加回放测试类；老类别逐字节比母版、新类别比需求翻译期望值；影子流量做不做写理由；三样同一 PR 入仓；请主人否样本。",
+      "files": [],
+      "assertions": [
+        { "name": "samples-cover-sentences-and-branches", "description": "样本清单覆盖了两条需求句和首重、续重、vip、区域加价、货到付款五个老路径分支，每条有场景名，并标了新类别 / 老类别。" },
+        { "name": "capture-before-change-with-normalization", "description": "明确母版在改代码之前采（Arthas 或日志），并写了规整规则：去掉 traceId、calcTime 一类噪声字段。" },
+        { "name": "old-byte-equal-new-expected", "description": "老类别写的是与母版逐字节一致，新类别写的是与需求翻译的期望值（26、18）一致，两类分开。" },
+        { "name": "repo-files-same-pr", "description": "母版文件、回放测试、比对结果放在代码仓同一个 PR 的布局里，没有提测试平台。" },
+        { "name": "waits-for-veto", "description": "请主人否样本覆盖与规整规则；没有开始采集、没有写测试代码、没有写文件。" }
+      ]
+    },
+    {
+      "id": "forgot-to-capture-before",
+      "name": "改完了才想起没采母版",
+      "kind": "behavior",
+      "prompt": "走证据回归。偏远附加的改动已经写完合到分支上了，分流开关 remote_fee_by_province 还关着，老路径 diff 为零已静态验。但是改之前忘了采母版。现在怎么办？你看不到代码，按规程写。",
+      "expected_trigger": true,
+      "expected_output": "不把改后输出当母版；指出开关关着即老路径（老路径 diff 为零），先在开关关闭状态下采母版，再开开关回放比对；或从老版本代码采。其余步骤照旧，请主人否样本。",
+      "files": [],
+      "assertions": [
+        { "name": "refuses-post-change-master", "description": "明确说不能拿改后的输出当母版（那是自己比自己）。" },
+        { "name": "uses-closed-toggle-as-before", "description": "给出的办法是在分流开关关闭状态下采母版（老路径 diff 为零所以等于改前），或用老版本代码采。" },
+        { "name": "waits-for-veto", "description": "请主人否样本；没有开始采集、没有写文件。" }
+      ]
+    },
+    {
+      "id": "rollout-question",
+      "name": "近似案例：问的是灰度放量（应由 release-observe 承担）",
+      "kind": "trigger",
+      "prompt": "偏远附加的改动预发联调过了。怎么灰度？第一档放谁、出问题怎么回滚？你看不到代码。",
+      "expected_trigger": false,
+      "expected_output": "不进证据回归。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://evidence-regression，没有输出样本清单与母版布局。" }
+      ]
+    },
+    {
+      "id": "unit-test-request",
+      "name": "近似案例：普通单测请求（不是母版回放）",
+      "kind": "trigger",
+      "prompt": "帮我给这个函数写几个单元测试。自足练习，不要去工作区找文件：\n\n```ts\nexport function sum(xs: number[]): number {\n  return xs.reduce((a, b) => a + b, 0);\n}\n```",
+      "expected_trigger": false,
+      "expected_output": "直接写单测；不谈母版、Arthas、逐字节比对。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://evidence-regression，没有输出母版 / 回放 / 影子流量。" },
+        { "name": "no-workspace-lookup", "description": "没有去工作区查找、读取或修改任何真实文件。" }
+      ]
+    },
+    {
+      "id": "incoming-requirement",
+      "name": "近似案例：外来需求（应由 requirement-insight 承担）",
+      "kind": "trigger",
+      "prompt": "来了个需求，产品 A 说「运费模板要支持按省份设偏远附加」。这个需求到底要什么？你看不到代码。",
+      "expected_trigger": false,
+      "expected_output": "不进证据回归。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://evidence-regression。" }
+      ]
+    },
+    {
+      "id": "plain-question",
+      "name": "讲解 Approval Testing 本身的知识问答不触发",
+      "kind": "trigger",
+      "prompt": "Golden Master 测试和 Approval Testing 是一回事吗？",
+      "expected_trigger": false,
+      "expected_output": "直接回答，不进入规程。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://evidence-regression。" }
+      ]
+    }
+  ]
+}
