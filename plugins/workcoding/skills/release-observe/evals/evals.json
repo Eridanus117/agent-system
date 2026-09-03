@@ -1,0 +1,85 @@
+{
+  "skill_name": "release-observe",
+  "evals": [
+    {
+      "id": "rollout-plan-with-toggle",
+      "name": "有分流开关的改动怎么灰度",
+      "kind": "behavior",
+      "prompt": "路线确认了，预发联调过了，现在走发布与观测。改动：偏远附加按省份查表，分流条件是「模板配置了偏远省份表」，开关叫 remote_fee_by_province，老路径 diff 为零已静态验。配置中心支持百分比和黑白名单。需求句：1 当目的地省份在模板的偏远省份表中时，系统应在基础运费上加该省份的附加金额（例：模板 1032 新疆 3.2kg → 26）；2 当目的地省份不在表中时，系统应不加附加（例：模板 1032 广东 3.2kg → 18）。怎么灰度？你看不到代码，按规程写。",
+      "expected_trigger": true,
+      "expected_output": "放量三档（白名单测试模板 → 百分比 → 全量）各写放谁停多久；回滚即关 remote_fee_by_province，写明前提老路径 diff 为零；每条需求句一个观测点加老路径四个黄金信号；演示用模板 1032 新疆打一条期望 26；请主人裁定档 1，不开开关。",
+      "files": [],
+      "assertions": [
+        { "name": "three-tiers-with-who-and-how-long", "description": "三档放量各写了放谁、停多久，顺序是白名单 → 百分比 → 全量（或等价）。" },
+        { "name": "rollback-is-toggle-off", "description": "回滚动作写的是关 remote_fee_by_province，不是回滚代码，并提到老路径 diff 为零这个前提。" },
+        { "name": "one-observation-per-sentence", "description": "两条需求句各配了一个观测点（命中数 / 抽样比对 / 异常数），老路径列了延迟、流量、错误、饱和四个信号。" },
+        { "name": "smoke-with-example", "description": "演示用需求翻译的例子（模板 1032 新疆 3.2kg，期望 26）在档 1 放开后打一条。" },
+        { "name": "owner-decides-no-toggle", "description": "请主人裁定档 1 放谁并说每档都等主人；没有自己开开关、没有写文件。" }
+      ]
+    },
+    {
+      "id": "no-toggle-system",
+      "name": "没有开关系统的环境怎么发布（降级为两档）",
+      "kind": "behavior",
+      "prompt": "走发布与观测。这是我自己的小工具 fizzbuzz-report，没有配置中心也没有开关系统，改动是给报表加了一列「偏远附加」，新逻辑在入口按环境变量 REMOTE_FEE=on 分流，老路径没动。需求句只有一条：当 REMOTE_FEE=on 时，报表应多出「偏远附加」列（例：跑一次报表 → 表头含该列）。怎么发布？自足练习，不要去工作区找文件。",
+      "expected_trigger": true,
+      "expected_output": "指出没有开关系统时用环境变量当开关，放量退化为开/关两档并标为假设或待裁定；回滚即把 REMOTE_FEE 关掉；一条需求句一个观测点；演示用例子跑一次报表看表头；请主人裁定。",
+      "files": [],
+      "assertions": [
+        { "name": "degrades-to-two-tiers", "description": "明确说没有开关系统时环境变量当开关、放量退化为开/关两档，并标注这是降级或待裁定。" },
+        { "name": "rollback-is-toggle-off", "description": "回滚是把 REMOTE_FEE 关掉，不是回滚代码。" },
+        { "name": "one-observation-per-sentence", "description": "那条需求句配了观测点（表头含该列 / 报表异常数）。" },
+        { "name": "owner-decides-no-toggle", "description": "请主人裁定；没有自己去改环境变量、没有写文件。" },
+        { "name": "no-workspace-lookup", "description": "没有去工作区查找、读取或修改任何真实文件。" }
+      ]
+    },
+    {
+      "id": "integration-question",
+      "name": "近似案例：问的是接入顺序与联调（应由 integration 承担）",
+      "kind": "trigger",
+      "prompt": "偏远附加的代码写完了，怎么接进运费服务？先合代码还是先加表？预发怎么联调？你看不到代码。",
+      "expected_trigger": false,
+      "expected_output": "不进发布与观测：问的是接入顺序与联调，放量还没到。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://release-observe，没有输出放量三档与回滚点。" }
+      ]
+    },
+    {
+      "id": "golden-master-question",
+      "name": "近似案例：证明老流程没变（应由 evidence-regression 承担）",
+      "kind": "trigger",
+      "prompt": "改代码之前我想把一批真实请求的出入参录下来，改完回放比对，证明老流程一点没变。该怎么采、存哪？你看不到代码。",
+      "expected_trigger": false,
+      "expected_output": "不进发布与观测：这是仓内母版回放，不是线上放量。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://release-observe，没有输出放量与回滚方案。" }
+      ]
+    },
+    {
+      "id": "plain-question",
+      "name": "讲解四个黄金信号本身的知识问答不触发",
+      "kind": "trigger",
+      "prompt": "Google SRE 说的四个黄金信号是哪四个？",
+      "expected_trigger": false,
+      "expected_output": "直接回答，不进入规程。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://release-observe。" }
+      ]
+    },
+    {
+      "id": "slo-design-request",
+      "name": "近似案例：要的是 SLO 与错误预算设计（不在本规程里）",
+      "kind": "trigger",
+      "prompt": "帮我给运费计算接口定 SLO 和错误预算：可用性目标定多少、预算烧完了怎么办。自足练习，不对应真实系统。",
+      "expected_trigger": false,
+      "expected_output": "直接给 SLO 设计或说明那是长期运维形态，不输出灰度三档。",
+      "files": [],
+      "assertions": [
+        { "name": "not-triggered", "description": "没有读取 skill://release-observe，没有把 SLO 问题改写成放量三档。" }
+      ]
+    }
+  ]
+}
