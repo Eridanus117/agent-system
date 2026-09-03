@@ -23,7 +23,7 @@
 3. `openspec/changes/`：待审、实施和交付证据；只有按生命周期同步或归档后才改变长期规范；
 4. ~~`_bmad-output/`：迁移输入和历史证据，完成覆盖核验后退役~~ —— **2026-09-02 已整体删除**，覆盖核验永不发生（理由见上方推翻说明）。权威结构现为上述三层。
 
-当任务落在本仓时，先读取仓库根 `README.md` 与（现仅作历史索引的）`_archive/authority/00-map.md`，再按模式继续：
+当任务落在本仓时，先读取仓库根 `README.md` 与 `AGENTS.md` 的当前权威声明，再按模式继续（`_archive/authority/00-map.md` 只是历史索引，不再必读）：
 
 1. 负责人明确激活公开、自足的 GitHub Issue：读取远端当前正文、状态、标签和明确引用，只在合同授权范围内实施并验证。版本化变更通过可核验 PR 交付；只读研究通过自足证据评论交付。
 2. Issue 带 `迁移索引/待分诊` 标签：默认只分诊和只读核验，不从旧正文、私有评论或开放状态恢复授权。
@@ -34,10 +34,6 @@ Session 职责由负责人当前指令、公开自足合同和写入所有权决
 ## 知识按名问路
 
 需要 Windows／GitHub 多行 Markdown 或长路径／文件锁知识时，可在仓库根运行 `python tools/knowledge_action_trigger/action_trigger.py --action github-multiline-markdown` 或 `--action windows-path-or-file-lock`，再按输出读取来源。这是问路查询，不扩大合同、权限或产品决定。
-
-## BMad 下一步推荐规范
-
-本仓内任何 BMad 技能／workflow 给出"下一步用哪个技能"的推荐时（例如 Finalize 阶段的 Common next、`bmad-help` 的建议），必须同时明确说明该下一步应该开新 session 还是可以接着当前 session 继续，不能只报技能名、把 session 连续性留空。
 
 ## GitHub 安全引用
 

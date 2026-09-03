@@ -2,7 +2,7 @@
 
 # Skill 目录页
 
-一个 skill 一个目录：`plugins/<plugin>/skills/<skill>/SKILL.md`，旁边可放 `evals/evals.json`。装配用 `tools/sk`（profile 即文件夹里的 junction）。
+一个 skill 一个目录：`plugins/<plugin>/skills/<skill>/SKILL.md`，旁边可放 `evals/evals.json`。装配用 `sk`（源码 `packages/sk`；profile 即文件夹里的 junction）。
 
 共 17 个 Skill，10 个 Plugin。
 

@@ -3,8 +3,8 @@ schema: delivery-change
 context: |
   本仓维护可公开复用的 Agent 系统原则、协议、合同、Plugin、profile 装配和验证工具。
   OpenSpec Change、长期 capability specs 与交付证据保存在本仓，不使用外置私人 Spec 仓。
-  后续产品权威收敛到 openspec/specs/ 与仓内版本化文档；_bmad-output/ 仅作为迁移完成前的
-  临时现状来源和历史证据，不再新增长期权威，完成覆盖核验前不得提前删除。
+  产品权威收敛到 openspec/specs/ 与仓内版本化文档；_bmad-output/ 已于 2026-09-02 整体删除，
+  不再作为任何权威或迁移来源。
   新持久实现使用 Go、Python、TypeScript 或 Rust；当前控制面基线为 TypeScript/Bun。
   人工审阅产物使用中文；机器 slug、JSON 字段、命令、路径和配置键保持稳定英文标识。
   公开仓不得保存个人状态、私人研究原文、账号、凭据、环境秘密或其他信任域真实资产。
@@ -19,7 +19,7 @@ rules:
   technical-current:
     - 区分声明态、配置态和实际生效态，记录版本、接口、失败语义与可复现证据
   change-plan:
-    - 说明 OpenSpec 与仓内文档的权威落位、BMad 迁移覆盖、范围、非目标、回滚边界和公开仓信息边界
+    - 说明 OpenSpec 与仓内文档的权威落位、范围、非目标、回滚边界和公开仓信息边界
   test-plan:
     - 覆盖合同、跨客户端实际生效态、失败路径和回滚；没有前后证据时不得声称行为改善
   tasks:

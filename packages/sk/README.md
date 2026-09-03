@@ -42,7 +42,7 @@ sk version                    版本（release 产物显示 tag 版本，源码�
 
 ## 约定
 
-- 特殊 profile：`all`（全部技能）、`general`（通用兜底，由主人策展）。
+- 特殊 profile：`all`（全部技能）。此前的 `general` 为空 profile，已于 2026-09-03 删除。
 - 成套框架类技能组按原子组进出（`@组名`），不单挑。
 - junction 与 overlay.yml 不入 git（`profiles/.gitignore`）；manifest.json 入 git，换机器后 `sk restore <profile>`——`sk run` 检测到链接全缺且 manifest 非空时也会自动 restore，绝不静默清空 manifest。
 - 同名冲突：`sk add` 遇到跨组同名技能会拒绝并列出双方，`sk list` 会标记 ⚠。
