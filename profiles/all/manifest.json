@@ -5,6 +5,10 @@
       "target": "plugins/adaptive-problem-solving/skills/adaptive-problem-solving"
     },
     {
+      "name": "clarify",
+      "target": "plugins/clarify/skills/clarify"
+    },
+    {
       "name": "evidence-regression",
       "target": "plugins/workcoding/skills/evidence-regression"
     },
