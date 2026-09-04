@@ -55,6 +55,7 @@ Session 的职责由负责人当前明确指令、公开自足的 Issue 合同�
 
 ## 文件职责
 
+- `docs/adr/`：架构决策记录（ADR，MADR 模板），有备选要比较、决定会比代码活得久的改动在此留一份；小改动只按 `.github/PULL_REQUEST_TEMPLATE.md` 写 PR 正文（2026-09-04 负责人裁定）；
 - `_archive/`：历史资产归档根，2026-08-23 起承载已降级但仍保留证据价值的旧目录，各子路径与原根路径同名（`_archive/authority/`、`_archive/knowledge/`、`_archive/docs/`、`_archive/src/agent_system/`），git 历史随 `git mv` 保留；
 - `_archive/authority/`：**历史资产（2026-08-22 起降级，见上方"开始工作"的权威变更；2026-08-23 起物理归档于此）**，曾保存版本化产品政策；正文不再是当前产品政策来源，只作历史证据；当前产品政策见 `AGENTS.md` 的当前权威声明（`_bmad-output/` 已于 2026-09-02 删除）；
 - `_archive/knowledge/`：**历史资产（2026-08-22 起降级；2026-08-23 起物理归档于此）**，通过价值门与可信门的公共知识包与检索卡，覆盖 Windows 运维（长路径、文件锁）、GitHub 引用与 PowerShell 多行正文等已验证陷阱；技术性内容仍可参考，但不再作为产品政策或流程权威；入口表见 [`_archive/knowledge/README.md`](./_archive/knowledge/README.md)；
