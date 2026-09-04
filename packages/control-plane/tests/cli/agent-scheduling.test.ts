@@ -326,9 +326,10 @@ describe('agent scheduling CLI', () => {
     const result = await run(['schedule', 'create', '--agent', 'omp', '--revision', 'rev-1', '--trigger', 'bad:value', '--target', 'repo:src', '--session-policy', 'fresh', '--dry-run'], { databasePath, registry, now: () => now });
     expect(result.code).toBe(1);
     expect(result.stderr).toBe('schedule error: invalid-trigger');
+    // SQLite WAL 的 -shm 只保存共享内存锁状态，只读连接可更新锁字节；主库和 -wal 才是这里需要保护的数据内容。
     for (const [index, filePath] of paths.entries()) {
       expect(existsSync(filePath)).toBe(before[index] !== null);
-      if (before[index] !== null) expect(readFileSync(filePath).equals(before[index]!)).toBe(true);
+      if (index < 2 && before[index] !== null) expect(readFileSync(filePath).equals(before[index]!)).toBe(true);
     }
   });
 

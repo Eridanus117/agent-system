@@ -5,6 +5,10 @@
       "target": "plugins/adaptive-problem-solving/skills/adaptive-problem-solving"
     },
     {
+      "name": "architecture-design",
+      "target": "plugins/workcoding/skills/architecture-design"
+    },
+    {
       "name": "evidence-regression",
       "target": "plugins/workcoding/skills/evidence-regression"
     },
