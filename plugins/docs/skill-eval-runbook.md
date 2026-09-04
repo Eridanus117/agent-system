@@ -61,8 +61,8 @@ omp -p --no-session --skills=<skill> --model <model> "只回答：你当前可�
 
 ```bash
 # 跑之前
-for r in agent-system delivery-spec-runtime knowledge desk; do (cd C:/Workspace/$r && git status --short); done
-for w in C:/Workspace/worktrees/*/*; do (cd "$w" && git status --short); done
+for r in agent-system delivery-spec-runtime knowledge desk work-spec; do (cd "/Users/a123/workspace-v2/$r" && git status --short); done
+for w in /Users/a123/workspace-v2/worktrees/*/*; do (cd "$w" && git status --short); done
 
 # 跑之后重跑一遍，逐行比对；出现新增或修改立即回滚
 ```

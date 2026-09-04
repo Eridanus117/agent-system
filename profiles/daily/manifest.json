@@ -1,8 +1,12 @@
 {
   "skills": [
     {
-      "name": "clarify",
-      "target": "plugins/clarify/skills/clarify"
+      "name": "note",
+      "target": "plugins/note/skills/note"
+    },
+    {
+      "name": "requirement-translation",
+      "target": "plugins/workcoding/skills/requirement-translation"
     },
     {
       "name": "evidence-regression",
@@ -13,28 +17,24 @@
       "target": "plugins/workcoding/skills/integration"
     },
     {
+      "name": "clarify",
+      "target": "plugins/clarify/skills/clarify"
+    },
+    {
       "name": "legacy-change",
       "target": "plugins/workcoding/skills/legacy-change"
-    },
-    {
-      "name": "note",
-      "target": "plugins/note/skills/note"
-    },
-    {
-      "name": "release-observe",
-      "target": "plugins/workcoding/skills/release-observe"
     },
     {
       "name": "requirement-insight",
       "target": "plugins/workcoding/skills/requirement-insight"
     },
     {
-      "name": "requirement-translation",
-      "target": "plugins/workcoding/skills/requirement-translation"
-    },
-    {
       "name": "system-analysis",
       "target": "plugins/workcoding/skills/system-analysis"
+    },
+    {
+      "name": "release-observe",
+      "target": "plugins/workcoding/skills/release-observe"
     },
     {
       "name": "workcoding",
