@@ -5,20 +5,22 @@ description: 把当前对话的探索结论沉淀进本地 Markdown 知识库。
 
 # 沉淀到知识库
 
-知识库是纯 Markdown + git 的内容仓，**没有工具链依赖**。当前实例：
+知识库正文是纯 Markdown + git；Rhizome/Memex 负责全局召回和关系投影，`index.md` 负责人工导航与故障降级，正文是事实源。当前实例：
 
-- **个人知识库**：`C:\Workspace\knowledge`
-- （工作知识库建立后在此登记）
+- **个人知识库**：当前工作区根目录下的 `knowledge/`
+- **工作知识库**：当前工作区根目录下的 `logistics-kb/`
 
+路径随工作区根目录变化，不写死盘符、用户名或机器绝对路径；需要绝对路径时先读当前工作区的 `WORKSPACE.md`。
+
+索引服务不可用时仍可直接维护 Markdown；同步失败必须显式记录，不能丢失正文。
 只沉淀耐用的东西：结论、关键证据或推理、未解决的疑问。过程性试错、任务状态、TODO 不进知识库。
 
-**写入前先判定归属**（细则见目标库 `rules/核心规则.md` 的「知识的归属」）：项目局部知识写项目自己的仓，不进知识库；项目死了仍有价值的才进；拿不准留项目仓，第二次用到再晋升；工作/雇主语境 → 工作库，通用 → 个人库。
-
-**写入规范以目标库的 `AGENTS.md` → `rules/核心规则.md` 为准**：先检索后合并、description/keywords frontmatter、中文文件名、同步维护 index.md、pre-commit 校验报错就修不许绕过。
+**写入前先判定归属**（细则见目标库 `rules/核心规则.md`）：项目局部知识写项目自己的仓，不进知识库；可迁移的通用知识进个人库；物流工作语境进工作库；拿不准留项目仓，第二次用到再晋升。
+**写入规范以目标库的 `AGENTS.md` → `rules/核心规则.md` 为准**：优先用 Rhizome/Memex 召回候选，再读 `index.md` 和正文核实；工具不可用时退回同义词检索；合并或新建后更新 `index.md` 并同步索引。
 
 ## 旧世界（只读，不写入）
 
-`C:\Users\Morni\workspace\knowledge\`（llm-kb 等领域仓）和 `C:\Users\Morni\personal\knowledge\orrery-kb\` 是已退役的旧知识库，连同 rhizome / memex / kb 工具链一起废弃。不要往里写、不要调用那些命令；可以只读参考——仍然有效的结论摘出来写成新笔记（注明来源路径），旧文件保持原样。
+`C:\Users\Morni\workspace\knowledge\`（llm-kb 等旧领域仓）和 `C:\Users\Morni\personal\knowledge\orrery-kb\` 是旧知识库内容，保持只读参考；不要把旧路径当作当前知识库，也不要把 Rhizome/Memex 当作退役工具。
 
 ## 收尾
 

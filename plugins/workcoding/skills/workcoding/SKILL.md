@@ -1,7 +1,7 @@
 ---
 name: workcoding
 description: >-
-  主人接到外来需求、要改一段既有代码、要出技术方案、要发布、或要证明改动没改坏老逻辑时先起它：判形状、摆一条路线、等主人确认，再交给对应的规程 skill（requirement-insight / requirement-translation / system-analysis / legacy-change / integration / release-observe / evidence-regression）。触发语「来了个需求」「帮我改 X」「出个方案」「怎么灰度」「怎么证明老流程没变」「查个数」。只做路由：不放步骤、不读源码、不写文件。不用于「我想建个工具」类痒点（那是 clarify），不用于已在某条规程里跑着的活（不回头重摆路线）。Route incoming work (a requirement, a change to existing code, a release) to the right procedure skill: judge the shape, lay out one route, wait for confirmation. Routing only; writes nothing. Not for "I want to build X" itches (that is clarify).
+  主人接到外来需求、既有代码改动、既有系统新能力设计、发布或回归证明时先起它：判形状、摆路线、等主人确认，再交给 requirement-insight / requirement-translation / architecture-design / system-analysis / legacy-change / integration / release-observe / evidence-regression。触发「来了个需求」「帮我改 X」「出个方案」「设计新能力」「怎么灰度」「怎么证明老流程没变」「查个数」。只做路由，不读源码、不写文件；不用于主人自建工具痒点（clarify）或已在规程中的活。Route incoming work to the right procedure skill; judge shape, propose one route, and wait for confirmation. Routing only; writes nothing.
 ---
 
 # 先摆路线，再动手
@@ -32,7 +32,7 @@ description: >-
 
 | 工位 | 干什么 | 判据 |
 |---|---|---|
-| **1 判形状** | 四选一：改既有代码 / 从零新建 / 查数 / 只改规则或文档 | 看输入的动词落在哪：要动既有行为 → 改既有代码；没有既有行为可动 → 从零新建；要的是一个数或一个判断 → 查数；只动文字规则 → 只改规则或文档 |
+| **1 判形状** | 五选一：改既有代码 / 设计既有系统上的新能力 / 从零新建 / 查数 / 只改规则或文档 | 看输入的动词落在哪：要动既有行为 → 改既有代码；要在既有系统上决定新能力的模型或承载方式 → 架构设计；没有既有行为可动 → 从零新建；要的是一个数或一个判断 → 查数；只动文字规则 → 只改规则或文档 |
 | **2 摆路线** | 按形状列要走的 skill，含跳过的与理由 | 路线表见下。写死的跳过判据只有一条：`system-analysis` 在影响草图一跳内只有一个调用方时跳过（2026-09-02 首次预演发现 4，PR #33 用过）。其余跳过都要写理由并等主人确认 |
 | **3 等确认** | 一段话摆出来，停 | 主人点头才交棒；主人否则改路线重摆，原摆的那版留着 |
 | **4 交棒** | 读对应规程 skill，从它第 1 步开始 | 交棒后本 skill 退场，同一条改动里不再回头重摆路线 |
@@ -42,14 +42,15 @@ description: >-
 | 形状 | 路线 |
 |---|---|
 | 改既有代码 | requirement-insight → requirement-translation → (system-analysis，摆改法卡住时) → legacy-change → integration → evidence-regression → release-observe |
-| 从零新建 | requirement-insight → requirement-translation → 暂无规程（6.4.4 / 6.4.5 塑造系统是已知缺口）：说明后临场做，把做法记进改动记录 |
+| 设计既有系统上的新能力 | requirement-insight → requirement-translation → architecture-design；若确认后同一改动继续写代码，再进入 legacy-change → integration → evidence-regression → release-observe |
+| 从零新建 | requirement-insight → requirement-translation → architecture-design；确认后进入实现；从零实现的专用规程仍未建，临场做并把做法记进改动记录 |
 | 查数 | system-analysis 一次，出一行数加置信度，不进后面的 skill |
 | 只改规则或文档 | 不走技术 skill，改完直接留 |
 
 ## 产出：一段话，没有别的
 
 ```
-形状｜这是〈改既有代码 / 从零新建 / 查数 / 只改规则或文档〉——<主人原话里的对象>
+形状｜这是〈改既有代码 / 设计既有系统上的新能力 / 从零新建 / 查数 / 只改规则或文档〉——<主人原话里的对象>
 路线｜<skill 顺序>；跳过 <哪条>，因为 <一句>
 理由｜<一句>
 请确认这条路线；否了我改。
@@ -63,8 +64,7 @@ description: >-
 
 | 关注点 | 用哪些 skill | 完成判据 |
 |---|---|---|
-| 拆 | requirement-insight、requirement-translation、system-analysis | 每个系统用例有 EARS 句加例子；改动点清单成文 |
-| 方案 | legacy-change 第 1、2 步、release-observe 第 1–3 步 | 现状 / 改法 / 灰度 / 可观测 / 发布五节齐，主人否过 |
+| 方案 | architecture-design；legacy-change 第 1、2 步；release-observe 第 1–3 步 | 现状 / 改法 / 灰度 / 可观测 / 发布五节齐，主人否过 |
 | 做 | legacy-change 第 4 步、integration | 老路径 diff 为零；集成面与顺序成文；联调过 |
 | 证 | evidence-regression、requirement-translation 第 6 步、release-observe 第 3、4 步 | 母版回放通过；例子变的测试通过；灰度样本比对无异常 |
 
@@ -81,7 +81,7 @@ description: >-
 | 相邻 | 它管什么 | 分界（可测） |
 |---|---|---|
 | **`clarify`** | 主人自己冒出的「我想建个 X」痒点 | **来源**：痒点来自主人自己 → clarify；活来自外面（产品、业务、同事）或对象是既有代码 → workcoding |
-| **七条规程 skill** | 各自的步骤 | **时机**：路线确认之前是 workcoding；之后是规程的事，workcoding 不再出现 |
+- **各规程 skill** | 各自的步骤 | **时机**：路线确认之前是 workcoding；之后是规程的事，workcoding 不再出现 |
 | **`adaptive-problem-solving`** | 执行途中的停滞、换路、交接 | **时机**：活已在某条规程里跑着才卡住的，不回路由 |
 | 普通知识问答 | 「EARS 有哪五种句式」 | 没有要动的对象，直接答 |
 

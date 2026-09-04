@@ -1,4 +1,4 @@
-{"type":"session","cwd":"C:\\Temp\\wc-eval\\workcoding\\cwd\\mid-procedure-stall-with_skill","timestamp":"2026-09-03T00:21:21.506Z"}
+{"type":"session","cwd":"<temp-root>/wc-eval\\workcoding\\cwd\\mid-procedure-stall-with_skill","timestamp":"2026-09-03T00:21:21.506Z"}
 {"type":"message","role":"user","content":[{"text":"我在做一个叫 fizzbuzz-report 的小工具，路线早就确认过、走到 legacy-change 的第 4 步「建」了。分流判断放在入口之后集成测试连续三次超时。要不要放弃分流、直接改老代码？"}]}
 {"type":"tool_execution_start","tool":"read","args":{"path":"skill://legacy-change"},"intent":"读取遗留代码变更规程"}
 {"type":"tool_execution_end","tool":"read","isError":false,"result_head":"---\nname: legacy-change\ndescription: 改一段复杂既有代码时用（注释与实现不符、分支上百）：带真实入参走读并写特征化测试、摆改法、主人否、新代码只新增并在入口一处分流、老路径 diff 为零、静态验、留。这是 Feathers 遗留代码修改流程。触发语「帮我改 X」「加个逻辑」「改一下这段」。由 workcoding 路由进入。\n---\n\n# 遗留代码修改\n\nagent 改一段注释与实现对不上、圈复杂度上百的代码时，先带一条真实请求走读并摆出现状，人否掉之后再以「新增不改、入口分流」的方式动手。这套走法不是自创，逐步对应 Michael Feathers《修改"}

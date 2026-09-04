@@ -5,13 +5,13 @@
       "id": "incoming-requirement",
       "name": "工作里来了一个外来需求",
       "kind": "behavior",
-      "prompt": "来了个需求：运费模板要支持按省份设偏远附加。",
+      "prompt": "来了个需求：fizzbuzz-report 要支持按类别设置一个可选附加项。",
       "expected_trigger": true,
-      "expected_output": "自动起 workcoding；判形状（改既有代码）并点名「运费模板」「按省份设偏远附加」；摆一条路线；停下等主人确认。不写代码、不建文件、不开始需求洞察的第 1 步。",
+      "expected_output": "自动起 workcoding；判形状（改既有代码）并点名「fizzbuzz-report」「按类别设置可选附加项」；摆一条路线；停下等主人确认。不写代码、不建文件、不开始需求洞察的第 1 步。",
       "files": [],
       "assertions": [
         { "name": "auto-trigger", "description": "未被显式点名，仅凭 description 自动加载 workcoding。" },
-        { "name": "shape-with-real-object", "description": "输出里有一句形状判断（改既有 / 从零新建 / 查数 / 只改规则或文档），且那句写的是主人原话里的对象（运费模板、按省份的偏远附加），不是 X、该模块一类占位符。" },
+        { "name": "shape-with-real-object", "description": "输出里有一句形状判断（改既有 / 从零新建 / 查数 / 只改规则或文档），且那句写的是主人原话里的对象（fizzbuzz-report、按类别的可选附加项），不是 X、该模块一类占位符。" },
         { "name": "route-listed", "description": "列出一条路线：要走的 skill 或规程的顺序；若跳过某条，写了理由。" },
         { "name": "waits-for-confirmation", "description": "明确请主人确认路线后再动；没有开始任何规程的第 1 步（没备三个问题、没写 EARS 句、没走读代码）。" },
         { "name": "no-artifact-written", "description": "没有写任何文件。" }
@@ -21,13 +21,13 @@
       "id": "modify-existing-code",
       "name": "「帮我改 X」形式的既有代码改动",
       "kind": "behavior",
-      "prompt": "帮我改一下 FreightCalc.calc：目的地是新疆或西藏时，运费在原来的基础上加一笔偏远附加。这个类在我们的运费服务里，你现在看不到代码。",
+      "prompt": "帮我改一下 ReportBuilder.build：当输出类别是 alpha 或 beta 时，在原结果基础上增加一个可选附加项。这个类在我们的报告服务里，你现在看不到代码。",
       "expected_trigger": true,
-      "expected_output": "自动起 workcoding；判为改既有代码，形状那句点名 FreightCalc.calc 与偏远附加；摆路线（含 legacy-change）；停下等确认，不试图去找代码、不直接写改法。",
+      "expected_output": "自动起 workcoding；判为改既有代码，形状那句点名 ReportBuilder.build 与可选附加项；摆路线（含 legacy-change）；停下等确认，不试图去找代码、不直接给改法。",
       "files": [],
       "assertions": [
         { "name": "auto-trigger", "description": "仅凭 description 自动加载 workcoding。" },
-        { "name": "shape-with-real-object", "description": "形状判为改既有代码，且那句写的是 FreightCalc.calc 与偏远附加，不是占位符。" },
+        { "name": "shape-with-real-object", "description": "形状判为改既有代码，且那句写的是 ReportBuilder.build 与可选附加项，不是占位符。" },
         { "name": "route-includes-legacy-change", "description": "路线里有 legacy-change（或「遗留代码修改」「Feathers 流程」），且它排在需求洞察与需求翻译之后。" },
         { "name": "waits-for-confirmation", "description": "请主人确认路线后再动；没有直接给改法、没有走读、没有去找代码。" },
         { "name": "no-artifact-written", "description": "没有写任何文件。" }
@@ -37,15 +37,29 @@
       "id": "count-query",
       "name": "「查个数」形状：只起一次系统分析",
       "kind": "behavior",
-      "prompt": "查个数：我们运费服务里调 FreightCalc.calc 的调用方有几个？这个改动我还没定要不要做，先要这个数。你现在看不到代码，先告诉我你打算怎么查。",
+      "prompt": "查个数：我们的报告服务里调 ReportBuilder.build 的调用方有几个？这个改动我还没定要不要做，先要这个数。你现在看不到代码，先告诉我你打算怎么查。",
       "expected_trigger": true,
       "expected_output": "自动起 workcoding；判为查数；路线只有 system-analysis 一次，明确说不进后面的 skill；停下等确认。",
       "files": [],
       "assertions": [
         { "name": "auto-trigger", "description": "仅凭 description 自动加载 workcoding。" },
-        { "name": "shape-is-count", "description": "形状判为查数，且点名「调 FreightCalc.calc 的调用方有几个」。" },
+        { "name": "shape-is-count", "description": "形状判为查数，且点名「调 ReportBuilder.build 的调用方有几个」。" },
         { "name": "route-is-system-analysis-only", "description": "路线只有 system-analysis（或「系统分析」）一次，并说明不进遗留代码修改、集成、发布等后续规程。" },
         { "name": "waits-for-confirmation", "description": "请主人确认后再动；没有自己开始画影响草图或去找代码。" }
+      ]
+    },
+    {
+      "id": "design-existing-system-capability",
+      "name": "在既有系统上设计新能力",
+      "kind": "behavior",
+      "prompt": "先不要改代码。请为现有数据导出组件设计一项新能力，当前分支只是尝试，先从需求和 master 基线比较架构候选。",
+      "expected_trigger": true,
+      "expected_output": "判为设计既有系统上的新能力；路线包含 requirement-insight、requirement-translation、architecture-design；停下等主人确认，不读源码、不写方案文件。",
+      "files": [],
+      "assertions": [
+        { "name": "shape-is-architecture-design", "description": "形状明确为设计既有系统上的新能力，并点名数据导出组件能力。" },
+        { "name": "route-includes-architecture-design", "description": "路线包含 architecture-design，且排在代码修改规程之前。" },
+        { "name": "waits-for-confirmation", "description": "主人确认路线前不读源码、不写方案文件、不进入实现。" }
       ]
     },
     {

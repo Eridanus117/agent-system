@@ -1,0 +1,62 @@
+{
+  "skill_name": "architecture-design",
+  "evals": [
+    {
+      "id": "new-capability-in-legacy-system",
+      "name": "在既有系统上设计新能力",
+      "kind": "behavior",
+      "prompt": "先别改代码。我们要在现有数据导出组件上设计一项新能力，当前实现分支只是尝试。请按架构设计规程先摆出决定、基线、未知和候选，并对候选做攻防，最后停在主人确认。",
+      "expected_trigger": true,
+      "expected_output": "不把现有类型、表或分支当成答案；列出至少两个有取舍的候选；包含反对意见、失败后果和可逆性；明确主人确认前不实现。",
+      "files": [],
+      "assertions": [
+        { "name": "decision-first", "description": "先明确架构决定和范围，不先从代码字段推导答案。" },
+        { "name": "baseline-and-unknowns", "description": "区分现状事实、尝试分支和未决未知。" },
+        { "name": "real-alternatives", "description": "至少给出两个具有真实取舍的架构候选。" },
+        { "name": "adversarial-review", "description": "每个候选都有支持、反对、最大风险和可逆性。" },
+        { "name": "owner-gate", "description": "主人确认前不写代码、不扩字段、不建表、不把草案当正式规范。" },
+        { "name": "no-artifact-written", "description": "规程对话阶段不自行创建额外架构文件。" }
+      ]
+    },
+    {
+      "id": "tui-decision-card",
+      "name": "TUI 决策卡短回复",
+      "kind": "behavior",
+      "prompt": "我在 TUI 里不想打开文件复制方案。请把当前“是否把旧系统中的某个实现取值作为架构前提”的裁定做成一张短决策卡，我只想回复 C、D 或“查证 D-001，问题=…”。",
+      "expected_trigger": true,
+      "expected_output": "直接在对话中给出带编号的短决策卡，包含建议、选项、最大反对理由和短回复格式；不要求主人回文件复制内容；说明回复后的状态和确认边界。",
+      "files": [],
+      "assertions": [
+        { "name": "card-in-conversation", "description": "决策信息直接出现在当前对话，不要求打开或复制工作项文件。" },
+        { "name": "short-reply", "description": "支持单卡短回复、多卡编号回复、否决和查证请求。" },
+        { "name": "explicit-state", "description": "区分 confirmed、rejected、deferred、needs-evidence，未明确确认不进入实现。" }
+      ]
+    },
+    {
+      "id": "architecture-not-code-change",
+      "name": "架构设计不直接走代码修改",
+      "kind": "trigger",
+      "prompt": "帮我直接把 ReportBuilder.build 改成新的输出逻辑，架构还没讨论过。",
+      "expected_trigger": false,
+      "expected_output": "由 workcoding 判为架构设计并先确认路线，不能直接进入 legacy-change 或写代码。",
+      "files": [],
+      "assertions": [
+        { "name": "route-before-code", "description": "未有架构决定时不直接进入代码修改。" },
+        { "name": "no-code", "description": "不修改代码或创建实现文件。" }
+      ]
+    },
+    {
+      "id": "confirmed-architecture-implementation",
+      "name": "架构确认后的代码修改",
+      "kind": "trigger",
+      "prompt": "架构方案和契约已经由主人确认，现在按已确认方案修改 ReportBuilder.build，并保留老路径行为。",
+      "expected_trigger": false,
+      "expected_output": "交给 legacy-change，不重新展开架构候选，不在 architecture-design 中改代码。",
+      "files": [],
+      "assertions": [
+        { "name": "handoff-to-legacy-change", "description": "已确认架构后进入 legacy-change。" },
+        { "name": "no-relitigation", "description": "不重新发起架构候选攻防。" }
+      ]
+    }
+  ]
+}
