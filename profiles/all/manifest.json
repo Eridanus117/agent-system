@@ -9,6 +9,10 @@
       "target": "plugins/workcoding/skills/architecture-design"
     },
     {
+      "name": "clarify",
+      "target": "plugins/clarify/skills/clarify"
+    },
+    {
       "name": "evidence-regression",
       "target": "plugins/workcoding/skills/evidence-regression"
     },

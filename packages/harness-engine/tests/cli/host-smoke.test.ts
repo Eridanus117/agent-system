@@ -5,7 +5,7 @@ import type { ControlPlaneFacade } from '../../src/application/control-plane-por
 const facade: ControlPlaneFacade = {
   readConfigRevision: async () => { throw new Error('must not call facade'); },
   readAssemblyManifest: async () => { throw new Error('must not call facade'); },
-  probeClient: async () => { throw new Error('must not call facade'); },
+  probeAgent: async () => { throw new Error('must not call facade'); },
   prepareLaunch: async () => { throw new Error('must not call facade'); },
 };
 

@@ -5,15 +5,18 @@ import path from 'node:path';
 test('release workflow is registered, pinned, deterministic, and attested', async () => {
   const workflow = await readFile(path.resolve(import.meta.dir, '../../../../.github/workflows/release-configs.yml'), 'utf8');
   const lockfile = await readFile(path.resolve(import.meta.dir, '../../../../bun.lock'), 'utf8');
-  expect(workflow).toContain("pull_request:\n    branches:\n      - main");
+  // PR 门禁自 PR #41 起统一在 packages-checks.yml；release 工作流只在打 tag / 手动触发时跑。
+  expect(workflow).not.toContain('pull_request:');
+  const gate = await readFile(path.resolve(import.meta.dir, '../../../../.github/workflows/packages-checks.yml'), 'utf8');
+  expect(gate).toContain('package: [control-plane, harness-engine, sk]');
+  expect(gate).toContain('bun-version: 1.3.14');
   expect(workflow).toContain('workflow_dispatch:');
   expect(workflow).toContain('bun-version: 1.3.14');
   expect(lockfile).toContain('"packages/control-plane"');
-  expect(workflow.match(/run: bun install --frozen-lockfile/g)).toHaveLength(2);
+  expect(workflow.match(/run: bun install --frozen-lockfile/g)).toHaveLength(1);
   const topLevel = workflow.slice(0, workflow.indexOf('jobs:'));
   expect(topLevel).toContain('permissions:\n  contents: read');
   expect(topLevel).not.toContain('contents: write');
-  expect(workflow).toContain("if: github.event_name == 'pull_request'\n    permissions:\n      contents: read");
   expect(workflow).toContain("if: github.event_name == 'push'\n    permissions:\n      attestations: write\n      contents: write\n      id-token: write");
   expect(workflow).toContain('tag version $VERSION does not match package.json $PACKAGE_VERSION');
   expect(workflow).toContain('git merge-base --is-ancestor "$GITHUB_SHA" origin/main');

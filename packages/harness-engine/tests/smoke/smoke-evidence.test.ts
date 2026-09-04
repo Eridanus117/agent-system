@@ -12,6 +12,10 @@ const correlation = {
 };
 const windowsOnly = test.skipIf(process.platform !== 'win32');
 
+// 下面三条实跑测试只登记了 cmd.exe（见 src/smoke/evidence.ts 的 READ_ONLY_SUBCOMMANDS 白名单），
+// 非 Windows 平台没有 cmd.exe，按平台跳过；不为测试放宽产品侧白名单。
+const windowsOnly = test.skipIf(process.platform !== 'win32');
+
 describe('Stage 4 real smoke evidence', () => {
   test('returns not-available without invoking a transport when prerequisites are missing', async () => {
     let invoked = false;

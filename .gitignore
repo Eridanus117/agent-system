@@ -16,7 +16,7 @@ node_modules/
 .DS_Store
 WATCHDOG.yml
 
-# OpenSpec CLI-generated client projections; canonical contracts live in .cap.
+# OpenSpec CLI 生成的客户端投影，不入库（.cap/ 已于 2026-08-24 退役，此处只忽略投影）。
 .claude/commands/opsx/
 .omp/skills/openspec-*/
 .qoder/commands/opsx/
