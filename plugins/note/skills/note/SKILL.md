@@ -7,8 +7,10 @@ description: 把当前对话的探索结论沉淀进本地 Markdown 知识库。
 
 知识库正文是纯 Markdown + git；Rhizome/Memex 负责全局召回和关系投影，`index.md` 负责人工导航与故障降级，正文是事实源。当前实例：
 
-- **个人知识库**：`/Users/a123/workspace-v2/knowledge`
-- **工作知识库**：`/Users/a123/workspace-v2/logistics-kb`
+- **个人知识库**：当前工作区根目录下的 `knowledge/`
+- **工作知识库**：当前工作区根目录下的 `logistics-kb/`
+
+路径随工作区根目录变化，不写死盘符、用户名或机器绝对路径；需要绝对路径时先读当前工作区的 `WORKSPACE.md`。
 
 索引服务不可用时仍可直接维护 Markdown；同步失败必须显式记录，不能丢失正文。
 只沉淀耐用的东西：结论、关键证据或推理、未解决的疑问。过程性试错、任务状态、TODO 不进知识库。

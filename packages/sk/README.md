@@ -1,6 +1,6 @@
 # sk — skills profile 管理与启动
 
-背景与全部裁决史：`/Users/a123/workspace-v2/desk/提案/2026-08-26-Skills管理工具.md`。
+背景与全部裁决史：当前工作区根目录下的 `desk/提案/2026-08-26-Skills管理工具.md`。
 
 ## 安装
 

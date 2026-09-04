@@ -4,20 +4,32 @@
 
 ## 跑法（2026-09-02 改：隔离 HOME + 全量日志）
 
+本段命令使用 POSIX shell；macOS、Linux 和 Windows Git Bash 共用。先把 `WORKSPACE_ROOT` 设为包含 `agent-system`、`desk`、`knowledge` 等目录的工作区根目录；不要把盘符、用户名或机器绝对路径写进评测。
+
 ```bash
 # 一次性准备：空 HOME、关记忆的 config 覆盖
-mkdir -p C:/Temp/fakehome/.claude/skills
-printf 'autolearn:\n  enabled: false\nmemory:\n  backend: off\nadvisor:\n  enabled: false\n' > overlay.yml
-# with_skill 需要把被测 SKILL.md 拷到 C:/Temp/fakehome/.claude/skills/<skill>/（拷工作树里的那份，不是安装副本）
+export WORKSPACE_ROOT="${WORKSPACE_ROOT:?请先设置工作区根目录}"
+export PI_CODING_AGENT_DIR="${PI_CODING_AGENT_DIR:-$HOME/.omp/agent}"
+export EVAL_HOME="${EVAL_HOME:-$(mktemp -d "${TMPDIR:-/tmp}/skill-eval.XXXXXX")}"
+mkdir -p "$EVAL_HOME/.claude/skills"
+cat > "$EVAL_HOME/overlay.yml" <<'YAML'
+autolearn:
+  enabled: false
+memory:
+  backend: off
+advisor:
+  enabled: false
+YAML
+# with_skill 需要把被测 SKILL.md 拷到 $EVAL_HOME/.claude/skills/<skill>/（拷工作树里的那份，不是安装副本）
 
-export USERPROFILE='C:\Temp\fakehome' HOME=/c/Temp/fakehome PI_CODING_AGENT_DIR='C:\Users\Morni\.omp\agent'
+export USERPROFILE="$EVAL_HOME" HOME="$EVAL_HOME"
 
 # baseline（不装 skill）
-omp -p --no-session --no-rules --no-skills --config overlay.yml --mode=json --model gpt-5.6-luna \
+omp -p --no-session --no-rules --no-skills --config "$EVAL_HOME/overlay.yml" --mode=json --model gpt-5.6-luna \
   "<prompt>" < /dev/null > <case>.baseline.jsonl
 
 # with_skill（只装被测 skill）
-omp -p --no-session --no-rules --skills=<skill> --config overlay.yml --mode=json --model gpt-5.6-luna \
+omp -p --no-session --no-rules --skills=<skill> --config "$EVAL_HOME/overlay.yml" --mode=json --model gpt-5.6-luna \
   "<prompt>" < /dev/null > <case>.with_skill.jsonl
 ```
 
@@ -61,8 +73,13 @@ omp -p --no-session --skills=<skill> --model <model> "只回答：你当前可�
 
 ```bash
 # 跑之前
-for r in agent-system delivery-spec-runtime knowledge desk work-spec; do (cd "/Users/a123/workspace-v2/$r" && git status --short); done
-for w in /Users/a123/workspace-v2/worktrees/*/*; do (cd "$w" && git status --short); done
+for r in agent-system delivery-spec-runtime knowledge desk work-spec; do
+  (cd "$WORKSPACE_ROOT/$r" && git status --short)
+done
+for w in "$WORKSPACE_ROOT"/worktrees/*/*; do
+  [ -d "$w" ] || continue
+  (cd "$w" && git status --short)
+done
 
 # 跑之后重跑一遍，逐行比对；出现新增或修改立即回滚
 ```

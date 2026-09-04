@@ -52,7 +52,7 @@
       "id": "design-existing-system-capability",
       "name": "在既有系统上设计新能力",
       "kind": "behavior",
-      "prompt": "先不要改代码。请为现有运费系统设计跨境模板能力，当前分支只是尝试，先从需求和 master 基线比较架构候选。",
+      "prompt": "先不要改代码。请为现有跨境模板设计一项新能力，当前分支只是尝试，先从需求和 master 基线比较架构候选。",
       "expected_trigger": true,
       "expected_output": "判为设计既有系统上的新能力；路线包含 requirement-insight、requirement-translation、architecture-design；停下等主人确认，不读源码、不写方案文件。",
       "files": [],

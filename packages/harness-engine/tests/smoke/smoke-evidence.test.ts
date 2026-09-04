@@ -10,7 +10,6 @@ const correlation = {
   workflowId: 'workflow-1', planId: 'plan-1', operationId: 'smoke-1', snapshotId: 'snapshot-1', attemptId: 'attempt-1',
   source: 'local-preflight', sourceVersion: '1', observedAt: '2026-08-28T00:00:00.000Z',
 };
-const windowsOnly = test.skipIf(process.platform !== 'win32');
 
 // 下面三条实跑测试只登记了 cmd.exe（见 src/smoke/evidence.ts 的 READ_ONLY_SUBCOMMANDS 白名单），
 // 非 Windows 平台没有 cmd.exe，按平台跳过；不为测试放宽产品侧白名单。
