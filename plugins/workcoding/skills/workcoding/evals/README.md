@@ -30,14 +30,14 @@
 
 ## 首轮实跑（2026-09-02，`gpt-5.6-luna`，改写后）
 
-跑法：隔离 HOME（`C:/Temp/fakehome`）、`--no-rules`、`--config overlay.yml` 关 autolearn 与 memory、`--mode=json`、每个 case 独立空 cwd；with_skill 装工作树里的全部 8 个 workcoding skill（不只装路由，才测得出「摆完路线停住、不进规程第 1 步」）；baseline `--no-skills`。SKILL 内容哈希 `7494fd74f589`。跑前跑后四个仓与全部 worktree 的 `git status` 逐行比对无新增；十个 cwd 里没有任何文件。
+跑法：隔离 HOME（使用 `$EVAL_HOME`）、`--no-rules`、`--config overlay.yml` 关 autolearn 与 memory、`--mode=json`、每个 case 独立空 cwd；with_skill 装工作树里的全部 9 个 workcoding skill（不只装路由，才测得出「摆完路线停住、不进规程第 1 步」）；baseline `--no-skills`。SKILL 内容哈希 `7494fd74f589`。跑前跑后四个仓与全部 worktree 的 `git status` 逐行比对无新增；十个 cwd 里没有任何文件。
 
 ### behavior：两模式对照
 
 | case | baseline | with_skill |
 |---|---|---|
-| `incoming-requirement` | 13 次工具调用：建 todo、glob、`git status`，找不到代码后逐项 block，最后给一段实现方向。**没有摆路线，没有等确认** | 读 `skill://workcoding`、读 `skill://requirement-insight`（只读，没做它的步骤），输出规定的四行：形状点名「运费模板要支持按省份设偏远附加」，路线七条无跳过，请确认。5 条断言全过 |
-| `modify-existing-code` | 24 次工具调用：起子 agent 找 `FreightCalc`，glob 到 cwd 之外读了评测目录里的 overlay.yml 与另一条 case 的原始日志，找不到后 block。**直接进实施态** | 只读 `skill://workcoding`，四行：形状点名 `FreightCalc.calc` 与新疆西藏偏远附加，路线含 legacy-change 且在两条需求规程之后，明确说「暂不跳过任何一条，因为当前看不到代码」。5 条断言全过 |
+| `incoming-requirement` | 13 次工具调用：建 todo、glob、`git status`，找不到代码后逐项 block，最后给一段实现方向。**没有摆路线，没有等确认** | 读 `skill://workcoding`、读 `skill://requirement-insight`（只读，没做它的步骤），输出规定的四行：形状点名「fizzbuzz-report 要支持按类别设置可选附加项」，路线七条无跳过，请确认。5 条断言全过 |
+| `modify-existing-code` | 24 次工具调用：起子 agent 找 `ReportBuilder`，glob 到 cwd 之外读了评测目录里的 overlay.yml 与另一条 case 的原始日志，找不到后 block。**直接进实施态** | 只读 `skill://workcoding`，四行：形状点名 `ReportBuilder.build` 与 alpha/beta 类别的可选附加项，路线含 legacy-change 且在两条需求规程之后，明确说「暂不跳过任何一条，因为当前看不到代码」。5 条断言全过 |
 | `count-query` | 无工具调用，给一份「怎么查」的五步计划（LSP 引用、AST、排除测试），直接开查的口吻 | 只读 `skill://workcoding`，四行：形状「查数」，路线 `system-analysis` 一次并列出跳过的五条规程与理由。4 条断言全过 |
 
 差值一句话：没有 skill 时三条输入都被当成「现在就做」；有 skill 时三条都停在路线那一段。
