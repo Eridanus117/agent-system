@@ -252,7 +252,6 @@ function fixtureText(content: string, fixture: string): string {
   for (const variant of variants) content = content.replace(new RegExp(variant.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), process.platform === "win32" ? "gi" : "g"), () => fixture);
   return content;
 }
-
 // 此函数和所需的静态内建模块 imports 一起序列化为临时 extension。
 async function boundaryExtension(pi: BoundaryAPI) {
   const f = fs;
