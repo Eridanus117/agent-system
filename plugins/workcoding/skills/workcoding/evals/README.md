@@ -16,11 +16,23 @@
 
 ## 实际 OMP 多轮对照
 
-`run-runtime.ts` 使用已安装的 OMP、`openai-codex/gpt-6-astra` 与 `high`，比较改前快照和当前 daily 11 个技能。四个合成场景是只读审查、真实文件中的小修复、未决生产结算变更、显式路线确认后继续。
+`run-runtime.ts` 使用已安装的 OMP、`openai-codex/gpt-6-astra` 与 `high`，比较改前快照和当前 daily 11 个技能。默认仍跑只读审查、小修复、未决生产结算变更、显式路线确认后继续四个合成场景；旧 CLI 调用保持有效。
 
-两组共享工作区 AGENTS 副本、工具边界和合成上下文；通过真实 RPC 会话记录技能来源/hash、模型、工具调用、文件变化和 final。不是只把 SKILL 文本交给 completion，也不是原样生产环境：临时 HOME、受限工具，关闭记忆等外部能力，具体差异写进结果 JSON。第二轮确认与第一轮在同一会话内。
+`baseline/AGENTS.md` 存在时 before 使用它，否则明确记录两组使用同一份当前工作区规则。技能正文、工作区规则与按需上下文分别冻结并记录来源/hash。两种模式共享当前按需上下文，不把它们伪称为历史副本；每例初始消息数必须为 0，同例第二轮保持原会话。工具边界、临时 HOME、禁用 memory 等环境差异写入 JSON。
 
-结构校验通过不等于行为通过；原始输出须人工判读，小修复代码由宿主审阅后执行示例。原始记录可能包含被读取的私人规则，发布前须检查内容；本次原文仅保存在私有 desk 仓库，公开仓库只保留判读结论和证据 SHA-256。运行错误、被阻止的越界写入与正常完成分开记录。
+输出 schemaVersion 为 2：未选案例／模式和缺必要上下文的案例保留为未运行、未评分；工具错误、越界尝试、运行错误不能计为通过。原始 final、读取事件与文件变化须人工判读，数学代码由宿主审阅后执行，运行器不执行模型写出的代码。
+
+### 方法选择与无聊天历史续接
+
+可用 `--cases <id,id>` 选择：`source-explanation`（沿来源解释旧扫描）、`unknown-operation`（EOF 后核对状态）、`bounded-learning`（两轮决策材料与改进权限）、`recorded-continuation`（从实际规则指针发现任务记录）、`mixed-risk-partial`（独立相邻反例：完成本地小修但不虚构发布）。
+
+```text
+node --experimental-strip-types run-runtime.ts --baseline <快照目录> --output <私有结果文件>
+node --experimental-strip-types run-runtime.ts --baseline <快照目录> --output <另一个私有结果文件> --cases source-explanation,unknown-operation,bounded-learning,recorded-continuation,mixed-risk-partial --only-after
+node --experimental-strip-types run-runtime.ts --baseline <快照目录> --output <另一个私有结果文件> --context-snapshot <冻结上下文根> --cases recorded-continuation --only-after
+```
+
+冷启动续接例需要工作区中实际的共用规则、按需方法说明、实施记录，以及实际规则要求读取的在途、主人档案、方法地图和知识索引；白名单见运行器的 `CONTEXT_PATHS`。`--context-snapshot` 要求在指定目录下保持相同的工作区相对布局，缺失时不回退实时文件，输出不能写入该快照。用户输入不给记录路径或聊天摘要，验收须检查实际读取链。上下文含私人档案、方法与历史授权，原始结果和快照只写私有目录，不复制旧模型回答来通过新例。本批来源与判读在同工作区私有 `desk/agent/040-方法选择改进/index.md`；下面保留早期各批次历史，不自动沿用为新规则结论。
 
 ## 首轮实跑（2026-09-02，`gpt-5.6-luna`，改写后）
 
@@ -53,6 +65,6 @@
 
 ## 状态
 
-**本批四类合成边界已实跑通过，不能据此宣称全面优于旧版。** 2026-09-06 固定 `gpt-6-astra:high`，改前／改后共 8 个场景、10 轮；小修复代码经宿主执行，两例均正确。只读、小修和确认续接在旧版也通过；可观察差异是复杂待决变更从先确认整套路线、再读取材料，变为先核实材料、再指出具体业务与授权缺口。没有越界写入尝试。没有验证真实生产、工作机或 Multica daemon。
+**2026-09-06 声明修复批的四类合成边界已实跑通过，不能据此宣称全面优于旧版。** 该批固定 `gpt-6-astra:high`，改前／改后共 8 个场景、10 轮；小修复代码经宿主执行，两例均正确。只读、小修和确认续接在旧版也通过；可观察差异是复杂待决变更从先确认整套路线、再读取材料，变为先核实材料、再指出具体业务与授权缺口。没有越界写入尝试。该批没有验证真实生产、工作机或 Multica daemon。
 
-原始记录在 [私有 desk 证据](https://github.com/Eridanus117/desk/blob/c9b4062/agent/evidence/2026-09-06-skill-routing/runtime-results.json)，人工判读在 [`runtime-review.json`](runs/2026-09-06/runtime-review.json)，其中记录原始文件的 SHA-256。改前 11 个技能源及其 SHA-256 保存在 [`baseline.zip`](runs/2026-09-06/baseline.zip)；这 11 个源均已核对与公开 main 的改前版本一致。解压后可作为 `run-runtime.ts --baseline <目录> --output <私有目录中的新结果.json>` 的输入。每次运行都重新记录模型、规则和装载证据；不能把不同环境的重跑当成本次原样复现。
+声明修复批的原始证据在[私有 desk 的固定提交](https://github.com/Eridanus117/desk/blob/c9b4062a488382b91cf4536071f73d127b4d6881/agent/evidence/2026-09-06-skill-routing/runtime-results.json)，公开人工判读在 [`runtime-review.json`](runs/2026-09-06/runtime-review.json)。改前 11 个公开技能源及其 SHA-256 保存在 [`baseline.zip`](runs/2026-09-06/baseline.zip)，解压后可作为 `--baseline` 输入；该历史包不含工作区 AGENTS.md。原始记录可能含私人规则和真实路径，即使存在本地未跟踪副本，也不得放进公开提交。每次运行重新记录模型、规则和装载证据，不能把不同环境的重跑当成原样复现。
