@@ -4,28 +4,29 @@
 
 ## 用例构成
 
-6 个 case：2 个 `behavior`（应触发）+ 4 个 `trigger`（不应触发）。
+7 个 case：2 个 `behavior` + 5 个 `trigger`。2026-09-02 的实跑保留为旧版历史证据；当时的「零 diff」与格式断言不再作为现行判据。
 
-两个 behavior case 是规程的两个「等主人」之前与之后：走读加改法（工位 1、2，停下等否）、否过之后的建与静态验（工位 4、5）。两条 prompt 都把被改的代码**整段贴在 prompt 里**（一段 15 行、注释与实现两处不符的 `calc`），这样探针自足，agent 不必也不该去工作区找代码（runbook 硬约束 2）。
+两个 behavior case 分别覆盖改法未确认与已确认：前者用真实输入走读到旧结果33，提出可关闭的分流并等待改法确认；后者已有明确配置开关，期望关闭时33、开启且命中时41，非目标类别不变。旧业务实现不改，既有代码唯一允许的修改是入口分流；不要求改过入口的整个旧文件零 diff。
 
-**4 个不应触发的 case 就是路由边界的可执行版本**：
+**5 个不应触发的 case**：
 
 | case | 该归谁 |
 |---|---|
 | `greenfield-new-class` | 暂无规程——纯新增没有既有路径要动，不得套「萌芽」（PR #33 纠偏） |
 | `incoming-requirement` | `requirement-insight` |
-| `count-query` | `system-analysis` |
+| `count-query` | 直接处理静态查询，不自动进入分析规程 |
 | `plain-question` | 直接答（讲接缝是什么） |
+| `clear-local-fix` | 直接修正明确低风险错误，不引入新旧并存与开关 |
 
 ## 与被测 SKILL.md 的对应
 
 | 铁律 / 工位 | 测它的断言 |
 |---|---|
 | 铁律 1 以走读为准、每步能对照入参 | `step-format-with-fields`、`comment-vs-code-flagged`、`correct-result` |
-| 铁律 2 没证据写假设、否过之前不写代码 | `waits-for-veto-no-code` |
-| 铁律 3 只新增、老路径 diff 为零、入口一处分流 | `old-path-zero-diff`、`single-branch-at-entry` |
-| 走读产物形态（特征化测试是存储） | `characterization-test-or-list`、`test-uses-walkthrough-input` |
-| 工位 2 改法三句 | `change-plan-three-sentences` |
+| 改法确认前不改生产实现 | `waits-before-production-change` |
+| 旧行为、新行为与唯一入口分流 | `old-behavior-preserved`、`bounded-routing`、`observable-new-behavior` |
+| 走读关联真实输入，不夸大分支覆盖 | `observable-walkthrough` |
+| 关闭分流回原入口，已确认后继续 | `rollback-aware-plan`、`no-relitigation` |
 
 ## 首轮实跑（2026-09-02，`gpt-5.6-luna`）
 
@@ -55,4 +56,4 @@
 
 ## 状态
 
-**未验证。** 隔离单轮 8 次，对象是示范代码。第一次真实考验只能在工作机上发生。
+当前 7 条合同已通过结构校验；本轮没有重跑 Java 计费行为用例。示范代码的历史隔离结果不证明复杂生产代码适用，真实遗留修改仍需真实输入与行为证据。

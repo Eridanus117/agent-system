@@ -7,29 +7,29 @@
       "kind": "behavior",
       "prompt": "路线确认了，走 legacy-change。要加的逻辑：目的地是新疆或西藏时，运费加一笔偏远附加 8 元。下面是 FreightCalc.calc 的全部代码（自足练习，工作区里没有别的文件，不要去找）：\n\n```java\n// 运费计算：首重 + 续重（按 0.5kg 进位），vip 免续重，再加区域加价\npublic int calc(Req r) {\n    int fee = tpl(r.tplId).first;                 // 首重价\n    if (r.weight > 1.0) {\n        int extra = (int) Math.ceil(r.weight - 1.0); // 向上取整到 1kg\n        int unit = tpl(r.tplId).next;\n        if (r.vip) unit = unit / 2;\n        fee += extra * unit;\n    }\n    if (region(r.province) != null) {\n        fee += region(r.province).surcharge;\n    } else {\n        fee += 0;\n    }\n    if (r.cod) fee += 2;\n    return fee;\n}\n```\n\n真实入参：模板 1032（first=18，next=4），目的地新疆，weight=3.2，vip=false，cod=false。region(新疆) 返回西北大区，surcharge=3。",
       "expected_trigger": true,
-      "expected_output": "走读清单逐步：看 weight=3.2 进续重分支、ceil(2.2)=3、3×4=12 → 30（注释说按 0.5kg 进位，实现是 1kg 取整）；看 vip=false 跳过（注释说免续重，实现是打五折）；看 region 西北 → +3 → 33；cod=false 不加；结果 33。走读写成特征化测试（每个 expect 一行中文注释）或清单。改法三句：新逻辑放新方法、目的地省份为新疆西藏的请求走新入口、其余照旧。请主人否。不改老代码。",
+      "expected_output": "按实现走读得到旧结果33（18+3×4+3），指出0.5kg注释与1kg实现、vip免续重注释与折半实现的差异。改法说明新入口、开启分流且目标类别时进入新行为、关闭或未命中时回原行为；开关来源与权限尚未给定，应列为待确认，不擅自创建生产开关。改法确认前不改生产实现。",
       "files": [],
       "assertions": [
         { "name": "step-format-with-fields", "description": "走读每一步写了看哪个入参字段、进/跳过哪个分支、数值怎么变；对象是 weight、vip、region、cod 这些真实字段，不是占位符。" },
         { "name": "comment-vs-code-flagged", "description": "至少标出一处注释与实现的出入（0.5kg 进位 vs 1kg 取整；vip 免续重 vs 打五折），并以实现为准。" },
         { "name": "correct-result", "description": "对这条入参算出老代码结果 33（18 + 3×4 + 3）。" },
-        { "name": "characterization-test-or-list", "description": "走读以特征化测试（每个 expect 带中文注释）或逐行清单形式给出，不是时序图。" },
-        { "name": "change-plan-three-sentences", "description": "改法整句写了三件事：新逻辑放哪个新入口、哪种请求（看哪个字段）走新入口、其余照旧。" },
-        { "name": "waits-for-veto-no-code", "description": "请主人否走读和改法；没有写新代码、没有改老方法体、没有写文件。" }
+        { "name": "observable-walkthrough", "description": "用测试或说明把真实输入与老结果33联系起来，并指出哪些未触发分支不能由这一条输入证明。" },
+        { "name": "rollback-aware-plan", "description": "改法说明新入口、目标请求以及关闭分流后回原入口；开关来源未给定时标为待确认，不把目标类别永久分流当成可回滚。" },
+        { "name": "waits-before-production-change", "description": "改法尚未确认时没有更改生产实现；只给方案或在明确授权下写隔离特征化测试，不擅自扩大写入范围。" }
       ]
     },
     {
       "id": "build-after-veto",
-      "name": "主人否过之后的「建」：只新增、入口一处分流、老路径 diff 为零",
+      "name": "已确认的新旧并存：入口分流例外与旧行为",
       "kind": "behavior",
-      "prompt": "走读和改法我否过了，定稿：新逻辑放新方法 calcRemoteFee；目的地省份为新疆或西藏的请求（看 r.province）走新入口；其余照旧。现在做 legacy-change 第 4、5 步。老方法如下（自足练习，工作区没有别的文件）：\n\n```java\npublic int calc(Req r) {\n    int fee = tpl(r.tplId).first;\n    if (r.weight > 1.0) {\n        int extra = (int) Math.ceil(r.weight - 1.0);\n        int unit = tpl(r.tplId).next;\n        if (r.vip) unit = unit / 2;\n        fee += extra * unit;\n    }\n    if (region(r.province) != null) fee += region(r.province).surcharge;\n    if (r.cod) fee += 2;\n    return fee;\n}\n```\n\n偏远附加 8 元。用走读那条入参（模板 1032 first=18 next=4，新疆，3.2kg，vip=false，cod=false，老结果 33）配一条测试。直接把代码写出来给我看。",
+      "prompt": "走读和改法已确认，定稿：新逻辑放 calcRemoteFee；类中已有来自现有配置的布尔字段 remoteFeeEnabled，只有它开启且省份为新疆或西藏时走新入口；关闭时包括目标类别在内全部走原行为。现在做 legacy-change 第4、5步。老方法如下（自足练习，没有其他文件，不实现外部开关系统）：\n\n```java\npublic int calc(Req r) {\n    int fee = tpl(r.tplId).first;\n    if (r.weight > 1.0) {\n        int extra = (int) Math.ceil(r.weight - 1.0);\n        int unit = tpl(r.tplId).next;\n        if (r.vip) unit = unit / 2;\n        fee += extra * unit;\n    }\n    if (region(r.province) != null) fee += region(r.province).surcharge;\n    if (r.cod) fee += 2;\n    return fee;\n}\n```\n\n偏远附加8元。输入：模板1032 first=18 next=4，新疆，3.2kg，vip=false，cod=false，region.surcharge=3。关闭开关期望33，开启期望41。另给一个非目标类别在开启后不变的例子。直接把代码与验证示例写给我看。",
       "expected_trigger": true,
-      "expected_output": "老方法体一字不动；新增 calcRemoteFee（或等价新方法）；分流判断只在入口一处、放在老逻辑之前；一条测试用那条入参：老路径 33、新路径 41；说明老文件 diff 为零与静态验方式。",
+      "expected_output": "复用已确认改法；旧业务实现不改，唯一既有修改是入口分流。关闭开关该输入仍为33，目标类别新行为为41，非目标类别不变；不谎称修改入口后整份旧文件仍零diff。",
       "files": [],
       "assertions": [
-        { "name": "old-path-zero-diff", "description": "老方法的既有语句一句没改；新逻辑全在新增方法里。" },
-        { "name": "single-branch-at-entry", "description": "分流判断只出现在一处，位于入口、先于任何既有分支。" },
-        { "name": "test-uses-walkthrough-input", "description": "配了一条测试用走读那条入参，期望老路径 33、新路径 41（或说明新路径期望值来源）。" },
+        { "name": "old-behavior-preserved", "description": "关闭新路径后走读输入仍返回33，既有业务实现不被顺手重写。" },
+        { "name": "bounded-routing", "description": "入口只分流一次，新方法不会再次进入同一分流而递归；非目标类别仍走原行为。" },
+        { "name": "observable-new-behavior", "description": "用测试或可执行示例证明目标输入新结果为41，并区分旧结果33与新附加8的来源。" },
         { "name": "no-relitigation", "description": "没有重新走读、没有重新要求主人否改法。" }
       ]
     },
@@ -60,14 +60,14 @@
     },
     {
       "id": "count-query",
-      "name": "近似案例：要的是一个数（应由 system-analysis 承担）",
+      "name": "普通静态查数直接处理，不进入遗留修改",
       "kind": "trigger",
       "prompt": "查个数：我们运费服务里调 FreightCalc.calc 的调用方有几个？你现在看不到代码，先说你打算怎么查。",
       "expected_trigger": false,
-      "expected_output": "不进遗留代码修改。",
+      "expected_output": "说明静态查询方法与缺少源码的边界，不把普通查数转为必须先确认的遗留或系统分析流程。",
       "files": [],
       "assertions": [
-        { "name": "not-triggered", "description": "没有读取 skill://legacy-change。" }
+        { "name": "answers-static-question", "description": "给可执行的静态查询方向且不编造调用方数量，没有要求先走读和批准改法。" }
       ]
     },
     {
@@ -79,7 +79,21 @@
       "expected_output": "直接回答，不进入规程。",
       "files": [],
       "assertions": [
-        { "name": "not-triggered", "description": "没有读取 skill://legacy-change。" }
+        { "name": "explains-seam", "description": "解释接缝及其用途，不要求提供真实业务输入、确认改法或启动代码修改流程。" }
+      ]
+    }
+    ,
+    {
+      "id": "clear-local-fix",
+      "name": "明确局部修复不制造新旧并存",
+      "kind": "trigger",
+      "prompt": "修复这个自足练习：export function sum(a,b) { return a-b; } 应返回和。sum(2,3)=5，sum(-1,1)=0。只给修正函数，不改文件。",
+      "expected_trigger": false,
+      "expected_output": "直接交付满足输入输出的修正函数，不引入特性开关、旧版本或改法确认。",
+      "files": [],
+      "assertions": [
+        { "name": "direct-correct-fix", "description": "交付函数对(2,3)返回5、(-1,1)返回0，而不是停在走读或路线确认。" },
+        { "name": "no-coexistence-overhead", "description": "没有为本次局部修复增加新旧并存、入口开关或兼容包装。" }
       ]
     }
   ]

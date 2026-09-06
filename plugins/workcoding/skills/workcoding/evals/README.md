@@ -4,29 +4,23 @@
 
 ## 用例构成
 
-7 个 case：3 个 `behavior`（应触发）+ 4 个 `trigger`（不应触发）。
+12 个 case：5 个 `behavior` + 7 个 `trigger`。当前合同在 `evals.json`，2026-09-02 的旧版实跑保留为历史证据，不再作为现行路由判据。
 
-三个 behavior case 各对应一种形状：外来需求（改既有代码）、「帮我改 X」（改既有代码）、「查个数」（查数）。「从零新建」与「只改规则或文档」没有 behavior case：前者暂无规程可交棒，后者的探针写不出来——凡「改一下某份文档」的 prompt 都会诱导 agent 去工作区找对象（runbook 硬约束 2）。
-
-**4 个不应触发的 case 就是路由边界的可执行版本**：
-
-| case | 该归谁 |
+| 边界 | case / 可观察结果 |
 |---|---|
-| `build-a-tool-itch` | `clarify`（痒点来自主人自己） |
-| `plain-question` | 直接答（没有要动的对象） |
-| `mid-procedure-stall` | `adaptive-problem-solving`（活已在 `legacy-change` 第 4 步里跑着，不回路由） |
-| `route-already-confirmed` | 不得拦路——路线确认之后再摆路线是倒退 |
+| 未决需求或架构取舍 | `incoming-requirement`、`modify-existing-code`、`design-existing-system-capability`：指出具体缺口，不臆定实现策略或默认整套规程 |
+| 普通只读与低风险任务 | `count-query`、`readonly-workspace-review`、`clear-low-risk-fix`、`plain-question`：利用已有证据直接完成，不人为增加确认 |
+| 已确认工作 | `mid-procedure-stall`、`route-already-confirmed`：继续当前工作，不重开路线 |
+| 显式要求与高风险动作 | `explicit-route-request`、`one-line-high-risk-change`：保留用户这次要求的确认，以及未授权高风险动作的边界 |
+| 自建工具痒点 | `build-a-tool-itch`：先判断实际问题，不直接立项 |
 
-后两条是按 clarify 形态改写时逼出来的：旧版 SKILL.md 只写「等主人确认」，没写「确认之后本 skill 退场」，多轮里就有反复要求确认的死法。
+## 实际 OMP 多轮对照
 
-## 与被测 SKILL.md 的对应
+`run-runtime.ts` 使用已安装的 OMP、`openai-codex/gpt-6-astra` 与 `high`，比较改前快照和当前 daily 11 个技能。四个合成场景是只读审查、真实文件中的小修复、未决生产结算变更、显式路线确认后继续。
 
-| 铁律 / 工位 | 测它的断言 |
-|---|---|
-| 铁律 1 主人点头前不动手 | `waits-for-confirmation`、`no-artifact-written` |
-| 铁律 2 跳过要说 | `route-listed`（跳过写理由）、`route-is-system-analysis-only` |
-| 铁律 3 贴具体对象不用黑话 | `shape-with-real-object`、`shape-is-count` |
-| 工位 4 交棒后退场 | `no-rerouting`、`no-relitigation` |
+两组共享工作区 AGENTS 副本、工具边界和合成上下文；通过真实 RPC 会话记录技能来源/hash、模型、工具调用、文件变化和 final。不是只把 SKILL 文本交给 completion，也不是原样生产环境：临时 HOME、受限工具，关闭记忆等外部能力，具体差异写进结果 JSON。第二轮确认与第一轮在同一会话内。
+
+结构校验通过不等于行为通过；原始输出须人工判读，小修复代码由宿主审阅后执行示例。原始记录可能包含被读取的私人规则，发布前须检查内容；本次原文仅保存在私有 desk 仓库，公开仓库只保留判读结论和证据 SHA-256。运行错误、被阻止的越界写入与正常完成分开记录。
 
 ## 首轮实跑（2026-09-02，`gpt-5.6-luna`，改写后）
 
@@ -59,4 +53,6 @@
 
 ## 状态
 
-**未验证。** 首轮实跑是设计者自己跑的隔离单轮，样本 10 次。真正的判据是主人在工作机上拿一条真实改动走一遍：路线那一段有没有让主人一眼判对错、跳过的有没有说。
+**本批四类合成边界已实跑通过，不能据此宣称全面优于旧版。** 2026-09-06 固定 `gpt-6-astra:high`，改前／改后共 8 个场景、10 轮；小修复代码经宿主执行，两例均正确。只读、小修和确认续接在旧版也通过；可观察差异是复杂待决变更从先确认整套路线、再读取材料，变为先核实材料、再指出具体业务与授权缺口。没有越界写入尝试。没有验证真实生产、工作机或 Multica daemon。
+
+原始记录在 [私有 desk 证据](https://github.com/Eridanus117/desk/blob/c9b4062/agent/evidence/2026-09-06-skill-routing/runtime-results.json)，人工判读在 [`runtime-review.json`](runs/2026-09-06/runtime-review.json)，其中记录原始文件的 SHA-256。改前 11 个技能源及其 SHA-256 保存在 [`baseline.zip`](runs/2026-09-06/baseline.zip)；这 11 个源均已核对与公开 main 的改前版本一致。解压后可作为 `run-runtime.ts --baseline <目录> --output <私有目录中的新结果.json>` 的输入。每次运行都重新记录模型、规则和装载证据；不能把不同环境的重跑当成本次原样复现。

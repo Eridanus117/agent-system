@@ -1,7 +1,7 @@
 ---
 name: system-analysis
 description: >-
-  改动前某个决定缺一个数或一个判断时用：会波及哪些调用方、新路径慢多少、分流条件占多大流量。写问题与假设、从改动点静态画两跳影响草图、只对拿不准的边用 Arthas 抓一条真实请求核实、出一行结论带置信度、结论进那个决定。限时两小时，不常驻。触发语「这改动影响谁」「有多少 X」「查个数」；也由 legacy-change 摆改法卡住、requirement-translation 举不出例子时起。数必须挂一个决定，写不出决定就不查。不用于需求本身（那是 requirement-insight），不用于「帮我改 X」类改代码指令（那是 workcoding 路由），不用于压测或全量调用图。One-shot impact analysis when a decision lacks a number: question and assumptions, two-hop sketch, verify only uncertain edges with one real request, one-line conclusion with confidence. Two-hour cap.
+  某个明确改动决定缺少影响、耗时或流量证据时，做一次有边界的分析：问题与假设、两跳影响草图、只核实不确定的边、带置信度的结论。由 workcoding 选中，或 legacy-change／requirement-translation 遇到这类证据缺口时使用。普通静态查数、工作区审查、资料比较直接查答，不因「查个数／有多少」套本规程；不用于需求洞察、压测或全量调用图。静态证据够用就停止，不强求 Arthas。One-shot impact analysis for a concrete change decision; direct static lookups and general reviews do not need this procedure.
 ---
 
 # 系统分析：一个决定缺一个数，查一次，出一行
@@ -29,8 +29,9 @@ description: >-
 
 ## 什么时候起，什么时候跳过
 
-- 起：`workcoding` 判为「查数」形状；`legacy-change` 工位 2 摆改法时卡住；`requirement-translation` 工位 3 举不出例子。不常驻，不进流转。
-- 跳过：影响草图一跳内只有一个调用方时跳过（2026-09-02 首次预演发现 4，PR #33 用过）。
+- 起：`workcoding` 为某个改动决定选中影响分析；`legacy-change` 摆改法或 `requirement-translation` 举例时遇到同类证据缺口。
+- 普通静态查数、只读审查或资料比较直接查答；误加载本 skill 时回到原任务，不补一个路线确认。
+- 静态证据足够时直接给结论；是否需要运行时核实由不确定的边决定，不由调用方数量决定。
 
 ## 五个工位
 
@@ -72,8 +73,8 @@ description: >-
 
 | 相邻 | 它管什么 | 分界（可测） |
 |---|---|---|
-| **`workcoding`** | 判形状、摆路线 | 「查数」形状由它判，本 skill 不摆路线；查完不进后面的 skill |
-| **`requirement-insight`** | 需求是什么、值不值 | 输入是「要支持 X」这类需求 → 洞察；输入是「有多少 X」「影响谁」→ 本 skill |
+| **`workcoding`** | 按任务与风险选择规程 | 本 skill 只接具体改动决定的证据缺口；不重新确认已有路线，普通查数不先绕回路由 |
+| **`requirement-insight`** | 需求是什么、值不值 | 未收口的问题交洞察；具体改动决定的影响证据缺口才进本 skill |
 | **`legacy-change`** | 改代码 | 它的工位 2 卡住时起本 skill 一次，结论回它的改法里 |
 | **`integration`** | 接进系统 | 本 skill 的草图喂它的集成面清单；变没变、接入顺序不在这里 |
 | 压测、全量调用图 | 6.4.9 性能测试、系统地图 | 要的是性能曲线或整张图 → 不是本 skill，另起 |

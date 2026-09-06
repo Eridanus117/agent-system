@@ -4,27 +4,28 @@
 
 ## 用例构成
 
-6 个 case：2 个 `behavior`（应触发）+ 4 个 `trigger`（不应触发）。
+7 个 case：2 个 `behavior` + 5 个 `trigger`。2026-09-02 的实跑是旧版历史证据；当前合同不再把普通静态查数自动送进规程。
 
-两个 behavior case 是规程的两个入口：`workcoding` 判为「查数」形状（调用方有几个）、`legacy-change` 摆改法卡住（新路径慢多少）。两条 prompt 都写明「看不到代码也跑不了 Arthas」，测的是六行形态与「挂决定」「假设单列」「证据只抓拿不准的边」，不是真的分析。
+两个 behavior case 都有明确决定缺口：决定开关位置所需的调用关系、决定灰度范围所需的性能证据。两条 prompt 都写明「看不到代码也跑不了 Arthas」，测的是承认未知、分析有边界、只补会改变决定的证据；不能据此宣称完成真实分析。
 
-**4 个不应触发的 case 就是路由边界的可执行版本**：
+**5 个不应触发的 case**：
 
 | case | 该归谁 |
 |---|---|
 | `incoming-requirement` | `requirement-insight` |
-| `direct-code-change` | `workcoding` 路由（「帮我改 X」） |
+| `direct-code-change` | 处理这次代码请求的实际信息缺口，不改写成取数任务 |
 | `plain-question` | 直接答（讲 Arthas 命令） |
 | `load-test-request` | 6.4.9 性能测试，备选里已排除 |
+| `plain-static-count` | 根据已提供的调用边直接统计，不索要 Arthas 或新建确认步骤 |
 
 ## 与被测 SKILL.md 的对应
 
 | 铁律 / 工位 | 测它的断言 |
 |---|---|
 | 铁律 1 每个数挂一个决定 | `tied-to-decision` |
-| 铁律 2 先草图后证据、只抓拿不准的边、没证据写假设 | `assumptions-separate`、`two-hop-sketch`、`evidence-only-uncertain`、`evidence-is-one-real-request` |
-| 铁律 3 一行结论带置信度与未验证假设 | `one-line-conclusion-with-confidence` |
-| 边界：不改代码、不压测、不全量调用图 | `no-code-no-plan` |
+| 铁律 2 不捏造草图与证据、只补拿不准的边 | `assumptions-separate`、`bounded-sketch`、`evidence-only-uncertain`、`evidence-is-targeted` |
+| 铁律 3 结论带置信度与未验证假设 | `honest-conclusion` |
+| 分析与静态查询的边界 | `no-code-no-plan`、`correct-static-answer`、`no-artificial-procedure` |
 
 ## 实跑（2026-09-02，`gpt-5.6-luna`）
 
@@ -60,4 +61,4 @@
 
 ## 状态
 
-**未验证。** 隔离单轮两轮共 16 次。真正的判据是在工作机上因 `legacy-change` 卡住起一次，两小时内有没有出一行能进决定的结论。
+当前 7 条合同已通过结构校验；本轮没有重跑 Arthas 或这两条分析行为用例。历史隔离结果不证明当前规程在真实系统上有效；真实证据仍须在有明确决定缺口的工作场景中取得。

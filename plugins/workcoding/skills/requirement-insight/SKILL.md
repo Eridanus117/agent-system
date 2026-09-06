@@ -1,12 +1,14 @@
 ---
 name: requirement-insight
 description: >-
-  工作里来了一个外来需求（产品、业务、同事提的），翻成需求句之前用：抄原话、判它是解还是问题并写断言草案、备三个问历史行为的问题让主人去问提出方、查现成、收口三行加一句「解到什么样算解了」。触发语「来了个需求」「产品要 X」「这个需求到底要什么」。由 workcoding 确认路线后进入；产出一段草案等主人带答案回来，主人否过之前不落盘。不用于主人自己冒出的「我想建个工具」痒点（那是 clarify），不用于已收口、要翻成 EARS 句的需求（那是 requirement-translation）。Use on an incoming requirement from a product owner or colleague, before translating it: copy the words verbatim, turn the solution back into a problem, prepare three history questions for the requester, check existing capability, close with three lines plus one acceptance cue. Writes nothing until the owner has corrected the draft.
+  外来需求的实际问题、现有做法或验收判据尚未收口时使用；由 workcoding 为这一缺口选中，或用户明确要求澄清需求。保留原话、提出问题假设、准备向提出方核实的历史行为问题、查现成并收口。已有经确认的问题与规则直接交给后续工作，不因「产品要／来了个需求」重做访谈。用户自己的建工具念头用 clarify；已收口但缺可验证行为句用 requirement-translation。Clarify an unresolved incoming requirement, not every request: recover the problem, verify historical behavior, and close an observable acceptance criterion.
 ---
 
 # 需求洞察：先翻回问题，再让主人去问
 
 工作里的需求从产品来，第一句永远是「解」——「要支持 X」。X 已经预设了问题是什么、这是最好的解法、值得做。本 skill 做的事：**把 X 翻回问题，备好问题让主人去问提出方，收口成三行加一句「解到什么样算解了」。** 这是 ISO 12207 的 6.4.1 业务或使命分析在 workCoding 里的规程。
+
+**入口判据：** 先复用当前对话或任务记录中已经确认的问题、提出方回答和验收依据。信息已经充分时直接交给所需后续工作；只补新缺口，不要求用户把同一个决定再确认一遍。未收口的断言仍须标为假设，不能借「复用」跳过真实未知。
 
 真源在个人知识库 `notes/需求洞察.md`（与标准的对照、备选与不选理由、裁决史、未解决）；步骤在本文。
 
@@ -31,7 +33,7 @@ description: >-
 
 ## 五个工位
 
-判形状与摆路线不在这里——那是 `workcoding` 路由的事，进到本 skill 时路线已经确认过。
+由 `workcoding` 针对需求缺口选中，或用户显式请求本规程；已有路线与授权直接复用，不在这里重新摆路线。
 
 | 工位 | 干什么 | 槽位里的实践 |
 |---|---|---|
