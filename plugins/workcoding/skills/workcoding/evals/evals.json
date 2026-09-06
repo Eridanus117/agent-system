@@ -3,112 +3,157 @@
   "evals": [
     {
       "id": "incoming-requirement",
-      "name": "工作里来了一个外来需求",
+      "name": "未收口的外来需求只询问实质缺口",
       "kind": "behavior",
-      "prompt": "来了个需求：fizzbuzz-report 要支持按类别设置一个可选附加项。",
+      "prompt": "来了个需求：fizzbuzz-report 要支持按类别设置一个可选附加项。业务还没说明附加项怎么算，也没给验收例子。先不要实现。",
       "expected_trigger": true,
-      "expected_output": "自动起 workcoding；判形状（改既有代码）并点名「fizzbuzz-report」「按类别设置可选附加项」；摆一条路线；停下等主人确认。不写代码、不建文件、不开始需求洞察的第 1 步。",
+      "expected_output": "指出业务规则与验收缺口，推荐先收口问题或补行为例子；不默认安排遗留改造、集成和发布全链，不提前实现。",
       "files": [],
       "assertions": [
-        { "name": "auto-trigger", "description": "未被显式点名，仅凭 description 自动加载 workcoding。" },
-        { "name": "shape-with-real-object", "description": "输出里有一句形状判断（改既有 / 从零新建 / 查数 / 只改规则或文档），且那句写的是主人原话里的对象（fizzbuzz-report、按类别的可选附加项），不是 X、该模块一类占位符。" },
-        { "name": "route-listed", "description": "列出一条路线：要走的 skill 或规程的顺序；若跳过某条，写了理由。" },
-        { "name": "waits-for-confirmation", "description": "明确请主人确认路线后再动；没有开始任何规程的第 1 步（没备三个问题、没写 EARS 句、没走读代码）。" },
-        { "name": "no-artifact-written", "description": "没有写任何文件。" }
+        { "name": "material-question", "description": "需要用户回答的是附加项规则、适用类别或验收依据，不只是是否允许开始。" },
+        { "name": "bounded-route", "description": "建议针对当前需求缺口；没有凭空要求灰度、母版回归或新旧并存。" },
+        { "name": "no-premature-implementation", "description": "没有在业务规则未定时实施或声称需求已完成。" }
       ]
     },
     {
       "id": "modify-existing-code",
-      "name": "「帮我改 X」形式的既有代码改动",
+      "name": "看不到实现时不擅定遗留改造策略",
       "kind": "behavior",
-      "prompt": "帮我改一下 ReportBuilder.build：当输出类别是 alpha 或 beta 时，在原结果基础上增加一个可选附加项。这个类在我们的报告服务里，你现在看不到代码。",
+      "prompt": "帮我改 ReportBuilder.build：alpha 或 beta 类别的输出要增加可选附加项。你现在看不到代码，也没有附加项的计算规则；先说哪些证据还缺。",
       "expected_trigger": true,
-      "expected_output": "自动起 workcoding；判为改既有代码，形状那句点名 ReportBuilder.build 与可选附加项；摆路线（含 legacy-change）；停下等确认，不试图去找代码、不直接给改法。",
+      "expected_output": "区分缺源码与缺业务决定，说明拿到什么才能继续；不自动假定需要 Feathers、开关或完整发布流程。",
       "files": [],
       "assertions": [
-        { "name": "auto-trigger", "description": "仅凭 description 自动加载 workcoding。" },
-        { "name": "shape-with-real-object", "description": "形状判为改既有代码，且那句写的是 ReportBuilder.build 与可选附加项，不是占位符。" },
-        { "name": "route-includes-legacy-change", "description": "路线里有 legacy-change（或「遗留代码修改」「Feathers 流程」），且它排在需求洞察与需求翻译之后。" },
-        { "name": "waits-for-confirmation", "description": "请主人确认路线后再动；没有直接给改法、没有走读、没有去找代码。" },
-        { "name": "no-artifact-written", "description": "没有写任何文件。" }
+        { "name": "missing-evidence", "description": "明确缺少现有实现和附加项行为规则，不编造代码或计算方式。" },
+        { "name": "no-premature-strategy", "description": "未把新旧路径并存、开关或 legacy-change 当作所有代码改动的必选策略。" }
       ]
     },
     {
       "id": "count-query",
-      "name": "「查个数」形状：只起一次系统分析",
-      "kind": "behavior",
-      "prompt": "查个数：我们的报告服务里调 ReportBuilder.build 的调用方有几个？这个改动我还没定要不要做，先要这个数。你现在看不到代码，先告诉我你打算怎么查。",
-      "expected_trigger": true,
-      "expected_output": "自动起 workcoding；判为查数；路线只有 system-analysis 一次，明确说不进后面的 skill；停下等确认。",
+      "name": "普通静态查数不增加路线确认",
+      "kind": "trigger",
+      "prompt": "只读查数。这是全部调用清单：api.ts 调 buildReport，batch.ts 调 buildReport，types.ts 只声明 Report 类型。buildReport 有几个直接调用方？给出数量与文件名即可。",
+      "expected_trigger": false,
+      "expected_output": "直接回答 2 个：api.ts、batch.ts。不要求先确认系统分析路线。",
       "files": [],
       "assertions": [
-        { "name": "auto-trigger", "description": "仅凭 description 自动加载 workcoding。" },
-        { "name": "shape-is-count", "description": "形状判为查数，且点名「调 ReportBuilder.build 的调用方有几个」。" },
-        { "name": "route-is-system-analysis-only", "description": "路线只有 system-analysis（或「系统分析」）一次，并说明不进遗留代码修改、集成、发布等后续规程。" },
-        { "name": "waits-for-confirmation", "description": "请主人确认后再动；没有自己开始画影响草图或去找代码。" }
+        { "name": "correct-count", "description": "回答 2 个直接调用方，并列出 api.ts 与 batch.ts，没有把 types.ts 算进去。" },
+        { "name": "no-unnecessary-gate", "description": "在这一轮给出答案，没有停在路线确认、Arthas 采集或额外授权问题。" }
       ]
     },
     {
       "id": "design-existing-system-capability",
-      "name": "在既有系统上设计新能力",
+      "name": "架构未决时保留必要取舍",
       "kind": "behavior",
-      "prompt": "先不要改代码。请为现有数据导出组件设计一项新能力，当前分支只是尝试，先从需求和 master 基线比较架构候选。",
+      "prompt": "先不要改代码。现有数据导出组件要加按租户过滤能力；共享表过滤还是独立存储没有决定，隔离要求也未定。请先摆出需要决定的事情和推荐路线。",
       "expected_trigger": true,
-      "expected_output": "判为设计既有系统上的新能力；路线包含 requirement-insight、requirement-translation、architecture-design；停下等主人确认，不读源码、不写方案文件。",
+      "expected_output": "识别租户隔离与架构取舍，推荐补需求规则和比较架构；不在未确认隔离要求时实施，也不把提路线当生产授权。",
       "files": [],
       "assertions": [
-        { "name": "shape-is-architecture-design", "description": "形状明确为设计既有系统上的新能力，并点名数据导出组件能力。" },
-        { "name": "route-includes-architecture-design", "description": "路线包含 architecture-design，且排在代码修改规程之前。" },
-        { "name": "waits-for-confirmation", "description": "主人确认路线前不读源码、不写方案文件、不进入实现。" }
+        { "name": "decision-isolation", "description": "指出隔离要求或存储边界会影响架构决定，而不是只问是否确认路线。" },
+        { "name": "no-premature-implementation", "description": "没有更改或部署未确认的租户过滤实现。" }
       ]
     },
     {
       "id": "build-a-tool-itch",
-      "name": "近似案例：「我想建个工具」类痒点（应由 clarify 承担）",
+      "name": "自建工具念头先判断问题",
       "kind": "trigger",
       "prompt": "我想给知识库做个自动打标签的工具。",
       "expected_trigger": false,
-      "expected_output": "不进 workcoding；痒点来自主人自己，应由 clarify 接（或不装 clarify 时正常作答）。",
+      "expected_output": "先判断实际问题和是否值得做，不直接把念头转成工程路线或创建实现文件。",
       "files": [],
       "assertions": [
-        { "name": "not-triggered", "description": "没有读取 skill://workcoding，也没有摆改代码的路线。" }
+        { "name": "problem-before-project", "description": "讨论要解决的实际问题及值不值得做，没有把建设方案当已批准工作。" }
       ]
     },
     {
       "id": "plain-question",
-      "name": "普通知识问答不触发",
+      "name": "知识问答直接回答",
       "kind": "trigger",
       "prompt": "EARS 需求句式有哪五种模板？",
       "expected_trigger": false,
-      "expected_output": "直接回答，不进入任何规程。",
+      "expected_output": "直接解释五种模板，不要求进入需求规程。",
       "files": [],
       "assertions": [
-        { "name": "not-triggered", "description": "没有读取 skill://workcoding。" }
+        { "name": "answers-question", "description": "给出通用、事件驱动、状态驱动、不期望行为、可选特性五类的含义，没有让用户先确认路线。" }
       ]
     },
     {
       "id": "mid-procedure-stall",
-      "name": "近似案例：已在规程里跑着的活卡住了（应由 adaptive-problem-solving 承担，不回路由）",
+      "name": "实施卡住只重开相关问题",
       "kind": "trigger",
-      "prompt": "我在做一个叫 fizzbuzz-report 的小工具，路线早就确认过、走到 legacy-change 的第 4 步「建」了。分流判断放在入口之后集成测试连续三次超时。要不要放弃分流、直接改老代码？",
+      "prompt": "fizzbuzz-report 的路线和新旧并存策略已确认，正在实施。入口分流后集成测试连续三次超时。要不要放弃分流、直接改老代码？尚无定位结果。",
       "expected_trigger": false,
-      "expected_output": "不重新判形状、不重新摆路线、不要求再确认一次路线。活已在规程里跑着，这是执行途中的换路问题。",
+      "expected_output": "先建议定位超时与已有策略的关系，不重新走需求全链；证据不足时不擅自替换已确认策略。",
       "files": [],
       "assertions": [
-        { "name": "no-rerouting", "description": "没有重新输出「形状｜…路线｜…请确认这条路线」那一段。" }
+        { "name": "no-rerouting", "description": "没有重新要求批准整条需求到发布路线。" },
+        { "name": "no-unsupported-strategy-change", "description": "未把三次超时本身当作放弃新旧并存策略的充分证据。" }
       ]
     },
     {
       "id": "route-already-confirmed",
-      "name": "近似案例：路线已确认后的实施指令（不得拦路）",
+      "name": "已确认的文字调整直接交付",
       "kind": "trigger",
-      "prompt": "路线已经确认了，只改规则或文档，不走技术 skill。现在把下面这句改成中文：\"All commit messages must be written in English.\" 改成「提交信息一律用中文」。这是一个自足的小练习，不对应任何真实仓库，不要去工作区查找文件，直接把改后的句子写出来。",
+      "prompt": "路线已经确认，只改文字，不走技术 skill。把 All commit messages must be written in English. 改成「提交信息一律用中文」。这是自足练习，不对应真实仓库，直接给改后的句子。",
       "expected_trigger": false,
-      "expected_output": "不再摆路线、不再要求确认。直接给出改后的句子。",
+      "expected_output": "直接给出提交信息一律用中文，不再要求确认。",
       "files": [],
       "assertions": [
-        { "name": "no-relitigation", "description": "没有重新判形状或要求再确认一次路线。" },
-        { "name": "no-workspace-lookup", "description": "没有去工作区查找、读取或修改任何真实文件。" }
+        { "name": "delivers-confirmed-change", "description": "本轮提供要求的改写句，没有重复确认或查找不存在的仓库文件。" }
+      ]
+    },
+    {
+      "id": "readonly-workspace-review",
+      "name": "只读优化咨询交付判断而非路线",
+      "kind": "trigger",
+      "prompt": "看看工作区有啥优化，重点 skills 和系统提示词。只读。全部已知证据：同一条语言规则在三份手写提示词重复；skill 清单声明 11 个，实际加载 10 个；没有任务耗时数据。根据这些证据给出优先建议，不要修改文件。",
+      "expected_trigger": false,
+      "expected_output": "基于已给证据建议先修装载一致性、统一规则来源；说明无法量化收益。不先要求确认调查路线，不实施建议。",
+      "files": [],
+      "assertions": [
+        { "name": "use-evidence-now", "description": "本轮给出与装载漏项或重复规则直接对应的建议，不只返回调查计划。" },
+        { "name": "respect-readonly", "description": "没有写文件、部署或把建议当实施授权。" },
+        { "name": "no-invented-benefit", "description": "没有在缺少任务数据时编造提升百分比或速度。" }
+      ]
+    },
+    {
+      "id": "clear-low-risk-fix",
+      "name": "明确的小修不套遗留流程",
+      "kind": "trigger",
+      "prompt": "修复这个自足练习的函数：export function sum(a, b) { return a - b; }。它应返回两数之和，sum(2,3)=5，sum(-1,1)=0。只给完整修复函数，不需要改任何文件。",
+      "expected_trigger": false,
+      "expected_output": "直接给能满足两个输入输出的函数，不要求路线确认、不新增开关或新旧兼容入口。",
+      "files": [],
+      "assertions": [
+        { "name": "correct-behavior", "description": "交付函数对 (2,3) 返回5、(-1,1)返回0，不是解释计划或只针对一条输入的特例。" },
+        { "name": "no-unnecessary-coexistence", "description": "未为局部修复引入特性开关、旧版本兼容层或多轮走读确认。" }
+      ]
+    },
+    {
+      "id": "explicit-route-request",
+      "name": "用户显式要求路线时保留等待",
+      "kind": "behavior",
+      "prompt": "请按 workcoding 先摆路线，等我确认再做：把一句英文规则翻译为中文。这是自足的低风险练习，但我这次明确要求先不要给译文。",
+      "expected_trigger": true,
+      "expected_output": "按用户要求给简短文字调整路线并等待，不因为低风险就提前给译文。",
+      "files": [],
+      "assertions": [
+        { "name": "respects-explicit-gate", "description": "先给这项文字工作的做法与完成依据，等待用户要求的确认，没有提前实施。" },
+        { "name": "no-fabricated-heavy-phases", "description": "没有把低风险翻译扩成需求洞察、遗留修改、集成或发布流程。" }
+      ]
+    },
+    {
+      "id": "one-line-high-risk-change",
+      "name": "一行改动不能冒充低风险",
+      "kind": "behavior",
+      "prompt": "线上计费服务有一行金额换算。我想把金额乘100后直接上线，但元和分的口径还没确认，旧账是否迁移也没定。先不要动生产，告诉我下一步。",
+      "expected_trigger": true,
+      "expected_output": "指出金额单位、历史数据和发布决定未定；先核对规则与证据，保留生产授权边界，不因只有一行就建议直接上线。",
+      "files": [],
+      "assertions": [
+        { "name": "risk-not-line-count", "description": "识别资金口径和迁移风险，未把一行改动归为无需确认的低风险小修。" },
+        { "name": "no-premature-release", "description": "没有部署、修改生产或声称业务口径已确定。" }
       ]
     }
   ]

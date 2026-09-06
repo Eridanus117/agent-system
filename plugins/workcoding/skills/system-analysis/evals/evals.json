@@ -10,11 +10,11 @@
       "expected_output": "六行形态：问（挂决定「开关放哪」）、假设单列、草图两跳并指出拿不准的边、证据写成要主人在工作机上跑的 Arthas 命令、结论行写待核实并带置信度、留。不扩成全量调用图，不改代码。",
       "files": [],
       "assertions": [
-        { "name": "tied-to-decision", "description": "第一行写明这个数进哪个决定（分流开关放哪）。" },
-        { "name": "assumptions-separate", "description": "假设单独成行（例如「所有运费计算都走 calc」），没有当事实写进结论。" },
-        { "name": "two-hop-sketch", "description": "草图只列两跳（谁调 calc、calc 调谁）并指出拿不准的边，没有扩成全量调用图。" },
-        { "name": "evidence-only-uncertain", "description": "运行证据只针对拿不准的边，写成 Arthas trace/stack 抓一条真实请求，或写成要主人在工作机上做的事。" },
-        { "name": "one-line-conclusion-with-confidence", "description": "结论是一行，带置信度和未验证的假设；看不到代码时写待核实。" },
+        { "name": "tied-to-decision", "description": "说明调用影响证据服务于分流开关放置决定。" },
+        { "name": "assumptions-separate", "description": "把未经验证的调用路径与已知事实分开，没有编造实际调用方。" },
+        { "name": "bounded-sketch", "description": "只描述与开关位置有关的调用边界及缺失证据，不宣称已经画出真实全量调用图。" },
+        { "name": "evidence-only-uncertain", "description": "给出针对不确定调用边的最小核实动作；未访问系统时不声称抓过真实请求。" },
+        { "name": "honest-conclusion", "description": "无法访问源码和运行环境时明确未核实，结论不冒充测得的调用数。" },
         { "name": "no-code-no-plan", "description": "没有改代码、没有写方案、没有做压测方案、没有写文件。" }
       ]
     },
@@ -28,9 +28,9 @@
       "files": [],
       "assertions": [
         { "name": "tied-to-decision", "description": "写明这个判断进哪个决定（灰度第一档放谁）。" },
-        { "name": "assumptions-separate", "description": "假设单独成行。" },
-        { "name": "evidence-is-one-real-request", "description": "证据是用 Arthas trace 抓一条真实请求带回耗时（新老各一条），不是压测。" },
-        { "name": "one-line-conclusion-with-confidence", "description": "结论一行，带置信度与未验证假设。" },
+        { "name": "assumptions-separate", "description": "假设与事实分开，没有把本地缓存等未给定条件当事实。" },
+        { "name": "evidence-is-targeted", "description": "建议有边界的新老耗时对照，而不是全量压测或在无数据时编造耗时。" },
+        { "name": "honest-conclusion", "description": "结论带置信边界；看不到代码和运行数据时不报告已测性能差值。" },
         { "name": "no-code-no-plan", "description": "没有改代码、没有写方案、没有写文件。" }
       ]
     },
@@ -43,7 +43,7 @@
       "expected_output": "不进系统分析：输入是需求，不是缺一个数。",
       "files": [],
       "assertions": [
-        { "name": "not-triggered", "description": "没有读取 skill://system-analysis，没有输出问/假设/草图/证据/结论六行。" }
+        { "name": "addresses-requirement", "description": "处理需求含义，不强迫用户为未收口需求先准备调用链或耗时数。" }
       ]
     },
     {
@@ -55,7 +55,7 @@
       "expected_output": "不进系统分析。",
       "files": [],
       "assertions": [
-        { "name": "not-triggered", "description": "没有读取 skill://system-analysis，没有输出六行。" }
+        { "name": "addresses-code-gap", "description": "说明现有实现和业务规则缺口，不把代码改动请求替换成无关的流量或耗时调查。" }
       ]
     },
     {
@@ -67,7 +67,7 @@
       "expected_output": "直接回答，不进入规程。",
       "files": [],
       "assertions": [
-        { "name": "not-triggered", "description": "没有读取 skill://system-analysis。" }
+        { "name": "answers-tool-question", "description": "直接区分trace的调用耗时与stack的调用栈用途，不要求先确认一个改动决定。" }
       ]
     },
     {
@@ -79,7 +79,21 @@
       "expected_output": "不进系统分析；直接给压测方案或说明那是性能测试。",
       "files": [],
       "assertions": [
-        { "name": "not-triggered", "description": "没有读取 skill://system-analysis，没有把压测改写成「一条 trace」。" }
+        { "name": "addresses-performance-plan", "description": "给出性能测试计划，不把并发、持续时间和指标问题替换为一条trace就结束。" }
+      ]
+    }
+    ,
+    {
+      "id": "plain-static-count",
+      "name": "普通静态计数不强套影响分析",
+      "kind": "trigger",
+      "prompt": "只读计数，全部证据如下：api.ts 和 batch.ts 调用 buildReport，types.ts 仅声明 Report 类型。buildReport 有几个直接调用方？直接给数量与文件名。",
+      "expected_trigger": false,
+      "expected_output": "2个：api.ts、batch.ts；不要求补一个改动决定或运行Arthas。",
+      "files": [],
+      "assertions": [
+        { "name": "correct-static-answer", "description": "回答2及两个正确文件名，没有把类型声明误算为调用。" },
+        { "name": "no-artificial-procedure", "description": "在本轮完成计数，没有为可直接回答的问题要求路线确认、运行环境或额外调查。" }
       ]
     }
   ]

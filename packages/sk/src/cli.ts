@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // sk — skills profile 管理与启动薄层（提案：desk/提案/2026-08-26-Skills管理工具.md）
-// profile = <库根>/profiles/<名>/ 文件夹：skills/ 内是指回库的 junction，文件夹即配置。
-// plugin.json / overlay.yml / manifest.json 均由 sync 派生，勿手改。
+// profile 的 manifest.json 是唯一声明；只有 new/add/rm 显式修改它。
+// skills/ junction、plugin.json 与 overlay.yml 都由声明派生；sync 不从投影反写声明。
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,7 +9,7 @@ import { spawnSync } from "node:child_process";
 import { SK_VERSION } from "./version.ts";
 
 interface Skill { name: string; group: string; dir: string; desc: string; }
-interface ProfileEntry { name: string; link: string; target: string | null; alive: boolean; }
+interface ProfileEntry extends ManifestSkill { alive: boolean; desc: string; }
 interface ManifestSkill { name: string; target: string; }
 
 // 技能库根的解析顺序：SK_ROOT 环境变量 → 从源码位置上溯 → 从编译后可执行文件位置上溯。
@@ -132,113 +132,182 @@ function profileDir(name: string): string {
 }
 function skillsDirOf(name: string): string { return path.join(profileDir(name), "skills"); }
 
-function profileSkills(name: string): ProfileEntry[] {
-  const dir = skillsDirOf(name);
-  if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir, { withFileTypes: true })
-    .filter(d => d.isDirectory() || d.isSymbolicLink())
-    .map(d => {
-      const link = path.join(dir, d.name);
-      let target: string | null = null, alive = false;
-      try { target = fs.readlinkSync(link); alive = fs.existsSync(path.join(link, "SKILL.md")); } catch { /* 非链接目录 */ alive = fs.existsSync(path.join(link, "SKILL.md")); }
-      return { name: d.name, link, target, alive };
-    });
+function insideLibrary(target: string): boolean {
+  const rel = path.relative(ROOT, target);
+  return !!rel && rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
 }
 
-// 由 junction 目标推断技能所属组：<扫描根>/<组>/skills/<技能>
-function groupOfEntry(e: ProfileEntry): string | null {
-  try {
-    const rel = path.relative(ROOT, fs.realpathSync(e.link));
-    const seg = rel.split(path.sep);
-    return seg.length >= 3 ? (seg[1] ?? null) : null;
-  } catch { return null; }
+function validateManifest(name: string, manifest: unknown): ManifestSkill[] {
+  const mf = path.join(profileDir(name), "manifest.json");
+  if (!manifest || typeof manifest !== "object" || !("skills" in manifest) || !Array.isArray(manifest.skills)) {
+    die(`无效 skill 声明：${mf} 必须包含 skills 数组`);
+  }
+  const names = new Set<string>();
+  for (const [index, skill] of manifest.skills.entries()) {
+    if (!skill || typeof skill !== "object"
+      || typeof skill.name !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(skill.name)
+      || skill.name.endsWith(".")
+      || process.platform === "win32" && /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(skill.name)
+      || typeof skill.target !== "string" || !skill.target.trim() || path.isAbsolute(skill.target)) {
+      die(`无效 skill 声明：${mf} 的 skills[${index}] 需要合法单段 name 与相对目录 target`);
+    }
+    const key = process.platform === "win32" ? skill.name.toLowerCase() : skill.name;
+    if (names.has(key)) die(`重复 skill 名：${mf} 的 ${skill.name}`);
+    names.add(key);
+    if (!insideLibrary(path.resolve(ROOT, skill.target))) {
+      die(`无效 skill 目标：${mf} 的 ${skill.name} 超出技能库：${skill.target}`);
+    }
+  }
+  return manifest.skills;
 }
 
 function readManifest(name: string): ManifestSkill[] {
   const mf = path.join(profileDir(name), "manifest.json");
-  if (!fs.existsSync(mf)) return [];
-  return (JSON.parse(fs.readFileSync(mf, "utf8")).skills ?? []) as ManifestSkill[];
+  let manifest: unknown;
+  try { manifest = JSON.parse(fs.readFileSync(mf, "utf8")); }
+  catch (cause) { die(`无法读取 skill 声明：${mf}：${cause}`); }
+  return validateManifest(name, manifest);
 }
 
-// allowEmpty：只有明确的用户操作（new/rm）允许把非空 manifest 写空；
-// 其他路径（run/add/sync）遇到「manifest 非空但链接全缺」视为未 restore 的 clone，拒绝覆盖。
-function sync(name: string, allowEmpty = false): number {
+function profileSkills(name: string): ProfileEntry[] {
+  return readManifest(name).map(skill => {
+    const link = path.join(skillsDirOf(name), skill.name);
+    let alive = false;
+    let desc = "";
+    try {
+      const target = fs.realpathSync(path.resolve(ROOT, skill.target));
+      if (insideLibrary(target) && path.basename(target) === skill.name && fs.lstatSync(link).isSymbolicLink()
+        && fs.realpathSync(link) === target && fs.statSync(path.join(target, "SKILL.md")).isFile()) {
+        const info = frontmatter(path.join(target, "SKILL.md"));
+        alive = info["name"] === skill.name;
+        desc = info["description"] ?? "";
+      }
+    } catch { /* 缺失、断链或目标不可读，都保留声明并展示为投影不一致。 */ }
+    return { ...skill, alive, desc };
+  });
+}
+
+function undeclaredSkills(name: string, declared: Iterable<string>): string[] {
+  const names = new Set([...declared].map(n => process.platform === "win32" ? n.toLowerCase() : n));
+  const dir = skillsDirOf(name);
+  return fs.existsSync(dir)
+    ? fs.readdirSync(dir).filter(n => !names.has(process.platform === "win32" ? n.toLowerCase() : n))
+    : [];
+}
+
+/** 写入前一次性核实全部声明目标和受管槽位；不能装到一半才发现坏目标或实体目录。 */
+function resolveTargets(name: string, skills: ManifestSkill[]): Map<string, string> {
+  const targets = new Map<string, string>();
+  for (const skill of skills) {
+    let target: string;
+    try {
+      target = fs.realpathSync(path.resolve(ROOT, skill.target));
+      if (!insideLibrary(target) || !fs.statSync(target).isDirectory() || !fs.statSync(path.join(target, "SKILL.md")).isFile()) {
+        throw new Error("目标必须是技能库内包含 SKILL.md 的目录");
+      }
+      const sourceName = frontmatter(path.join(target, "SKILL.md"))["name"];
+      if (path.basename(target) !== skill.name || sourceName !== skill.name) {
+        throw new Error(`声明名 ${skill.name} 与源目录或 SKILL.md name 不一致（源 name：${sourceName ?? "缺失"}）`);
+      }
+    } catch (cause) {
+      die(`失效 skill 目标：${path.join(profileDir(name), "manifest.json")} 的 ${skill.name} -> ${skill.target}：${cause}`);
+    }
+    const link = path.join(skillsDirOf(name), skill.name);
+    const entry = fs.lstatSync(link, { throwIfNoEntry: false });
+    if (entry && !entry.isSymbolicLink()) die(`拒绝替换实体路径：${link}；请先移走其内容，sk 不删除实体目录`);
+    targets.set(skill.name, target);
+  }
+  return targets;
+}
+
+// 仅 new/add/rm 调用；调用者先校验完整的新声明，再提交声明并修复投影。
+function writeManifest(name: string, skills: ManifestSkill[]): void {
   const dir = profileDir(name);
-  if (!fs.existsSync(dir)) die(`profile 不存在：${name}`);
-  fs.mkdirSync(path.join(dir, ".claude-plugin"), { recursive: true });
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify({ skills }, null, 2) + "\n");
+}
+
+function sync(name: string, targets = resolveTargets(name, readManifest(name))): number {
+  const dir = profileDir(name);
   fs.mkdirSync(skillsDirOf(name), { recursive: true });
-  const entries = profileSkills(name);
-  const live = entries.filter(e => e.alive);
-  if (!allowEmpty && live.length === 0 && readManifest(name).length > 0) {
-    die(`拒绝把 ${name} 的 manifest 覆盖为空：技能链接全部缺失（多半是新 clone）。先执行 sk restore ${name}。`);
+  for (const [skill, target] of targets) {
+    const link = path.join(skillsDirOf(name), skill);
+    let same = false;
+    try { same = fs.lstatSync(link).isSymbolicLink() && fs.realpathSync(link) === target; } catch { /* 缺链待重建。 */ }
+    if (same) continue;
+    if (fs.lstatSync(link, { throwIfNoEntry: false })) removeLink(link);
+    fs.symlinkSync(target, link, "junction");
   }
-  for (const e of entries.filter(e => !e.alive)) {
-    removeLink(e.link);
-    console.log(`已清除失效链接：${name}/${e.name}`);
-  }
+  fs.mkdirSync(path.join(dir, ".claude-plugin"), { recursive: true });
   fs.writeFileSync(path.join(dir, ".claude-plugin", "plugin.json"), JSON.stringify({
     name, version: "0.0.0", description: `skills profile: ${name}（sk 生成，勿手改）`,
   }, null, 2) + "\n");
   const skillsPath = skillsDirOf(name).replaceAll("\\", "/");
   fs.writeFileSync(path.join(dir, "overlay.yml"), `# sk 生成，勿手改（机器相关的绝对路径，不入 git）\nskills:\n  customDirectories:\n    - ${skillsPath}\n`);
-  fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify({
-    skills: live.map(e => ({ name: e.name, target: path.relative(ROOT, fs.realpathSync(e.link)).replaceAll("\\", "/") })),
-  }, null, 2) + "\n");
-  return live.length;
+  for (const skill of undeclaredSkills(name, targets.keys())) {
+    console.log(`未接入：${path.join(skillsDirOf(name), skill)} 不在 manifest 声明中（保留，也未授权）`);
+  }
+  return targets.size;
 }
 
 function cmdNew(name: string | undefined): void {
   if (!name) die("用法：sk new <profile>");
-  if (fs.existsSync(profileDir(name!))) die(`已存在：${name}`);
-  fs.mkdirSync(skillsDirOf(name!), { recursive: true });
-  sync(name!, true);
+  if (fs.existsSync(profileDir(name))) die(`已存在：${name}`);
+  writeManifest(name, []);
+  sync(name);
   console.log(`已创建 profile：${name}`);
 }
 
 function cmdAdd(name: string | undefined, patterns: string[]): void {
   if (!name || patterns.length === 0) die("用法：sk add <profile> <模式...>（技能名 glob 或 @组名）");
-  if (!fs.existsSync(profileDir(name!))) cmdNew(name);
-  // 只把存活链接算作已存在；同名的失效链接先摘掉，让重新 add 能恢复
-  const entries = profileSkills(name!);
-  const existing = new Set(entries.filter(e => e.alive).map(e => e.name));
-  const dead = new Map(entries.filter(e => !e.alive).map(e => [e.name, e.link]));
+  const skills = fs.existsSync(profileDir(name)) ? readManifest(name) : [];
   let added = 0;
-  for (const s of matchSkills(patterns)) {
-    if (existing.has(s.name)) continue;
-    const deadLink = dead.get(s.name);
-    if (deadLink) removeLink(deadLink);
-    fs.symlinkSync(s.dir, path.join(skillsDirOf(name!), s.name), "junction");
+  for (const skill of matchSkills(patterns)) {
+    const target = path.relative(ROOT, fs.realpathSync(skill.dir)).replaceAll("\\", "/");
+    const existing = skills.find(s => process.platform === "win32"
+      ? s.name.toLowerCase() === skill.name.toLowerCase() : s.name === skill.name);
+    if (existing) {
+      if (path.resolve(ROOT, existing.target) !== path.resolve(ROOT, target)) {
+        die(`同名冲突：${skill.name}\n  已声明 ${existing.target}\n  待添加 ${target}\n请先显式 sk rm 再选择新目标。`);
+      }
+      continue;
+    }
+    skills.push({ name: skill.name, target });
     added++;
   }
-  const total = sync(name!);
-  console.log(`${name}：新增 ${added}，现共 ${total} 个技能`);
+  validateManifest(name, { skills });
+  const targets = resolveTargets(name, skills);
+  if (added) writeManifest(name, skills);
+  const total = sync(name, targets);
+  console.log(`${name}：新增 ${added}，现共声明 ${total} 个技能`);
 }
 
 function cmdRm(name: string | undefined, patterns: string[]): void {
   if (!name || patterns.length === 0) die("用法：sk rm <profile> <模式...>（技能名 glob 或 @组名）");
-  let removed = 0;
-  for (const e of profileSkills(name!)) {
-    const hit = patterns.some(p => p.startsWith("@") ? groupOfEntry(e) === p.slice(1) : globToRe(p).test(e.name));
-    if (hit) {
-      removeLink(e.link);
-      removed++;
-    }
+  const skills = readManifest(name);
+  const removed = skills.filter(skill => patterns.some(p => p.startsWith("@")
+    ? skill.target.split(/[\\/]/)[1] === p.slice(1) : globToRe(p).test(skill.name)));
+  if (removed.length === 0) die(`模式未匹配任何技能：${patterns.join(" ")}（sk profiles / sk list 查看）`);
+  const selected = new Set(removed.map(skill => skill.name));
+  const remaining = skills.filter(skill => !selected.has(skill.name));
+  const targets = resolveTargets(name, remaining);
+  for (const skill of removed) {
+    const link = path.join(skillsDirOf(name), skill.name);
+    const entry = fs.lstatSync(link, { throwIfNoEntry: false });
+    if (entry && !entry.isSymbolicLink()) die(`拒绝移除实体路径：${link}；sk 只摘受管链接，不删除实体内容`);
   }
-  if (removed === 0) die(`模式未匹配任何技能：${patterns.join(" ")}（sk profiles / sk list 查看）`);
-  const total = sync(name!, true);
-  console.log(`${name}：移除 ${removed}，现共 ${total} 个技能`);
+  writeManifest(name, remaining);
+  for (const skill of removed) {
+    const link = path.join(skillsDirOf(name), skill.name);
+    if (fs.lstatSync(link, { throwIfNoEntry: false })) removeLink(link);
+  }
+  const total = sync(name, targets);
+  console.log(`${name}：移除 ${removed.length}，现共声明 ${total} 个技能`);
 }
 
 function cmdRestore(name: string | undefined): void {
   if (!name) die("用法：sk restore <profile>");
-  const skills = readManifest(name!);
-  if (skills.length === 0 && !fs.existsSync(path.join(profileDir(name!), "manifest.json"))) die(`无 manifest：${name}`);
-  fs.mkdirSync(skillsDirOf(name!), { recursive: true });
-  for (const s of skills) {
-    const link = path.join(skillsDirOf(name!), s.name);
-    if (!fs.existsSync(link)) fs.symlinkSync(path.join(ROOT, s.target), link, "junction");
-  }
-  console.log(`${name}：已按 manifest 重建，共 ${sync(name!)} 个技能`);
+  console.log(`${name}：已按 manifest 重建，共 ${sync(name)} 个技能`);
 }
 
 function cmdList(): void {
@@ -256,47 +325,41 @@ function cmdList(): void {
   console.log(`\n共 ${inv.length} 个技能，${listGroups().length} 个组（@组名 可整组引用）`);
 }
 
-// 只读展示单个 profile 的当前配置：组、技能名、描述、链接健康度。
-// 未 restore 的 clone（链接全缺但 manifest 非空）回退按 manifest 展示，不改任何盘上状态。
+// 只读展示声明与投影健康度；部分缺链和全部缺链都不会减少声明计数。
 function cmdShow(name: string | undefined): void {
   if (!name) die("用法：sk show <profile>");
-  if (!fs.existsSync(profileDir(name!))) die(`profile 不存在：${name}（sk profiles 查看）`);
-  const entries = profileSkills(name!);
-  const live = entries.filter(e => e.alive);
-  if (entries.length === 0) {
-    const manifest = readManifest(name!);
-    if (manifest.length > 0) {
-      console.log(`${name}：技能链接全部缺失（多半是新 clone），以下按 manifest.json 展示；sk restore ${name} 可重建。`);
-      for (const s of [...manifest].sort((a, b) => a.name.localeCompare(b.name))) {
-        // manifest 的 target 形如 plugins/<组>/skills/<技能>，第二段即组名
-        const group = s.target.split("/")[1] ?? "?";
-        console.log(`${group.padEnd(24)} ${s.name.padEnd(40)} ${s.target}`);
-      }
-      console.log(`\n共 ${manifest.length} 个技能（按 manifest）`);
-      return;
-    }
-    console.log(`${name}：（空 profile，sk add ${name} <模式...> 加技能）`);
-    return;
-  }
-  const rows = entries.map(e => ({ e, group: groupOfEntry(e) ?? "?" }))
+  if (!fs.existsSync(profileDir(name))) die(`profile 不存在：${name}（sk profiles 查看）`);
+  const entries = profileSkills(name);
+  const rows = entries.map(e => ({ e, group: e.target.split(/[\\/]/)[1] ?? "?" }))
     .sort((a, b) => a.group.localeCompare(b.group) || a.e.name.localeCompare(b.e.name));
   for (const { e, group } of rows) {
     const info = e.alive
-      ? (frontmatter(path.join(e.link, "SKILL.md"))["description"] ?? "").slice(0, 60)
-      : `⚠ 链接失效（sk sync ${name} 清理）`;
+      ? e.desc.slice(0, 60)
+      : `投影缺失或目标不一致：${e.target}（sk sync ${name} 修复）`;
     console.log(`${group.padEnd(24)} ${e.name.padEnd(40)} ${info}`);
   }
-  const dead = entries.length - live.length;
-  console.log(`\n共 ${entries.length} 个技能${dead ? `（${dead} 个链接失效）` : ""}`);
+  for (const skill of undeclaredSkills(name, entries.map(e => e.name))) {
+    console.log(`未接入：${skill}（不计入声明，也未授权）`);
+  }
+  if (entries.length === 0) console.log(`${name}：（空 profile，sk add ${name} <模式...> 加技能）`);
+  else {
+    const missing = entries.filter(e => !e.alive).length;
+    console.log(`\n共声明 ${entries.length} 个技能${missing ? `（${missing} 个投影缺失或目标不一致）` : ""}`);
+  }
 }
 
 function cmdProfiles(): void {
   if (!fs.existsSync(PROFILES)) { console.log("（还没有 profile）"); return; }
   for (const d of fs.readdirSync(PROFILES, { withFileTypes: true })) {
     if (!d.isDirectory()) continue;
+    if (!fs.existsSync(path.join(profileDir(d.name), "manifest.json"))) {
+      console.log(`未接入：${d.name} 缺少 manifest 声明（不视为已登记 profile）`);
+      continue;
+    }
     const entries = profileSkills(d.name);
-    const dead = entries.filter(e => !e.alive).length;
-    console.log(`${d.name.padEnd(20)} ${entries.length} 个技能${dead ? `（${dead} 个链接失效，跑 sk sync ${d.name}）` : ""}`);
+    const missing = entries.filter(e => !e.alive).length;
+    const extra = undeclaredSkills(d.name, entries.map(e => e.name)).length;
+    console.log(`${d.name.padEnd(20)} 声明 ${entries.length} 个技能${missing ? `（${missing} 个投影不一致，跑 sk sync ${d.name}）` : ""}${extra ? `（${extra} 个未接入项）` : ""}`);
   }
 }
 
@@ -323,14 +386,15 @@ function winQuote(arg: string): string {
 
 function cmdRun(name: string | undefined, cli: string | undefined, rest: string[]): void {
   if (!name || !cli) die("用法：sk run <profile> <omp|claude> [参数...]");
-  if (!fs.existsSync(profileDir(name!))) die(`profile 不存在：${name}（sk profiles 查看）`);
-  // 新 clone：链接缺失但 manifest 有内容 → 先按 manifest 重建，不能静默清空
-  if (profileSkills(name!).filter(e => e.alive).length === 0 && readManifest(name!).length > 0) cmdRestore(name);
-  sync(name!);
+  if (cli !== "omp" && cli !== "claude") die(`不认识的 CLI：${cli}（支持 omp | claude）`);
+  if (!fs.existsSync(profileDir(name))) die(`profile 不存在：${name}（sk profiles 查看）`);
+  const targets = resolveTargets(name, readManifest(name));
+  const extra = undeclaredSkills(name, targets.keys());
+  if (extra.length) die(`拒绝装载未接入技能：${extra.join("、")}；不在 ${name} 的 manifest 声明中，请先确认并处理，sk 不删除它们。`);
+  sync(name, targets);
   let cmd: string, args: string[];
-  if (cli === "omp") { cmd = "omp"; args = ["--config", path.join(profileDir(name!), "overlay.yml"), ...rest]; }
-  else if (cli === "claude") { cmd = "claude"; args = ["--plugin-dir", profileDir(name!), ...rest]; }
-  else { die(`不认识的 CLI：${cli}（支持 omp | claude）`); return; }
+  if (cli === "omp") { cmd = "omp"; args = ["--config", path.join(profileDir(name), "overlay.yml"), ...rest]; }
+  else { cmd = "claude"; args = ["--plugin-dir", profileDir(name), ...rest]; }
   const exe = resolveExecutable(cmd);
   let r;
   if (process.platform === "win32" && /\.(cmd|bat)$/i.test(exe)) {
@@ -353,7 +417,7 @@ switch (cmd) {
   case "new": cmdNew(rest[0]); break;
   case "add": cmdAdd(rest[0], rest.slice(1)); break;
   case "rm": cmdRm(rest[0], rest.slice(1)); break;
-  case "sync": rest[0] ? console.log(`${rest[0]}：现共 ${sync(rest[0])} 个技能`) : die("用法：sk sync <profile>"); break;
+  case "sync": rest[0] ? console.log(`${rest[0]}：现共声明 ${sync(rest[0])} 个技能`) : die("用法：sk sync <profile>"); break;
   case "restore": cmdRestore(rest[0]); break;
   case "run": cmdRun(rest[0], rest[1], rest.slice(2)); break;
   case "version": case "--version": console.log(SK_VERSION); break;
@@ -361,11 +425,11 @@ switch (cmd) {
     console.log(`sk — skills profile 管理与启动（v${SK_VERSION}）
   sk list                       库存清单（含同名冲突标记）
   sk profiles                   已有 profile 一览
-  sk show <profile>             查看 profile 当前配置（组、技能、描述、链接健康度）
+  sk show <profile>             查看声明、技能描述与投影健康度
   sk new <profile>              新建空 profile
   sk add <profile> <模式...>    加技能（glob 或 @组名，如 sk add 写作 grilling '@openspec'）
   sk rm <profile> <模式...>     移除技能（同样支持 glob 与 @组名）
-  sk sync <profile>             重新生成派生文件、清理失效链接
+  sk sync <profile>             按声明修复投影、重生成派生文件（不反写声明）
   sk restore <profile>          按 manifest 重建链接（新 clone 后用）
   sk run <profile> omp|claude [参数...]   按 profile 启动 session
   sk version                    版本
