@@ -7,7 +7,7 @@ description: 把当前对话的探索结论沉淀进本地 Markdown 知识库。
 
 知识库正文是纯 Markdown + git；Rhizome/Memex 负责全局召回和关系投影，`index.md` 负责人工导航与故障降级，正文是事实源。当前实例：
 
-- **个人知识库**：当前工作区根目录下的 `knowledge/`
+- **个人知识库**：当前工作区根目录下的 `desk/knowledge/`（2026-09-06 由独立仓合入 desk）
 - **工作知识库**：当前工作区根目录下的 `logistics-kb/`
 
 路径随工作区根目录变化，不写死盘符、用户名或机器绝对路径；需要绝对路径时先读当前工作区的 `WORKSPACE.md`。
