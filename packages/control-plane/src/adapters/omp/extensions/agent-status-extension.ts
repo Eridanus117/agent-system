@@ -255,7 +255,11 @@ export async function evaluateWriteGuard(
   if (contexts.some((context) => context === null || context.branch === null || !context.isLinkedWorktree)) {
     return {
       block: true,
-      reason: '写入守卫拒绝执行：写入目标必须位于 Git 仓库的 linked worktree，且必须能确认当前分支。',
+      reason: blockedReason(
+        event,
+        '写入守卫拒绝执行：写入目标必须位于 Git 仓库的 linked worktree，且必须能确认当前分支。',
+        contexts,
+      ),
     };
   }
   const protectedContext = contexts.find(
@@ -267,10 +271,43 @@ export async function evaluateWriteGuard(
   if (protectedContext !== undefined) {
     return {
       block: true,
-      reason: `写入守卫拒绝执行：Agent 不得在受保护分支 ${protectedContext.branch} 上修改文件。请切换到任务分支或使用独立 worktree。`,
+      reason: blockedReason(
+        event,
+        `写入守卫拒绝执行：Agent 不得在受保护分支 ${protectedContext.branch} 上修改文件。请切换到任务分支或使用独立 worktree。`,
+        contexts,
+      ),
     };
   }
   return undefined;
+}
+function formatRepoContext(context: RepoContext | null): string {
+  if (context === null) return 'repo=unknown';
+  return [
+    `repo=${context.root}`,
+    `branch=${context.branch ?? 'detached'}`,
+    `origin-default=${context.defaultBranch ?? 'unknown'}`,
+    `worktree=${context.isLinkedWorktree ? 'linked' : 'main'}`,
+  ].join(', ');
+}
+
+function formatGuardContext(contexts: readonly (RepoContext | null)[]): string {
+  return contexts.map(formatRepoContext).join(' | ');
+}
+
+function recoveryHint(event: MinimalToolCallEvent): string {
+  const command = stringValue(event.input.command);
+  if (event.toolName === 'bash' && command !== null && !isReadOnlyBashCommand(command)) {
+    return '这条 shell 命令未被守卫证明为只读；不要重复重试同一命令，改用 read/grep/glob 或先切到 linked worktree。';
+  }
+  return '这不是瞬时错误；不要在当前 cwd 重试，先确认主干事实并切到 linked worktree。';
+}
+
+function blockedReason(
+  event: MinimalToolCallEvent,
+  message: string,
+  contexts: readonly (RepoContext | null)[],
+): string {
+  return `${message} 当前事实：${formatGuardContext(contexts)} ${recoveryHint(event)}`;
 }
 
 /** 读取一次启动上下文；不轮询、不监听，也不在事件之间重复读取。 */
