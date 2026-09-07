@@ -7,8 +7,8 @@
 当前可复核的机制版本：
 
 - package：`@agent-system/mounts`
-- package version：`0.1.0`
-- 验收基线 commit：`d18bfbd26494c573f4110c9a4d406d169aa03e08`
+- package version：`0.1.0-private-mount-acceptance-SNAPSHOT`
+- 验收基线 commit：`6935f4c`（`0.1.0-private-mount-acceptance-SNAPSHOT`）
 - 消费方式：固定到明确 commit SHA；不要消费 `main`、工作目录未提交内容或跨仓实时软链。
 
 该 package 当前为仓内 private package，未声明远端制品发布。目标仓需要将 agent-system 作为已审阅的固定版本来源，再由目标仓自己的薄 adapter 调用 CLI 或公开 TypeScript API。
