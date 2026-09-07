@@ -32,7 +32,7 @@ sk list                       库存清单（含同名冲突标记）
 sk profiles                   profile 一览（按声明计数，显示缺链与未接入项）
 sk show <profile>             只读查看声明、组、技能、描述与链接健康度；缺链提示 sync 修复
 sk new <profile>              新建空 profile 声明
-sk add <profile> <模式...>    加入声明并装配（技能名 glob 或 @组名，如 sk add 写作 grilling @openspec）
+sk add <profile> <模式...>    加入声明并装配（技能名 glob 或 @组名，如 sk add 写作 grilling @workcoding）
 sk rm <profile> <模式...>     按声明移除技能（支持 glob 与 @组名；缺链或目标失效也可移除）
 sk sync <profile>             校验声明、修复投影、重生成客户端配置；保留并报告未声明项
 sk restore <profile>          同样按声明修复投影和配置（可用于新 clone）

@@ -1,15 +1,12 @@
 {
   "name": "agent-system",
-  "private": true,
-  "type": "module",
-  "workspaces": [
-    "packages/*"
-  ],
   "version": "0.1.1",
+  "private": true,
   "scripts": {
     "prepare": "git config core.hooksPath .githooks"
   },
-  "devDependencies": {
-    "@fission-ai/openspec": "1.10.0"
-  }
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ]
 }

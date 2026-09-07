@@ -18,10 +18,12 @@
 
 目标权威结构固定为：
 
-1. `openspec/specs/`：已生效的产品需求与 capability 规范；
+1. `openspec/specs/`：已生效的产品需求与 capability 规范（纯 Markdown 记录，见下方退役说明）；
 2. 仓内版本化文档、入口和合同：架构、操作边界、失败语义与维护规则；
-3. `openspec/changes/`：待审、实施和交付证据；只有按生命周期同步或归档后才改变长期规范；
+3. `openspec/changes/`：已归档的交付证据（纯 Markdown 记录，不再有 Change 生命周期）；
 4. ~~`_bmad-output/`：迁移输入和历史证据，完成覆盖核验后退役~~ —— **2026-09-02 已整体删除**，覆盖核验永不发生（理由见上方推翻说明）。权威结构现为上述三层。
+
+> **OpenSpec 工具与工作流已于 2026-09-08 退役（负责人裁定「干掉」）。** `@fission-ai/openspec` 依赖、`openspec/config.yaml`、`openspec/schemas/` 已删除；此前承载 Change 生命周期、机器状态门与 opsx 命令的 `.delivery-spec-runtime` 子模块已于 PR #67 拆除。`openspec/specs/`、`openspec/intake/`、`openspec/changes/archive/` 作为负责人裁决与交付证据的记录原样保留，可读可引用，但新工作不再套入 OpenSpec，也不再产生新的 Change 目录（与 `plugins/workcoding/工作项资产与人机审阅.md` 一致）。
 
 当任务落在本仓时，先读取仓库根 `README.md` 与 `AGENTS.md` 的当前权威声明，再按模式继续（`_archive/authority/00-map.md` 只是历史索引，不再必读）：
 
