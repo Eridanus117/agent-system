@@ -127,14 +127,21 @@ describe('OMP branch-aware write guard', () => {
 
   test('does not let an outside target launder a protected-branch target in the same call', async () => {
     // 放行仓外不等于放行整次调用：只要有一个目标落在受管仓的主干上，仍然拒绝。
+    //
+    // 目标路径必须平台中立：targetDirectories 会 path.resolve 再取最近的现存目录，
+    // 而 `C:/...` 在 POSIX 上不是绝对路径，会被解析到 cwd 底下，两个目标于是塌成
+    // 同一个——本用例最初就是这样在 Linux CI 上假过的。改用「文件系统根」与「本测试
+    // 文件所在目录」这两个各平台都真实存在且必然不同的位置。
+    const outsideDir = path.parse(process.cwd()).root;
+    const insideDir = import.meta.dir;
     const mixed: RepoContextReader = async (directory) => (
-      directory.toLowerCase().includes('workspaces')
+      path.resolve(directory) === path.resolve(outsideDir)
         ? { kind: 'outside' }
-        : { kind: 'repo', context: { root: 'C:/repo', branch: 'main', defaultBranch: 'main', isLinkedWorktree: true } }
+        : { kind: 'repo', context: { root: insideDir, branch: 'main', defaultBranch: 'main', isLinkedWorktree: true } }
     );
     const blocked = await evaluateWriteGuard(
-      toolCall('write', { paths: ['C:/Users/Morni/multica_workspaces/ws/run/workdir/a.md', 'C:/repo/src/index.ts'] }),
-      'C:/repo',
+      toolCall('write', { paths: [path.join(outsideDir, 'outside.md'), path.join(insideDir, 'inside.ts')] }),
+      insideDir,
       mixed,
     );
     expect(blocked).toMatchObject({ block: true });
