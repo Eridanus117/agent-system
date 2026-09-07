@@ -20,8 +20,7 @@ function fail(message: string): never { throw new Error(message); }
 /**
  * Windows 的默认路径上限是 260；超过它的路径 lstat 会失败，git 于是把一份未改动的文件报成 `M`。
  * 受控探针（2026-09-01）：同一条干净路径，全长 259 时报干净、260 起报 `M`，加上本参数后恒为干净。
- * 写入侧的 openspec-upgrade.ts 早就固定带着它，读侧不带，就会把「写得进去的文件」读成内容漂移，
- * 把一个环境能力问题伪装成一次正确的 fail-closed（INT-20260831-010 因此被误归因为 git 竞态）。
+ * 读写侧统一携带该 Git 能力参数，避免把环境能力问题伪装成内容漂移。
  */
 function withGitCapability(args: string[]): string[] {
   return process.platform === "win32" ? ["-c", "core.longpaths=true", ...args] : args;
@@ -42,7 +41,7 @@ function gitResult(root: string, args: string[], input?: string): { status: numb
   return { status: result.status, signal: result.signal ?? null, stdout: result.stdout ?? "" };
 }
 // ---- 受管投影校验的纯判据（openspec/tools/runtime-lib.ts 的逐字副本）--------
-// 本文件是四条受管投影之一，在消费仓里是 openspec/tools/ 下**唯一**存在的文件，
+// 本文件是受管投影之一，在消费仓里是 openspec/tools/ 下**唯一**存在的文件，
 // 因此不得 import 任何同级模块——一 import，投影副本就会因找不到模块而无法加载。
 // 权威定义在 runtime-lib.ts；两份必须逐字相同，由 test/contracts.test.ts 的 VC-042 比对源码兜底。
 // 修改时两边一起改，不要只改一边。
