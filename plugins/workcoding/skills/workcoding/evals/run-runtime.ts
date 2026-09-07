@@ -26,6 +26,15 @@ const CONTEXT_PATHS = [
   "desk/20-知识库/10-知识笔记/20-工作方法/10-总纲/10-工作方法地图.md",
   "desk/20-知识库/05-索引/10-索引.md",
 ];
+const FROZEN_CONTEXT_PATHS = [
+  "desk/agent/prompt/00-共用规则.md",
+  "desk/agent/prompt/030-方法选择.md",
+  "desk/agent/040-方法选择改进/index.md",
+  "desk/在途.md",
+  "desk/knowledge/notes/主人档案.md",
+  "desk/knowledge/notes/工作方法地图.md",
+  "desk/knowledge/index.md",
+];
 const DEFAULT_CASE_IDS = ["readonly-review", "small-bugfix", "consequential-unresolved", "confirmed-continuation"];
 type Mode = "before" | "after";
 type FrozenDocument = { path: string; source: string; content: string; sha256: string };
@@ -1048,6 +1057,7 @@ async function main() {
   const authDir = path.resolve(process.env.PI_CODING_AGENT_DIR || path.join(homedir(), ".omp", "agent"));
   requireThat(!within(authDir, output) && !within(baseline, output), "结果路径不得覆盖认证目录或改前快照");
   requireThat(options["--context-snapshot"] === undefined || !within(contextRoot, output), "结果路径不得覆盖指定上下文快照");
+  const contextPaths = contextRoot === WORKSPACE ? CONTEXT_PATHS : FROZEN_CONTEXT_PATHS;
   const clean = redactor([[baseline, "<BASELINE>"], [authDir, "<AUTH_DIR>"], [contextRoot, contextRoot === WORKSPACE ? "<WORKSPACE>" : "<CONTEXT_SNAPSHOT>"], [WORKSPACE, "<WORKSPACE>"], [homedir(), "<REAL_HOME>"]]);
   const scenarios: Record<Mode, CaseResult[]> = { before: [], after: [] };
   for (const mode of ["before", "after"] as const) for (const definition of CASES) {
@@ -1110,7 +1120,7 @@ async function main() {
     const [currentAgents, baselineAgents, contextSnapshots] = await Promise.all([
       freezeDocument(WORKSPACE, "AGENTS.md"),
       freezeDocument(baseline, "AGENTS.md"),
-      Promise.all(CONTEXT_PATHS.map(relative => freezeDocument(contextRoot, relative))),
+      Promise.all(contextPaths.map(relative => freezeDocument(contextRoot, relative))),
     ]);
     requireThat(currentAgents, "实际工作区 AGENTS.md 不存在");
     const agentsByMode: Record<Mode, FrozenDocument> = { before: baselineAgents ?? currentAgents, after: currentAgents };
@@ -1125,7 +1135,7 @@ async function main() {
       workspaceAgentsComparison: baselineAgents ? "baseline_snapshot_vs_current" : "same_current_prompt_baseline_agents_absent",
       workspaceAgentsByMode: Object.fromEntries(Object.entries(agentsByMode).map(([mode, snapshot]) => [mode, { source: snapshot.source, sha256: snapshot.sha256 }])),
       contextDocuments: contextSnapshots.map((snapshot, index) => ({
-        path: CONTEXT_PATHS[index], source: snapshot?.source ?? path.join(contextRoot, CONTEXT_PATHS[index]),
+        path: contextPaths[index], source: snapshot?.source ?? path.join(contextRoot, contextPaths[index]),
         available: snapshot !== null, sha256: snapshot?.sha256 ?? null,
       })),
       skills: Object.fromEntries(Object.entries(versions).map(([mode, skills]) => [mode, skills.map(({ name, target, sha256 }) => ({ name, target, sha256 }))])),
@@ -1137,7 +1147,7 @@ async function main() {
         const result = document[mode][index];
         if (result.selected !== true) continue;
         requireThat(!interrupted.signal.aborted, "评测已中断，剩余案例不运行");
-        const missingContext = definition.requiredContext?.filter(relative => !contextDocuments.some(snapshot => snapshot.path === relative)) ?? [];
+        const missingContext = definition.requiredContext ? contextPaths.filter(relative => !contextDocuments.some(snapshot => snapshot.path === relative)) : [];
         if (missingContext.length > 0) {
           result.skipReason = "required_context_unavailable";
           result.missingContext = missingContext;
