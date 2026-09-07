@@ -5,7 +5,7 @@
 ## 入口与作用域
 
 - Agent 从当前进程解析 `rhizome`、`memex`、`memex-sync` 的实际可执行文件，并按需读其子命令 `--help`。已安装清单不等于当前入口；源码 dispatcher 或临时脚本跑通不等于正常 CLI 可用。缺入口就明确反馈，不另造包装器或兼容副本。
-- 从当前工作区入口和有效 `kb-sources.toml`（含本机覆盖）取得逻辑 source 名与物理源根。`KB_SOURCES` 是两工具共有的显式 registry 定位；已有设置不改写。源根可以是 Git 仓的子目录，不用外层 Git 仓名或磁盘目录名替代登记 identity。
+- 从当前工作区入口和有效 `kb-sources.toml`（含本机覆盖）取得逻辑 source 名与物理源根；个人 `knowledge` source 的物理根当前为 `desk/20-知识库/`，工作 `logistics-kb` source 沿用现行根。`KB_SOURCES` 是两工具共有的显式 registry 定位；已有设置不改写。源根可以是 Git 仓的子目录，不用外层 Git 仓名或磁盘目录名替代登记 identity。
 - 下文 `<source>`、`<源根>`、`<compiled目录>`、`<笔记路径>` 都由 Agent 从有效配置和实际文件解析并替换，不让用户填写。确认 Memex lexical 正在读本次编译的 compiled 目录；只核对必要配置，不输出凭据。
 
 ## 先检索并读正文
@@ -16,7 +16,7 @@ memex query "现实问题或关键同义词" --lane lexical --format json
 
 明确使用离线 lexical，不调用默认 hybrid 的 `memex recall`。需要缩小范围时加 `--repo <source>`；跨库结果保留来源标记。输出 `hits[].object_key` 是 identity，`repo` 是 source 名，`path` 是相对源根的正文路径；按登记解析到文件，用普通读取工具读正文后再回答或合并。
 
-没有命中、源未索引或命令失败时，读目标库 `index.md` 并在其正文范围做同义词文件检索。索引可能不新鲜，不能据空结果直接新建。
+没有命中、源未索引或命令失败时，读目标库 `AGENTS.md` 指定的人工索引，并在其正文范围做同义词文件检索。索引可能不新鲜，不能据空结果直接新建。
 
 ## 写后校验与本地索引
 
