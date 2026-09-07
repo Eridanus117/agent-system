@@ -19,7 +19,7 @@ const PREFIX = "OMP_RUNTIME_BOUNDARY:";
 const INITIAL_MATH = "export function sum(a,b){return a-b;}\n";
 const CONTEXT_PATHS = [
   "desk/80-agent配置/20-提示词/10-共用/10-共用规则.md",
-  "desk/80-agent配置/20-提示词/40-方法选择.md",
+  "desk/80-agent配置/20-提示词/10-共用/40-方法选择.md",
   "desk/80-agent配置/30-方法选择改进/10-决定与证据.md",
   "desk/10-现在在哪/30-在途.md",
   "desk/20-知识库/10-知识笔记/10-主人与协作/10-主人档案.md",
