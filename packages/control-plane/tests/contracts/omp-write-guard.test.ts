@@ -63,21 +63,23 @@ describe('OMP branch-aware write guard', () => {
     if (handler === undefined) throw new Error('tool_call handler was not registered');
     const previousLaunchContext = process.env.AGENT_SYSTEM_LAUNCH_CONTEXT;
     delete process.env.AGENT_SYSTEM_LAUNCH_CONTEXT;
-    await expect(handler(
+    const unguarded = handler(
       toolCall('write', { path: 'packages/control-plane/src/index.ts' }),
       { cwd: 'C:/Workspace/agent-system' },
-    )).resolves.toBeUndefined();
+    );
+    if (previousLaunchContext === undefined) delete process.env.AGENT_SYSTEM_LAUNCH_CONTEXT;
+    else process.env.AGENT_SYSTEM_LAUNCH_CONTEXT = previousLaunchContext;
+    await expect(unguarded).resolves.toBeUndefined();
+
+    const beforeGuardedCall = process.env.AGENT_SYSTEM_LAUNCH_CONTEXT;
     process.env.AGENT_SYSTEM_LAUNCH_CONTEXT = 'test-context';
-    try {
-      const result = await handler(
-        toolCall('write', { path: 'packages/control-plane/src/index.ts' }),
-        { cwd: 'C:/Workspace/agent-system' },
-      );
-      expect(result).toMatchObject({ block: true });
-    } finally {
-      if (previousLaunchContext === undefined) delete process.env.AGENT_SYSTEM_LAUNCH_CONTEXT;
-      else process.env.AGENT_SYSTEM_LAUNCH_CONTEXT = previousLaunchContext;
-    }
+    const guarded = handler(
+      toolCall('write', { path: 'packages/control-plane/src/index.ts' }),
+      { cwd: 'C:/Workspace/agent-system' },
+    );
+    if (beforeGuardedCall === undefined) delete process.env.AGENT_SYSTEM_LAUNCH_CONTEXT;
+    else process.env.AGENT_SYSTEM_LAUNCH_CONTEXT = beforeGuardedCall;
+    await expect(guarded).resolves.toMatchObject({ block: true });
   });
 
   test('blocks unknown or detached repository context instead of guessing permission', async () => {
