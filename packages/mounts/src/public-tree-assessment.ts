@@ -118,7 +118,6 @@ const DEFAULT_DENYLIST: readonly string[] = [
   '**/*.log',
   '**/*.pid',
   '**/*.sock',
-  '**/*.lock',
   '**/*.sqlite',
   '**/*.sqlite3',
   '**/*.db',
@@ -259,7 +258,7 @@ function pathPatternIsValid(pattern: unknown): pattern is string {
   if (/[\u0000-\u001f\u007f]/.test(pattern) || pattern.includes('\\')) return false;
   if (pattern.startsWith('/') || /^~(?:\/|$)/.test(pattern) || /^[A-Za-z]:/.test(pattern)) return false;
   const segments = pattern.split('/');
-  if (segments.some((segment) => segment === '' && segments.length > 1 && segment !== '**')) return false;
+  if (segments.some((segment) => segment === '')) return false;
   if (segments.some((segment) => segment === '.' || segment === '..')) return false;
   return true;
 }
@@ -297,7 +296,7 @@ function normalizePath(value: unknown): NormalizedPathResult {
 function globPatternToRegExp(pattern: string): RegExp {
   let source = '^';
   for (let index = 0; index < pattern.length; index += 1) {
-    const character = pattern[index];
+    const character = pattern[index] ?? '';
     if (character === '*' && pattern[index + 1] === '*') {
       index += 1;
       if (pattern[index + 1] === '/') {
@@ -325,6 +324,9 @@ function compilePatterns(patterns: readonly string[]): readonly RegExp[] | null 
     if (!pathPatternIsValid(pattern)) return null;
     const normalized = pattern.endsWith('/') ? `${pattern}**` : pattern;
     compiled.push(globPatternToRegExp(normalized));
+    if (normalized.endsWith('/**')) {
+      compiled.push(globPatternToRegExp(normalized.slice(0, -3)));
+    }
   }
   return compiled;
 }

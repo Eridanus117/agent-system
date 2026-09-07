@@ -4,7 +4,7 @@ import {
   assessPublicTree,
   type PublicTreeAssessmentInput,
   type PublicTreeEntry,
-} from '../src/public-tree-assessment';
+} from '../src/index';
 
 const allowlist = ['README.md', 'docs/**', 'fixtures/**', 'archives/**', 'packages/mounts/**'];
 const denylist = ['private/**', 'blocked/**'];
@@ -26,6 +26,14 @@ describe('PublicTreeAssessment', () => {
       { path: 'docs/guide.txt', kind: 'file', content: 'Reusable guidance.' },
       { path: 'packages/mounts', kind: 'directory' },
     ]);
+
+    expect(result).toEqual({ status: 'allowed', violations: [] });
+  });
+
+  test('allows the public workspace lockfile when explicitly allowlisted', () => {
+    const result = assess([
+      { path: 'bun.lock', kind: 'file', content: '{"lockfileVersion":1}' },
+    ], { allowlist: ['bun.lock'] });
 
     expect(result).toEqual({ status: 'allowed', violations: [] });
   });
@@ -88,7 +96,7 @@ describe('PublicTreeAssessment', () => {
       { path: 'fixtures/b.txt', kind: 'file', content: 'endpoint = http://10.20.30.40/service' },
       { path: 'fixtures/c.txt', kind: 'file', content: 'token: synthetic-token-value' },
       { path: 'fixtures/d.txt', kind: 'file', content: 'session_data: synthetic' },
-    ]);
+    ], { maxFileBytes: 128 });
     expect(result.status).toBe('blocked');
     expect(result.violations.map((item) => item.code)).toEqual([
       'business-identifier',

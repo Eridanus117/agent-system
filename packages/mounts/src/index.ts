@@ -8,6 +8,24 @@ export {
   validateMountPlanResult,
 } from './contracts';
 export { createMountPlan } from './mount-plan';
+export { assessPublicTree, DEFAULT_PUBLIC_TREE_MAX_FILE_BYTES } from './public-tree-assessment';
+
+export type {
+  PublicTreeArchive,
+  PublicTreeArchiveEntry,
+  PublicTreeAssessmentAllowed,
+  PublicTreeAssessmentBlocked,
+  PublicTreeAssessmentInput,
+  PublicTreeAssessmentResult,
+  PublicTreeContent,
+  PublicTreeDirectoryEntry,
+  PublicTreeEntry,
+  PublicTreeFileEntry,
+  PublicTreeOtherEntry,
+  PublicTreeSymlinkEntry,
+  PublicTreeViolation,
+  PublicTreeViolationCode,
+} from './public-tree-assessment';
 
 export type {
   MachineLocalRoot,
