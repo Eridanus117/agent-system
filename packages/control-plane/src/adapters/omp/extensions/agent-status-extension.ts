@@ -64,6 +64,7 @@ export interface RepoContext {
   readonly root: string;
   readonly branch: string | null;
   readonly defaultBranch: string | null;
+  readonly isLinkedWorktree: boolean;
 }
 
 export type RepoContextReader = (
@@ -160,6 +161,13 @@ function gitDirectoryForRoot(root: string): string | null {
     return null;
   }
 }
+function isLinkedWorktree(root: string): boolean {
+  try {
+    return !statSync(path.join(root, '.git')).isDirectory();
+  } catch {
+    return false;
+  }
+}
 
 function commonGitDirectory(gitDirectory: string): string {
   const commonDirectory = readText(path.join(gitDirectory, 'commondir'));
@@ -204,6 +212,7 @@ function defaultRepoContextReader(directory: string): RepoContext | null {
     root,
     branch: branchFromHead(gitDirectory),
     defaultBranch: defaultBranchFromOriginHead(commonDirectory),
+    isLinkedWorktree: isLinkedWorktree(root),
   };
 }
 
@@ -217,10 +226,10 @@ export async function evaluateWriteGuard(
   const contexts = await Promise.all(
     targetDirectories(event, cwd).map((directory) => repoContextReader(directory)),
   );
-  if (contexts.some((context) => context === null || context.branch === null)) {
+  if (contexts.some((context) => context === null || context.branch === null || !context.isLinkedWorktree)) {
     return {
       block: true,
-      reason: '写入守卫拒绝执行：当前工作目录或目标路径无法确认 Git 仓库和分支。',
+      reason: '写入守卫拒绝执行：写入目标必须位于 Git 仓库的 linked worktree，且必须能确认当前分支。',
     };
   }
   const protectedContext = contexts.find(

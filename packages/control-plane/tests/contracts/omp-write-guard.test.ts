@@ -16,8 +16,9 @@ function toolCall(toolName: string, input: Record<string, unknown> = {}): ToolCa
 function repoFacts(
   branch: string | null,
   defaultBranch: string | null = 'main',
+  isLinkedWorktree = true,
 ): RepoContextReader {
-  return async () => ({ root: 'C:/repo', branch, defaultBranch });
+  return async () => ({ root: 'C:/repo', branch, defaultBranch, isLinkedWorktree });
 }
 
 describe('OMP branch-aware write guard', () => {
@@ -34,15 +35,24 @@ describe('OMP branch-aware write guard', () => {
     await expect(evaluateWriteGuard(event, 'C:/repo', repoFacts('feature/guard'))).resolves.toBeUndefined();
   });
 
+  test('blocks writes from the main worktree even on a task branch', async () => {
+    await expect(evaluateWriteGuard(
+      toolCall('edit', { path: 'src/index.ts' }),
+      'C:/repo',
+      repoFacts('feature/guard', 'main', false),
+    )).resolves.toMatchObject({ block: true });
+  });
+
   test('checks the repository owning a direct target path instead of trusting session cwd', async () => {
-    const targetPath = path.join(process.cwd(), 'src', 'index.ts');
+    const targetPath = path.resolve(import.meta.dir, '..', '..', 'src', 'index.ts');
     const sessionRoot = path.parse(process.cwd()).root;
     const readRepoContext: RepoContextReader = async (directory) => {
       const isProtected = directory.toLowerCase().includes('control-plane');
       return {
-        root: isProtected ? path.dirname(process.cwd()) : sessionRoot,
+        root: isProtected ? path.resolve(import.meta.dir, '..', '..') : sessionRoot,
         branch: isProtected ? 'main' : 'feature/guard',
         defaultBranch: 'main',
+        isLinkedWorktree: true,
       };
     };
     await expect(evaluateWriteGuard(
@@ -94,6 +104,7 @@ describe('OMP branch-aware write guard', () => {
       root: 'C:/repo',
       branch,
       defaultBranch: 'main',
+      isLinkedWorktree: true,
     });
     const event = toolCall('edit', { path: 'src/index.ts' });
     await expect(evaluateWriteGuard(event, 'C:/repo', dynamicRunGit)).resolves.toMatchObject({ block: true });
