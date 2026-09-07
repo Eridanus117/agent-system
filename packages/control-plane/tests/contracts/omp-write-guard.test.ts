@@ -31,16 +31,24 @@ describe('OMP branch-aware write guard', () => {
 
   test('blocks direct writes on a protected branch and allows a task branch', async () => {
     const event = toolCall('write', { path: 'src/index.ts' });
-    await expect(evaluateWriteGuard(event, 'C:/repo', repoFacts('main'))).resolves.toMatchObject({ block: true });
+    const blocked = await evaluateWriteGuard(event, 'C:/repo', repoFacts('main'));
+    expect(blocked).toMatchObject({ block: true });
+    expect(blocked?.reason).toContain('branch=main');
+    expect(blocked?.reason).toContain('origin-default=main');
+    expect(blocked?.reason).toContain('不要在当前 cwd 重试');
     await expect(evaluateWriteGuard(event, 'C:/repo', repoFacts('feature/guard'))).resolves.toBeUndefined();
   });
 
-  test('blocks writes from the main worktree even on a task branch', async () => {
-    await expect(evaluateWriteGuard(
+  test('explains that the main worktree, not only the branch, is the blocker', async () => {
+    const blocked = await evaluateWriteGuard(
       toolCall('edit', { path: 'src/index.ts' }),
       'C:/repo',
       repoFacts('feature/guard', 'main', false),
-    )).resolves.toMatchObject({ block: true });
+    );
+    expect(blocked).toMatchObject({ block: true });
+    expect(blocked?.reason).toContain('branch=feature/guard');
+    expect(blocked?.reason).toContain('worktree=main');
+    expect(blocked?.reason).toContain('先确认主干事实');
   });
 
   test('checks the repository owning a direct target path instead of trusting session cwd', async () => {
@@ -93,6 +101,7 @@ describe('OMP branch-aware write guard', () => {
       return null;
     };
     await expect(evaluateWriteGuard(toolCall('read', { path: 'src/index.ts' }), 'C:/repo', noGitCalls)).resolves.toBeUndefined();
+
     await expect(evaluateWriteGuard(toolCall('bash', { command: 'git status --short && git diff --stat' }), 'C:/repo', repoFacts('main'))).resolves.toBeUndefined();
     expect(gitCalls).toBe(0);
     expect(isReadOnlyBashCommand('git show-ref --heads --remotes')).toBe(true);
@@ -100,6 +109,16 @@ describe('OMP branch-aware write guard', () => {
     expect(isReadOnlyBashCommand('git rev-list --left-right --count main...feature')).toBe(true);
     expect(isReadOnlyBashCommand('git merge-base --is-ancestor main feature')).toBe(true);
     expect(isReadOnlyBashCommand('git commit -am change')).toBe(false);
+  });
+  test('distinguishes an unclassified shell command from a transient write failure', async () => {
+    const blocked = await evaluateWriteGuard(
+      toolCall('bash', { command: 'git commit -am change' }),
+      'C:/repo',
+      repoFacts('feature/guard', 'main', false),
+    );
+    expect(blocked).toMatchObject({ block: true });
+    expect(blocked?.reason).toContain('shell 命令未被守卫证明为只读');
+    expect(blocked?.reason).toContain('不要重复重试同一命令');
   });
 
   test('keeps read-only GitHub device calls available without allowing remote mutations', async () => {
