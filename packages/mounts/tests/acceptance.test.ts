@@ -3,7 +3,7 @@ import { lstat, mkdir, mkdtemp, readFile, readlink, rm, symlink, unlink, writeFi
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const pinnedMechanismCommit = 'd18bfbd26494c573f4110c9a4d406d169aa03e08';
+const pinnedMechanismCommit = '6935f4c5e3e31b101095ed00472a100633f4ec8f';
 const temporaryDirectories: string[] = [];
 
 type CommandResult = { readonly code: number; readonly stdout: string; readonly stderr: string };
@@ -126,6 +126,7 @@ describe('private-local end-to-end acceptance', () => {
     expect(blocked.code).toBe(1);
     expect(JSON.parse(blocked.stdout).status).toBe('blocked');
     expect(await exists(join(checkoutRoot, '.omp/local/navigation'))).toBe(false);
+    await git(checkoutRoot, ['checkout', '--quiet', '--detach', 'HEAD']);
     expect(await git(checkoutRoot, ['status', '--porcelain'])).toBe('');
 
     await mkdir(secondSource, { recursive: true });
