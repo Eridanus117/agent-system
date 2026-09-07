@@ -1,3 +1,5 @@
+import { mkdtempSync, mkdirSync, realpathSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, test } from 'bun:test';
 import registerAgentStatusExtension, {
@@ -94,9 +96,21 @@ describe('OMP branch-aware write guard', () => {
     } as unknown as ExtensionApi;
     registerAgentStatusExtension(api);
     if (handler === undefined) throw new Error('tool_call handler was not registered');
+    // 这条走的是默认 reader，会真读文件系统，所以要一个确定性的落点。
+    //
+    // 原来它传 cwd='C:/Workspace/agent-system' 加一个仓内相对路径。那条路径只在
+    // 作者本机存在：Windows CI 上会退到 `C:\`，Linux 上 `C:/...` 根本不是绝对路径。
+    // 它此前之所以通过，靠的正是「确证仓外 → 拒绝」这个已被本次修掉的行为——
+    // 换句话说，测接线的用例在拿一个 bug 当断言依据。
+    //
+    // 改成就地造一个最小仓：.git 是真目录（即主检出，非 linked worktree），
+    // HEAD 指向 main。不调 git，不依赖机器上已有的仓，各平台结果一致。
+    const repoRoot = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'guard-wiring-')));
+    mkdirSync(path.join(repoRoot, '.git'), { recursive: true });
+    writeFileSync(path.join(repoRoot, '.git', 'HEAD'), 'ref: refs/heads/main\n', 'utf8');
     const result = await handler(
-      toolCall('write', { path: 'packages/control-plane/src/index.ts' }),
-      { cwd: 'C:/Workspace/agent-system' },
+      toolCall('write', { path: path.join(repoRoot, 'src', 'index.ts') }),
+      { cwd: repoRoot },
     );
     expect(result).toMatchObject({ block: true });
   });
