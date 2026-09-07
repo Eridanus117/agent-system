@@ -427,7 +427,7 @@ switch (cmd) {
   sk profiles                   已有 profile 一览
   sk show <profile>             查看声明、技能描述与投影健康度
   sk new <profile>              新建空 profile
-  sk add <profile> <模式...>    加技能（glob 或 @组名，如 sk add 写作 grilling '@openspec'）
+  sk add <profile> <模式...>    加技能（glob 或 @组名，如 sk add 写作 grilling '@workcoding'）
   sk rm <profile> <模式...>     移除技能（同样支持 glob 与 @组名）
   sk sync <profile>             按声明修复投影、重生成派生文件（不反写声明）
   sk restore <profile>          按 manifest 重建链接（新 clone 后用）
