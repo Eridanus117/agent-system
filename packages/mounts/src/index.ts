@@ -9,6 +9,20 @@ export {
 } from './contracts';
 export { createMountPlan } from './mount-plan';
 export { assessPublicTree, DEFAULT_PUBLIC_TREE_MAX_FILE_BYTES } from './public-tree-assessment';
+export {
+  doctorMounts,
+  initMountFiles,
+  planMounts,
+  repairMounts,
+  syncMounts,
+} from './lifecycle';
+
+export type {
+  MountInitConfig,
+  MountInitResult,
+  MountLifecycleConfig,
+  MountLifecycleOutcome,
+} from './lifecycle';
 
 export type {
   PublicTreeArchive,
