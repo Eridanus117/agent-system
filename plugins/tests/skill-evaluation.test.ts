@@ -46,6 +46,6 @@ test('skill-maintenance routes behavior changes to the evaluation reference', ()
 
 test('evaluation support does not change the default profile import', () => {
   const imports = read(join(pluginsRoot, 'skill-imports.toml'));
-  assert.match(imports, /source = "plugins\/grilling\/skills\/grilling"/u);
+  assert.match(imports, /source = "vendor\/mattpocock\/skills\/grilling"/u);
   assert.doesNotMatch(imports, /skill-maintenance/u);
 });

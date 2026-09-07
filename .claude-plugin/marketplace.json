@@ -17,11 +17,6 @@
       "source": "./plugins/clarify"
     },
     {
-      "name": "grilling",
-      "version": "0.1.2",
-      "source": "./plugins/grilling"
-    },
-    {
       "name": "knowledge-maintenance",
       "version": "0.1.3",
       "source": "./plugins/knowledge-maintenance"

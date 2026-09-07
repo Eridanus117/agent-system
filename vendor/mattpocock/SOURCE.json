@@ -1,0 +1,7 @@
+{
+  "repository": "https://github.com/mattpocock/skills",
+  "version": "1.2.3",
+  "revision": "6acc160e4e0cd062dbbbd7a1b26ae92855edf07e",
+  "installedSkillCount": 25,
+  "selection": "plugin-declared skills only; misc, in-progress, and deprecated trees excluded"
+}

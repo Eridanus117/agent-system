@@ -5,4 +5,4 @@ version = 1
 
 [[imports]]
 name = "grilling"
-source = "plugins/grilling/skills/grilling"
+source = "vendor/mattpocock/skills/grilling"
