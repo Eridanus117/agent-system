@@ -133,9 +133,12 @@ describe('OMP write guard：判定对象是写入目标，不是会话 cwd', () 
     } as unknown as ExtensionApi;
     registerAgentStatusExtension(api);
     if (handler === undefined) throw new Error('tool_call handler was not registered');
+    // 用临时检出而不是本机固定路径：注册测试走的是默认解析器，没有注入点，
+    // 依赖某台机器上恰好存在的仓库会让结果随机器而变。
+    const root = makeCheckout('main');
     const result = await handler(
-      toolCall('write', { path: 'packages/control-plane/src/index.ts' }),
-      { cwd: 'C:/Workspace/agent-system' },
+      toolCall('write', { path: path.join(root, 'src', 'index.ts') }),
+      { cwd: root },
     );
     expect(result).toMatchObject({ block: true });
   });
