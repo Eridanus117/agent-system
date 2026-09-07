@@ -1076,7 +1076,7 @@ async function main() {
       "这是已安装 OMP 的真实 RPC agent 执行，不是把 SKILL 文本送给 completion；不是原样全生产环境。",
       "before/after 使用当前 daily manifest 的同一组 11 个技能，分别冻结改前快照与当前 SKILL.md 并记录 SHA-256；--cases 只运行指定案例，缺省仍运行原四例，--only-after 不运行 before。",
       "before 优先复制 baseline/AGENTS.md；缺失时如实使用与 after 相同的当前 AGENTS.md。每种模式记录来源及源 hash，每个 fixture 另记路径替换后的 hash；--no-rules 关闭扫描，--append-system-prompt 显式注入副本。",
-      "从当前工作区或显式 --context-snapshot 目录冻结精确白名单内存在的 00、030、方法改进记录、在途、主人档案、工作方法地图和知识索引；保留工作区相对布局，realpath 不得越过所选根，映射文内真实工作区路径。两种模式共享本次所选上下文，不伪称它们是改前版本；快照模式不回退实时文件，不复制聊天记录、运行结果 JSON 或其他链接材料。",
+      "实时工作区读取当前统一编号的上下文白名单；显式 --context-snapshot 固定读取冻结快照的旧平铺白名单。两者均保留所选根下的工作区相对布局，realpath 不得越过所选根；缺项只产生 required_context_unavailable，不回退另一套路径，不复制聊天记录、运行结果 JSON 或其他链接材料。",
       "每个案例独立临时 HOME/USERPROFILE 和 fixture，启动必须证实 messageCount=0；confirmed-continuation 与 bounded-learning 各自在同一 RPC 进程和会话内执行两轮。",
       "PI_CODING_AGENT_DIR 指向现有认证目录；运行器不读取认证文件或打印环境变量。OMP 自身仍使用现有认证，可能进行正常 OAuth 刷新；这不是操作系统沙箱。",
       "原 agent 目录也承载全局配置，overlay 与 discovery 禁用负责排除其技能、规则、扩展、记忆及浏览器；不修改该配置。",
