@@ -83,7 +83,7 @@ bun "$AGENT_SYSTEM/tools/public-tree-gate/index.ts"
 - `packages/mounts/tests/acceptance.test.ts`：`/tmp` 合成 root、真实临时 Git repository 和 detached worktree 的端到端验收。
 - `tools/public-tree-gate/tests/public-tree-gate.test.ts`：合规 tree、symlink、忽略文件、未跟踪内容、敏感内容、归档和 blob 读取失败。
 - 固定消费 smoke：验收测试把 agent-system clone 到临时目录并 checkout `6935f4c5e3e31b101095ed00472a100633f4ec8f`，再从该 SHA 执行 CLI；固定版本 HEAD 校验通过。
-- `/tmp` 真实 worktree smoke：`acceptance.test.ts` 覆盖 `init`、`plan`、blocked `sync`、成功 `sync`、`doctor`、错误软链 `repair`；`1 pass / 20 expect calls`。blocked 期间执行真实 `git checkout --detach HEAD`，checkout 与 `git status --porcelain` 均成功且无部分链接。
+- `/tmp` 真实 worktree smoke：`acceptance.test.ts` 覆盖 `init`、`plan`、合成 hook 调用的 blocked `sync`、成功 `sync`、`doctor`、错误软链 `repair`；`1 pass / 20 expect calls`。hook wrapper 只调用非交互式 `sync`；blocked 期间执行真实 `git checkout --detach HEAD`，checkout 与 `git status --porcelain` 均成功且无部分链接。
 - package 验证：mounts typecheck 通过；mounts 全量测试 `34 pass / 0 fail`；公共门禁合成测试 `6 pass / 0 fail`；公共门禁入口 TypeScript 检查通过。
 - prototype 验证：运行 `worktrees/agent-system/private-mount-prototype/prototypes/private-mount-manifest.html`，正常场景显示“计划可以执行”，本机根缺失场景显示“整个计划被拒绝”且写入列表为空；该页面只使用合成数据。
 - 公共门禁负向证据：对当前整合树执行实际 index 扫描返回 `124` 项既有违规并退出 `1`；门禁没有通过放宽 allowlist 伪造成功，既有内容清理另行处理。

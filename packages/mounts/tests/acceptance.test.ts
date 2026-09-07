@@ -55,6 +55,38 @@ async function mountsCli(
   return run(cwd, 'bun', [pinnedCliPath, command, '--manifest', manifestPath, '--roots', rootsPath, '--checkout', checkoutRoot]);
 }
 
+async function syncHook(
+  cwd: string,
+  mechanismRoot: string,
+  manifestPath: string,
+  rootsPath: string,
+  checkoutRoot: string,
+): Promise<CommandResult> {
+  const hookPath = join(cwd, 'synthetic-sync-hook.ts');
+  const command = [
+    'bun',
+    join(mechanismRoot, 'packages/mounts/src/cli.ts'),
+    'sync',
+    '--manifest',
+    manifestPath,
+    '--roots',
+    rootsPath,
+    '--checkout',
+    checkoutRoot,
+  ];
+  await writeFile(hookPath, [
+    `const child = Bun.spawn(${JSON.stringify(command)}, { stdout: 'pipe', stderr: 'pipe' });`,
+    "const stdout = child.stdout === null ? '' : await new Response(child.stdout).text();",
+    "const stderr = child.stderr === null ? '' : await new Response(child.stderr).text();",
+    'const code = await child.exited;',
+    'process.stdout.write(stdout);',
+    'process.stderr.write(stderr);',
+    'process.exitCode = code;',
+    '',
+  ].join('\n'), 'utf8');
+  return run(cwd, 'bun', [hookPath]);
+}
+
 async function writeProfile(
   manifestPath: string,
   rootsPath: string,
@@ -122,9 +154,9 @@ describe('private-local end-to-end acceptance', () => {
     const plan = await mountsCli(root, mechanismRoot, 'plan', manifestPath, rootsPath, checkoutRoot);
     expect(plan.code).toBe(1);
     expect(JSON.parse(plan.stdout).status).toBe('blocked');
-    const blocked = await mountsCli(root, mechanismRoot, 'sync', manifestPath, rootsPath, checkoutRoot);
-    expect(blocked.code).toBe(1);
-    expect(JSON.parse(blocked.stdout).status).toBe('blocked');
+    const hookSync = await syncHook(root, mechanismRoot, manifestPath, rootsPath, checkoutRoot);
+    expect(hookSync.code).toBe(1);
+    expect(JSON.parse(hookSync.stdout).status).toBe('blocked');
     expect(await exists(join(checkoutRoot, '.omp/local/navigation'))).toBe(false);
     await git(checkoutRoot, ['checkout', '--quiet', '--detach', 'HEAD']);
     expect(await git(checkoutRoot, ['status', '--porcelain'])).toBe('');
