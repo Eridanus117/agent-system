@@ -76,6 +76,16 @@ const READ_ONLY_TOOL_NAMES: Record<string, true> = {
   grep: true,
   glob: true,
 };
+const READ_ONLY_GITHUB_OPS: Record<string, true> = {
+  repo_view: true,
+  file_read: true,
+  search_issues: true,
+  search_prs: true,
+  search_code: true,
+  search_commits: true,
+  search_repos: true,
+  run_watch: true,
+};
 const PROTECTED_BRANCHES: Record<string, true> = {
   main: true,
   master: true,
@@ -104,7 +114,7 @@ function shellSegments(command: string): string[] {
 }
 
 function isReadOnlyShellSegment(segment: string): boolean {
-  return /^(?:(?:git\s+(?:-[^\s]+\s+)*(?:status|diff|log|show|branch|rev-parse|remote|describe|blame|ls-files|cat-file|for-each-ref|symbolic-ref|config\s+--get))|(?:pwd|cd|dir|ls|type|cat|sed|findstr|where|which|echo|printf|node\s+--version|bun\s+--version|npm\s+--version|python\s+--version))(?:\s|$)/iu.test(segment)
+  return /^(?:(?:git\s+(?:-[^\s]+\s+)*(?:status|diff|log|show|show-ref|branch|rev-parse|rev-list|merge-base|remote|describe|blame|ls-files|cat-file|for-each-ref|symbolic-ref|worktree|check-ignore|ls-remote|config\s+--get(?:-[^\s]+)?))|(?:pwd|cd|dir|ls|type|cat|sed|findstr|where|which|echo|printf|node\s+--version|bun\s+--version|npm\s+--version|python\s+--version))(?:\s|$)/iu.test(segment)
     && !/[<>]/u.test(segment);
 }
 
@@ -113,12 +123,28 @@ export function isReadOnlyBashCommand(command: string): boolean {
   return trimmed.length === 0 || shellSegments(trimmed).every(isReadOnlyShellSegment);
 }
 
+function isReadOnlyGitHubCall(event: MinimalToolCallEvent): boolean {
+  if (event.toolName !== 'write' || stringValue(event.input.path) !== 'xd://github') return false;
+  const content = stringValue(event.input.content);
+  if (content === null) return false;
+  try {
+    const payload: unknown = JSON.parse(content);
+    const operation = payload !== null && typeof payload === 'object' && 'op' in payload
+      ? payload.op
+      : null;
+    return typeof operation === 'string' && READ_ONLY_GITHUB_OPS[operation] === true;
+  } catch {
+    return false;
+  }
+}
+
 function isMutationCandidate(event: MinimalToolCallEvent): boolean {
-  if (READ_ONLY_TOOL_NAMES[event.toolName] === true) return false;
+  if (READ_ONLY_TOOL_NAMES[event.toolName] === true || isReadOnlyGitHubCall(event)) return false;
   if (event.toolName !== 'bash') return true;
   const command = stringValue(event.input.command);
   return command === null || !isReadOnlyBashCommand(command);
 }
+
 
 function nearestExistingDirectory(directory: string): string {
   let current = directory;

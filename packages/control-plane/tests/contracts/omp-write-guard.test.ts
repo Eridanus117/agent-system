@@ -95,7 +95,23 @@ describe('OMP branch-aware write guard', () => {
     await expect(evaluateWriteGuard(toolCall('read', { path: 'src/index.ts' }), 'C:/repo', noGitCalls)).resolves.toBeUndefined();
     await expect(evaluateWriteGuard(toolCall('bash', { command: 'git status --short && git diff --stat' }), 'C:/repo', repoFacts('main'))).resolves.toBeUndefined();
     expect(gitCalls).toBe(0);
+    expect(isReadOnlyBashCommand('git show-ref --heads --remotes')).toBe(true);
+    expect(isReadOnlyBashCommand('git config --get-regexp remote')).toBe(true);
+    expect(isReadOnlyBashCommand('git rev-list --left-right --count main...feature')).toBe(true);
+    expect(isReadOnlyBashCommand('git merge-base --is-ancestor main feature')).toBe(true);
     expect(isReadOnlyBashCommand('git commit -am change')).toBe(false);
+  });
+
+  test('keeps read-only GitHub device calls available without allowing remote mutations', async () => {
+    const readOnlyGitHubCall = toolCall('write', {
+      path: 'xd://github',
+      content: JSON.stringify({ op: 'repo_view' }),
+    });
+    await expect(evaluateWriteGuard(readOnlyGitHubCall, 'C:/repo', repoFacts('main'))).resolves.toBeUndefined();
+    await expect(evaluateWriteGuard(toolCall('write', {
+      path: 'xd://github',
+      content: JSON.stringify({ op: 'pr_merge', pr: '52' }),
+    }), 'C:/repo', repoFacts('main'))).resolves.toMatchObject({ block: true });
   });
 
   test('rechecks the branch on every write so a branch switch takes effect immediately', async () => {
