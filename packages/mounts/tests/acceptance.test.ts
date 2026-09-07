@@ -3,7 +3,7 @@ import { lstat, mkdir, mkdtemp, readFile, readlink, rm, symlink, unlink, writeFi
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const cliPath = join(import.meta.dir, '..', 'src', 'cli.ts');
+const pinnedMechanismCommit = 'd18bfbd26494c573f4110c9a4d406d169aa03e08';
 const temporaryDirectories: string[] = [];
 
 type CommandResult = { readonly code: number; readonly stdout: string; readonly stderr: string };
@@ -43,8 +43,16 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-async function mountsCli(cwd: string, command: string, manifestPath: string, rootsPath: string, checkoutRoot: string): Promise<CommandResult> {
-  return run(cwd, 'bun', [cliPath, command, '--manifest', manifestPath, '--roots', rootsPath, '--checkout', checkoutRoot]);
+async function mountsCli(
+  cwd: string,
+  mechanismRoot: string,
+  command: string,
+  manifestPath: string,
+  rootsPath: string,
+  checkoutRoot: string,
+): Promise<CommandResult> {
+  const pinnedCliPath = join(mechanismRoot, 'packages/mounts/src/cli.ts');
+  return run(cwd, 'bun', [pinnedCliPath, command, '--manifest', manifestPath, '--roots', rootsPath, '--checkout', checkoutRoot]);
 }
 
 async function writeProfile(
@@ -63,6 +71,7 @@ async function fixture(): Promise<{
   readonly rootsPath: string;
   readonly checkoutRoot: string;
   readonly sourceRoot: string;
+  readonly mechanismRoot: string;
 }> {
   const root = await mkdtemp(join(tmpdir(), 'mounts-acceptance-'));
   temporaryDirectories.push(root);
@@ -70,6 +79,7 @@ async function fixture(): Promise<{
   const repository = join(root, 'repository');
   const checkoutRoot = join(root, 'worktree');
   const sourceRoot = join(root, 'private-assets');
+  const mechanismRoot = join(root, 'agent-system-pinned');
   const manifestPath = join(profile, 'manifest.json');
   const rootsPath = join(profile, 'roots.json');
   await mkdir(profile, { recursive: true });
@@ -83,7 +93,11 @@ async function fixture(): Promise<{
   await git(repository, ['add', '--all']);
   await git(repository, ['commit', '--quiet', '-m', 'synthetic baseline']);
   await git(repository, ['worktree', 'add', '--quiet', '--detach', checkoutRoot, 'main']);
-  return { root, manifestPath, rootsPath, checkoutRoot, sourceRoot };
+  const agentSystemRoot = (await git(process.cwd(), ['rev-parse', '--show-toplevel'])).trim();
+  await git(root, ['clone', '--quiet', '--no-local', agentSystemRoot, mechanismRoot]);
+  await git(mechanismRoot, ['checkout', '--quiet', '--detach', pinnedMechanismCommit]);
+  expect(await git(mechanismRoot, ['rev-parse', 'HEAD'])).toBe(`${pinnedMechanismCommit}\n`);
+  return { root, manifestPath, rootsPath, checkoutRoot, sourceRoot, mechanismRoot };
 }
 
 afterEach(async () => {
@@ -92,7 +106,7 @@ afterEach(async () => {
 
 describe('private-local end-to-end acceptance', () => {
   test('keeps a real worktree usable across blocked, sync, doctor, and repair states', async () => {
-    const { root, manifestPath, rootsPath, checkoutRoot, sourceRoot } = await fixture();
+    const { root, manifestPath, rootsPath, checkoutRoot, sourceRoot, mechanismRoot } = await fixture();
     const firstSource = join(sourceRoot, 'navigation');
     const secondSource = join(sourceRoot, 'prompts');
     await mkdir(firstSource, { recursive: true });
@@ -100,35 +114,35 @@ describe('private-local end-to-end acceptance', () => {
       { id: 'navigation', rootId: 'assets', source: 'navigation', target: '.omp/local/navigation', expectedType: 'directory', required: true, readonly: true },
       { id: 'prompts', rootId: 'assets', source: 'prompts', target: '.omp/local/prompts', expectedType: 'directory', required: true, readonly: true },
     ];
-    const init = await mountsCli(root, 'init', manifestPath, rootsPath, checkoutRoot);
+    const init = await mountsCli(root, mechanismRoot, 'init', manifestPath, rootsPath, checkoutRoot);
     expect(init.code).toBe(0);
     expect(await readFile(manifestPath, 'utf8')).toContain('private-local');
     expect(await exists(join(checkoutRoot, '.omp/local'))).toBe(false);
     await writeProfile(manifestPath, rootsPath, sourceRoot, mounts);
-    const plan = await mountsCli(root, 'plan', manifestPath, rootsPath, checkoutRoot);
+    const plan = await mountsCli(root, mechanismRoot, 'plan', manifestPath, rootsPath, checkoutRoot);
     expect(plan.code).toBe(1);
     expect(JSON.parse(plan.stdout).status).toBe('blocked');
-    const blocked = await mountsCli(root, 'sync', manifestPath, rootsPath, checkoutRoot);
+    const blocked = await mountsCli(root, mechanismRoot, 'sync', manifestPath, rootsPath, checkoutRoot);
     expect(blocked.code).toBe(1);
     expect(JSON.parse(blocked.stdout).status).toBe('blocked');
     expect(await exists(join(checkoutRoot, '.omp/local/navigation'))).toBe(false);
     expect(await git(checkoutRoot, ['status', '--porcelain'])).toBe('');
 
     await mkdir(secondSource, { recursive: true });
-    const synced = await mountsCli(root, 'sync', manifestPath, rootsPath, checkoutRoot);
+    const synced = await mountsCli(root, mechanismRoot, 'sync', manifestPath, rootsPath, checkoutRoot);
     expect(synced.code).toBe(0);
     expect(JSON.parse(synced.stdout).status).toBe('synced');
     expect(await readlink(join(checkoutRoot, '.omp/local/navigation'))).toBe(firstSource);
     expect(await readlink(join(checkoutRoot, '.omp/local/prompts'))).toBe(secondSource);
 
-    const doctor = await mountsCli(root, 'doctor', manifestPath, rootsPath, checkoutRoot);
+    const doctor = await mountsCli(root, mechanismRoot, 'doctor', manifestPath, rootsPath, checkoutRoot);
     expect(doctor.code).toBe(0);
     expect(JSON.parse(doctor.stdout).message).toBe('private overlay healthy');
     expect(JSON.parse(doctor.stdout).plan.keeps).toHaveLength(2);
 
     await unlink(join(checkoutRoot, '.omp/local/prompts'));
     await symlink(join(root, 'wrong-source'), join(checkoutRoot, '.omp/local/prompts'));
-    const repaired = await mountsCli(root, 'repair', manifestPath, rootsPath, checkoutRoot);
+    const repaired = await mountsCli(root, mechanismRoot, 'repair', manifestPath, rootsPath, checkoutRoot);
     expect(repaired.code).toBe(0);
     expect(await readlink(join(checkoutRoot, '.omp/local/prompts'))).toBe(secondSource);
     expect(await git(checkoutRoot, ['status', '--porcelain'])).toBe('');
