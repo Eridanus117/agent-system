@@ -17,14 +17,8 @@ node_modules/
 WATCHDOG.yml
 
 # OpenSpec CLI 生成的客户端投影，不入库（.cap/ 已于 2026-08-24 退役，此处只忽略投影）。
-.claude/commands/opsx/
 .omp/skills/openspec-*/
-.qoder/commands/opsx/
 .qoder/skills/openspec-*/
-# 2026-08-31：原先这里还有一条 `.omp/commands/opsx-*.md`。delivery-spec-runtime
-# 改用「可校验复制」分发后，.omp/commands 是 runtime-manifest.json 声明的受管投影，
-# 由 runtime-link.ts apply 从 pinned submodule 复制出真实文件并逐文件哈希校验，
-# 必须跟踪；继续忽略会让 runtime-check 在他人 clone 上因投影缺失而 fail-closed。
 
 
 # Claude Code / agent runtime-local session state -- never shared, unlike
