@@ -238,6 +238,12 @@ export async function evaluateWriteGuard(
   return undefined;
 }
 
+export function isAgentSystemSession(
+  environment: Readonly<Record<string, string | undefined>> = process.env,
+): boolean {
+  return stringValue(environment.AGENT_SYSTEM_LAUNCH_CONTEXT) !== null;
+}
+
 /** 读取一次启动上下文；不轮询、不监听，也不在事件之间重复读取。 */
 async function readLaunchContext(): Promise<LaunchContextFile | null> {
   const contextPath = process.env.AGENT_SYSTEM_LAUNCH_CONTEXT;
@@ -278,7 +284,7 @@ export default function registerAgentStatusExtension(pi: MinimalExtensionAPI): v
   });
 
   pi.on('tool_call', async (event, ctx) => {
-    if (stringValue(process.env.AGENT_SYSTEM_LAUNCH_CONTEXT) === null) return undefined;
+    if (!isAgentSystemSession()) return undefined;
     return evaluateWriteGuard(event, ctx.cwd);
   });
 

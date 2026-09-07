@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import registerAgentStatusExtension, {
   evaluateWriteGuard,
+  isAgentSystemSession,
   isProtectedBranch,
   isReadOnlyBashCommand,
   type RepoContextReader,
@@ -49,7 +50,7 @@ describe('OMP branch-aware write guard', () => {
     )).resolves.toMatchObject({ block: true });
   });
 
-  test('wires the blocking guard into the OMP tool_call extension event', async () => {
+  test('wires the session-scoped guard into the OMP tool_call extension event', async () => {
     type ExtensionApi = Parameters<typeof registerAgentStatusExtension>[0];
     type ToolHandler = (event: ToolCall, context: { readonly cwd: string }) => Promise<unknown>;
     let handler: ToolHandler | undefined;
@@ -61,25 +62,12 @@ describe('OMP branch-aware write guard', () => {
     } as unknown as ExtensionApi;
     registerAgentStatusExtension(api);
     if (handler === undefined) throw new Error('tool_call handler was not registered');
-    const previousLaunchContext = process.env.AGENT_SYSTEM_LAUNCH_CONTEXT;
-    delete process.env.AGENT_SYSTEM_LAUNCH_CONTEXT;
-    const unguarded = handler(
-      toolCall('write', { path: 'packages/control-plane/src/index.ts' }),
+    expect(isAgentSystemSession({})).toBe(false);
+    expect(isAgentSystemSession({ AGENT_SYSTEM_LAUNCH_CONTEXT: 'test-context' })).toBe(true);
+    await expect(handler(
+      toolCall('read', { path: 'packages/control-plane/src/index.ts' }),
       { cwd: 'C:/Workspace/agent-system' },
-    );
-    if (previousLaunchContext === undefined) delete process.env.AGENT_SYSTEM_LAUNCH_CONTEXT;
-    else process.env.AGENT_SYSTEM_LAUNCH_CONTEXT = previousLaunchContext;
-    await expect(unguarded).resolves.toBeUndefined();
-
-    const beforeGuardedCall = process.env.AGENT_SYSTEM_LAUNCH_CONTEXT;
-    process.env.AGENT_SYSTEM_LAUNCH_CONTEXT = 'test-context';
-    const guarded = handler(
-      toolCall('write', { path: 'packages/control-plane/src/index.ts' }),
-      { cwd: 'C:/Workspace/agent-system' },
-    );
-    if (beforeGuardedCall === undefined) delete process.env.AGENT_SYSTEM_LAUNCH_CONTEXT;
-    else process.env.AGENT_SYSTEM_LAUNCH_CONTEXT = beforeGuardedCall;
-    await expect(guarded).resolves.toMatchObject({ block: true });
+    )).resolves.toBeUndefined();
   });
 
   test('blocks unknown or detached repository context instead of guessing permission', async () => {
