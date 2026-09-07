@@ -1,5 +1,5 @@
 
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 interface MinimalExtensionUi {
@@ -60,16 +60,15 @@ interface LaunchContextFile {
   readonly client: string;
 }
 
-interface RepoContext {
+export interface RepoContext {
   readonly root: string;
   readonly branch: string | null;
   readonly defaultBranch: string | null;
 }
 
-export type GitCommandRunner = (
-  cwd: string,
-  args: readonly string[],
-) => Promise<string | null>;
+export type RepoContextReader = (
+  directory: string,
+) => RepoContext | null | Promise<RepoContext | null>;
 
 const READ_ONLY_TOOL_NAMES: Record<string, true> = {
   read: true,
@@ -141,40 +140,82 @@ function targetDirectories(event: MinimalToolCallEvent, cwd: string): readonly s
   return candidates.map((candidate) => nearestExistingDirectory(path.dirname(path.resolve(cwd, candidate))));
 }
 
-async function defaultGitCommandRunner(cwd: string, args: readonly string[]): Promise<string | null> {
+function readText(filePath: string): string | null {
   try {
-    const child = Bun.spawn(['git', '-C', cwd, ...args], {
-      stdout: 'pipe',
-      stderr: 'ignore',
-    });
-    const output = child.stdout === null ? '' : await new Response(child.stdout).text();
-    return (await child.exited) === 0 ? output.trim() : null;
+    return readFileSync(filePath, 'utf8').trim();
   } catch {
     return null;
   }
 }
 
-async function readRepoContext(
-  directory: string,
-  runGit: GitCommandRunner,
-): Promise<RepoContext | null> {
-  const root = await runGit(directory, ['rev-parse', '--show-toplevel']);
-  if (root === null || root.length === 0) return null;
-  const branch = await runGit(root, ['branch', '--show-current']);
-  const defaultRef = await runGit(root, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']);
-  const defaultBranch = defaultRef === null ? null : normalizeBranch(defaultRef);
-  return { root, branch: branch === null || branch.length === 0 ? null : branch, defaultBranch };
+function gitDirectoryForRoot(root: string): string | null {
+  const marker = path.join(root, '.git');
+  try {
+    if (!existsSync(marker)) return null;
+    if (statSync(marker).isDirectory()) return marker;
+    const content = readText(marker);
+    if (content === null || !content.startsWith('gitdir:')) return null;
+    return path.resolve(path.dirname(marker), content.slice('gitdir:'.length).trim());
+  } catch {
+    return null;
+  }
+}
+
+function commonGitDirectory(gitDirectory: string): string {
+  const commonDirectory = readText(path.join(gitDirectory, 'commondir'));
+  return commonDirectory === null
+    ? gitDirectory
+    : path.resolve(gitDirectory, commonDirectory);
+}
+
+function findRepoRoot(directory: string): string | null {
+  let current = path.resolve(directory);
+  while (true) {
+    if (gitDirectoryForRoot(current) !== null) return current;
+    const parent = path.dirname(current);
+    if (parent === current) return null;
+    current = parent;
+  }
+}
+
+function branchFromHead(gitDirectory: string): string | null {
+  const head = readText(path.join(gitDirectory, 'HEAD'));
+  const prefix = 'ref: refs/heads/';
+  if (head === null || !head.startsWith(prefix)) return null;
+  const branch = head.slice(prefix.length).trim();
+  return branch.length === 0 ? null : branch;
+}
+
+function defaultBranchFromOriginHead(gitDirectory: string): string | null {
+  const originHead = readText(path.join(gitDirectory, 'refs', 'remotes', 'origin', 'HEAD'));
+  const prefix = 'ref: refs/remotes/origin/';
+  if (originHead === null || !originHead.startsWith(prefix)) return null;
+  const branch = originHead.slice(prefix.length).trim();
+  return branch.length === 0 ? null : normalizeBranch(branch);
+}
+
+function defaultRepoContextReader(directory: string): RepoContext | null {
+  const root = findRepoRoot(directory);
+  if (root === null) return null;
+  const gitDirectory = gitDirectoryForRoot(root);
+  if (gitDirectory === null) return null;
+  const commonDirectory = commonGitDirectory(gitDirectory);
+  return {
+    root,
+    branch: branchFromHead(gitDirectory),
+    defaultBranch: defaultBranchFromOriginHead(commonDirectory),
+  };
 }
 
 /** 每次潜在写入前重新读取 Git 状态，避免分支切换后继续沿用旧许可。 */
 export async function evaluateWriteGuard(
   event: MinimalToolCallEvent,
   cwd: string,
-  runGit: GitCommandRunner = defaultGitCommandRunner,
+  repoContextReader: RepoContextReader = defaultRepoContextReader,
 ): Promise<MinimalToolCallResult | undefined> {
   if (!isMutationCandidate(event)) return undefined;
   const contexts = await Promise.all(
-    targetDirectories(event, cwd).map((directory) => readRepoContext(directory, runGit)),
+    targetDirectories(event, cwd).map((directory) => repoContextReader(directory)),
   );
   if (contexts.some((context) => context === null || context.branch === null)) {
     return {
