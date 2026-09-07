@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import registerAgentStatusExtension, {
   evaluateWriteGuard,
-  isAgentSystemSession,
   isProtectedBranch,
   isReadOnlyBashCommand,
   type RepoContextReader,
@@ -50,7 +49,7 @@ describe('OMP branch-aware write guard', () => {
     )).resolves.toMatchObject({ block: true });
   });
 
-  test('wires the session-scoped guard into the OMP tool_call extension event', async () => {
+  test('wires the blocking guard into the OMP tool_call extension event', async () => {
     type ExtensionApi = Parameters<typeof registerAgentStatusExtension>[0];
     type ToolHandler = (event: ToolCall, context: { readonly cwd: string }) => Promise<unknown>;
     let handler: ToolHandler | undefined;
@@ -62,12 +61,11 @@ describe('OMP branch-aware write guard', () => {
     } as unknown as ExtensionApi;
     registerAgentStatusExtension(api);
     if (handler === undefined) throw new Error('tool_call handler was not registered');
-    expect(isAgentSystemSession({})).toBe(false);
-    expect(isAgentSystemSession({ AGENT_SYSTEM_LAUNCH_CONTEXT: 'test-context' })).toBe(true);
-    await expect(handler(
-      toolCall('read', { path: 'packages/control-plane/src/index.ts' }),
+    const result = await handler(
+      toolCall('write', { path: 'packages/control-plane/src/index.ts' }),
       { cwd: 'C:/Workspace/agent-system' },
-    )).resolves.toBeUndefined();
+    );
+    expect(result).toMatchObject({ block: true });
   });
 
   test('blocks unknown or detached repository context instead of guessing permission', async () => {

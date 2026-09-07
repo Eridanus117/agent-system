@@ -238,11 +238,6 @@ export async function evaluateWriteGuard(
   return undefined;
 }
 
-export function isAgentSystemSession(
-  environment: Readonly<Record<string, string | undefined>> = process.env,
-): boolean {
-  return stringValue(environment.AGENT_SYSTEM_LAUNCH_CONTEXT) !== null;
-}
 
 /** 读取一次启动上下文；不轮询、不监听，也不在事件之间重复读取。 */
 async function readLaunchContext(): Promise<LaunchContextFile | null> {
@@ -283,10 +278,7 @@ export default function registerAgentStatusExtension(pi: MinimalExtensionAPI): v
     ctx.ui.setStatus('agent-system-config', formatStatusLine(context));
   });
 
-  pi.on('tool_call', async (event, ctx) => {
-    if (!isAgentSystemSession()) return undefined;
-    return evaluateWriteGuard(event, ctx.cwd);
-  });
+  pi.on('tool_call', async (event, ctx) => evaluateWriteGuard(event, ctx.cwd));
 
   pi.registerCommand('agent-config', {
     description: 'Show the Agent System configuration and launch status for this OMP session',
