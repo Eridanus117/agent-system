@@ -36,6 +36,14 @@
         "@agent-system/control-plane": "workspace:*",
       },
     },
+    "packages/mounts": {
+      "name": "@agent-system/mounts",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/bun": "^1.1.6",
+        "typescript": "^5.6.0",
+      },
+    },
     "packages/sk": {
       "name": "@agent-system/sk",
       "version": "0.1.0",
@@ -52,6 +60,8 @@
     "@agent-system/control-plane": ["@agent-system/control-plane@workspace:packages/control-plane"],
 
     "@agent-system/harness-engine": ["@agent-system/harness-engine@workspace:packages/harness-engine"],
+
+    "@agent-system/mounts": ["@agent-system/mounts@workspace:packages/mounts"],
 
     "@agent-system/sk": ["@agent-system/sk@workspace:packages/sk"],
 
