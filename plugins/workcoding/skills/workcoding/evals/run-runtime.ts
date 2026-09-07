@@ -22,9 +22,9 @@ const CONTEXT_PATHS = [
   "desk/80-agent配置/20-提示词/40-方法选择.md",
   "desk/80-agent配置/30-方法选择改进/10-决定与证据.md",
   "desk/10-现在在哪/30-在途.md",
-  "desk/20-知识库/20-笔记/10-主人与协作/10-主人档案.md",
-  "desk/20-知识库/20-笔记/20-工作方法/10-总纲/10-工作方法地图.md",
-  "desk/20-知识库/10-索引/10-索引.md",
+  "desk/20-知识库/10-知识笔记/10-主人与协作/10-主人档案.md",
+  "desk/20-知识库/10-知识笔记/20-工作方法/10-总纲/10-工作方法地图.md",
+  "desk/20-知识库/05-索引/10-索引.md",
 ];
 const DEFAULT_CASE_IDS = ["readonly-review", "small-bugfix", "consequential-unresolved", "confirmed-continuation"];
 type Mode = "before" | "after";
