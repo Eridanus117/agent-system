@@ -1,14 +1,30 @@
 
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+
 interface MinimalExtensionUi {
   notify(message: string, type?: string): void;
   setStatus(key: string, text?: string): void;
 }
 interface MinimalExtensionContext {
   readonly ui: MinimalExtensionUi;
+  readonly cwd: string;
 }
 
 interface MinimalSessionStartEvent {
   readonly type: 'session_start';
+}
+
+interface MinimalToolCallEvent {
+  readonly type: 'tool_call';
+  readonly toolName: string;
+  readonly toolCallId: string;
+  readonly input: Record<string, unknown>;
+}
+
+interface MinimalToolCallResult {
+  readonly block?: boolean;
+  readonly reason?: string;
 }
 
 interface MinimalExtensionAPI {
@@ -18,6 +34,13 @@ interface MinimalExtensionAPI {
       event: MinimalSessionStartEvent,
       ctx: MinimalExtensionContext,
     ) => void | Promise<void>,
+  ): void;
+  on(
+    event: 'tool_call',
+    handler: (
+      event: MinimalToolCallEvent,
+      ctx: MinimalExtensionContext,
+    ) => MinimalToolCallResult | void | Promise<MinimalToolCallResult | void>,
   ): void;
   registerCommand(
     name: string,
@@ -35,6 +58,143 @@ interface LaunchContextFile {
   readonly configName: string;
   readonly revisionId: string;
   readonly client: string;
+}
+
+interface RepoContext {
+  readonly root: string;
+  readonly branch: string | null;
+  readonly defaultBranch: string | null;
+}
+
+export type GitCommandRunner = (
+  cwd: string,
+  args: readonly string[],
+) => Promise<string | null>;
+
+const READ_ONLY_TOOL_NAMES: Record<string, true> = {
+  read: true,
+  grep: true,
+  glob: true,
+};
+const PROTECTED_BRANCHES: Record<string, true> = {
+  main: true,
+  master: true,
+  trunk: true,
+};
+
+function stringValue(value: unknown): string | null {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function normalizeBranch(value: string): string {
+  return value.trim().toLowerCase().replace(/^(?:refs\/heads\/|origin\/)+/u, '');
+}
+
+export function isProtectedBranch(branch: string, defaultBranch: string | null = null): boolean {
+  const normalized = normalizeBranch(branch);
+  return PROTECTED_BRANCHES[normalized] === true
+    || (defaultBranch !== null && normalized === normalizeBranch(defaultBranch));
+}
+
+function shellSegments(command: string): string[] {
+  return command
+    .split(/\s*(?:&&|\|\||[;|])\s*/u)
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0);
+}
+
+function isReadOnlyShellSegment(segment: string): boolean {
+  return /^(?:(?:git\s+(?:-[^\s]+\s+)*(?:status|diff|log|show|branch|rev-parse|remote|describe|blame|ls-files|cat-file|for-each-ref|symbolic-ref|config\s+--get))|(?:pwd|cd|dir|ls|type|cat|sed|findstr|where|which|echo|printf|node\s+--version|bun\s+--version|npm\s+--version|python\s+--version))(?:\s|$)/iu.test(segment)
+    && !/[<>]/u.test(segment);
+}
+
+export function isReadOnlyBashCommand(command: string): boolean {
+  const trimmed = command.trim();
+  return trimmed.length === 0 || shellSegments(trimmed).every(isReadOnlyShellSegment);
+}
+
+function isMutationCandidate(event: MinimalToolCallEvent): boolean {
+  if (READ_ONLY_TOOL_NAMES[event.toolName] === true) return false;
+  if (event.toolName !== 'bash') return true;
+  const command = stringValue(event.input.command);
+  return command === null || !isReadOnlyBashCommand(command);
+}
+
+function nearestExistingDirectory(directory: string): string {
+  let current = directory;
+  while (!existsSync(current)) {
+    const parent = path.dirname(current);
+    if (parent === current) return current;
+    current = parent;
+  }
+  return current;
+}
+
+function targetDirectories(event: MinimalToolCallEvent, cwd: string): readonly string[] {
+  if (event.toolName === 'bash') return [cwd];
+  const paths = Array.isArray(event.input.paths)
+    ? event.input.paths.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    : [];
+  const directPath = stringValue(event.input.path);
+  const candidates = paths.length > 0 ? paths : directPath === null ? [] : [directPath];
+  if (candidates.length === 0) return [cwd];
+  return candidates.map((candidate) => nearestExistingDirectory(path.dirname(path.resolve(cwd, candidate))));
+}
+
+async function defaultGitCommandRunner(cwd: string, args: readonly string[]): Promise<string | null> {
+  try {
+    const child = Bun.spawn(['git', '-C', cwd, ...args], {
+      stdout: 'pipe',
+      stderr: 'ignore',
+    });
+    const output = child.stdout === null ? '' : await new Response(child.stdout).text();
+    return (await child.exited) === 0 ? output.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+async function readRepoContext(
+  directory: string,
+  runGit: GitCommandRunner,
+): Promise<RepoContext | null> {
+  const root = await runGit(directory, ['rev-parse', '--show-toplevel']);
+  if (root === null || root.length === 0) return null;
+  const branch = await runGit(root, ['branch', '--show-current']);
+  const defaultRef = await runGit(root, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']);
+  const defaultBranch = defaultRef === null ? null : normalizeBranch(defaultRef);
+  return { root, branch: branch === null || branch.length === 0 ? null : branch, defaultBranch };
+}
+
+/** 每次潜在写入前重新读取 Git 状态，避免分支切换后继续沿用旧许可。 */
+export async function evaluateWriteGuard(
+  event: MinimalToolCallEvent,
+  cwd: string,
+  runGit: GitCommandRunner = defaultGitCommandRunner,
+): Promise<MinimalToolCallResult | undefined> {
+  if (!isMutationCandidate(event)) return undefined;
+  const contexts = await Promise.all(
+    targetDirectories(event, cwd).map((directory) => readRepoContext(directory, runGit)),
+  );
+  if (contexts.some((context) => context === null || context.branch === null)) {
+    return {
+      block: true,
+      reason: '写入守卫拒绝执行：当前工作目录或目标路径无法确认 Git 仓库和分支。',
+    };
+  }
+  const protectedContext = contexts.find(
+    (context): context is RepoContext =>
+      context !== null
+      && context.branch !== null
+      && isProtectedBranch(context.branch, context.defaultBranch),
+  );
+  if (protectedContext !== undefined) {
+    return {
+      block: true,
+      reason: `写入守卫拒绝执行：Agent 不得在受保护分支 ${protectedContext.branch} 上修改文件。请切换到任务分支或使用独立 worktree。`,
+    };
+  }
+  return undefined;
 }
 
 /** 读取一次启动上下文；不轮询、不监听，也不在事件之间重复读取。 */
@@ -75,6 +235,8 @@ export default function registerAgentStatusExtension(pi: MinimalExtensionAPI): v
     const context = await readLaunchContext();
     ctx.ui.setStatus('agent-system-config', formatStatusLine(context));
   });
+
+  pi.on('tool_call', async (event, ctx) => evaluateWriteGuard(event, ctx.cwd));
 
   pi.registerCommand('agent-config', {
     description: 'Show the Agent System configuration and launch status for this OMP session',
