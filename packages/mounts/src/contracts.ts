@@ -39,12 +39,19 @@ export type MountTargetState =
   | { readonly kind: 'symlink'; readonly target: string }
   | { readonly kind: 'file' | 'directory' | 'other' };
 
+export type MountSourceState =
+  | { readonly kind: 'present' }
+  | { readonly kind: 'missing' };
+
 export interface MountPlanInput {
   readonly manifest: MountManifest;
   readonly roots: MachineLocalRoots;
   readonly checkoutRoot: string;
+  readonly sources: Readonly<Record<string, MountSourceState>>;
   readonly targets: Readonly<Record<string, MountTargetState>>;
 }
+
+
 
 export type MountPlanErrorCode =
   | 'invalid-manifest'

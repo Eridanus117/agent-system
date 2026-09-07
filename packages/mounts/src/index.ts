@@ -7,6 +7,7 @@ export {
   parseMountManifest,
   validateMountPlanResult,
 } from './contracts';
+export { createMountPlan } from './mount-plan';
 
 export type {
   MachineLocalRoot,
@@ -26,6 +27,7 @@ export type {
   MountPlanResult,
   MountPlanWrite,
   MountProfile,
+  MountSourceState,
   MountSpec,
   MountTargetState,
   MountTrustDomain,
