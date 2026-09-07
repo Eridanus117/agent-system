@@ -871,7 +871,7 @@ async function runCase(mode: Mode, definition: Case, skills: Skill[], sourceAgen
   result.mathInitialSource = initialMath;
   try {
     for (const dir of [fixture, path.dirname(outside), path.join(home, "tmp"), path.join(home, "cache", "omp"), path.join(home, "state", "omp"), path.join(home, "data", "omp")]) await fs.mkdir(dir, { recursive: true });
-    const instruction = fixtureText(sourceAgents.content, fixture);
+    const instruction = fixtureContextText(sourceAgents.content, fixture, contextPaths);
     requireThat(!/(?:^|[\t ])@[^\s`]+/m.test(instruction), "AGENTS.md 含自动 @ 导入，隔离器不能让启动阶段读取未知来源");
     const fixtureFiles: Record<string, string> = {
       "AGENTS.md": instruction,
