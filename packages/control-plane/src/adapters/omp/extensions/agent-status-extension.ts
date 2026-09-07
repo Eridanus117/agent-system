@@ -277,7 +277,10 @@ export default function registerAgentStatusExtension(pi: MinimalExtensionAPI): v
     ctx.ui.setStatus('agent-system-config', formatStatusLine(context));
   });
 
-  pi.on('tool_call', async (event, ctx) => evaluateWriteGuard(event, ctx.cwd));
+  pi.on('tool_call', async (event, ctx) => {
+    if (stringValue(process.env.AGENT_SYSTEM_LAUNCH_CONTEXT) === null) return undefined;
+    return evaluateWriteGuard(event, ctx.cwd);
+  });
 
   pi.registerCommand('agent-config', {
     description: 'Show the Agent System configuration and launch status for this OMP session',

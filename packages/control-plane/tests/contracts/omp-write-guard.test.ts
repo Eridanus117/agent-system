@@ -61,11 +61,23 @@ describe('OMP branch-aware write guard', () => {
     } as unknown as ExtensionApi;
     registerAgentStatusExtension(api);
     if (handler === undefined) throw new Error('tool_call handler was not registered');
-    const result = await handler(
+    const previousLaunchContext = process.env.AGENT_SYSTEM_LAUNCH_CONTEXT;
+    delete process.env.AGENT_SYSTEM_LAUNCH_CONTEXT;
+    await expect(handler(
       toolCall('write', { path: 'packages/control-plane/src/index.ts' }),
       { cwd: 'C:/Workspace/agent-system' },
-    );
-    expect(result).toMatchObject({ block: true });
+    )).resolves.toBeUndefined();
+    process.env.AGENT_SYSTEM_LAUNCH_CONTEXT = 'test-context';
+    try {
+      const result = await handler(
+        toolCall('write', { path: 'packages/control-plane/src/index.ts' }),
+        { cwd: 'C:/Workspace/agent-system' },
+      );
+      expect(result).toMatchObject({ block: true });
+    } finally {
+      if (previousLaunchContext === undefined) delete process.env.AGENT_SYSTEM_LAUNCH_CONTEXT;
+      else process.env.AGENT_SYSTEM_LAUNCH_CONTEXT = previousLaunchContext;
+    }
   });
 
   test('blocks unknown or detached repository context instead of guessing permission', async () => {
