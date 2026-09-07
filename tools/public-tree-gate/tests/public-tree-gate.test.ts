@@ -153,8 +153,13 @@ describe('public tree gate adapter', () => {
 
   test('fails closed when an indexed blob cannot be read', async () => {
     const root = await fixtureRepo([['fixture/safe.txt', 'Synthetic public content.\n']]);
-    await command(root, ['update-index', '--add', '--cacheinfo', `100644,${'0'.repeat(40)},fixture/missing.txt`]);
-    const result = await runPublicTreeGate({ cwd: root });
+    const result = await runPublicTreeGate({
+      cwd: root,
+      runGit: async (args) => {
+        if (args[0] === 'ls-files') return encoder.encode(`100644 ${'0'.repeat(40)} 0\tfixture/missing.txt\0`);
+        throw new Error('synthetic blob read failure');
+      },
+    });
 
     expect(result.exitCode).toBe(1);
     expect(result.output).toContain('code=scan-failed');
