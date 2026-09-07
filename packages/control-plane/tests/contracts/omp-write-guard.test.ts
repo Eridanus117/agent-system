@@ -105,7 +105,7 @@ describe('OMP branch-aware write guard', () => {
     await expect(evaluateWriteGuard(toolCall('bash', { command: 'git status --short && git diff --stat' }), 'C:/repo', repoFacts('main'))).resolves.toBeUndefined();
     expect(gitCalls).toBe(0);
     expect(isReadOnlyBashCommand('git show-ref --heads --remotes')).toBe(true);
-    expect(isReadOnlyBashCommand('git config --get-regexp remote')).toBe(true);
+    expect(isReadOnlyBashCommand('git config --get-regexp "^(branch|remote\\.origin\\.)"')).toBe(true);
     expect(isReadOnlyBashCommand('git rev-list --left-right --count main...feature')).toBe(true);
     expect(isReadOnlyBashCommand('git merge-base --is-ancestor main feature')).toBe(true);
     expect(isReadOnlyBashCommand('git commit -am change')).toBe(false);
