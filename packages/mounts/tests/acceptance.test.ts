@@ -162,9 +162,9 @@ describe('private-local end-to-end acceptance', () => {
     expect(await git(checkoutRoot, ['status', '--porcelain'])).toBe('');
 
     await mkdir(secondSource, { recursive: true });
-    const synced = await mountsCli(root, mechanismRoot, 'sync', manifestPath, rootsPath, checkoutRoot);
-    expect(synced.code).toBe(0);
-    expect(JSON.parse(synced.stdout).status).toBe('synced');
+    const hookSyncReady = await syncHook(root, mechanismRoot, manifestPath, rootsPath, checkoutRoot);
+    expect(hookSyncReady.code).toBe(0);
+    expect(JSON.parse(hookSyncReady.stdout).status).toBe('synced');
     expect(await readlink(join(checkoutRoot, '.omp/local/navigation'))).toBe(firstSource);
     expect(await readlink(join(checkoutRoot, '.omp/local/prompts'))).toBe(secondSource);
 
