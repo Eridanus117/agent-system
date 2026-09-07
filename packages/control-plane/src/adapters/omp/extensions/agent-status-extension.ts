@@ -238,7 +238,6 @@ export async function evaluateWriteGuard(
   return undefined;
 }
 
-
 /** 读取一次启动上下文；不轮询、不监听，也不在事件之间重复读取。 */
 async function readLaunchContext(): Promise<LaunchContextFile | null> {
   const contextPath = process.env.AGENT_SYSTEM_LAUNCH_CONTEXT;
