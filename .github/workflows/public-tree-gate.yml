@@ -1,0 +1,33 @@
+name: Public tree gate
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  public-tree:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install workspace dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Assess staged public tree
+        run: bun tools/public-tree-gate/index.ts
+
+      - name: Run synthetic gate fixtures
+        run: bun test tools/public-tree-gate/tests/public-tree-gate.test.ts

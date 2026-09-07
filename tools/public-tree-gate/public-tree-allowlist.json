@@ -1,0 +1,41 @@
+{
+  "allowlist": [
+    ".agents/**",
+    ".claude-plugin/**",
+    ".claude/**",
+    ".delivery-spec-runtime",
+    ".gitattributes",
+    ".githooks/**",
+    ".github/**",
+    ".gitignore",
+    ".gitmodules",
+    ".omp/**",
+    ".superpowers/**",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "CLAUDE.md",
+    "LICENSE",
+    "README.md",
+    "VERSION",
+    "_archive/**",
+    "bun.lock",
+    "contracts/**",
+    "diagrams/**",
+    "docs/**",
+    "entrypoints/**",
+    "openspec/**",
+    "package.json",
+    "packages/**",
+    "plugins/**",
+    "profiles/**",
+    "scripts/**",
+    "tests/**",
+    "tools/**",
+    "work/**"
+  ],
+  "denylist": [
+    "fixtures/blocked/**",
+    "private/**"
+  ],
+  "maxFileBytes": 1048576
+}
