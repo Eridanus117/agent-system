@@ -261,6 +261,24 @@ function fixtureText(content: string, fixture: string): string {
   for (const variant of variants) content = content.replace(new RegExp(variant.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), process.platform === "win32" ? "gi" : "g"), () => fixture);
   return content;
 }
+function fixtureContextText(content: string, fixture: string, contextPaths: string[]): string {
+  content = fixtureText(content, fixture);
+  for (let index = 0; index < CONTEXT_PATHS.length; index++) {
+    for (const source of [CONTEXT_PATHS[index], FROZEN_CONTEXT_PATHS[index]]) content = content.replaceAll(source, contextPaths[index]);
+  }
+  return content;
+}
+export async function prepareContextFixture(fixture: string, snapshots: FrozenDocument[], contextPaths: string[]): Promise<Json[]> {
+  const evidence: Json[] = [];
+  for (const snapshot of snapshots) {
+    const content = fixtureContextText(snapshot.content, fixture, contextPaths);
+    const target = path.join(fixture, snapshot.path);
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.writeFile(target, content);
+    evidence.push({ path: snapshot.path, source: snapshot.source, sha256: snapshot.sha256, fixtureSha256: hash(content) });
+  }
+  return evidence;
+}
 // 此函数和所需的静态内建模块 imports 一起序列化为临时 extension。
 async function boundaryExtension(pi: BoundaryAPI) {
   const f = fs;
@@ -837,7 +855,7 @@ function stateEvidence(state: RpcData, instruction: string, boundary: BoundaryPr
   return { model: { provider: state.model.provider, id: state.model.id }, thinkingLevel: state.thinkingLevel, tools: names, skills: skillNames, workspaceInstructionsLoaded: instructionsLoaded, systemPromptSha256: hash(prompt), sessionId: state.sessionId, messageCount: state.messageCount };
 }
 
-async function runCase(mode: Mode, definition: Case, skills: Skill[], sourceAgents: FrozenDocument, contextDocuments: FrozenDocument[], launcher: { command: string; prefix: string[] }, authDir: string, baseline: string, contextRoot: string, save: () => Promise<void>, result: CaseResult): Promise<void> {
+async function runCase(mode: Mode, definition: Case, skills: Skill[], sourceAgents: FrozenDocument, contextDocuments: FrozenDocument[], contextPaths: string[], launcher: { command: string; prefix: string[] }, authDir: string, baseline: string, contextRoot: string, save: () => Promise<void>, result: CaseResult): Promise<void> {
   const base = await fs.mkdtemp(path.join(tmpdir(), `omp-runtime-${mode}-${definition.id}-`));
   const home = path.join(base, "home");
   const fixture = path.join(home, "fixture");
@@ -859,8 +877,7 @@ async function runCase(mode: Mode, definition: Case, skills: Skill[], sourceAgen
       "AGENTS.md": instruction,
       "fixture.txt": "这是隔离方法选择评测目录，不是真实生产或私人工作区。只有合成材料、实际规则与技能副本，以及存在时复制的指定上下文，其中可能含在途记录、主人档案、工作方法地图和知识索引。这些都是冻结副本，不是实时工作区；不复制聊天记录、运行结果 JSON、其他外链材料或业务账户，也不提供 Multica 或生产访问权限。复制记录中的历史授权不扩大本案例的工具权限。\n",
       "desk/index.md": "# 隔离事务台\n\n包含合成索引及存在时复制的方法改进、在途与知识上下文。副本不连接工作项服务，不能当作刚查询的实时状态。\n",
-      "desk/AGENTS.md": "# 合成 desk\n\n本目录只用于隔离评测，不关联真实工作项系统，不授权创建工作项或持久记录。\n",
-      "desk/knowledge/index.md": "# 隔离知识索引（未提供实际索引）\n\n指定的上下文文档只在来源存在时复制，可用资料以本目录实际文件为准；没有复制的链接目标不可用。本页不是实际知识库索引，也不授予外部访问权限。\n",
+      [contextPaths[6]]: "# 隔离知识索引\n",
       "src/math.js": INITIAL_MATH,
       "src/settlement.js": "export function settle(invoice) { return { charged: invoice.total, ledgerId: invoice.id }; }\n",
       "production.txt": "合成现状：生产结算涉及多租户、幂等、退款和审计。新增差额补扣会改既有账本行为。负差额规则尚未由产品确定，生产发布未授权。没有真实生产连接，也没有更多业务档案。\n",
@@ -873,14 +890,7 @@ async function runCase(mode: Mode, definition: Case, skills: Skill[], sourceAgen
       await fs.mkdir(path.dirname(target), { recursive: true });
       await fs.writeFile(target, content);
     }
-    const contextEvidence: Json[] = [];
-    for (const snapshot of contextDocuments) {
-      const content = fixtureText(snapshot.content, fixture);
-      const target = path.join(fixture, snapshot.path);
-      await fs.mkdir(path.dirname(target), { recursive: true });
-      await fs.writeFile(target, content);
-      contextEvidence.push({ path: snapshot.path, source: snapshot.source, sha256: snapshot.sha256, fixtureSha256: hash(content) });
-    }
+    const contextEvidence = await prepareContextFixture(fixture, contextDocuments, contextPaths);
     result.sourceDocuments = clean({
       workspaceAgents: { path: sourceAgents.path, source: sourceAgents.source, sha256: sourceAgents.sha256, fixtureSha256: hash(instruction) },
       contextDocuments: contextEvidence,
@@ -1057,7 +1067,7 @@ async function main() {
   const authDir = path.resolve(process.env.PI_CODING_AGENT_DIR || path.join(homedir(), ".omp", "agent"));
   requireThat(!within(authDir, output) && !within(baseline, output), "结果路径不得覆盖认证目录或改前快照");
   requireThat(options["--context-snapshot"] === undefined || !within(contextRoot, output), "结果路径不得覆盖指定上下文快照");
-  const contextPaths = contextRoot === WORKSPACE ? CONTEXT_PATHS : FROZEN_CONTEXT_PATHS;
+  const contextPaths = options["--context-snapshot"] === undefined ? CONTEXT_PATHS : FROZEN_CONTEXT_PATHS;
   const clean = redactor([[baseline, "<BASELINE>"], [authDir, "<AUTH_DIR>"], [contextRoot, contextRoot === WORKSPACE ? "<WORKSPACE>" : "<CONTEXT_SNAPSHOT>"], [WORKSPACE, "<WORKSPACE>"], [homedir(), "<REAL_HOME>"]]);
   const scenarios: Record<Mode, CaseResult[]> = { before: [], after: [] };
   for (const mode of ["before", "after"] as const) for (const definition of CASES) {
@@ -1154,7 +1164,7 @@ async function main() {
           await save();
           continue;
         }
-        await runCase(mode, definition, versions[mode], agentsByMode[mode], contextDocuments, launcher, authDir, baseline, contextRoot, save, result);
+        await runCase(mode, definition, versions[mode], agentsByMode[mode], contextDocuments, contextPaths, launcher, authDir, baseline, contextRoot, save, result);
         if (result.failureKind === "isolation_failure" || result.cleanupError || result.isolationStatus !== "preflight_verified" || result.failureKind === "authentication_failure") throw new Error("运行环境或隔离失败：停止其余模型运行，不能将此结果作为 skill 行为结论");
       }
     }
@@ -1179,8 +1189,10 @@ async function main() {
   }
 }
 
-main().catch(error => {
-  // 不输出异常堆栈或环境变量，避免带出 HOME 路径和认证上下文。
-  console.error(redactor([[WORKSPACE, "<WORKSPACE>"], [homedir(), "<REAL_HOME>"]])(error.message ?? String(error)));
-  process.exitCode = 1;
-});
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  main().catch(error => {
+    // 不输出异常堆栈或环境变量，避免带出 HOME 路径和认证上下文。
+    console.error(redactor([[WORKSPACE, "<WORKSPACE>"], [homedir(), "<REAL_HOME>"]])(error.message ?? String(error)));
+    process.exitCode = 1;
+  });
+}
