@@ -107,10 +107,42 @@ export function isProtectedBranch(branch: string, defaultBranch: string | null =
 }
 
 function shellSegments(command: string): string[] {
-  return command
-    .split(/\s*(?:&&|\|\||[;|])\s*/u)
-    .map((segment) => segment.trim())
-    .filter((segment) => segment.length > 0);
+  const segments: string[] = [];
+  let segmentStart = 0;
+  let quote: '"' | "'" | null = null;
+  let escaped = false;
+  for (let index = 0; index < command.length; index += 1) {
+    const character = command[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (character === '\\' && quote !== "'") {
+      escaped = true;
+      continue;
+    }
+    if (quote !== null) {
+      if (character === quote) quote = null;
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+      continue;
+    }
+    const operatorLength = command.startsWith('&&', index) || command.startsWith('||', index)
+      ? 2
+      : character === ';' || character === '|'
+        ? 1
+        : 0;
+    if (operatorLength === 0) continue;
+    const segment = command.slice(segmentStart, index).trim();
+    if (segment.length > 0) segments.push(segment);
+    index += operatorLength - 1;
+    segmentStart = index + 1;
+  }
+  const tail = command.slice(segmentStart).trim();
+  if (tail.length > 0) segments.push(tail);
+  return segments;
 }
 
 function isReadOnlyShellSegment(segment: string): boolean {
