@@ -753,10 +753,14 @@ if git_files.returncode == 0:
     except UnicodeError as error:
         add_check_result(False, f"Git 文件列表可读取为 UTF-8；错误：{error}")
     else:
+        # vendor/ 是按负责人 2026-08-25 裁决逐字节跟踪的第三方 Skill 内容（「clone 即可用」
+        # 高于「不提交第三方内容」，见提交 2cf0e44）。上游自带的脚本不是本仓沉淀的产品脚本，
+        # 不受 entrypoints/agent-system.md「持久实现语言」一条约束，这里不计入。
         prohibited_scripts = sorted(
             item
             for item in repository_files
             if Path(item).suffix.lower() in PROHIBITED_SCRIPT_SUFFIXES
+            and not item.startswith("vendor/")
         )
         add_check_result(
             not prohibited_scripts,
