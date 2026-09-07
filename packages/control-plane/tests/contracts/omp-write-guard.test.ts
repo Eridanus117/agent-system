@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { describe, expect, test } from 'bun:test';
 import registerAgentStatusExtension, {
   evaluateWriteGuard,
@@ -34,17 +35,19 @@ describe('OMP branch-aware write guard', () => {
   });
 
   test('checks the repository owning a direct target path instead of trusting session cwd', async () => {
+    const targetPath = path.join(process.cwd(), 'src', 'index.ts');
+    const sessionRoot = path.parse(process.cwd()).root;
     const readRepoContext: RepoContextReader = async (directory) => {
-      const isProtected = directory.includes('agent-system');
+      const isProtected = directory.toLowerCase().includes('control-plane');
       return {
-        root: isProtected ? 'C:/protected' : 'C:/feature',
+        root: isProtected ? path.dirname(process.cwd()) : sessionRoot,
         branch: isProtected ? 'main' : 'feature/guard',
         defaultBranch: 'main',
       };
     };
     await expect(evaluateWriteGuard(
-      toolCall('write', { path: 'C:/Workspace/agent-system/packages/control-plane/src/index.ts' }),
-      'C:/Workspace/worktrees/agent-system/branch-write-guard',
+      toolCall('write', { path: targetPath }),
+      sessionRoot,
       readRepoContext,
     )).resolves.toMatchObject({ block: true });
   });
