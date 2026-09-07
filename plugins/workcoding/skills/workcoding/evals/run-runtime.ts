@@ -18,6 +18,15 @@ const TURN_TIMEOUT_MS = 5 * 60_000;
 const PREFIX = "OMP_RUNTIME_BOUNDARY:";
 const INITIAL_MATH = "export function sum(a,b){return a-b;}\n";
 const CONTEXT_PATHS = [
+  "desk/80-agent配置/20-提示词/10-共用/10-共用规则.md",
+  "desk/80-agent配置/20-提示词/10-共用/40-方法选择.md",
+  "desk/80-agent配置/30-方法选择改进/10-决定与证据.md",
+  "desk/10-现在在哪/30-在途.md",
+  "desk/20-知识库/10-知识笔记/10-主人与协作/10-主人档案.md",
+  "desk/20-知识库/10-知识笔记/20-工作方法/10-总纲/10-工作方法地图.md",
+  "desk/20-知识库/05-索引/10-索引.md",
+];
+const FROZEN_CONTEXT_PATHS = [
   "desk/agent/prompt/00-共用规则.md",
   "desk/agent/prompt/030-方法选择.md",
   "desk/agent/040-方法选择改进/index.md",
@@ -251,6 +260,32 @@ function fixtureText(content: string, fixture: string): string {
   const variants = new Set([WORKSPACE, WORKSPACE.replace(/\\/g, "/"), WORKSPACE.replace(/\//g, "\\")]);
   for (const variant of variants) content = content.replace(new RegExp(variant.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), process.platform === "win32" ? "gi" : "g"), () => fixture);
   return content;
+}
+function fixtureContextText(content: string, fixture: string, contextPaths: string[]): string {
+  content = fixtureText(content, fixture);
+  for (let index = 0; index < CONTEXT_PATHS.length; index++) {
+    for (const source of [CONTEXT_PATHS[index], FROZEN_CONTEXT_PATHS[index]]) content = content.replaceAll(source, contextPaths[index]);
+  }
+  return content;
+}
+export async function prepareContextFixture(fixture: string, snapshots: FrozenDocument[], contextPaths: string[]): Promise<Json[]> {
+  const evidence: Json[] = [];
+  for (const snapshot of snapshots) {
+    const content = fixtureContextText(snapshot.content, fixture, contextPaths);
+    const target = path.join(fixture, snapshot.path);
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.writeFile(target, content);
+    evidence.push({ path: snapshot.path, source: snapshot.source, sha256: snapshot.sha256, fixtureSha256: hash(content) });
+  }
+  return evidence;
+}
+function mapRequiredContext(required: string[], contextPaths: string[]): string[] {
+  return required.map(relative => {
+    const index = CONTEXT_PATHS.indexOf(relative);
+    if (index >= 0) return contextPaths[index];
+    const frozenIndex = FROZEN_CONTEXT_PATHS.indexOf(relative);
+    return frozenIndex >= 0 ? contextPaths[frozenIndex] : relative;
+  });
 }
 // 此函数和所需的静态内建模块 imports 一起序列化为临时 extension。
 async function boundaryExtension(pi: BoundaryAPI) {
@@ -828,7 +863,7 @@ function stateEvidence(state: RpcData, instruction: string, boundary: BoundaryPr
   return { model: { provider: state.model.provider, id: state.model.id }, thinkingLevel: state.thinkingLevel, tools: names, skills: skillNames, workspaceInstructionsLoaded: instructionsLoaded, systemPromptSha256: hash(prompt), sessionId: state.sessionId, messageCount: state.messageCount };
 }
 
-async function runCase(mode: Mode, definition: Case, skills: Skill[], sourceAgents: FrozenDocument, contextDocuments: FrozenDocument[], launcher: { command: string; prefix: string[] }, authDir: string, baseline: string, contextRoot: string, save: () => Promise<void>, result: CaseResult): Promise<void> {
+async function runCase(mode: Mode, definition: Case, skills: Skill[], sourceAgents: FrozenDocument, contextDocuments: FrozenDocument[], contextPaths: string[], launcher: { command: string; prefix: string[] }, authDir: string, baseline: string, contextRoot: string, save: () => Promise<void>, result: CaseResult): Promise<void> {
   const base = await fs.mkdtemp(path.join(tmpdir(), `omp-runtime-${mode}-${definition.id}-`));
   const home = path.join(base, "home");
   const fixture = path.join(home, "fixture");
@@ -844,14 +879,13 @@ async function runCase(mode: Mode, definition: Case, skills: Skill[], sourceAgen
   result.mathInitialSource = initialMath;
   try {
     for (const dir of [fixture, path.dirname(outside), path.join(home, "tmp"), path.join(home, "cache", "omp"), path.join(home, "state", "omp"), path.join(home, "data", "omp")]) await fs.mkdir(dir, { recursive: true });
-    const instruction = fixtureText(sourceAgents.content, fixture);
+    const instruction = fixtureContextText(sourceAgents.content, fixture, contextPaths);
     requireThat(!/(?:^|[\t ])@[^\s`]+/m.test(instruction), "AGENTS.md 含自动 @ 导入，隔离器不能让启动阶段读取未知来源");
     const fixtureFiles: Record<string, string> = {
       "AGENTS.md": instruction,
       "fixture.txt": "这是隔离方法选择评测目录，不是真实生产或私人工作区。只有合成材料、实际规则与技能副本，以及存在时复制的指定上下文，其中可能含在途记录、主人档案、工作方法地图和知识索引。这些都是冻结副本，不是实时工作区；不复制聊天记录、运行结果 JSON、其他外链材料或业务账户，也不提供 Multica 或生产访问权限。复制记录中的历史授权不扩大本案例的工具权限。\n",
       "desk/index.md": "# 隔离事务台\n\n包含合成索引及存在时复制的方法改进、在途与知识上下文。副本不连接工作项服务，不能当作刚查询的实时状态。\n",
-      "desk/AGENTS.md": "# 合成 desk\n\n本目录只用于隔离评测，不关联真实工作项系统，不授权创建工作项或持久记录。\n",
-      "desk/knowledge/index.md": "# 隔离知识索引（未提供实际索引）\n\n指定的上下文文档只在来源存在时复制，可用资料以本目录实际文件为准；没有复制的链接目标不可用。本页不是实际知识库索引，也不授予外部访问权限。\n",
+      [contextPaths[6]]: "# 隔离知识索引\n",
       "src/math.js": INITIAL_MATH,
       "src/settlement.js": "export function settle(invoice) { return { charged: invoice.total, ledgerId: invoice.id }; }\n",
       "production.txt": "合成现状：生产结算涉及多租户、幂等、退款和审计。新增差额补扣会改既有账本行为。负差额规则尚未由产品确定，生产发布未授权。没有真实生产连接，也没有更多业务档案。\n",
@@ -864,14 +898,7 @@ async function runCase(mode: Mode, definition: Case, skills: Skill[], sourceAgen
       await fs.mkdir(path.dirname(target), { recursive: true });
       await fs.writeFile(target, content);
     }
-    const contextEvidence: Json[] = [];
-    for (const snapshot of contextDocuments) {
-      const content = fixtureText(snapshot.content, fixture);
-      const target = path.join(fixture, snapshot.path);
-      await fs.mkdir(path.dirname(target), { recursive: true });
-      await fs.writeFile(target, content);
-      contextEvidence.push({ path: snapshot.path, source: snapshot.source, sha256: snapshot.sha256, fixtureSha256: hash(content) });
-    }
+    const contextEvidence = await prepareContextFixture(fixture, contextDocuments, contextPaths);
     result.sourceDocuments = clean({
       workspaceAgents: { path: sourceAgents.path, source: sourceAgents.source, sha256: sourceAgents.sha256, fixtureSha256: hash(instruction) },
       contextDocuments: contextEvidence,
@@ -1048,6 +1075,7 @@ async function main() {
   const authDir = path.resolve(process.env.PI_CODING_AGENT_DIR || path.join(homedir(), ".omp", "agent"));
   requireThat(!within(authDir, output) && !within(baseline, output), "结果路径不得覆盖认证目录或改前快照");
   requireThat(options["--context-snapshot"] === undefined || !within(contextRoot, output), "结果路径不得覆盖指定上下文快照");
+  const contextPaths = options["--context-snapshot"] === undefined ? CONTEXT_PATHS : FROZEN_CONTEXT_PATHS;
   const clean = redactor([[baseline, "<BASELINE>"], [authDir, "<AUTH_DIR>"], [contextRoot, contextRoot === WORKSPACE ? "<WORKSPACE>" : "<CONTEXT_SNAPSHOT>"], [WORKSPACE, "<WORKSPACE>"], [homedir(), "<REAL_HOME>"]]);
   const scenarios: Record<Mode, CaseResult[]> = { before: [], after: [] };
   for (const mode of ["before", "after"] as const) for (const definition of CASES) {
@@ -1066,7 +1094,7 @@ async function main() {
       "这是已安装 OMP 的真实 RPC agent 执行，不是把 SKILL 文本送给 completion；不是原样全生产环境。",
       "before/after 使用当前 daily manifest 的同一组 11 个技能，分别冻结改前快照与当前 SKILL.md 并记录 SHA-256；--cases 只运行指定案例，缺省仍运行原四例，--only-after 不运行 before。",
       "before 优先复制 baseline/AGENTS.md；缺失时如实使用与 after 相同的当前 AGENTS.md。每种模式记录来源及源 hash，每个 fixture 另记路径替换后的 hash；--no-rules 关闭扫描，--append-system-prompt 显式注入副本。",
-      "从当前工作区或显式 --context-snapshot 目录冻结精确白名单内存在的 00、030、方法改进记录、在途、主人档案、工作方法地图和知识索引；保留工作区相对布局，realpath 不得越过所选根，映射文内真实工作区路径。两种模式共享本次所选上下文，不伪称它们是改前版本；快照模式不回退实时文件，不复制聊天记录、运行结果 JSON 或其他链接材料。",
+      "实时工作区读取当前统一编号的上下文白名单；显式 --context-snapshot 固定读取冻结快照的旧平铺白名单。两者均保留所选根下的工作区相对布局，realpath 不得越过所选根；缺项只产生 required_context_unavailable，不回退另一套路径，不复制聊天记录、运行结果 JSON 或其他链接材料。",
       "每个案例独立临时 HOME/USERPROFILE 和 fixture，启动必须证实 messageCount=0；confirmed-continuation 与 bounded-learning 各自在同一 RPC 进程和会话内执行两轮。",
       "PI_CODING_AGENT_DIR 指向现有认证目录；运行器不读取认证文件或打印环境变量。OMP 自身仍使用现有认证，可能进行正常 OAuth 刷新；这不是操作系统沙箱。",
       "原 agent 目录也承载全局配置，overlay 与 discovery 禁用负责排除其技能、规则、扩展、记忆及浏览器；不修改该配置。",
@@ -1110,7 +1138,7 @@ async function main() {
     const [currentAgents, baselineAgents, contextSnapshots] = await Promise.all([
       freezeDocument(WORKSPACE, "AGENTS.md"),
       freezeDocument(baseline, "AGENTS.md"),
-      Promise.all(CONTEXT_PATHS.map(relative => freezeDocument(contextRoot, relative))),
+      Promise.all(contextPaths.map(relative => freezeDocument(contextRoot, relative))),
     ]);
     requireThat(currentAgents, "实际工作区 AGENTS.md 不存在");
     const agentsByMode: Record<Mode, FrozenDocument> = { before: baselineAgents ?? currentAgents, after: currentAgents };
@@ -1125,7 +1153,7 @@ async function main() {
       workspaceAgentsComparison: baselineAgents ? "baseline_snapshot_vs_current" : "same_current_prompt_baseline_agents_absent",
       workspaceAgentsByMode: Object.fromEntries(Object.entries(agentsByMode).map(([mode, snapshot]) => [mode, { source: snapshot.source, sha256: snapshot.sha256 }])),
       contextDocuments: contextSnapshots.map((snapshot, index) => ({
-        path: CONTEXT_PATHS[index], source: snapshot?.source ?? path.join(contextRoot, CONTEXT_PATHS[index]),
+        path: contextPaths[index], source: snapshot?.source ?? path.join(contextRoot, contextPaths[index]),
         available: snapshot !== null, sha256: snapshot?.sha256 ?? null,
       })),
       skills: Object.fromEntries(Object.entries(versions).map(([mode, skills]) => [mode, skills.map(({ name, target, sha256 }) => ({ name, target, sha256 }))])),
@@ -1137,14 +1165,15 @@ async function main() {
         const result = document[mode][index];
         if (result.selected !== true) continue;
         requireThat(!interrupted.signal.aborted, "评测已中断，剩余案例不运行");
-        const missingContext = definition.requiredContext?.filter(relative => !contextDocuments.some(snapshot => snapshot.path === relative)) ?? [];
+        const requiredContext = definition.requiredContext ? mapRequiredContext(definition.requiredContext, contextPaths) : [];
+        const missingContext = requiredContext.filter(relative => !contextDocuments.some(snapshot => snapshot.path === relative));
         if (missingContext.length > 0) {
           result.skipReason = "required_context_unavailable";
           result.missingContext = missingContext;
           await save();
           continue;
         }
-        await runCase(mode, definition, versions[mode], agentsByMode[mode], contextDocuments, launcher, authDir, baseline, contextRoot, save, result);
+        await runCase(mode, definition, versions[mode], agentsByMode[mode], contextDocuments, contextPaths, launcher, authDir, baseline, contextRoot, save, result);
         if (result.failureKind === "isolation_failure" || result.cleanupError || result.isolationStatus !== "preflight_verified" || result.failureKind === "authentication_failure") throw new Error("运行环境或隔离失败：停止其余模型运行，不能将此结果作为 skill 行为结论");
       }
     }
@@ -1169,8 +1198,10 @@ async function main() {
   }
 }
 
-main().catch(error => {
-  // 不输出异常堆栈或环境变量，避免带出 HOME 路径和认证上下文。
-  console.error(redactor([[WORKSPACE, "<WORKSPACE>"], [homedir(), "<REAL_HOME>"]])(error.message ?? String(error)));
-  process.exitCode = 1;
-});
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  main().catch(error => {
+    // 不输出异常堆栈或环境变量，避免带出 HOME 路径和认证上下文。
+    console.error(redactor([[WORKSPACE, "<WORKSPACE>"], [homedir(), "<REAL_HOME>"]])(error.message ?? String(error)));
+    process.exitCode = 1;
+  });
+}
