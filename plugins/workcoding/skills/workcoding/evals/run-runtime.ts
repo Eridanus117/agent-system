@@ -279,6 +279,14 @@ export async function prepareContextFixture(fixture: string, snapshots: FrozenDo
   }
   return evidence;
 }
+function mapRequiredContext(required: string[], contextPaths: string[]): string[] {
+  return required.map(relative => {
+    const index = CONTEXT_PATHS.indexOf(relative);
+    if (index >= 0) return contextPaths[index];
+    const frozenIndex = FROZEN_CONTEXT_PATHS.indexOf(relative);
+    return frozenIndex >= 0 ? contextPaths[frozenIndex] : relative;
+  });
+}
 // 此函数和所需的静态内建模块 imports 一起序列化为临时 extension。
 async function boundaryExtension(pi: BoundaryAPI) {
   const f = fs;
@@ -1157,7 +1165,8 @@ async function main() {
         const result = document[mode][index];
         if (result.selected !== true) continue;
         requireThat(!interrupted.signal.aborted, "评测已中断，剩余案例不运行");
-        const missingContext = definition.requiredContext ? contextPaths.filter(relative => !contextDocuments.some(snapshot => snapshot.path === relative)) : [];
+        const requiredContext = definition.requiredContext ? mapRequiredContext(definition.requiredContext, contextPaths) : [];
+        const missingContext = requiredContext.filter(relative => !contextDocuments.some(snapshot => snapshot.path === relative));
         if (missingContext.length > 0) {
           result.skipReason = "required_context_unavailable";
           result.missingContext = missingContext;
