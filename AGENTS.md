@@ -45,3 +45,19 @@
 ## Git / PR 约定
 
 - `gh pr create`/`gh pr edit` 的标题和正文默认使用中文（提交信息本身的语言不受此约束）。
+
+## Agent skills
+
+### Issue tracker
+
+Issue 与 spec 记在本仓的 GitHub Issues，用 `gh` CLI 操作。见 [`docs/agents/issue-tracker.md`](./docs/agents/issue-tracker.md)。
+
+### Triage labels
+
+沿用五个规范角色名 `needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` / `wontfix`。
+与既有的中文「类型/领域」标签正交：那套答「这是什么」，这五个答「现在轮到谁」，同一个 issue 可以同时挂两套。见 [`docs/agents/triage-labels.md`](./docs/agents/triage-labels.md)。
+
+### Domain docs
+
+多 context：仓根 `CONTEXT-MAP.md` 指向每个包各自的 `CONTEXT.md`；跨包决定沿用既有的 `docs/adr/`（MADR，2026-09-04 裁定）。
+这些文件按需懒创建，不预建，也不预先枚举有哪些 context。见 [`docs/agents/domain.md`](./docs/agents/domain.md)。
