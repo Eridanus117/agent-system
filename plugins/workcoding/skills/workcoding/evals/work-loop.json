@@ -1,0 +1,127 @@
+{
+  "contract": "minimum-work-loop",
+  "version": 1,
+  "purpose": "验证 Agent 系统能否从真实问题走到可复查、可裁决、已记录的结果；不替代 Skill 级触发与行为评估。",
+  "runtime_order": ["omp", "claude"],
+  "modes": [
+    {
+      "id": "control",
+      "name": "daily-own-11",
+      "description": "当前正式装配的自有 11 个 Skill。"
+    },
+    {
+      "id": "treatment",
+      "name": "matt-superpowers",
+      "description": "Matt 与 Superpowers 的联合候选能力栈。"
+    }
+  ],
+  "states": [
+    {
+      "id": "received",
+      "entry": "收到具体问题或请求。",
+      "exit_evidence": "对象和原始来源已定位。"
+    },
+    {
+      "id": "clarified",
+      "entry": "目标、范围和未知已列出。",
+      "exit_evidence": "能说明要改变谁的什么状态。"
+    },
+    {
+      "id": "authorized",
+      "entry": "负责人选择路径或明确授权。",
+      "exit_evidence": "授权范围、禁止事项和验收门明确。"
+    },
+    {
+      "id": "capability_set",
+      "entry": "选定执行能力。",
+      "exit_evidence": "选择理由、替代方案和职责边界已记录。"
+    },
+    {
+      "id": "executing",
+      "entry": "开始执行或只读调查。",
+      "exit_evidence": "实际动作、工具事件或调查记录存在。"
+    },
+    {
+      "id": "evidence_ready",
+      "entry": "获得可复查结果。",
+      "exit_evidence": "结果、来源、环境和限制可复查。"
+    },
+    {
+      "id": "owner_gated",
+      "entry": "结果需要负责人判断。",
+      "exit_evidence": "负责人可以基于一页材料作出决定。"
+    },
+    {
+      "id": "recorded",
+      "entry": "决定或结果已落盘。",
+      "exit_evidence": "任务载体、证据、知识和未决项各归其位。"
+    }
+  ],
+  "side_states": [
+    {
+      "id": "blocked",
+      "meaning": "等待外部输入或负责人决定；不算完成。"
+    },
+    {
+      "id": "unknown",
+      "meaning": "证据不足，不能判定通过或回炉。"
+    },
+    {
+      "id": "rework",
+      "meaning": "关键状态或证据门失败，需要回炉。"
+    }
+  ],
+  "evidence_levels": [
+    "source",
+    "generated",
+    "installed",
+    "host_visible",
+    "fresh_session"
+  ],
+  "task_types": [
+    {
+      "id": "fact",
+      "name": "查明事实",
+      "case_id": "fact-traceability",
+      "expected_result": "沿来源查明当前事实，区分历史、现状、推断和未知。"
+    },
+    {
+      "id": "decision",
+      "name": "形成决定",
+      "case_id": "decision-actionability",
+      "expected_result": "给出事实、建议、代价和负责人需要作出的必要决定。"
+    },
+    {
+      "id": "implementation",
+      "name": "实施并验证",
+      "case_id": "implementation-closure",
+      "expected_result": "完成授权范围内的改动，验证结果，并记录未决项。"
+    }
+  ],
+  "verdicts": [
+    {
+      "id": "pass",
+      "meaning": "任务闭环完成，没有未登记的关键缺口。"
+    },
+    {
+      "id": "conditional",
+      "meaning": "闭环可用，剩余缺口已当场列出并交给负责人。"
+    },
+    {
+      "id": "rework",
+      "meaning": "关键状态或证据门失败，需要回炉。"
+    },
+    {
+      "id": "unknown",
+      "meaning": "运行、安装或证据不足，不能作出通过或回炉判断。"
+    }
+  ],
+  "run_requirements": {
+    "control_and_treatment": "每个 task_type 都需要 control 与 treatment 的配对运行。",
+    "fresh_session": "常驻生效结论必须包含目标客户端的新会话证据。",
+    "raw_log": "原始运行日志保留在私有评估目录，不写入公开仓。",
+    "owner_gate": "Agent 不替负责人完成 owner_gated 决定。",
+    "near_miss": "每个 task_type 需要至少一个相邻但不应进入该闭环的 near-miss。",
+    "implementation_workspace": "含写入的实现案例必须运行在宿主认可的 linked worktree；普通临时目录的写入拒绝只证明夹具不合格，不判为能力失败。"
+  }
+}

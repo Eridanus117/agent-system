@@ -1,0 +1,84 @@
+{
+  "contract": "minimum-work-loop",
+  "version": 1,
+  "status": "resident-experimental",
+  "purpose": "固定 Matt Pocock 与 Superpowers 联合处理组的可复现来源、当前常驻装配和后续优化证据；常驻是负责人的明确试验裁决，不等于能力缺口已消失。",
+  "runtime": {
+    "primary": "omp",
+    "versionObserved": "18.1.13",
+    "platform": "windows",
+    "freshSessionRequired": true
+  },
+  "control": {
+    "id": "daily-own-11",
+    "source": "profiles/daily/manifest.json",
+    "declaredSkillCount": 11
+  },
+  "treatment": {
+    "id": "matt-superpowers",
+    "base": "daily-own-11",
+    "sources": [
+      {
+        "id": "mattpocock-skills",
+        "repository": "https://github.com/mattpocock/skills",
+        "version": "1.2.3",
+        "revision": "6acc160e4e0cd062dbbbd7a1b26ae92855edf07e",
+        "declaredSkillCount": 25
+      },
+      {
+        "id": "superpowers",
+        "repository": "https://github.com/obra/superpowers",
+        "version": "6.3.0",
+        "revision": "b36e0829c6d0140e93cfef2ca599b1b07d4a7797",
+        "declaredSkillCount": 14
+      }
+    ],
+    "declaredExternalSkillCount": 39
+  },
+  "evidenceGates": [
+    "source",
+    "generated",
+    "installed",
+    "host-visible",
+    "fresh-session"
+  ],
+  "evaluationCases": [
+    "fact-finding/source-explanation",
+    "decision-formation/bounded-learning",
+    "implementation-verification/mixed-risk-partial"
+  ],
+  "observed": {
+    "date": "2026-09-07",
+    "control": {
+      "fact": "pass",
+      "decision": "pass",
+      "implementation": "pass"
+    },
+    "treatment": {
+      "fact": "pass",
+      "decision": "pass",
+      "implementation": "rework"
+    },
+    "implementationFixture": "linked-worktree-required",
+    "aggregateVerdict": "conditional",
+    "decisionBasis": "首轮联合能力栈改善事实查找与决策表达，但在实施案例中陷入工作树与守卫分析，未完成已授权的小修；该缺口保留为优化输入。"
+  },
+  "ownerOverride": {
+    "date": "2026-09-07",
+    "decision": "full-install-then-optimize",
+    "scope": "daily profile，OMP 与 Claude",
+    "reason": "负责人明确反馈仅用自有 11 个 Skill 的实际体验不足，要求先全装 Matt 与 Superpowers，再基于真实使用优化。",
+    "firstOptimizationSmoke": {
+      "runtime": "omp-and-claude",
+      "session": "fresh",
+      "task": "明确授权的低风险 sum 修复",
+      "verdict": "pass",
+      "observedBehavior": "两个客户端均读取目标文件并完成精确 edit，未再进入外部流程分析循环。"
+    }
+  },
+  "privacy": {
+    "rawPromptsAndLogs": "private",
+    "publicRecord": "contract, pinned source revisions, aggregate verdict only"
+  },
+  "residentDecision": "installed-optimize"
+}

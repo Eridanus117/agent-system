@@ -45,3 +45,6 @@ WATCHDOG.yml
 # 留在 git 历史里，谁都删不掉，此后每次 clone 都要拖一份。该目录按维护者
 # 2026-09-01 的决定不进 git，需要用的人从外部渠道获取。
 tools/sk/
+
+# sk／OMP 的本地 Skill 投影：指向本机绝对路径的符号链接，机器相关，不入库。
+.agents/skills/

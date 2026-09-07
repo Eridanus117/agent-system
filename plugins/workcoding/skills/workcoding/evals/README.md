@@ -14,6 +14,27 @@
 | 显式要求与高风险动作 | `explicit-route-request`、`one-line-high-risk-change`：保留用户这次要求的确认，以及未授权高风险动作的边界 |
 | 自建工具痒点 | `build-a-tool-itch`：先判断实际问题，不直接立项 |
 
+## 最低工作闭环合同
+
+`work-loop.json` 是 Skill 级评估之上的端到端合同。它不替代各 Skill 的 `evals/evals.json`，也不把 workcoding 变成第二个总 router。
+
+第一版只验证三类任务：
+
+- `fact`：沿来源查明事实，区分历史、现状、推断和未知；
+- `decision`：给出事实、建议、代价和负责人需要作出的决定；
+- `implementation`：完成授权范围内的改动、验证结果并记录未决项。
+
+每类任务比较两个模式：
+
+- `control`：当前正式装配的自有 11 个 Skill；
+- `treatment`：Matt 与 Superpowers 的联合候选能力栈。
+
+任务状态依次为 `received`、`clarified`、`authorized`、`capability_set`、`executing`、`evidence_ready`、`owner_gated`、`recorded`。`blocked`、`unknown` 和 `rework` 是旁路状态，不算完成。
+
+常驻生效必须分别取得 `source`、`generated`、`installed`、`host_visible`、`fresh_session` 五段证据。含写入的 `implementation` 案例必须放在宿主认可的 linked worktree 中运行；普通临时目录的写入拒绝属于夹具失败，不判为能力失败。真实任务输入、原始事件日志和负责人判读属于私有评估目录，不写入公开仓；本文件和 `work-loop.json` 只保存公共合同。
+
+现有 `tools/skill_eval/skill-eval.ts` 继续负责 Skill 级结果的确定性校验和汇总；工作闭环结果使用本合同的状态、证据阶梯和 `pass`／`conditional`／`rework`／`unknown` 判定，运行端仍需另行提供真实新会话证据。
+
 ## 实际 OMP 多轮对照
 
 `run-runtime.ts` 使用已安装的 OMP、`openai-codex/gpt-6-astra` 与 `high`，比较改前快照和当前 daily 11 个技能。默认仍跑只读审查、小修复、未决生产结算变更、显式路线确认后继续四个合成场景；旧 CLI 调用保持有效。
