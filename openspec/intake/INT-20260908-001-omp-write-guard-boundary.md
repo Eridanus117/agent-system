@@ -287,3 +287,75 @@ desk 近 3 天 13 个 PR 所碰目录统计：`20-知识库`、`80-agent配置`�
 ## 下一步
 
 范围与强度均已裁定，A′ 的源码修改与验收矩阵可以起草。**本记录仍未授权实施。**
+
+---
+
+# 实施结果（2026-09-08，A′）
+
+## 改了什么
+
+单文件改动：`packages/control-plane/src/adapters/omp/extensions/agent-status-extension.ts`
+（该文件被 `process-port.ts` 以 `type: 'text'` 整体导入再写盘，必须保持自足，不能拆模块）。
+
+1. **仓库解析改三态**：`RepoContext | null` → `RepoResolution`，取值 `repo` / `outside` / `unknown`。
+   `outside` 放行，`unknown` 拒绝。旧实现把两者压成 `null` 一律拒绝，正当的仓外配置维护因此被拦。
+2. **判定对象改为写入目标**：`targetDirectories()` → `writeTargets()`。
+   bash 不再用 cwd 冒充目标；提取重定向 `>` `>>`、`cp`/`mv`/`rm`/`touch`/`mkdir`/`tee`/`install`
+   的目标参数、`sed -i` 的目标，并跟踪 `cd` 对有效 cwd 的改变。
+   提取不出目标的命令仍按有效 cwd 判定——不放宽旧行为。
+3. **`sed` 移出只读白名单**（`sed -i` 是原地写）。
+4. **加 realpath**：目标先上溯到最近存在的祖先做 realpath 再接回剩余段，
+   堵住经 junction/symlink 指入受保护检出的绕过。
+5. **坏 `.git` 标记不再被跳过**：旧实现遇到解析不了的 `.git` 会继续找父级，
+   把「元数据损坏」误报成「属于外层仓库」；现在返回 `unknown` 并停止上溯。
+6. **仓级写入策略**：仓根可放 `.agent-write-policy.json`，声明 `directWritePaths`
+   （允许直写主干的路径前缀）。落在声明前缀内的目标同时豁免受保护分支与 linked worktree 两条规则。
+   文件缺失、无法解析或字段类型不对时一律回落到全仓保护，**不因策略文件坏掉而放宽**。
+
+## 实测：修复前后同一场景对照
+
+cwd 为 linked worktree 的任务分支；目标为 `C:/Workspace/desk/AGENTS.md`（主检出，main 分支）。
+用真实解析器读真实磁盘状态，纯判定，无真实写入。
+
+| 路径 | 修复前 | 修复后 |
+| --- | --- | --- |
+| 结构化 `write` 直写主检出 main | 拒绝 | 拒绝 |
+| `bash echo x >> <同一文件>` | **放行** | **拒绝** |
+| `bash cp /tmp/x <同一文件>` | **放行** | **拒绝** |
+| `bash cd <主检出> && git commit -am x` | **放行** | **拒绝** |
+| `bash sed -i 's/a/b/' <同一文件>` | **放行** | **拒绝** |
+| 结构化 `edit` 写 `~/.config/rhizome/sources.toml` | **拒绝** | **放行** |
+| 在自己 worktree 内写 | 放行 | 放行 |
+
+## 验收矩阵
+
+`packages/control-plane/tests/contracts/omp-write-guard.test.ts` 重写为五组共 24 项：
+
+- 判定对象：受保护分支、主检出、按目标而非 cwd、已注册到 tool_call 事件。
+- bash 与结构化同路径：`cp`、重定向、`cd` 改变有效 cwd、`sed -i`、自己 worktree 内放行、
+  提取不出目标时仍按 cwd 判定。
+- 三态：确证仓外放行、`unknown` 拒绝且理由与 `repo=none` 可区分、分支不可确认拒绝、多目标混入即整次拒绝。
+- 仓级策略：声明路径放行（即便 main + 主检出）、策略文件损坏回落全仓保护、
+  无策略文件行为与今天一致、前缀不做子串匹配（`logs/` 不放行 `logs-archive/`）。
+- 只读路径保持可用：只读工具与只读 shell 不触发 Git 读取、恢复提示可执行、
+  只读 GitHub 调用可用而远端变更仍拒绝、每写重读分支。
+
+结果：合同测试 24 pass / 0 fail；`packages/control-plane` 全量 287 pass / 0 fail；
+仓库全量 564 pass / 0 fail；`tsc --noEmit` 无错误。
+
+## 已知限制（不隐藏）
+
+- **启发式，不是围栏**。`python -c "open(...,'w')"`、`make`、`npm` 脚本等无法静态提取目标的命令，
+  仍只按有效 cwd 判定。负责人 2026-09-08 裁定守卫只需防粗心，此为该裁定下的已知取舍。
+  要防规避须走候选 D（把受保护检出对 agent 进程设为只读），另需 `system-analysis`。
+- 在受保护检出内运行任何提取不出目标的命令（如 `node 90-工具/在途.ts`）仍被拒绝。
+  这与今天行为一致，不是本次引入的新限制。
+- 策略文件放在仓根，agent 理论上可以自行创建它来放宽自己。防粗心场景下可接受；
+  防规避场景下不可接受。同上，由候选 D 解决。
+
+## 部署顺序约束
+
+`desk` 需要一份 `.agent-write-policy.json` 声明
+`70-工作日志/`、`40-收件箱/`、`30-提案/`、`60-迁移/`、`10-现在在哪/`。
+**该文件必须先于新守卫生效**，否则工作区规则要求的工作日志直推会被拦。
+desk 是另一个仓，属另一次改动，本 PR 不包含。
