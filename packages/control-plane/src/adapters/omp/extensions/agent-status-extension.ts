@@ -67,9 +67,27 @@ export interface RepoContext {
   readonly isLinkedWorktree: boolean;
 }
 
+/**
+ * 写入目标的仓库归属，三态显式区分。
+ *
+ * 之前这里是 `RepoContext | null`，而 `null` 同时表示「确证不在任何 Git 仓库里」
+ * 和「说不清」，守卫一律拒绝。后果是 agent 在任何仓外目录都动不了——包括只读操作。
+ * 2026-09-07 实测：Multica 派给 agent 的受管工作目录
+ * （`~/multica_workspaces/<workspace>/<run>/workdir`）天然不是 Git 仓库，于是
+ * 每一次 run 的**全部**工具调用都被以 `repo=unknown` 拒绝，连 `multica issue get`
+ * 这种只读命令都执行不了，派工整条路不可用。
+ *
+ * 守卫要保护的是「不在受管仓的主检出上写」。确证落在所有仓之外的路径不在其管辖内，
+ * 放行；确认不了的仍然拒绝，保守方向不变。
+ */
+export type RepoResolution =
+  | { readonly kind: 'repo'; readonly context: RepoContext }
+  | { readonly kind: 'outside' }
+  | { readonly kind: 'unknown' };
+
 export type RepoContextReader = (
   directory: string,
-) => RepoContext | null | Promise<RepoContext | null>;
+) => RepoResolution | Promise<RepoResolution>;
 
 const READ_ONLY_TOOL_NAMES: Record<string, true> = {
   read: true,
@@ -260,17 +278,28 @@ function defaultBranchFromOriginHead(gitDirectory: string): string | null {
   return branch.length === 0 ? null : normalizeBranch(branch);
 }
 
-function defaultRepoContextReader(directory: string): RepoContext | null {
+function defaultRepoContextReader(directory: string): RepoResolution {
   const root = findRepoRoot(directory);
-  if (root === null) return null;
+  // findRepoRoot 一路向上走到盘符根都没找到 .git，才会返回 null。
+  // 这是「确证仓外」，不是「说不清」。
+  //
+  // 已知局限：向上走时 gitDirectoryForRoot 把文件系统异常（权限、IO）也吞成
+  // 「此层没有 .git」，因此这类异常同样落进 outside。要收紧的话得让那一层区分
+  // 「没有」与「读不了」，属于另一件事，这里不顺手改。
+  if (root === null) return { kind: 'outside' };
   const gitDirectory = gitDirectoryForRoot(root);
-  if (gitDirectory === null) return null;
+  // findRepoRoot 的返回值必然满足 gitDirectoryForRoot !== null，所以这条实际走不到；
+  // 保留是为了让「说不清就拒绝」这条契约在类型上闭合，不依赖调用方的巧合。
+  if (gitDirectory === null) return { kind: 'unknown' };
   const commonDirectory = commonGitDirectory(gitDirectory);
   return {
-    root,
-    branch: branchFromHead(gitDirectory),
-    defaultBranch: defaultBranchFromOriginHead(commonDirectory),
-    isLinkedWorktree: isLinkedWorktree(root),
+    kind: 'repo',
+    context: {
+      root,
+      branch: branchFromHead(gitDirectory),
+      defaultBranch: defaultBranchFromOriginHead(commonDirectory),
+      isLinkedWorktree: isLinkedWorktree(root),
+    },
   };
 }
 
@@ -281,23 +310,37 @@ export async function evaluateWriteGuard(
   repoContextReader: RepoContextReader = defaultRepoContextReader,
 ): Promise<MinimalToolCallResult | undefined> {
   if (!isMutationCandidate(event)) return undefined;
-  const contexts = await Promise.all(
+  const resolutions = await Promise.all(
     targetDirectories(event, cwd).map((directory) => repoContextReader(directory)),
   );
-  if (contexts.some((context) => context === null || context.branch === null || !context.isLinkedWorktree)) {
+  // 说不清就拒绝，保守方向与原实现一致。
+  if (resolutions.some((resolution) => resolution.kind === 'unknown')) {
     return {
       block: true,
       reason: blockedReason(
         event,
-        '写入守卫拒绝执行：写入目标必须位于 Git 仓库的 linked worktree，且必须能确认当前分支。',
-        contexts,
+        '写入守卫拒绝执行：无法确认写入目标所在的 Git 仓库状态。',
+        resolutions,
+      ),
+    };
+  }
+  // kind === 'outside' 的目标不在守卫管辖内，直接跳过；只审落在受管仓里的那些。
+  const contexts = resolutions.flatMap(
+    (resolution) => (resolution.kind === 'repo' ? [resolution.context] : []),
+  );
+  if (contexts.some((context) => context.branch === null || !context.isLinkedWorktree)) {
+    return {
+      block: true,
+      reason: blockedReason(
+        event,
+        '写入守卫拒绝执行：写入目标位于 Git 仓库内时，必须在 linked worktree 且能确认当前分支。',
+        resolutions,
       ),
     };
   }
   const protectedContext = contexts.find(
     (context): context is RepoContext =>
-      context !== null
-      && context.branch !== null
+      context.branch !== null
       && isProtectedBranch(context.branch, context.defaultBranch),
   );
   if (protectedContext !== undefined) {
@@ -306,14 +349,16 @@ export async function evaluateWriteGuard(
       reason: blockedReason(
         event,
         `写入守卫拒绝执行：Agent 不得在受保护分支 ${protectedContext.branch} 上修改文件。请切换到任务分支或使用独立 worktree。`,
-        contexts,
+        resolutions,
       ),
     };
   }
   return undefined;
 }
-function formatRepoContext(context: RepoContext | null): string {
-  if (context === null) return 'repo=unknown';
+function formatRepoContext(resolution: RepoResolution): string {
+  if (resolution.kind === 'outside') return 'repo=outside';
+  if (resolution.kind === 'unknown') return 'repo=unknown';
+  const context = resolution.context;
   return [
     `repo=${context.root}`,
     `branch=${context.branch ?? 'detached'}`,
@@ -322,8 +367,8 @@ function formatRepoContext(context: RepoContext | null): string {
   ].join(', ');
 }
 
-function formatGuardContext(contexts: readonly (RepoContext | null)[]): string {
-  return contexts.map(formatRepoContext).join(' | ');
+function formatGuardContext(resolutions: readonly RepoResolution[]): string {
+  return resolutions.map(formatRepoContext).join(' | ');
 }
 
 function recoveryHint(event: MinimalToolCallEvent): string {
@@ -337,9 +382,9 @@ function recoveryHint(event: MinimalToolCallEvent): string {
 function blockedReason(
   event: MinimalToolCallEvent,
   message: string,
-  contexts: readonly (RepoContext | null)[],
+  resolutions: readonly RepoResolution[],
 ): string {
-  return `${message} 当前事实：${formatGuardContext(contexts)} ${recoveryHint(event)}`;
+  return `${message} 当前事实：${formatGuardContext(resolutions)} ${recoveryHint(event)}`;
 }
 
 /** 读取一次启动上下文；不轮询、不监听，也不在事件之间重复读取。 */

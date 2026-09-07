@@ -5,6 +5,7 @@ import registerAgentStatusExtension, {
   isProtectedBranch,
   isReadOnlyBashCommand,
   type RepoContextReader,
+  type RepoResolution,
 } from '../../src/adapters/omp/extensions/agent-status-extension';
 
 type ToolCall = Parameters<typeof evaluateWriteGuard>[0];
@@ -18,8 +19,16 @@ function repoFacts(
   defaultBranch: string | null = 'main',
   isLinkedWorktree = true,
 ): RepoContextReader {
-  return async () => ({ root: 'C:/repo', branch, defaultBranch, isLinkedWorktree });
+  return async () => ({
+    kind: 'repo',
+    context: { root: 'C:/repo', branch, defaultBranch, isLinkedWorktree },
+  });
 }
+
+/** 确证不在任何 Git 仓库里，例如 Multica 派给 agent 的受管工作目录。 */
+const outside: RepoContextReader = async () => ({ kind: 'outside' });
+/** 说不清所在仓库，守卫必须保守拒绝。 */
+const unknown: RepoContextReader = async () => ({ kind: 'unknown' });
 
 describe('OMP branch-aware write guard', () => {
   test('recognizes configured defaults and the standard protected branch names', () => {
@@ -57,10 +66,13 @@ describe('OMP branch-aware write guard', () => {
     const readRepoContext: RepoContextReader = async (directory) => {
       const isProtected = directory.toLowerCase().includes('control-plane');
       return {
-        root: isProtected ? path.resolve(import.meta.dir, '..', '..') : sessionRoot,
-        branch: isProtected ? 'main' : 'feature/guard',
-        defaultBranch: 'main',
-        isLinkedWorktree: true,
+        kind: 'repo',
+        context: {
+          root: isProtected ? path.resolve(import.meta.dir, '..', '..') : sessionRoot,
+          branch: isProtected ? 'main' : 'feature/guard',
+          defaultBranch: 'main',
+          isLinkedWorktree: true,
+        },
       };
     };
     await expect(evaluateWriteGuard(
@@ -89,16 +101,52 @@ describe('OMP branch-aware write guard', () => {
     expect(result).toMatchObject({ block: true });
   });
 
-  test('blocks unknown or detached repository context instead of guessing permission', async () => {
-    await expect(evaluateWriteGuard(toolCall('edit', { path: 'src/index.ts' }), 'C:/not-a-repo', repoFacts(null))).resolves.toMatchObject({ block: true });
-    await expect(evaluateWriteGuard(toolCall('write', { path: 'src/index.ts' }), 'C:/repo', async () => null)).resolves.toMatchObject({ block: true });
+  test('blocks detached or unclassifiable repository context instead of guessing permission', async () => {
+    await expect(evaluateWriteGuard(toolCall('edit', { path: 'src/index.ts' }), 'C:/repo', repoFacts(null))).resolves.toMatchObject({ block: true });
+    const blocked = await evaluateWriteGuard(toolCall('write', { path: 'src/index.ts' }), 'C:/repo', unknown);
+    expect(blocked).toMatchObject({ block: true });
+    expect(blocked?.reason).toContain('repo=unknown');
+    expect(blocked?.reason).toContain('无法确认写入目标所在的 Git 仓库状态');
+  });
+
+  test('allows writes provably outside every repository, which is what the guard does not govern', async () => {
+    // 回归 2026-09-07 的实测故障：Multica 给每个 run 分配的受管工作目录
+    // （~/multica_workspaces/<workspace>/<run>/workdir）不是 Git 仓库，旧实现把
+    // 「确证仓外」和「说不清」都压成拒绝，于是整条派工路不可用——连只读命令都被拦。
+    await expect(evaluateWriteGuard(
+      toolCall('write', { path: 'C:/Users/Morni/multica_workspaces/ws/run/workdir/report.md' }),
+      'C:/Users/Morni/multica_workspaces/ws/run/workdir',
+      outside,
+    )).resolves.toBeUndefined();
+    await expect(evaluateWriteGuard(
+      toolCall('bash', { command: 'multica issue get ERID-1 --output json' }),
+      'C:/Users/Morni/multica_workspaces/ws/run/workdir',
+      outside,
+    )).resolves.toBeUndefined();
+  });
+
+  test('does not let an outside target launder a protected-branch target in the same call', async () => {
+    // 放行仓外不等于放行整次调用：只要有一个目标落在受管仓的主干上，仍然拒绝。
+    const mixed: RepoContextReader = async (directory) => (
+      directory.toLowerCase().includes('workspaces')
+        ? { kind: 'outside' }
+        : { kind: 'repo', context: { root: 'C:/repo', branch: 'main', defaultBranch: 'main', isLinkedWorktree: true } }
+    );
+    const blocked = await evaluateWriteGuard(
+      toolCall('write', { paths: ['C:/Users/Morni/multica_workspaces/ws/run/workdir/a.md', 'C:/repo/src/index.ts'] }),
+      'C:/repo',
+      mixed,
+    );
+    expect(blocked).toMatchObject({ block: true });
+    expect(blocked?.reason).toContain('repo=outside');
+    expect(blocked?.reason).toContain('branch=main');
   });
 
   test('keeps read-only tools and read-only shell commands available on protected branches', async () => {
     let gitCalls = 0;
     const noGitCalls: RepoContextReader = async () => {
       gitCalls += 1;
-      return null;
+      return { kind: 'unknown' } satisfies RepoResolution;
     };
     await expect(evaluateWriteGuard(toolCall('read', { path: 'src/index.ts' }), 'C:/repo', noGitCalls)).resolves.toBeUndefined();
 
@@ -136,10 +184,8 @@ describe('OMP branch-aware write guard', () => {
   test('rechecks the branch on every write so a branch switch takes effect immediately', async () => {
     let branch: string | null = 'main';
     const dynamicRunGit: RepoContextReader = async () => ({
-      root: 'C:/repo',
-      branch,
-      defaultBranch: 'main',
-      isLinkedWorktree: true,
+      kind: 'repo',
+      context: { root: 'C:/repo', branch, defaultBranch: 'main', isLinkedWorktree: true },
     });
     const event = toolCall('edit', { path: 'src/index.ts' });
     await expect(evaluateWriteGuard(event, 'C:/repo', dynamicRunGit)).resolves.toMatchObject({ block: true });
