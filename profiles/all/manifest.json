@@ -18,7 +18,7 @@
     },
     {
       "name": "grilling",
-      "target": "plugins/grilling/skills/grilling"
+      "target": "vendor/mattpocock/skills/grilling"
     },
     {
       "name": "integration",

@@ -14,7 +14,7 @@
     "node plugins/orchestrated-collaboration/tests/verify-three-party-review.test.ts => PASS"
   ],
   "effective_state": {
-    "codex_isolated_install_readback_cleanup": "pass for grilling 0.1.2",
+    "codex_isolated_install_readback_cleanup": "pass for mattpocock/skills grilling 1.2.3",
     "claude": "unknown; CLI unavailable",
     "archive_blocked": true
   },

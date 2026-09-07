@@ -1,6 +1,0 @@
-interface:
-  display_name: "盘问"
-  short_description: "经同意后用结构化追问压力测试想法"
-
-policy:
-  allow_implicit_invocation: true

@@ -4,13 +4,12 @@
 
 一个 skill 一个目录：`plugins/<plugin>/skills/<skill>/SKILL.md`，旁边可放 `evals/evals.json`。装配用 `sk`（源码 `packages/sk`；profile 的 manifest.json 是声明，junction 是投影）。
 
-共 18 个 Skill，10 个 Plugin。
+共 17 个 Skill，9 个 Plugin。
 
 | Skill | Plugin | 版本 | L2 字节 | evals | description |
 |---|---|---|---|---|---|
 | `adaptive-problem-solving` | adaptive-problem-solving | 0.2.14 | 9389 | 无 | 用于问题含糊、关键路径选择、波次／里程碑反思、高成本或难回退动作、范围／成本变化、停滞、恢复／交接／验收／长期收口，或检查方向、方法、ROI、模型、上下文、工具、环境与 Agent 组合。恢复原问题和主瓶颈，比较普通路径与方法后组合、换路或… |
 | `clarify` | clarify | 0.1.0 | 7151 | 有 | 主人冒出一个痒点、想建个东西、或者说某处别扭时，先把「解」翻回「问题」，判断该不该做。触发语包括「我想建/我想做/要不要搞一个/有没有必要弄个/能不能做个工具/这个流程好烦/这里不对劲」，以及 /clarify。**动手之前**用；不产出文… |
-| `grilling` | grilling | 0.1.2 | 3986 | 有 | 仅在用户直接要求 grilling／盘问／压力测试，或明确接受建议后，用结构化问题压力测试计划、决定或想法；复杂性、关键词或 Agent 偏好不构成同意。Use structured questions to stress-test a p… |
 | `knowledge-maintenance` | knowledge-maintenance | 0.1.3 | 6488 | 无 | 用于多来源调研、可重复实验、会影响权威／Agent 配置／重要决定的研究，或用户要求复用、复核、更新当前知识时：先找已认可知识和失效条件，只补变化、冲突与缺口，再经价值门和可信门更新。不用于低成本一次性事实、原始材料／研发过程留存、私域结构… |
 | `note` | note | 0.1.0 | 2633 | 无 | 把成熟结论沉淀进本地 Markdown 知识库，或找回以前记过的结论。当用户说「沉淀到知识库」「记到 KB」「/note」「以前记过」「找回笔记」时使用。 |
 | `orchestrated-collaboration` | orchestrated-collaboration | 0.2.7 | 21795 | 无 | 当用户明确要求多 Agent／多 Session／跨 Provider 协作、任务已授权委派，或活动 Session 发生共享写入碰撞时，建立目标来源、排他所有权、可追踪交付、独立验收与综合；按共享资源和 Issue 子树确定唯一协调者，只… |

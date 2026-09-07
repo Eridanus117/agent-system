@@ -33,7 +33,7 @@
 以下发布记录保留迁移前编号以便仓库维护者溯源；其中私有链接对公共协作者不可用，只是可选历史来源。当前行为、贡献要求和验收必须在本仓公开内容中自足表达。
 `adaptive-problem-solving` `0.2.14` 随 2026-09-01 负责人裁定的 bmad 整组退库清理引用：description 与方法登记面 INDEX 的「与装配内其他 Skill 的分界」表不再列 bmad-* 执行流程承载者（仅保留 `grilling`），失效条款同步；行为合同与方法卡内容不变。
 
-仓库目前包含十个可安装 Plugin：`grilling` `0.1.2`、`self-improvement` `0.1.7`、`skill-maintenance` `0.1.1`、`knowledge-maintenance` `0.1.3`、`orchestrated-collaboration` `0.2.7`、`adaptive-problem-solving` `0.2.14`、`skill-appraisal` `0.2.0`、`clarify` `0.1.0`、`note` `0.1.0`、`workcoding` `0.1.0`（含 8 个规程 Skill）。以 `docs/skills-overview.md`（自动生成）为准。
+仓库目前包含九个可安装 Plugin：`self-improvement` `0.1.7`、`skill-maintenance` `0.1.1`、`knowledge-maintenance` `0.1.3`、`orchestrated-collaboration` `0.2.7`、`adaptive-problem-solving` `0.2.14`、`skill-appraisal` `0.2.0`、`clarify` `0.1.0`、`note` `0.1.0`、`workcoding` `0.1.0`（含 8 个规程 Skill）。Matt 的 25 个 promoted Skill 与 Superpowers 的 14 个 Skill 由 daily profile 从 `vendor/` 固定来源装配，不属于本仓 Plugin 目录。以 `docs/skills-overview.md`（自动生成）为准。
 
 **2026-09-02 负责人裁定退库两组**：`github-collaboration`（六个 Skill）与 `resource-observability`。理由见下方「已退库」。此前写进符合性门禁的「GitHub 协作 Plugin 必须作为可发布资产保留」一条同时作废，已从 `plugins/tests/workflow-routing.test.ts` 移除。
 
@@ -80,37 +80,6 @@
 
 本仓当前需求与授权只来自负责人当前明确指令，或本仓公开、自足且经明确激活的 Issue／PR。旧 Issue、私有历史和既有研究默认只作待核验来源，不能自行恢复工作。
 
-## 安装 `grilling`
-
-先克隆本仓，然后把仓库根目录作为本地 Marketplace 添加。下面的 `<repo-root>` 是本仓的绝对路径。
-
-Codex：
-
-```powershell
-codex plugin marketplace add "<repo-root>" --json
-codex plugin add grilling@agent-plugins --json
-```
-
-显式入口为 `$grilling`。
-
-Claude：
-
-```powershell
-claude plugin marketplace add "<repo-root>"
-claude plugin install grilling@agent-plugins --scope user
-```
-
-显式入口为 `/grilling:grilling`。
-
-移除时先卸载 Plugin，再移除 Marketplace：
-
-```powershell
-codex plugin remove grilling@agent-plugins --json
-codex plugin marketplace remove agent-plugins --json
-
-claude plugin uninstall grilling@agent-plugins --scope user
-claude plugin marketplace remove agent-plugins
-```
 
 原生 Windows 的 Codex `elevated` sandbox 在首次初始化或 marker 不兼容时可能触发 UAC；请在确认程序来自本机 Codex 后完成提升。本仓曾在无人处理 UAC 时只对受阻测试命令临时使用 `windows.sandbox="unelevated"`，随后在可处理 UAC 时确认 `elevated` 最小探针恢复正常。持久配置没有被降低，也没有关闭沙箱；若以后必须临时回退，优先只覆盖单条命令，因为 `unelevated` 的隔离强度低于 `elevated`。
 

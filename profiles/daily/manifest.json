@@ -43,6 +43,162 @@
     {
       "name": "workcoding",
       "target": "plugins/workcoding/skills/workcoding"
+    },
+    {
+      "name": "ask-matt",
+      "target": "vendor/mattpocock/skills/ask-matt"
+    },
+    {
+      "name": "diagnosing-bugs",
+      "target": "vendor/mattpocock/skills/diagnosing-bugs"
+    },
+    {
+      "name": "grill-with-docs",
+      "target": "vendor/mattpocock/skills/grill-with-docs"
+    },
+    {
+      "name": "triage",
+      "target": "vendor/mattpocock/skills/triage"
+    },
+    {
+      "name": "improve-codebase-architecture",
+      "target": "vendor/mattpocock/skills/improve-codebase-architecture"
+    },
+    {
+      "name": "setup-matt-pocock-skills",
+      "target": "vendor/mattpocock/skills/setup-matt-pocock-skills"
+    },
+    {
+      "name": "tdd",
+      "target": "vendor/mattpocock/skills/tdd"
+    },
+    {
+      "name": "to-spec",
+      "target": "vendor/mattpocock/skills/to-spec"
+    },
+    {
+      "name": "to-tickets",
+      "target": "vendor/mattpocock/skills/to-tickets"
+    },
+    {
+      "name": "wayfinder",
+      "target": "vendor/mattpocock/skills/wayfinder"
+    },
+    {
+      "name": "implement",
+      "target": "vendor/mattpocock/skills/implement"
+    },
+    {
+      "name": "prototype",
+      "target": "vendor/mattpocock/skills/prototype"
+    },
+    {
+      "name": "research",
+      "target": "vendor/mattpocock/skills/research"
+    },
+    {
+      "name": "domain-modeling",
+      "target": "vendor/mattpocock/skills/domain-modeling"
+    },
+    {
+      "name": "codebase-design",
+      "target": "vendor/mattpocock/skills/codebase-design"
+    },
+    {
+      "name": "code-review",
+      "target": "vendor/mattpocock/skills/code-review"
+    },
+    {
+      "name": "resolving-merge-conflicts",
+      "target": "vendor/mattpocock/skills/resolving-merge-conflicts"
+    },
+    {
+      "name": "wizard",
+      "target": "vendor/mattpocock/skills/wizard"
+    },
+    {
+      "name": "grill-me",
+      "target": "vendor/mattpocock/skills/grill-me"
+    },
+    {
+      "name": "grilling",
+      "target": "vendor/mattpocock/skills/grilling"
+    },
+    {
+      "name": "handoff",
+      "target": "vendor/mattpocock/skills/handoff"
+    },
+    {
+      "name": "teach",
+      "target": "vendor/mattpocock/skills/teach"
+    },
+    {
+      "name": "to-questionnaire",
+      "target": "vendor/mattpocock/skills/to-questionnaire"
+    },
+    {
+      "name": "wait-what",
+      "target": "vendor/mattpocock/skills/wait-what"
+    },
+    {
+      "name": "writing-for-agents",
+      "target": "vendor/mattpocock/skills/writing-for-agents"
+    },
+    {
+      "name": "brainstorming",
+      "target": "vendor/superpowers/skills/brainstorming"
+    },
+    {
+      "name": "dispatching-parallel-agents",
+      "target": "vendor/superpowers/skills/dispatching-parallel-agents"
+    },
+    {
+      "name": "executing-plans",
+      "target": "vendor/superpowers/skills/executing-plans"
+    },
+    {
+      "name": "finishing-a-development-branch",
+      "target": "vendor/superpowers/skills/finishing-a-development-branch"
+    },
+    {
+      "name": "receiving-code-review",
+      "target": "vendor/superpowers/skills/receiving-code-review"
+    },
+    {
+      "name": "requesting-code-review",
+      "target": "vendor/superpowers/skills/requesting-code-review"
+    },
+    {
+      "name": "subagent-driven-development",
+      "target": "vendor/superpowers/skills/subagent-driven-development"
+    },
+    {
+      "name": "systematic-debugging",
+      "target": "vendor/superpowers/skills/systematic-debugging"
+    },
+    {
+      "name": "test-driven-development",
+      "target": "vendor/superpowers/skills/test-driven-development"
+    },
+    {
+      "name": "using-git-worktrees",
+      "target": "vendor/superpowers/skills/using-git-worktrees"
+    },
+    {
+      "name": "using-superpowers",
+      "target": "vendor/superpowers/skills/using-superpowers"
+    },
+    {
+      "name": "verification-before-completion",
+      "target": "vendor/superpowers/skills/verification-before-completion"
+    },
+    {
+      "name": "writing-plans",
+      "target": "vendor/superpowers/skills/writing-plans"
+    },
+    {
+      "name": "writing-skills",
+      "target": "vendor/superpowers/skills/writing-skills"
     }
   ]
 }

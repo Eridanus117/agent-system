@@ -59,35 +59,28 @@
 
 - **产品合同**：用户直接请求方法，或在 Agent 给出一次建议后明确接受，才允许开始问询。
 - **产品合同**：任务复杂、命中关键词或 Agent 认为方法有用，都不构成同意。
-- **已批准试验输入**：首次 Plugin 实验允许两个运行端由 Agent 自动加载 `grilling`。
-- **已批准试验输入**：两个运行端都要保留手动调用 `grilling` 的入口。
+- **当前装配来源**：daily profile 从固定的 `vendor/mattpocock/skills` 来源装配 `grilling`。
+- **当前入口**：两个运行端保留手动调用 `grilling` 的入口。
+- **来源边界**：当前使用 Matt 的原版 Skill，不在本仓维护本地 Fork。
 - **待验证**：Claude 与 Codex 最终显示的命令是否正好是 `/grilling`、`$grilling`，还是带有 Plugin 命名空间。
-- **待验证**：允许自动加载后，两个运行端能否稳定做到“先建议、有同意才问询”。
 - **失败回退**：哪个运行端守不住同意边界，就先把哪个运行端收紧为只能由命令进入，并记录增加的用户步骤。
 
 因此，配置字段只能证明 Agent 有没有加载能力，不能证明用户已经同意，也不能单独证明方法行为合格。
 
-## 待验证的物理候选
+## 当前物理来源
 
-以下目录只是后续 `grilling` Plugin 实验的首测候选。当前文档切片不创建其中任何文件，也不声称两个运行端已经兼容它。
+`grilling` 不再作为本仓 Plugin 发布，也不再复制一份本地正文；当前由 daily profile 直接引用 Matt 的固定 vendor 来源。
 
 ```text
-plugins/grilling/
-├── .codex-plugin/
-│   └── plugin.json
-├── .claude-plugin/
-│   └── plugin.json
-├── skills/
-│   └── grilling/
-│       ├── SKILL.md
-│       └── agents/
-│           └── openai.yaml
-├── LICENSES/
-│   └── mattpocock-skills-MIT.txt
-└── UPSTREAM.md
+vendor/mattpocock/
+└── skills/
+    └── grilling/
+        ├── SKILL.md
+        └── agents/
+            └── openai.yaml
 ```
 
-候选中的共同 `SKILL.md` 只出现一次；两个清单文件只表达各自运行端的包装。发现与安装目录是否能共享，不由这棵目录树提前决定。
+共同正文只保留在 vendor 来源；两个运行端的装配入口由 profile 与各自运行端处理，不由本仓 Marketplace 再包一层。
 
 ## 已确定、待验证与回退
 
