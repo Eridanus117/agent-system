@@ -27,7 +27,7 @@ const USAGE = `用法：
   sj judge <会话文件> [--judge claude|omp]   机械检查 + 评委，落状态文件
   sj anchor <会话文件> [--from <json>]       主人判标准答案
   sj agreement                      评委与标准答案的一致率（不足 10 道拒绝）
-  sj sentinel                       跑哨兵题，评委全给满分即报警
+  sj sentinel [--judge claude|omp]           跑哨兵题，评委全给满分即报警
   sj list [--latest N]              列最近会话
 `;
 
@@ -145,7 +145,8 @@ export async function runCli(args: string[], io: CliIo): Promise<number> {
       const fullMarks = applicable.length > 0 && applicable.every((r) => r.verdict === "符合");
       const name = path.basename(f, ".jsonl");
       if (!outcome.judged) { io.stdout(`${name}：评委失败\n`); alarms++; continue; }
-      if (fullMarks) { io.stdout(`报警：评委给哨兵题「${name}」满分——它是空壳，评委被糊弄了\n`); alarms++; }
+      if (outcome.judged && applicable.length === 0) { io.stdout(`报警：评委对哨兵题「${name}」全部判不适用——它回避了问题\n`); alarms++; }
+      else if (fullMarks) { io.stdout(`报警：评委给哨兵题「${name}」满分——它是空壳，评委被糊弄了\n`); alarms++; }
       else io.stdout(`${name}：评委识破（${applicable.map((r) => `${r.id} ${r.verdict}`).join("，")}）\n`);
     }
     return alarms ? 1 : 0;
