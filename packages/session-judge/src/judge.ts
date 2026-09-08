@@ -66,6 +66,10 @@ export function runnerFor(kind: "claude" | "omp"): JudgeRunner {
     child.stderr.on("data", (d) => { err += d; });
     child.on("error", reject);
     child.on("close", (code) => (code === 0 ? resolve(out) : reject(new Error(`评委进程退出 ${code}：${err.slice(0, 300)}`))));
+    // 评委进程可能不读 stdin 就提前退出（比如假评委 process.exit(3)）：写大 prompt 时会撞 EPIPE，
+    // 不接住就是未捕获异常、能把测试进程带崩。这里吞掉 stdin 的 error，交由上面的 close 处理器
+    // （对端已退出，close 事件仍会触发并给出「评委进程退出 N」）负责真正的失败报告。
+    child.stdin.on("error", () => {});
     child.stdin.end(prompt);
   });
 }

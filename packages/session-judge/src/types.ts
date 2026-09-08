@@ -1,4 +1,5 @@
 // 时间线的数据形状。所有解析器都产出 RawEvent，timeline.ts 负责编号与渲染。
+import { WRITE_REDIRECT } from "./shell-classify.ts";
 
 export type EventKind =
   | "owner"       // 主人发言
@@ -45,12 +46,8 @@ export interface CheckResult {
   note?: string;       // 一句说明
 }
 
-/** 重定向／原地编辑／写文件调用：真写文件。
- * 排除两类假阳性：(1) `=>`/`->`/`2>`/`2>&1`/`&>`/`1>` 这类不是「重定向到文件」的写法——`>` 前一个字符
- *   是 `=`/`-`/`<`/`2`/`&`/`1` 时不算；(2) `>` 后面（跳过空白）不像路径或引号的写法（比如比较运算符
- *   `x > 5` 里的 `5`）——要求紧跟着的 token 以引号/`/`/`.`/`~`/`$`/盘符（`C:`）开头，或是一个含 `/`／`.`
- *   的普通词（如 `out.txt`），并且不是写 /dev/null。 */
-const WRITE_REDIRECT = /(?<![=\-<2&1])>>?(?!\s*\/dev\/null)(?=\s*(?:['"]|[/.~$]|[A-Za-z]:|\w[^\s]*[/.]))/;
+// 重定向识别正则 WRITE_REDIRECT 挪去了 shell-classify.ts，此处只 import 复用——
+// 与 shellWriteTarget 共用同一份，避免命令里多个 `>` 时两处认出不同目标（见该文件顶部说明）。
 const WRITE_CALL = /\bsed\s+-i\b|\btee\s+|writeFileSync\(/;
 
 /** 命令标记：push/merge、测试运行、写文件（重定向 / sed -i / tee / writeFileSync）。 */

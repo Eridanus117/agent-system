@@ -160,6 +160,73 @@ describe("sj extract", () => {
     }
   });
 
+  test("sj anchor --from 含未知键时拒绝写入", async () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "sj-"));
+    withFakeJudge(tmp);
+    process.env.SJ_ANCHORS_DIR = path.join(tmp, "anchors");
+    const from = path.join(tmp, "owner-badkey.json");
+    fs.writeFileSync(from, JSON.stringify({ M5: "符合" }));
+    const fixture = path.join(import.meta.dir, "..", "fixtures", "claude.jsonl");
+    const err: string[] = [];
+    try {
+      const code = await runCli(["anchor", fixture, "--from", from], { stdout: () => {}, stderr: (s) => err.push(s) });
+      expect(code).toBe(2);
+      expect(err.join("")).toContain("--from 里的键只能是 M1–M4、J1–J4：M5");
+      expect(fs.existsSync(path.join(tmp, "anchors", "claude.json"))).toBe(false);
+    } finally {
+      delete process.env.SJ_ANCHORS_DIR; delete process.env.SJ_STATE_DIR; delete process.env.SJ_JUDGE_CMD;
+    }
+  });
+
+  test("sj anchor --from 后面没跟值时返回 2，不去读文件 undefined", async () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "sj-"));
+    withFakeJudge(tmp);
+    process.env.SJ_ANCHORS_DIR = path.join(tmp, "anchors");
+    const fixture = path.join(import.meta.dir, "..", "fixtures", "claude.jsonl");
+    const err: string[] = [];
+    try {
+      const code = await runCli(["anchor", fixture, "--from"], { stdout: () => {}, stderr: (s) => err.push(s) });
+      expect(code).toBe(2);
+      expect(err.join("")).toContain("用法");
+      expect(fs.existsSync(path.join(tmp, "anchors", "claude.json"))).toBe(false);
+    } finally {
+      delete process.env.SJ_ANCHORS_DIR; delete process.env.SJ_STATE_DIR; delete process.env.SJ_JUDGE_CMD;
+    }
+  });
+
+  test("sj anchor 已有标准答案时拒绝覆盖，加 --force 才允许", async () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "sj-"));
+    withFakeJudge(tmp);
+    process.env.SJ_ANCHORS_DIR = path.join(tmp, "anchors");
+    const from = path.join(tmp, "owner.json");
+    fs.writeFileSync(from, JSON.stringify({ J1: "不符合" }));
+    const fixture = path.join(import.meta.dir, "..", "fixtures", "claude.jsonl");
+    const anchorFile = path.join(tmp, "anchors", "claude.json");
+    try {
+      // 第一次保存：正常写入。
+      expect(await runCli(["anchor", fixture, "--from", from], { stdout: () => {}, stderr: () => {} })).toBe(0);
+      const firstSaved = JSON.parse(fs.readFileSync(anchorFile, "utf8"));
+      expect(firstSaved.owner.J1).toBe("不符合");
+
+      // 第二次不带 --force：拒绝覆盖，文件保持第一次的内容不变。
+      const from2 = path.join(tmp, "owner2.json");
+      fs.writeFileSync(from2, JSON.stringify({ J1: "符合" }));
+      const err: string[] = [];
+      const code = await runCli(["anchor", fixture, "--from", from2], { stdout: () => {}, stderr: (s) => err.push(s) });
+      expect(code).toBe(1);
+      expect(err.join("")).toContain(`已有标准答案：${anchorFile}；要覆盖请加 --force`);
+      const stillFirst = JSON.parse(fs.readFileSync(anchorFile, "utf8"));
+      expect(stillFirst.owner.J1).toBe("不符合");
+
+      // 带 --force：允许覆盖。
+      expect(await runCli(["anchor", fixture, "--from", from2, "--force"], { stdout: () => {}, stderr: () => {} })).toBe(0);
+      const overwritten = JSON.parse(fs.readFileSync(anchorFile, "utf8"));
+      expect(overwritten.owner.J1).toBe("符合");
+    } finally {
+      delete process.env.SJ_ANCHORS_DIR; delete process.env.SJ_STATE_DIR; delete process.env.SJ_JUDGE_CMD;
+    }
+  });
+
   test("sj list 扫两个目录并按时间倒序", async () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "sj-list-"));
     const c = path.join(tmp, "claude", "proj"); const o = path.join(tmp, "omp", "cwd");

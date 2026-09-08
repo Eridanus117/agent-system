@@ -1,9 +1,12 @@
 // 评委层：只测提示词拼装、输出解析与重试；评委本身用假函数。
 import { describe, expect, test } from "bun:test";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
-import { buildPrompt, judgeTimeline, loadRubric, parseSummary, parseVerdicts, renderMechanical, renderReport } from "../src/judge.ts";
-import { loadTimeline } from "../src/timeline.ts";
+import { buildPrompt, judgeTimeline, loadRubric, parseSummary, parseVerdicts, renderMechanical, renderReport, runnerFor } from "../src/judge.ts";
+import { loadTimeline, renderTimeline } from "../src/timeline.ts";
 import { runChecks } from "../src/checks.ts";
+import type { Event, Timeline } from "../src/types.ts";
 
 const FIX = path.join(import.meta.dir, "..", "fixtures", "claude.jsonl");
 const GOOD = `| 判据 | 判决 | 证据 |
@@ -85,6 +88,29 @@ describe("judgeTimeline", () => {
   test("合格时 outcome 带上总评", async () => {
     const r = await judgeTimeline(loadTimeline(FIX), async () => GOOD);
     expect(r.summary).toBe("走了规矩。");
+  });
+});
+
+describe("runnerFor：评委进程不读 stdin 就提前退出（EPIPE）", () => {
+  test("prompt 超过 100KB、假评委直接 exit(3) 不读 stdin：judgeTimeline 拒绝并带退出码，不把测试进程带崩", async () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "sj-judge-epipe-"));
+    const fake = path.join(tmp, "fake-judge-noread.mjs");
+    // 故意不挂 stdin 监听、立刻退出：小 prompt 靠系统管道缓冲区往往还是能写进去，
+    // 只有 prompt 大到超过缓冲区（这里造 100KB+ 的时间线）才能稳定复现 EPIPE。
+    fs.writeFileSync(fake, "process.exit(3);\n");
+    process.env.SJ_JUDGE_CMD = `node ${fake}`;
+    try {
+      const bigText = "x".repeat(200);
+      const events: Event[] = Array.from({ length: 700 }, (_, i) => ({
+        n: i + 1, at: "2026-09-08T10:00:00.000Z", kind: "agent-text" as const, text: bigText, tags: [],
+      }));
+      const t: Timeline = { id: "big", client: "claude", events };
+      expect(renderTimeline(t).length).toBeGreaterThan(100_000);
+      await expect(judgeTimeline(t, runnerFor("claude"))).rejects.toThrow(/评委进程退出 3/);
+    } finally {
+      delete process.env.SJ_JUDGE_CMD;
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
   });
 });
 

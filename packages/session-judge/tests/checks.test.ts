@@ -184,4 +184,29 @@ describe("classifyShellWrite：写入目标是 shell 变量引用时按命令内
     expect(classifyShellWrite(cmd)).toBe("code");
     expect(isCodeWrite(sh(cmd))).toBe(true);
   });
+  test("(d) 变量目标未知，命令里读取的源文件恰好在 /tmp/ 下：草稿判定只看写入目标，不被源文件路径误伤", () => {
+    // F 是未知变量，真正写入目标抽出来是 "$F" 本身；命令里提到的 /tmp/frag.txt 只是读取源，不是写入目标，
+    // 不该让 classifyShellWrite 把这条命令误判成 scratch。
+    const cmd = 'cat /tmp/frag.txt >> "$F"';
+    expect(shellWriteTarget(cmd)).toBe("$F");
+    expect(classifyShellWrite(cmd)).not.toBe("scratch");
+  });
+});
+
+describe("重定向识别统一：更早出现的假箭头/比较运算符不偷走后面真重定向的目标（终审回归）", () => {
+  test("(a) commit message 里的 -> 不是重定向，后面 >> 到 desk 路径才是真目标", () => {
+    const cmd = 'git commit -m "fix: a->b" && cat >> C:/Workspace/desk/70-工作日志/x.md';
+    expect(shellWriteTarget(cmd)).toBe("C:/Workspace/desk/70-工作日志/x.md");
+    expect(isCodeWrite(sh(cmd))).toBe(false);
+  });
+  test("(b) grep 字符串里的 => 不是重定向", () => {
+    const cmd = 'grep -rn "x=>y" src && cat >> C:/Workspace/desk/70-工作日志/x.md';
+    expect(shellWriteTarget(cmd)).toBe("C:/Workspace/desk/70-工作日志/x.md");
+    expect(isCodeWrite(sh(cmd))).toBe(false);
+  });
+  test("(c) echo 字符串里的比较运算符 > 不是重定向", () => {
+    const cmd = 'echo "a > b" && cat > C:/Workspace/desk/40-收件箱/a.md';
+    expect(shellWriteTarget(cmd)).toBe("C:/Workspace/desk/40-收件箱/a.md");
+    expect(isCodeWrite(sh(cmd))).toBe(false);
+  });
 });

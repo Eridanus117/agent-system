@@ -34,6 +34,26 @@ describe("anchors", () => {
     const ten = Array.from({ length: 10 }, (_, i) => anchor(`s${i}`, {}, {}));
     expect(() => assertAnchorsReady(ten)).not.toThrow();
   });
+  test("saveAnchor 遇到已有同 id 文件时拒绝覆盖，加 force 才允许", () => {
+    saveAnchor(anchor("dup", {}, {}));
+    expect(() => saveAnchor(anchor("dup", { J1: "不符合" }, {}))).toThrow(
+      `已有标准答案：${path.join(tmp, "dup.json")}；要覆盖请加 --force`,
+    );
+    // 拒绝覆盖时文件内容保持第一次落盘的样子。
+    const kept = JSON.parse(fs.readFileSync(path.join(tmp, "dup.json"), "utf8"));
+    expect(kept.owner.J1).toBe("符合");
+    // 传 force=true 才允许覆盖。
+    saveAnchor(anchor("dup", { J1: "不符合" }, {}), true);
+    const overwritten = JSON.parse(fs.readFileSync(path.join(tmp, "dup.json"), "utf8"));
+    expect(overwritten.owner.J1).toBe("不符合");
+  });
+
+  test("loadAnchors 遇到损坏的 JSON 文件时报出文件名，不吞掉", () => {
+    const bad = path.join(tmp, "broken.json");
+    fs.writeFileSync(bad, "{not valid json");
+    expect(() => loadAnchors()).toThrow(`标准答案文件损坏：${bad}`);
+  });
+
   test("双方都缺同一格算不一致，不算匹配", () => {
     const a: Anchor = {
       id: "a", client: "claude", file: "C:/x/a.jsonl", judgedAt: "2026-09-08T00:00:00.000Z",

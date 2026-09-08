@@ -26,7 +26,7 @@ export interface CliIo {
 const USAGE = `用法：
   sj extract <会话文件>            出时间线
   sj judge <会话文件> [--judge claude|omp]   机械检查 + 评委，落状态文件
-  sj anchor <会话文件> [--from <json>]       主人判标准答案
+  sj anchor <会话文件> [--from <json>] [--force]   主人判标准答案（固定用 claude 评委，与 --judge 无关）
   sj agreement                      评委与标准答案的一致率（不足 10 道拒绝）
   sj sentinel [--judge claude|omp]           跑哨兵题，评委全给满分即报警
   sj list [--latest N]              列最近会话
@@ -75,7 +75,15 @@ export async function runCli(args: string[], io: CliIo): Promise<number> {
 
   if (cmd === "anchor") {
     const file = args[1];
-    if (!file) { io.stderr("用法：sj anchor <会话文件> [--from <json>]\n"); return 2; }
+    if (!file) { io.stderr("用法：sj anchor <会话文件> [--from <json>] [--force]\n"); return 2; }
+    const force = args.includes("--force");
+    const fromIdx = args.indexOf("--from");
+    // --from 后面没跟值（比如写成结尾的 `--from`）：indexOf 命中但 args[fromIdx+1] 是 undefined，
+    // 原来会直接拿 "undefined" 当文件名去读，这里提前拦掉。
+    if (fromIdx >= 0 && args[fromIdx + 1] === undefined) {
+      io.stderr("用法：sj anchor <会话文件> --from <json>\n");
+      return 2;
+    }
     try {
       const t = loadTimeline(file);
       const outcome = await judgeTimeline(t, runnerFor("claude"));
@@ -87,11 +95,15 @@ export async function runCli(args: string[], io: CliIo): Promise<number> {
       const judge: Record<string, Verdict> = {};
       for (const r of [...outcome.mechanical, ...outcome.judged]) judge[r.id] = r.verdict;
       const owner: Record<string, Verdict> = { ...judge };
-      const fromIdx = args.indexOf("--from");
       if (fromIdx >= 0) {
         const given = JSON.parse(readFileSync(String(args[fromIdx + 1]), "utf8")) as Record<string, Verdict>;
+        const allowedKeys: readonly string[] = ANCHOR_CELLS;
         const allowed: Verdict[] = VERDICTS.filter((v) => v !== "需主人看");
         for (const [k, v] of Object.entries(given)) {
+          if (!allowedKeys.includes(k)) {
+            io.stderr(`--from 里的键只能是 M1–M4、J1–J4：${k}\n`);
+            return 2;
+          }
           if (!allowed.includes(v)) {
             io.stderr(`--from 里的判决只能是 符合／不符合／不适用／判不了：${k}=${v}\n`);
             return 2;
@@ -108,7 +120,7 @@ export async function runCli(args: string[], io: CliIo): Promise<number> {
         }
         rl.close();
       }
-      const saved = saveAnchor({ id: t.id, client: t.client, file, judgedAt: new Date().toISOString(), owner, judge });
+      const saved = saveAnchor({ id: t.id, client: t.client, file, judgedAt: new Date().toISOString(), owner, judge }, force);
       io.stdout(`已保存标准答案：${saved}\n`);
       return 0;
     } catch (err) {

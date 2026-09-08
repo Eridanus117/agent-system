@@ -36,10 +36,15 @@ export function anchorsDir(): string {
   return path.join(found, "60-回放题库", "锚样本");
 }
 
-export function saveAnchor(a: Anchor): string {
+/** 标准答案是主人亲手判的，覆盖会丢掉之前的判断；默认拒绝覆盖已存在的同 id 文件，
+ * 传 force=true（对应 CLI 的 `--force`）才允许覆盖。 */
+export function saveAnchor(a: Anchor, force = false): string {
   const dir = anchorsDir();
   mkdirSync(dir, { recursive: true });
   const file = path.join(dir, `${a.id}.json`);
+  if (existsSync(file) && !force) {
+    throw new Error(`已有标准答案：${file}；要覆盖请加 --force`);
+  }
   writeFileSync(file, JSON.stringify(a, null, 2) + "\n", "utf8");
   return file;
 }
@@ -47,7 +52,15 @@ export function saveAnchor(a: Anchor): string {
 export function loadAnchors(): Anchor[] {
   const dir = anchorsDir();
   if (!existsSync(dir)) return [];
-  return readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => JSON.parse(readFileSync(path.join(dir, f), "utf8")) as Anchor);
+  return readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => {
+    const full = path.join(dir, f);
+    try {
+      return JSON.parse(readFileSync(full, "utf8")) as Anchor;
+    } catch {
+      // JSON.parse 失败说明文件损坏（截断写入、手改坏了等）；报出具体文件名，不吞掉、不让整批读取悄悄失败。
+      throw new Error(`标准答案文件损坏：${full}`);
+    }
+  });
 }
 
 export function agreement(anchors: Anchor[]): { cells: number; matched: number; rate: number } {
