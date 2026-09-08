@@ -42,6 +42,12 @@ export function parseVerdicts(text: string): CheckResult[] | null {
   return out;
 }
 
+/** 解析评委的「总评」一句话；找不到就返回 null。 */
+export function parseSummary(text: string): string | null {
+  const m = text.match(/^\s*总评[：:]\s*(.+)$/m);
+  return m?.[1]?.trim() || null;
+}
+
 export type JudgeRunner = (prompt: string) => Promise<string>;
 
 /** 起外部评委进程，prompt 走 stdin。SJ_JUDGE_CMD 可整体覆盖（测试用）。 */
@@ -69,6 +75,7 @@ export interface JudgeOutcome {
   judged: CheckResult[] | null;
   raw: string;
   attempts: number;
+  summary: string | null;  // 评委的「总评」一句话，解析不出就是 null
 }
 
 export async function judgeTimeline(t: Timeline, runner: JudgeRunner): Promise<JudgeOutcome> {
@@ -78,14 +85,14 @@ export async function judgeTimeline(t: Timeline, runner: JudgeRunner): Promise<J
   for (let attempt = 1; attempt <= 2; attempt++) {
     raw = await runner(prompt);
     const judged = parseVerdicts(raw);
-    if (judged) return { mechanical, judged, raw, attempts: attempt };
+    if (judged) return { mechanical, judged, raw, attempts: attempt, summary: parseSummary(raw) };
   }
-  return { mechanical, judged: null, raw, attempts: 2 };
+  return { mechanical, judged: null, raw, attempts: 2, summary: null };
 }
 
 export function renderReport(t: Timeline, o: JudgeOutcome, judgeName: string): string {
   const judgedTable = o.judged
-    ? renderMechanical(o.judged, "判据")
+    ? renderMechanical(o.judged, "判据") + (o.summary ? `\n\n总评：${o.summary}` : "")
     : `评委失败（重试 ${o.attempts} 次，输出不合格式）。原文：\n\n${o.raw.trim()}`;
   return [
     `# 评分：会话 ${t.id}（${t.client}）`, "",

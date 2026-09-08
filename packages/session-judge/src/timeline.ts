@@ -40,7 +40,7 @@ function clock(iso: string): string {
 
 export function formatEvent(e: Event): string {
   const head = `${e.n}. [${clock(e.at)}]`;
-  const tag = e.tags.map((t) => (t === "push" ? " ⚠push/merge" : " ✅test-run")).join("");
+  const tag = e.tags.map((t) => (t === "push" ? " ⚠push/merge" : t === "write" ? " ✏️write" : " ✅test-run")).join("");
   switch (e.kind) {
     case "owner": return `${head} 主人：「${e.text}」`;
     case "agent-text": return `${head} agent：「${e.text}」`;

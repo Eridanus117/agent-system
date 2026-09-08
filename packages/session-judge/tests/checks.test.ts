@@ -1,12 +1,15 @@
 // 机械检查：只看顺序与有无，用手工拼的时间线覆盖每条的三种结论。
 import { describe, expect, test } from "bun:test";
-import { isCodeWrite, isPlanPath, isRecordPath, runChecks } from "../src/checks.ts";
+import { isCodeWrite, isPlanPath, isRecordPath, runChecks, shellWriteTarget } from "../src/checks.ts";
+import { tagCommand } from "../src/types.ts";
 import type { Event, Timeline } from "../src/types.ts";
 
 let n = 0;
 const ev = (kind: Event["kind"], extra: Partial<Event> = {}): Event => ({
   n: ++n, at: `2026-09-08T10:00:${String(n).padStart(2, "0")}.000Z`, kind, text: extra.text ?? "", tags: extra.tags ?? [], ...extra,
 });
+// shell 事件按真实解析路径来：tags 由 tagCommand(命令) 算，text 就是命令本身（测试里不做截断）。
+const sh = (command: string): Event => ev("shell", { text: command, tags: tagCommand(command) });
 const tl = (events: Event[]): Timeline => ({ id: "t", client: "claude", events });
 const byId = (t: Timeline) => Object.fromEntries(runChecks(t).map((r) => [r.id, r]));
 
@@ -87,5 +90,49 @@ describe("runChecks", () => {
     expect(r.M5?.verdict).toBe("需主人看");
     expect(r.M5?.evidence).toEqual([2, 1, 3, 1]);
     expect(r.M5?.note).toContain("事件 2 push，之前主人最近一句是事件 1『推吧』");
+  });
+});
+
+describe("shellWriteTarget", () => {
+  test("取重定向 > / >> 之后的路径，去引号、遇空白停", () => {
+    expect(shellWriteTarget("cat > C:/repo/src/a.ts <<'EOF'")).toBe("C:/repo/src/a.ts");
+    expect(shellWriteTarget("cat >> \"C:/Workspace/desk/70-工作日志/x.md\" <<'EOF'")).toBe("C:/Workspace/desk/70-工作日志/x.md");
+  });
+  test("tee 与 sed -i 的目标参数", () => {
+    expect(shellWriteTarget("echo hi | tee C:/repo/src/a.ts")).toBe("C:/repo/src/a.ts");
+    expect(shellWriteTarget("sed -i 's/a/b/' C:/repo/src/a.ts")).toBe("C:/repo/src/a.ts");
+  });
+  test("取不到路径时返回 null", () => {
+    expect(shellWriteTarget("node -e 'fs.writeFileSync(\"x\")'")).toBeNull();
+    expect(shellWriteTarget("echo hi 2>/dev/null")).toBeNull();
+  });
+});
+
+describe("isCodeWrite：shell 重定向 / tee / sed -i / writeFileSync", () => {
+  test("(a) 重定向到代码文件算代码写入", () => {
+    expect(isCodeWrite(sh("cat > C:/repo/src/a.ts <<'EOF'"))).toBe(true);
+  });
+  test("(b) 重定向到记录类路径（desk/）不算", () => {
+    expect(isCodeWrite(sh("cat >> C:/Workspace/desk/70-工作日志/x.md <<'EOF'"))).toBe(false);
+  });
+  test("(c) writeFileSync 调用取不到路径，按代码算", () => {
+    expect(isCodeWrite(sh("node -e 'fs.writeFileSync(\"x\")'"))).toBe(true);
+  });
+  test("(d) 只重定向 stderr 到 /dev/null，不算写文件", () => {
+    expect(isCodeWrite(sh("echo hi 2>/dev/null"))).toBe(false);
+  });
+  test("shell 写代码事件驱动 M1（此前没有 brainstorming → 不符合）", () => {
+    n = 0;
+    const t = tl([ev("owner", { text: "建" }), sh("cat > C:/repo/src/a.ts <<'EOF'")]);
+    const r = byId(t);
+    expect(r.M1?.verdict).toBe("不符合");
+    expect(r.M1?.evidence).toEqual([2]);
+  });
+  test("shell 写代码事件驱动 M1（先 brainstorming → 符合）", () => {
+    n = 0;
+    const t = tl([ev("owner", { text: "建" }), ev("skill", { skill: "brainstorming" }), sh("cat > C:/repo/src/a.ts <<'EOF'")]);
+    const r = byId(t);
+    expect(r.M1?.verdict).toBe("符合");
+    expect(r.M1?.evidence).toEqual([2, 3]);
   });
 });

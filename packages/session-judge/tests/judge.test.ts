@@ -1,7 +1,7 @@
 // 评委层：只测提示词拼装、输出解析与重试；评委本身用假函数。
 import { describe, expect, test } from "bun:test";
 import path from "node:path";
-import { buildPrompt, judgeTimeline, loadRubric, parseVerdicts, renderMechanical } from "../src/judge.ts";
+import { buildPrompt, judgeTimeline, loadRubric, parseSummary, parseVerdicts, renderMechanical, renderReport } from "../src/judge.ts";
 import { loadTimeline } from "../src/timeline.ts";
 import { runChecks } from "../src/checks.ts";
 
@@ -33,6 +33,15 @@ describe("parseVerdicts", () => {
     const r = parseVerdicts(indented)!;
     expect(r).not.toBeNull();
     expect(r.map((x) => x.id)).toEqual(["J1", "J2", "J3", "J4"]);
+  });
+});
+
+describe("parseSummary", () => {
+  test("取到「总评：」那一句", () => {
+    expect(parseSummary(GOOD)).toBe("走了规矩。");
+  });
+  test("没有总评行时返回 null", () => {
+    expect(parseSummary(GOOD.replace("总评：走了规矩。", ""))).toBeNull();
   });
 });
 
@@ -71,5 +80,21 @@ describe("judgeTimeline", () => {
     expect(r.attempts).toBe(2);
     expect(r.judged).toBeNull();
     expect(r.raw).toBe("还是胡说");
+    expect(r.summary).toBeNull();
+  });
+  test("合格时 outcome 带上总评", async () => {
+    const r = await judgeTimeline(loadTimeline(FIX), async () => GOOD);
+    expect(r.summary).toBe("走了规矩。");
+  });
+});
+
+describe("renderReport", () => {
+  test("评委判决表后面带总评一行", async () => {
+    const t = loadTimeline(FIX);
+    const outcome = await judgeTimeline(t, async () => GOOD);
+    const report = renderReport(t, outcome, "claude");
+    expect(report).toContain("总评：走了规矩。");
+    // 总评要出现在「## 时间线」之前，这样 cli.ts 按该标记切片时也能看到
+    expect(report.indexOf("总评：走了规矩。")).toBeLessThan(report.indexOf("## 时间线"));
   });
 });

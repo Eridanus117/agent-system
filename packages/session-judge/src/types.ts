@@ -11,7 +11,7 @@ export type EventKind =
   | "ask"         // 向主人提问
   | "tool";       // 其它工具
 
-export type EventTag = "push" | "test";
+export type EventTag = "push" | "test" | "write";
 
 export interface RawEvent {
   at: string;          // ISO 时间
@@ -44,11 +44,16 @@ export interface CheckResult {
   note?: string;       // 一句说明
 }
 
-/** 命令标记：push/merge 与测试运行。 */
+/** 重定向／原地编辑／写文件调用：真写文件，但不含 `2>`、`2>&1`、`&>` 这类只重定向输出流的写法，也不含写 /dev/null。 */
+const WRITE_REDIRECT = /(?<![2&])>>?(?!\s*\/dev\/null)/;
+const WRITE_CALL = /\bsed\s+-i\b|\btee\s+|writeFileSync\(/;
+
+/** 命令标记：push/merge、测试运行、写文件（重定向 / sed -i / tee / writeFileSync）。 */
 export function tagCommand(command: string): EventTag[] {
   const tags: EventTag[] = [];
   if (/\bgit push\b|\bgh pr merge\b/.test(command)) tags.push("push");
   if (/\.test\.|\bnode --test\b|\bbun test\b|\bnpm test\b|\bpytest\b|\bvitest\b/.test(command)) tags.push("test");
+  if (WRITE_REDIRECT.test(command) || WRITE_CALL.test(command)) tags.push("write");
   return tags;
 }
 

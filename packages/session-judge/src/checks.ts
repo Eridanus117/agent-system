@@ -16,8 +16,30 @@ export function isPlanPath(p: string): boolean {
   return s.includes("/plans/") || s.includes("计划");
 }
 
+/** 从 shell 命令里抠出写入目标：优先取第一个 `>`/`>>` 之后的路径（去引号，遇空白/`;`/`&&`/`|` 停），
+ * 其次是 `tee`/`sed -i` 的目标参数；都取不到时返回 null（比如 `writeFileSync(...)` 这种代码里的调用）。 */
+export function shellWriteTarget(command: string): string | null {
+  const redirect = command.match(/(?<![2&])>>?\s*(['"]?)([^\s;&|'"]+)\1/);
+  if (redirect?.[2]) return redirect[2];
+  for (const seg of command.split(/&&|\|\||[;|]/)) {
+    const tee = seg.match(/\btee\s+(?:-a\s+)?(['"]?)([^\s;&|'"]+)\1/);
+    if (tee?.[2]) return tee[2];
+    if (/\bsed\s+-i\b/.test(seg)) {
+      const tokens = seg.trim().split(/\s+/).map((t) => t.replace(/^['"]|['"]$/g, ""));
+      const last = tokens[tokens.length - 1];
+      if (last && last !== "-i") return last;
+    }
+  }
+  return null;
+}
+
 export function isCodeWrite(e: Event): boolean {
-  return (e.kind === "write" || e.kind === "edit") && !!e.path && !isRecordPath(e.path);
+  if ((e.kind === "write" || e.kind === "edit") && !!e.path) return !isRecordPath(e.path);
+  if (e.kind === "shell" && e.tags.includes("write")) {
+    const target = shellWriteTarget(e.text);
+    return !(target && isRecordPath(target));
+  }
+  return false;
 }
 
 export function runChecks(t: Timeline): CheckResult[] {

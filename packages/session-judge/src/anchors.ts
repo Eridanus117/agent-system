@@ -29,9 +29,11 @@ function walkUpTo(start: string, marker: string): string | null {
 export function anchorsDir(): string {
   if (process.env.SJ_ANCHORS_DIR) return process.env.SJ_ANCHORS_DIR;
   const here = path.dirname(fileURLToPath(import.meta.url));
-  const found = walkUpTo(here, path.join("agent-config", "80-agent配置", "60-回放题库"));
-  if (!found) throw new Error("未设置 SJ_ANCHORS_DIR，也找不到 agent-config/80-agent配置/60-回放题库");
-  return path.join(found, "锚样本");
+  // 标记目录用已经存在的 agent-config/80-agent配置；60-回放题库/锚样本 是它下面还没建的子目录，
+  // loadAnchors 遇到不存在的目录会当成「零标准答案」，不需要它预先存在。
+  const found = walkUpTo(here, path.join("agent-config", "80-agent配置"));
+  if (!found) throw new Error("未设置 SJ_ANCHORS_DIR，也找不到 agent-config/80-agent配置");
+  return path.join(found, "60-回放题库", "锚样本");
 }
 
 export function saveAnchor(a: Anchor): string {
