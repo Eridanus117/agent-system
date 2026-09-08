@@ -6,7 +6,7 @@ description: >-
 
 # 证据回归：母版改前采，改后逐字节比
 
-代码写完后要回答两句：老流程一点没变，新流程是对的。agent 说「跑过了」不算证据，能进 diff 的文件才算。这是 workCoding 四个关注点里「证」的规程，实践是 Golden Master（又叫 Approval Testing，Feathers 一脉，Java 有 ApprovalTests 库），配套标准 ISO 29119 的测试记录要求。测试资产一律进代码仓，不进测试平台（2026-09-02 主人裁定）。
+代码写完后要回答两句：老流程一点没变，新流程是对的。agent 说「跑过了」不算证据，能进 diff 的文件才算。这是 workCoding 四个关注点里「证」的规程，实践是 Golden Master（又叫 Approval Testing，Feathers 一脉，Java 有 ApprovalTests 库），配套标准 ISO 29119 的测试记录要求。测试资产一律进代码仓，不进测试平台（2026-09-02 主人定）。
 
 真源在个人知识库 `notes/证据回归.md`（与标准的对照、备选与不选理由、裁决史、未解决）；备选实践一排见 `notes/实践备选库.md` 槽位二；步骤在本文。
 
