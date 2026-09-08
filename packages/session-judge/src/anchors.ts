@@ -54,7 +54,10 @@ export function agreement(anchors: Anchor[]): { cells: number; matched: number; 
   for (const a of anchors) {
     for (const c of ANCHOR_CELLS) {
       cells++;
-      if (a.owner[c] === a.judge[c]) matched++;
+      // 双方都判过且判决相同才算一致；任一方缺格（含双方都缺）都算不一致，不能让「都没判」冒充「判一样」。
+      const o = a.owner[c];
+      const j = a.judge[c];
+      if (o !== undefined && j !== undefined && o === j) matched++;
     }
   }
   return { cells, matched, rate: cells ? matched / cells : 0 };

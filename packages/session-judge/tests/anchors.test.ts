@@ -34,4 +34,15 @@ describe("anchors", () => {
     const ten = Array.from({ length: 10 }, (_, i) => anchor(`s${i}`, {}, {}));
     expect(() => assertAnchorsReady(ten)).not.toThrow();
   });
+  test("双方都缺同一格算不一致，不算匹配", () => {
+    const a: Anchor = {
+      id: "a", client: "claude", file: "C:/x/a.jsonl", judgedAt: "2026-09-08T00:00:00.000Z",
+      // J3 在 owner 和 judge 里都缺失
+      owner: { M1: "符合", M2: "符合", M3: "符合", M4: "符合", J1: "符合", J2: "符合", J4: "符合" },
+      judge: { M1: "符合", M2: "符合", M3: "符合", M4: "符合", J1: "符合", J2: "符合", J4: "符合" },
+    };
+    const r = agreement([a]);
+    expect(r.cells).toBe(8);
+    expect(r.matched).toBe(7);
+  });
 });

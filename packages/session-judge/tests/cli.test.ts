@@ -121,4 +121,42 @@ describe("sj extract", () => {
       delete process.env.SJ_ANCHORS_DIR; delete process.env.SJ_STATE_DIR; delete process.env.SJ_JUDGE_CMD;
     }
   });
+
+  test("sj anchor 评委解析失败时不落标准答案", async () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "sj-"));
+    const fake = path.join(tmp, "fake-judge-garbage.mjs");
+    // 评委输出不含判决表，parseVerdicts 两次都会失败
+    fs.writeFileSync(fake, "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{console.log('胡说八道，不是表格');});");
+    process.env.SJ_STATE_DIR = path.join(tmp, "state");
+    process.env.SJ_JUDGE_CMD = `node ${fake}`;
+    process.env.SJ_ANCHORS_DIR = path.join(tmp, "anchors");
+    const fixture = path.join(import.meta.dir, "..", "fixtures", "claude.jsonl");
+    const err: string[] = [];
+    try {
+      const code = await runCli(["anchor", fixture], { stdout: () => {}, stderr: (s) => err.push(s) });
+      expect(code).toBe(1);
+      expect(err.join("")).toContain("评委失败，无法判标准答案");
+      expect(fs.existsSync(path.join(tmp, "anchors", "claude.json"))).toBe(false);
+    } finally {
+      delete process.env.SJ_ANCHORS_DIR; delete process.env.SJ_STATE_DIR; delete process.env.SJ_JUDGE_CMD;
+    }
+  });
+
+  test("sj anchor --from 含非法判决时拒绝写入", async () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "sj-"));
+    withFakeJudge(tmp);
+    process.env.SJ_ANCHORS_DIR = path.join(tmp, "anchors");
+    const from = path.join(tmp, "owner-bad.json");
+    fs.writeFileSync(from, JSON.stringify({ J1: "很好" }));
+    const fixture = path.join(import.meta.dir, "..", "fixtures", "claude.jsonl");
+    const err: string[] = [];
+    try {
+      const code = await runCli(["anchor", fixture, "--from", from], { stdout: () => {}, stderr: (s) => err.push(s) });
+      expect(code).toBe(2);
+      expect(err.join("")).toContain("--from 里的判决只能是 符合／不符合／不适用／判不了：J1=很好");
+      expect(fs.existsSync(path.join(tmp, "anchors", "claude.json"))).toBe(false);
+    } finally {
+      delete process.env.SJ_ANCHORS_DIR; delete process.env.SJ_STATE_DIR; delete process.env.SJ_JUDGE_CMD;
+    }
+  });
 });

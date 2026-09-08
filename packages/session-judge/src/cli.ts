@@ -8,7 +8,7 @@ import { loadTimeline, renderTimeline } from "./timeline.ts";
 import { judgeTimeline, renderReport, runnerFor } from "./judge.ts";
 import { writeState } from "./state.ts";
 import { ANCHOR_CELLS, agreement, assertAnchorsReady, loadAnchors, saveAnchor } from "./anchors.ts";
-import type { Verdict } from "./types.ts";
+import { VERDICTS, type Verdict } from "./types.ts";
 
 export interface CliIo {
   stdout: (s: string) => void;
@@ -71,12 +71,24 @@ export async function runCli(args: string[], io: CliIo): Promise<number> {
     try {
       const t = loadTimeline(file);
       const outcome = await judgeTimeline(t, runnerFor("claude"));
+      if (!outcome.judged) {
+        // 评委两次都没解析出合格判决，标准答案没有评委那一半可比，不落盘。
+        io.stderr("评委失败，无法判标准答案\n");
+        return 1;
+      }
       const judge: Record<string, Verdict> = {};
-      for (const r of [...outcome.mechanical, ...(outcome.judged ?? [])]) judge[r.id] = r.verdict;
+      for (const r of [...outcome.mechanical, ...outcome.judged]) judge[r.id] = r.verdict;
       const owner: Record<string, Verdict> = { ...judge };
       const fromIdx = args.indexOf("--from");
       if (fromIdx >= 0) {
         const given = JSON.parse(readFileSync(String(args[fromIdx + 1]), "utf8")) as Record<string, Verdict>;
+        const allowed: Verdict[] = VERDICTS.filter((v) => v !== "需主人看");
+        for (const [k, v] of Object.entries(given)) {
+          if (!allowed.includes(v)) {
+            io.stderr(`--from 里的判决只能是 符合／不符合／不适用／判不了：${k}=${v}\n`);
+            return 2;
+          }
+        }
         Object.assign(owner, given);
       } else {
         io.stdout(renderTimeline(t));
