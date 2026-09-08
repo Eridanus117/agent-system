@@ -61,6 +61,35 @@ manifest 与 roots 的 schema 错误、`checkout-missing`、`unknown-root`、`un
 - 内容规则：凭据形状、本机家目录路径、内网地址与内部主机名、按哈希登记的业务标识。`contentExemptPaths` 只豁免内容规则，路径、大小与归档规则照常。
 - 大文件不在 `largeFileAllowlist` 里就拒绝，但内容照样完整扫描；zip / gzip / tar 按魔数识别（改扩展名无效），成员递归扫描，超过 `archiveMaxDepth`、加密、zip64 或解不开的都拒绝。
 
+## CLI（目标仓侧薄执行层）
+
+```
+bun packages/mounts/src/cli.ts <command> [--checkout <dir>] [--manifest <file>] [--roots <file>] [--json]
+```
+
+| 命令 | 作用 | 退出码 |
+|---|---|---|
+| `init` | 在目标仓 git common dir 下建 `mounts/manifest.json`、`mounts/roots.json` 骨架（已存在不覆盖），并把 `/.omp/local/` 写进 `info/exclude` | 0 |
+| `plan` | 评估计划，不写任何东西 | 0 ready / 2 blocked |
+| `sync [--hook]` | 只创建计划里已验证且缺失的链接；写入前还要求每个 target 已被 git 排除（`target-not-excluded`）；任一链接创建失败即回滚本轮全部写入（`write-failed`）。`--hook` 模式失败也退出 0，stderr 打印 `private overlay unavailable`，不阻断 checkout | 0 / 2（hook 恒 0） |
+| `doctor` | plan 加 exclude 检查，报告 source / target / exclude / trust 问题与只读条目 | 0 / 2 |
+| `repair` | 只移除 `target-wrong-symlink` 的错误链接再 sync；普通文件、目录与未知对象永远不动 | 0 / 2 |
+| `assess-public-tree --policy <file> [--rev HEAD] [--repo <dir>]` | 读 git tree（`ls-tree` + `cat-file --batch`，不读工作目录）跑公共面评估 | 0 allowed / 2 blocked |
+
+用法或环境错误（不是 git checkout、manifest 缺失、策略文件缺失）退出 1。
+
+manifest 与 roots 默认放在 `$(git rev-parse --git-common-dir)/mounts/`：同一仓的所有 worktree 共享，且不进任何远端。
+
+### post-checkout hook（可选）
+
+hook 只做非交互式 sync，失败不阻断 checkout。在目标仓 `.git/hooks/post-checkout` 里调用固定版本的 agent-system：
+
+```
+bun /path/to/agent-system@<pinned-sha>/packages/mounts/src/cli.ts sync --hook --checkout "$PWD"
+```
+
+版本消费：目标仓记录所依赖的 agent-system commit SHA（或 `mounts` 包版本），不用指向 agent-system 工作树的实时软链；升级 agent-system 不会隐式改变目标仓行为。
+
 ## 开发
 
 ```
