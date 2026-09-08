@@ -76,7 +76,10 @@ export type MountErrorCode =
   | "target-wrong-symlink"
   | "target-unknown-object"
   | "duplicate-target"
-  | "target-overlap";
+  | "target-overlap"
+  // 以下由执行层（CLI）在纯逻辑计划之外追加：target 没被 git 排除就会污染业务分支；写入失败已回滚。
+  | "target-not-excluded"
+  | "write-failed";
 
 export interface MountError {
   code: MountErrorCode;
