@@ -3,6 +3,8 @@
 // 设计：docs/superpowers/specs/2026-09-08-session-judge-design.md
 
 import { loadTimeline, renderTimeline } from "./timeline.ts";
+import { judgeTimeline, renderReport, runnerFor } from "./judge.ts";
+import { writeState } from "./state.ts";
 
 export interface CliIo {
   stdout: (s: string) => void;
@@ -35,6 +37,24 @@ export async function runCli(args: string[], io: CliIo): Promise<number> {
       return 1;
     }
   }
+  if (cmd === "judge") {
+    const file = args[1];
+    if (!file) { io.stderr("用法：sj judge <会话文件> [--judge claude|omp]\n"); return 2; }
+    const kind = args.includes("--judge") && args[args.indexOf("--judge") + 1] === "omp" ? "omp" : "claude";
+    try {
+      const t = loadTimeline(file);
+      const outcome = await judgeTimeline(t, runnerFor(kind));
+      const report = renderReport(t, outcome, kind);
+      const written = writeState(t, report);
+      io.stdout(report.split("## 时间线")[0] ?? report);
+      io.stdout(`状态文件：${written}\n`);
+      return outcome.judged ? 0 : 1;
+    } catch (err) {
+      io.stderr(`${(err as Error).message}\n`);
+      return 1;
+    }
+  }
+
   io.stderr(`未知命令：${cmd}\n${USAGE}`);
   return 2;
 }
