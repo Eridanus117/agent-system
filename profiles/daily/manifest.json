@@ -238,7 +238,7 @@
     },
     {
       "name": "vercel-react-best-practices",
-      "target": "vendor/vercel-agent-skills/skills/react-best-practices"
+      "target": "vendor/vercel-agent-skills/skills/vercel-react-best-practices"
     },
     {
       "name": "janitor-discover",
