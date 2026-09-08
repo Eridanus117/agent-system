@@ -27,7 +27,7 @@ describe("路径分类", () => {
   });
   test("临时/草稿路径", () => {
     expect(isScratchPath("/tmp/probe-settings.json")).toBe(true);
-    expect(isScratchPath("C:/Users/x/AppData/Local/Temp/a.md")).toBe(true);
+    expect(isScratchPath("D:/Work/AppData/Local/Temp/a.md")).toBe(true);
     expect(isScratchPath("C:/repo/src/a.ts")).toBe(false);
   });
 });
