@@ -18,6 +18,10 @@ describe("路径分类", () => {
     expect(isPlanPath("C:/repo/docs/superpowers/plans/a.md")).toBe(true);
     expect(isPlanPath("C:/repo/src/plan.ts")).toBe(false);
   });
+  test("反斜杠路径", () => {
+    expect(isRecordPath("C:\\Workspace\\desk\\30-提案\\x.md")).toBe(true);
+    expect(isPlanPath("C:\\repo\\docs\\superpowers\\plans\\a.md")).toBe(true);
+  });
 });
 
 describe("runChecks", () => {
@@ -56,6 +60,23 @@ describe("runChecks", () => {
     const r = byId(tl([ev("owner", { text: "记一下" }), ev("write", { path: "C:/Workspace/desk/40-收件箱/a.md" })]));
     expect(r.M1?.verdict).toBe("不适用");
     expect(isCodeWrite(ev("write", { path: "C:/Workspace/desk/40-收件箱/a.md" }))).toBe(false);
+  });
+  test("edit 事件处理", () => {
+    expect(isCodeWrite(ev("edit", { path: "C:/Workspace/desk/40-收件箱/a.md" }))).toBe(false);
+    expect(isCodeWrite(ev("edit", { path: "C:/repo/src/a.ts" }))).toBe(true);
+  });
+  test("第一个代码写入是 edit：M1–M4 符合", () => {
+    n = 0;
+    const t = tl([
+      ev("owner", { text: "建" }), ev("skill", { skill: "brainstorming" }), ev("agent-text", { text: "方案" }),
+      ev("owner", { text: "行" }), ev("edit", { path: "C:/repo/src/a.ts" }), ev("shell", { text: "bun test", tags: ["test"] }),
+    ]);
+    const r = byId(t);
+    expect(r.M1?.verdict).toBe("符合");
+    expect(r.M1?.evidence).toEqual([2, 5]);
+    expect(r.M2?.verdict).toBe("不符合");
+    expect(r.M3?.verdict).toBe("符合");
+    expect(r.M4?.verdict).toBe("符合");
   });
   test("M5 列出每次 push 与之前主人最近一句", () => {
     n = 0;
