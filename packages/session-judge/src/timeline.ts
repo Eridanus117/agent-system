@@ -6,12 +6,19 @@ import { ompSessionId, parseOmp } from "./parse-omp.ts";
 import type { Client, Event, Timeline } from "./types.ts";
 
 export function detectClient(jsonl: string): Client | null {
-  for (const line of jsonl.split("\n").slice(0, 50)) {
+  // 扫全文件查 OMP 标记，OMP 优先（session 行只会出现在 OMP）
+  for (const line of jsonl.split("\n")) {
     if (!line.trim()) continue;
     let row: { type?: string };
     try { row = JSON.parse(line); } catch { continue; }
-    if (row.type === "session" || row.type === "message") return "omp";
-    if (row.type === "user" || row.type === "assistant" || row.type === "mode" || row.type === "permission-mode") return "claude";
+    if (row.type === "session") return "omp";
+  }
+  // 再扫全文件查 Claude 标记
+  for (const line of jsonl.split("\n")) {
+    if (!line.trim()) continue;
+    let row: { type?: string };
+    try { row = JSON.parse(line); } catch { continue; }
+    if (row.type === "user" || row.type === "assistant") return "claude";
   }
   return null;
 }

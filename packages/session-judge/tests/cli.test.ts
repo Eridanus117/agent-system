@@ -26,4 +26,17 @@ describe("sj extract", () => {
     expect(code).toBe(0);
     expect(out.join("")).toContain("调用 skill: brainstorming");
   });
+  test("sj extract 无参数返回 2", async () => {
+    const err: string[] = [];
+    const code = await runCli(["extract"], { stdout: () => {}, stderr: (s) => err.push(s) });
+    expect(code).toBe(2);
+    expect(err.join("")).toContain("用法");
+  });
+  test("sj extract 不认识的格式返回 1", async () => {
+    const err: string[] = [];
+    const fixture = path.join(import.meta.dir, "..", "package.json");
+    const code = await runCli(["extract", fixture], { stdout: () => {}, stderr: (s) => err.push(s) });
+    expect(code).toBe(1);
+    expect(err.join("")).toContain("不认识的会话格式");
+  });
 });
