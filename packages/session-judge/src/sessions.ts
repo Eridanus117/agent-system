@@ -6,16 +6,28 @@ import type { Client } from "./types.ts";
 
 export interface SessionFile { file: string; client: Client; mtime: Date }
 
+/** 目录/文件条目可能在 readdir 之后、stat 之前消失，或本身是悬空符号链接／无权限项——
+ * 逐项 try/catch，坏条目直接跳过，不让一个坏条目拖垮整次扫描。 */
+function tryStat(p: string) {
+  try { return statSync(p); } catch { return null; }
+}
+function tryReaddir(p: string): string[] {
+  try { return readdirSync(p); } catch { return []; }
+}
+
 function scan(root: string, client: Client): SessionFile[] {
   if (!existsSync(root)) return [];
   const out: SessionFile[] = [];
-  for (const d of readdirSync(root)) {
+  for (const d of tryReaddir(root)) {
     const dir = path.join(root, d);
-    if (!statSync(dir).isDirectory()) continue;
-    for (const f of readdirSync(dir)) {
+    const dirStat = tryStat(dir);
+    if (!dirStat?.isDirectory()) continue;
+    for (const f of tryReaddir(dir)) {
       if (!f.endsWith(".jsonl")) continue;
       const file = path.join(dir, f);
-      out.push({ file, client, mtime: statSync(file).mtime });
+      const fileStat = tryStat(file);
+      if (!fileStat) continue;
+      out.push({ file, client, mtime: fileStat.mtime });
     }
   }
   return out;

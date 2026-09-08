@@ -111,6 +111,9 @@ describe("shellWriteTarget", () => {
     expect(shellWriteTarget("node -e 'fs.writeFileSync(\"x\")'")).toBeNull();
     expect(shellWriteTarget("echo hi 2>/dev/null")).toBeNull();
   });
+  test("引号内目标含空格时取完整内容，不在空白处截断", () => {
+    expect(shellWriteTarget("cat > \"C:/path with spaces/a.md\" <<EOF")).toBe("C:/path with spaces/a.md");
+  });
 });
 
 describe("isCodeWrite：shell 重定向 / tee / sed -i / writeFileSync", () => {

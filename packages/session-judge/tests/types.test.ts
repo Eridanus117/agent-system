@@ -21,4 +21,12 @@ describe("tagCommand write 标记", () => {
     expect(tagCommand("git push -q origin main")).not.toContain("write");
     expect(tagCommand("bun test")).not.toContain("write");
   });
+  test("=> 与 -> 不是重定向，不算 write（字符串里的箭头、比较运算符会误伤）", () => {
+    expect(tagCommand('grep -rn "=>" src')).not.toContain("write");
+    expect(tagCommand('echo "(x)=>x+1"')).not.toContain("write");
+  });
+  test("真实重定向到看起来像路径的目标仍算 write", () => {
+    expect(tagCommand("cat > out.txt")).toContain("write");
+    expect(tagCommand("printf x >> ./a/b.md")).toContain("write");
+  });
 });

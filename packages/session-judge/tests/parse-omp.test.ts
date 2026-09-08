@@ -30,4 +30,20 @@ describe("parseOmp", () => {
     expect(result).toHaveLength(1);
     expect(result[0]?.kind).toBe("owner");
   });
+  test("shell 事件的 command 保留完整命令，text 仍按 110 字截断", () => {
+    // 200 字长的命令：text 应截到 110，command 应是完整 200+ 字（机械检查靠它才能看到截断点之后的重定向目标）。
+    const command = "echo start && ".repeat(14) + "cat > C:/repo/src/a.ts";
+    expect(command.length).toBeGreaterThan(200);
+    const row = {
+      type: "message",
+      timestamp: "2026-09-08T10:00:00.000Z",
+      message: { role: "assistant", content: [{ type: "toolCall", name: "bash", arguments: { command } }] },
+    };
+    const result = parseOmp(JSON.stringify(row));
+    expect(result).toHaveLength(1);
+    expect(result[0]?.kind).toBe("shell");
+    expect(result[0]?.text).toHaveLength(110);
+    expect(result[0]?.command).toBe(command);
+    expect(result[0]?.command?.length).toBeGreaterThan(110);
+  });
 });
