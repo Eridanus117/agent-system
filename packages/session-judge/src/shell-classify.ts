@@ -29,8 +29,12 @@ export function isPlanPath(p: string): boolean {
 
 /** 临时/草稿目录：/tmp/、/Temp/、AppData/Local/Temp 下的写入不算「建东西」（temp 段大小写不敏感）。 */
 const SCRATCH_DIRS = /\/tmp\/|\/temp\/|appdata\/local\/temp/i;
+// 临时目录的变量写法：$TEMP、$TMP、$TMPDIR、${TEMP}、%TEMP%、%TMP%。本机会话里常见 cat > "$TEMP/x.md"，
+// 展开前看不到真实路径，按草稿处理（2026-09-08 用真实会话校准时发现的误判）。
+const SCRATCH_VARS = /^["'\s]*(?:\$\{?(?:TEMP|TMP|TMPDIR)\}?|%(?:TEMP|TMP)%)(?:[/\\]|$)/i;
 export function isScratchPath(p: string): boolean {
-  return SCRATCH_DIRS.test(p.replaceAll("\\", "/"));
+  const s = p.replaceAll("\\", "/");
+  return SCRATCH_DIRS.test(s) || SCRATCH_VARS.test(s);
 }
 
 /** 从 shell 命令里抠出写入目标：优先取 WRITE_REDIRECT 认定的第一个真重定向之后的路径——

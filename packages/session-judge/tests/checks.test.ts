@@ -210,3 +210,21 @@ describe("重定向识别统一：更早出现的假箭头/比较运算符不偷
     expect(isCodeWrite(sh(cmd))).toBe(false);
   });
 });
+
+describe("临时目录的变量写法算草稿（2026-09-08 真实会话校准）", () => {
+  test("isScratchPath 认 $TEMP / ${TMP} / %TEMP% / $TMPDIR，不认 $TEMPLATE", () => {
+    expect(isScratchPath("$TEMP/事项.md")).toBe(true);
+    expect(isScratchPath("${TMP}/a.txt")).toBe(true);
+    expect(isScratchPath("%TEMP%/a.txt")).toBe(true);
+    expect(isScratchPath("$TMPDIR/x")).toBe(true);
+    expect(isScratchPath("$TEMPLATE/x")).toBe(false);
+    expect(isScratchPath("C:/repo/src/a.ts")).toBe(false);
+  });
+  test("写 $TEMP 文件与 sed -i 改 $TEMP 文件都不算代码写入", () => {
+    n = 0;
+    const write = "cat > \"$TEMP/事项.md\" <<'EOF'";
+    const edit = "sed -i '1s/^## 07:40 /## /' \"$TEMP/事项.md\" && cat \"$TEMP/事项.md\" | node --experimental-strip-types 90-工具/日志.ts --stdin";
+    expect(isCodeWrite(ev("shell", { text: write, command: write, tags: tagCommand(write) }))).toBe(false);
+    expect(isCodeWrite(ev("shell", { text: edit, command: edit, tags: tagCommand(edit) }))).toBe(false);
+  });
+});
