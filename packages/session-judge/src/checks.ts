@@ -39,12 +39,39 @@ export function shellWriteTarget(command: string): string | null {
   return null;
 }
 
+/** 记录类标记词：整条命令里出现这些即认为写的是记录类文件。 */
+const SHELL_RECORD_MARKERS = ["desk/", "工作日志", "提案", "收件箱", "现在在哪", "docs/", "plans/", "specs/"];
+/** 代码类标记词：出现即认为命令里牵涉代码目录。 */
+const SHELL_CODE_MARKERS = ["/src/", "/packages/"];
+
+/**
+ * 当 `shellWriteTarget` 抽不出字面路径（写入目标是 shell 变量引用，或压根找不到重定向）时，
+ * 退回扫描整条命令的记录类/代码类标记词做粗判：命令里出现记录类标记且没有代码类标记 → 记录；
+ * 命中临时目录标记 → 草稿；否则保守按代码处理。
+ */
+export function classifyShellWrite(command: string): "code" | "record" | "scratch" {
+  if (isScratchPath(command)) return "scratch";
+  const hasRecord = SHELL_RECORD_MARKERS.some((m) => command.includes(m));
+  const hasCode = SHELL_CODE_MARKERS.some((m) => command.includes(m));
+  if (hasRecord && !hasCode) return "record";
+  return "code";
+}
+
 export function isCodeWrite(e: Event): boolean {
   if ((e.kind === "write" || e.kind === "edit") && !!e.path) return !isRecordPath(e.path) && !isScratchPath(e.path);
   if (e.kind === "shell" && e.tags.includes("write")) {
     // 机械检查要看完整命令，不能用给人看的截断摘要——写入目标常常落在 110 字之后。
-    const target = shellWriteTarget(e.command ?? e.text);
-    return !(target && (isRecordPath(target) || isScratchPath(target)));
+    const command = e.command ?? e.text;
+    const target = shellWriteTarget(command);
+    if (target !== null) {
+      const stripped = target.replace(/^['"]|['"]$/g, "");
+      if (!stripped.startsWith("$")) {
+        // 字面路径：按原有规则用 isRecordPath/isScratchPath 判定。
+        return !(isRecordPath(target) || isScratchPath(target));
+      }
+    }
+    // 目标是 shell 变量引用（如 "$LOG"），或者压根抽不出目标：退回扫描整条命令找类别标记。
+    return classifyShellWrite(command) === "code";
   }
   return false;
 }

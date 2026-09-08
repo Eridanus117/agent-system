@@ -1,6 +1,6 @@
 // 机械检查：只看顺序与有无，用手工拼的时间线覆盖每条的三种结论。
 import { describe, expect, test } from "bun:test";
-import { isCodeWrite, isPlanPath, isRecordPath, isScratchPath, runChecks, shellWriteTarget } from "../src/checks.ts";
+import { classifyShellWrite, isCodeWrite, isPlanPath, isRecordPath, isScratchPath, runChecks, shellWriteTarget } from "../src/checks.ts";
 import { tagCommand } from "../src/types.ts";
 import type { Event, Timeline } from "../src/types.ts";
 
@@ -159,5 +159,26 @@ describe("isCodeWrite：shell 重定向 / tee / sed -i / writeFileSync", () => {
     const r = byId(t);
     expect(r.M1?.verdict).toBe("符合");
     expect(r.M1?.evidence).toEqual([2, 3]);
+  });
+});
+
+describe("classifyShellWrite：写入目标是 shell 变量引用时按命令内路径特征分类", () => {
+  test("(a) 变量目标 $LOG，命令里带工作日志标记、不带代码标记：不算代码写入", () => {
+    const cmd = 'LOG="70-工作日志/x.md"; cat >> "$LOG" <<\'EOF\'';
+    expect(shellWriteTarget(cmd)).toBe("$LOG");
+    expect(classifyShellWrite(cmd)).toBe("record");
+    expect(isCodeWrite(sh(cmd))).toBe(false);
+  });
+  test("(b) 变量目标 $F，命令里带 /packages/ 与 /src/：算代码写入", () => {
+    const cmd = 'F="C:/repo/packages/sk/src/a.ts"; cat > "$F" <<\'EOF\'';
+    expect(shellWriteTarget(cmd)).toBe("$F");
+    expect(classifyShellWrite(cmd)).toBe("code");
+    expect(isCodeWrite(sh(cmd))).toBe(true);
+  });
+  test("(c) node -e 里的 writeFileSync，命令里没有任何标记：仍按代码算（不变）", () => {
+    const cmd = "node -e 'fs.writeFileSync(\"x\")'";
+    expect(shellWriteTarget(cmd)).toBeNull();
+    expect(classifyShellWrite(cmd)).toBe("code");
+    expect(isCodeWrite(sh(cmd))).toBe(true);
   });
 });
