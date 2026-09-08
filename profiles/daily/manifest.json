@@ -199,6 +199,74 @@
     {
       "name": "writing-skills",
       "target": "vendor/superpowers/skills/writing-skills"
+    },
+    {
+      "name": "frontend-design",
+      "target": "vendor/anthropics-skills/skills/frontend-design"
+    },
+    {
+      "name": "skill-creator",
+      "target": "vendor/anthropics-skills/skills/skill-creator"
+    },
+    {
+      "name": "defuddle",
+      "target": "vendor/obsidian-skills/skills/defuddle"
+    },
+    {
+      "name": "json-canvas",
+      "target": "vendor/obsidian-skills/skills/json-canvas"
+    },
+    {
+      "name": "obsidian-bases",
+      "target": "vendor/obsidian-skills/skills/obsidian-bases"
+    },
+    {
+      "name": "obsidian-cli",
+      "target": "vendor/obsidian-skills/skills/obsidian-cli"
+    },
+    {
+      "name": "obsidian-markdown",
+      "target": "vendor/obsidian-skills/skills/obsidian-markdown"
+    },
+    {
+      "name": "agent-browser",
+      "target": "vendor/agent-browser/skills/agent-browser"
+    },
+    {
+      "name": "web-design-guidelines",
+      "target": "vendor/vercel-agent-skills/skills/web-design-guidelines"
+    },
+    {
+      "name": "vercel-react-best-practices",
+      "target": "vendor/vercel-agent-skills/skills/react-best-practices"
+    },
+    {
+      "name": "janitor-discover",
+      "target": "vendor/skills-janitor/skills/janitor-discover"
+    },
+    {
+      "name": "janitor-fix",
+      "target": "vendor/skills-janitor/skills/janitor-fix"
+    },
+    {
+      "name": "janitor-report",
+      "target": "vendor/skills-janitor/skills/janitor-report"
+    },
+    {
+      "name": "janitor-security",
+      "target": "vendor/skills-janitor/skills/janitor-security"
+    },
+    {
+      "name": "janitor-swipe",
+      "target": "vendor/skills-janitor/skills/janitor-swipe"
+    },
+    {
+      "name": "janitor-value",
+      "target": "vendor/skills-janitor/skills/janitor-value"
+    },
+    {
+      "name": "find-skills",
+      "target": "vendor/vercel-skills/skills/find-skills"
     }
   ]
 }

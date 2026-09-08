@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/anthropics/skills",
+  "version": "41bbe19",
+  "revision": "41bbe19d1a1a7eaab5e7bb9050a417e5c6cffc8f",
+  "installedSkillCount": 2,
+  "selection": "frontend-design、skill-creator 两个；其余 17 个未装",
+  "trial": "2026-09-08 主人圈选试用，验收见 desk issue；未过验收即整目录删除"
+}
