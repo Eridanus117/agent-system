@@ -1,7 +1,7 @@
 ---
 name: system-analysis
 description: >-
-  某个明确改动决定缺少影响、耗时或流量证据时，做一次有边界的分析：问题与假设、两跳影响草图、只核实不确定的边、带置信度的结论。由 workcoding 选中，或 legacy-change／requirement-translation 遇到这类证据缺口时使用。普通静态查数、工作区审查、资料比较直接查答，不因「查个数／有多少」套本规程；不用于需求洞察、压测或全量调用图。静态证据够用就停止，不强求 Arthas。One-shot impact analysis for a concrete change decision; direct static lookups and general reviews do not need this procedure.
+  某个明确改动决定缺影响、耗时或流量证据时，做一次有边界的分析：问题与假设、两跳影响草图、只核实不确定的边、带置信度的结论。One-shot, bounded impact analysis for a concrete change decision.
 ---
 
 # 系统分析：一个决定缺一个数，查一次，出一行

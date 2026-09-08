@@ -1,7 +1,7 @@
 ---
 name: workcoding
 description: >-
-  为复杂既有系统的未决需求、架构取舍、遗留改造或发布选择必要规程；用户显式要求「先摆路线／按 workcoding」时也用。先核实已知与授权，只让用户决定会改变结果或风险的事项。咨询、只读审查、静态查数、明确低风险小修直接完成，不因「帮我改／看看／查个数」自动要求确认；已确认的路线继续执行。复杂任务按缺口选 requirement-insight、requirement-translation、architecture-design、system-analysis、legacy-change、integration、evidence-regression 或 release-observe，不默认串全套。Route unresolved, consequential engineering decisions or an explicit request for a route. Complete read-only and clear low-risk work directly; reuse confirmed decisions.
+  复杂既有系统的未决需求、架构取舍、遗留改造、集成、回归证据或发布，按缺口选必要规程；用户说「先摆路线／按 workcoding」时也用。Pick the necessary procedures for unresolved engineering decisions on an existing system, or when asked to lay out the route.
 ---
 
 # 按任务与风险选规程

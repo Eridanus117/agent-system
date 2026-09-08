@@ -1,7 +1,7 @@
 ---
 name: legacy-change
 description: >-
-  用于复杂遗留代码，且用户显式要求 Feathers／新旧路径并存，或 workcoding 已选定该策略：真实输入走读、特征化测试、确认改法、入口一处分流、验证旧行为。普通低风险修复、只读审查、文案调整或没有既有路径的新增直接按任务处理，不因「帮我改／加个逻辑」套本规程。旧业务实现不改，入口分流是明确的唯一修改例外；已确认的走读与决定直接复用。Characterize complex legacy behavior and sprout a new path only when coexistence is the chosen strategy, not for every code change.
+  复杂遗留代码且已选定新旧路径并存（Feathers）时用：真实输入走读、特征化测试、确认改法、入口一处分流、验证旧行为。Characterize legacy behavior and sprout a new path beside the old one when coexistence is the chosen strategy.
 ---
 
 # 遗留代码修改：先走读，人否，再萌芽

@@ -1,7 +1,7 @@
 ---
 name: architecture-design
 description: >-
-  在既有系统上设计一项新能力、需要决定领域模型和承载方式时用：从已确认需求出发，摆出现状与未知，比较至少两个候选，做支持/反对攻防，形成待主人确认的架构决定；不把现有字段、表或分支当成前提，不在确认前实现。用于补齐 6.4.4/6.4.5「塑造系统」缺口；不用于已经确认方案后的改代码、单次查数或发布。
+  在既有系统上设计一项新能力、要定领域模型和承载方式时用：摆现状与未知，比较至少两个候选，做支持／反对攻防，形成待主人确认的架构决定。Design a new capability on an existing system: compare candidates, argue both sides, produce a decision for the owner to confirm.
 ---
 
 # 架构设计：先摆决定，再做攻防

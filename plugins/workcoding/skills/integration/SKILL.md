@@ -1,7 +1,7 @@
 ---
 name: integration
 description: >-
-  改动做完要接进复杂既有系统时用：列出改动碰到的每个边界（谁调我、我调谁、动了哪张表哪个配置、注册了什么开关）、每个边界写「变没变」、定接入顺序（依赖在前、每步可单独退：表与配置先扩不收 → 开关注册且关着 → 代码合入 → 下游 → 上游）、在预发沿真实调用链跑需求翻译的例子联调、留。预发与生产共库时联调只读。触发语「怎么接进去」「联调」「集成」。由 workcoding 确认路线、legacy-change 建完之后进入；集成面与顺序主人否过之前不合分支、不动表。不用于合分支解冲突（那是配置管理），不用于放量与回滚（那是 release-observe）。Wire a finished change into an existing system: list every boundary it touches, state changed/unchanged per boundary, order the steps so each can be undone alone, run the requirement examples along the real call chain in staging.
+  改动做完要接进复杂既有系统时用：列出每个边界、写变没变、定可单独回退的接入顺序、预发沿真实调用链联调。触发语「怎么接进去」「联调」「集成」。Wire a finished change into an existing system boundary by boundary, in an order where each step can be undone alone.
 ---
 
 # 集成：列边界，写变没变，定顺序，联调
