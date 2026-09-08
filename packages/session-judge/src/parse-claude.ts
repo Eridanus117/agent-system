@@ -32,7 +32,7 @@ export function parseClaude(jsonl: string): RawEvent[] {
       const input = b.input ?? {};
       switch (b.name) {
         case "Skill":
-          events.push({ at, kind: "skill", text: String(input.skill ?? ""), skill: String(input.skill ?? ""), tags: [] });
+          events.push({ at, kind: "skill", text: short(input.skill, 80), skill: String(input.skill ?? ""), tags: [] });
           break;
         case "Write":
           events.push({ at, kind: "write", text: String(input.file_path ?? ""), path: String(input.file_path ?? ""), tags: [] });
