@@ -1,0 +1,42 @@
+name: Public tree gate
+
+# 公共面硬门禁：对 PR 合并结果 / main 的最终 git tree 跑 PublicTreeAssessment（packages/mounts）。
+# 扫的是对象库里的 tree，不是工作目录，所以未跟踪、被忽略的文件与磁盘上的临时物都不影响结果；
+# 归档内容按魔数展开，大文件不跳过。策略在 .github/public-tree-policy.json：缺失、读不到、
+# 评估异常都让作业失败（fail-closed）。与 packages-checks.yml（包的 typecheck/test）和
+# repository-checks.yml（入口投影、装配意图、Python 工具测试）职责不重叠：那两条不看发布面。
+# 来源与验收见 Issue #62、ADR-0002。
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install workspace dependencies
+        run: bun install --frozen-lockfile
+
+      # 先证明门禁真的会拦：合成的违规 tree 必须 blocked、合成的合规 tree 必须 allowed，
+      # 缺策略必须失败。任一断言不成立，本作业在真正扫描之前就失败。
+      - name: Smoke-check the gate on synthetic trees
+        run: bun packages/mounts/scripts/public-gate-smoke.ts
+
+      - name: Assess the final tree of HEAD
+        run: bun packages/mounts/src/cli.ts assess-public-tree --repo . --rev HEAD --policy .github/public-tree-policy.json
