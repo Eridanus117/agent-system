@@ -16,6 +16,12 @@ export function isPlanPath(p: string): boolean {
   return s.includes("/plans/") || s.includes("计划");
 }
 
+/** 临时/草稿目录：/tmp/、/Temp/、AppData/Local/Temp 下的写入不算「建东西」（temp 段大小写不敏感）。 */
+const SCRATCH_DIRS = /\/tmp\/|\/temp\/|appdata\/local\/temp/i;
+export function isScratchPath(p: string): boolean {
+  return SCRATCH_DIRS.test(p.replaceAll("\\", "/"));
+}
+
 /** 从 shell 命令里抠出写入目标：优先取第一个 `>`/`>>` 之后的路径（去引号，遇空白/`;`/`&&`/`|` 停），
  * 其次是 `tee`/`sed -i` 的目标参数；都取不到时返回 null（比如 `writeFileSync(...)` 这种代码里的调用）。 */
 export function shellWriteTarget(command: string): string | null {
@@ -34,10 +40,10 @@ export function shellWriteTarget(command: string): string | null {
 }
 
 export function isCodeWrite(e: Event): boolean {
-  if ((e.kind === "write" || e.kind === "edit") && !!e.path) return !isRecordPath(e.path);
+  if ((e.kind === "write" || e.kind === "edit") && !!e.path) return !isRecordPath(e.path) && !isScratchPath(e.path);
   if (e.kind === "shell" && e.tags.includes("write")) {
     const target = shellWriteTarget(e.text);
-    return !(target && isRecordPath(target));
+    return !(target && (isRecordPath(target) || isScratchPath(target)));
   }
   return false;
 }

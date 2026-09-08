@@ -1,6 +1,6 @@
 // 机械检查：只看顺序与有无，用手工拼的时间线覆盖每条的三种结论。
 import { describe, expect, test } from "bun:test";
-import { isCodeWrite, isPlanPath, isRecordPath, runChecks, shellWriteTarget } from "../src/checks.ts";
+import { isCodeWrite, isPlanPath, isRecordPath, isScratchPath, runChecks, shellWriteTarget } from "../src/checks.ts";
 import { tagCommand } from "../src/types.ts";
 import type { Event, Timeline } from "../src/types.ts";
 
@@ -24,6 +24,11 @@ describe("路径分类", () => {
   test("反斜杠路径", () => {
     expect(isRecordPath("C:\\Workspace\\desk\\30-提案\\x.md")).toBe(true);
     expect(isPlanPath("C:\\repo\\docs\\superpowers\\plans\\a.md")).toBe(true);
+  });
+  test("临时/草稿路径", () => {
+    expect(isScratchPath("/tmp/probe-settings.json")).toBe(true);
+    expect(isScratchPath("C:/Users/x/AppData/Local/Temp/a.md")).toBe(true);
+    expect(isScratchPath("C:/repo/src/a.ts")).toBe(false);
   });
 });
 
@@ -120,6 +125,9 @@ describe("isCodeWrite：shell 重定向 / tee / sed -i / writeFileSync", () => {
   });
   test("(d) 只重定向 stderr 到 /dev/null，不算写文件", () => {
     expect(isCodeWrite(sh("echo hi 2>/dev/null"))).toBe(false);
+  });
+  test("(e) 重定向到 /tmp/ 临时文件不算代码写入", () => {
+    expect(isCodeWrite(sh("cat > /tmp/probe.json <<'EOF'"))).toBe(false);
   });
   test("shell 写代码事件驱动 M1（此前没有 brainstorming → 不符合）", () => {
     n = 0;
