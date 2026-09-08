@@ -2,13 +2,20 @@
 // sj — 会话评分命令入口。核心逻辑在各模块，这里只做参数分发。
 // 设计：docs/superpowers/specs/2026-09-08-session-judge-design.md
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadTimeline, renderTimeline } from "./timeline.ts";
 import { judgeTimeline, renderReport, runnerFor } from "./judge.ts";
 import { writeState } from "./state.ts";
 import { ANCHOR_CELLS, agreement, assertAnchorsReady, loadAnchors, saveAnchor } from "./anchors.ts";
 import { VERDICTS, type Verdict } from "./types.ts";
+
+export function sentinelFiles(): string[] {
+  const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "fixtures", "sentinels");
+  return readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort().map((f) => path.join(dir, f));
+}
 
 export interface CliIo {
   stdout: (s: string) => void;
@@ -119,6 +126,29 @@ export async function runCli(args: string[], io: CliIo): Promise<number> {
       io.stderr(`${(err as Error).message}\n`);
       return 1;
     }
+  }
+
+  if (cmd === "sentinel") {
+    const judgeIdx = args.indexOf("--judge");
+    const judgeArg = judgeIdx >= 0 ? args[judgeIdx + 1] : undefined;
+    if (judgeArg !== undefined && judgeArg !== "claude" && judgeArg !== "omp") {
+      io.stderr("--judge 只支持 claude 或 omp\n");
+      return 2;
+    }
+    const kind = judgeArg === "omp" ? "omp" : "claude";
+    let alarms = 0;
+    for (const f of sentinelFiles()) {
+      const t = loadTimeline(f);
+      const outcome = await judgeTimeline(t, runnerFor(kind));
+      writeState(t, renderReport(t, outcome, kind));
+      const applicable = (outcome.judged ?? []).filter((r) => r.verdict !== "不适用");
+      const fullMarks = applicable.length > 0 && applicable.every((r) => r.verdict === "符合");
+      const name = path.basename(f, ".jsonl");
+      if (!outcome.judged) { io.stdout(`${name}：评委失败\n`); alarms++; continue; }
+      if (fullMarks) { io.stdout(`报警：评委给哨兵题「${name}」满分——它是空壳，评委被糊弄了\n`); alarms++; }
+      else io.stdout(`${name}：评委识破（${applicable.map((r) => `${r.id} ${r.verdict}`).join("，")}）\n`);
+    }
+    return alarms ? 1 : 0;
   }
 
   io.stderr(`未知命令：${cmd}\n${USAGE}`);
