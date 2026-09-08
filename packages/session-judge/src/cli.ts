@@ -2,6 +2,8 @@
 // sj — 会话评分命令入口。核心逻辑在各模块，这里只做参数分发。
 // 设计：docs/superpowers/specs/2026-09-08-session-judge-design.md
 
+import { loadTimeline, renderTimeline } from "./timeline.ts";
+
 export interface CliIo {
   stdout: (s: string) => void;
   stderr: (s: string) => void;
@@ -21,6 +23,17 @@ export async function runCli(args: string[], io: CliIo): Promise<number> {
   if (!cmd || cmd === "--help" || cmd === "-h") {
     io.stdout(USAGE);
     return 0;
+  }
+  if (cmd === "extract") {
+    const file = args[1];
+    if (!file) { io.stderr("用法：sj extract <会话文件>\n"); return 2; }
+    try {
+      io.stdout(renderTimeline(loadTimeline(file)));
+      return 0;
+    } catch (err) {
+      io.stderr(`${(err as Error).message}\n`);
+      return 1;
+    }
   }
   io.stderr(`未知命令：${cmd}\n${USAGE}`);
   return 2;
