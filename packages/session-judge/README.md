@@ -5,16 +5,28 @@
 ## 命令
 
 ```
-sj extract <会话文件>            出时间线
-sj judge <会话文件> [--judge claude|omp]   机械检查 + 评委，落状态文件
-sj anchor <会话文件> [--from <json>]       主人判标准答案
-sj agreement                      评委与标准答案的一致率（不足 10 道拒绝）
-sj sentinel                       跑哨兵题，评委全给满分即报警
-sj list [--latest N]              列最近会话
+sj extract <会话文件>                       出时间线
+sj judge <会话文件> [--judge claude|omp]    机械检查 + 评委，落状态文件
+sj anchor <会话文件> [--from <json>]        主人判标准答案
+sj agreement                                评委与标准答案的一致率（不足 10 道拒绝）
+sj sentinel [--judge claude|omp]            跑哨兵题，评委全给满分即报警
+sj list [--latest N]                        列最近会话
 ```
+
+## 环境变量
+
+| 变量 | 默认 | 作用 |
+|---|---|---|
+| `SJ_STATE_DIR` | `~/.agent-system-state/session-judge` | `judge`/`sentinel` 落状态文件的目录（不入版本仓） |
+| `SJ_ANCHORS_DIR` | 向上查找 `agent-config/80-agent配置/60-回放题库/锚样本` | `anchor` 落标准答案、`agreement` 读标准答案的目录 |
+| `SJ_JUDGE_CMD` | 未设 → `claude -p --model claude-haiku-4-5-20251001`（`--judge omp` 时为 `omp -p --no-skills`） | 整体覆盖评委外部命令，主要供测试用假评委 |
+| `SJ_CLAUDE_DIR` | `~/.claude/projects` | `list` 扫 Claude 会话的根目录 |
+| `SJ_OMP_DIR` | `~/.omp/agent/sessions` | `list` 扫 OMP 会话的根目录 |
 
 ## 边界
 
-- 不读取工具执行结果；只基于 session 记录进行评价。
-- 状态不入版本仓；评价结果保存在临时或非 git 位置。
-- 评委（LLM）只是顾问；最终判标准答案仍由主人决定。
+- 评委只是顾问：最终判标准答案仍由主人决定，评委的判决不覆盖机械检查。
+- 机械检查它不能改：M1–M5 只看事件顺序与有无，由程序判定，评委不得复判或推翻。
+- 标准答案不足十道时，`sj agreement` 不出一致率——样本太少的一致率没有意义。
+
+设计文档：[`docs/superpowers/specs/2026-09-08-session-judge-design.md`](../../docs/superpowers/specs/2026-09-08-session-judge-design.md)

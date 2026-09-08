@@ -159,4 +159,26 @@ describe("sj extract", () => {
       delete process.env.SJ_ANCHORS_DIR; delete process.env.SJ_STATE_DIR; delete process.env.SJ_JUDGE_CMD;
     }
   });
+
+  test("sj list 扫两个目录并按时间倒序", async () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "sj-list-"));
+    const c = path.join(tmp, "claude", "proj"); const o = path.join(tmp, "omp", "cwd");
+    fs.mkdirSync(c, { recursive: true }); fs.mkdirSync(o, { recursive: true });
+    fs.copyFileSync(path.join(import.meta.dir, "..", "fixtures", "claude.jsonl"), path.join(c, "s1.jsonl"));
+    fs.copyFileSync(path.join(import.meta.dir, "..", "fixtures", "omp.jsonl"), path.join(o, "s2.jsonl"));
+    const later = new Date(Date.now() + 5000);
+    fs.utimesSync(path.join(o, "s2.jsonl"), later, later);
+    process.env.SJ_CLAUDE_DIR = path.join(tmp, "claude"); process.env.SJ_OMP_DIR = path.join(tmp, "omp");
+    const out: string[] = [];
+    try {
+      expect(await runCli(["list", "--latest", "5"], { stdout: (s) => out.push(s), stderr: () => {} })).toBe(0);
+      const lines = out.join("").trim().split("\n");
+      expect(lines).toHaveLength(2);
+      expect(lines[0]).toContain("omp");
+      expect(lines[0]).toContain("帮我修一下");
+      expect(lines[1]).toContain("claude");
+    } finally {
+      delete process.env.SJ_CLAUDE_DIR; delete process.env.SJ_OMP_DIR;
+    }
+  });
 });

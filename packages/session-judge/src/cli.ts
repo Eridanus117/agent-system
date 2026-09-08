@@ -10,6 +10,7 @@ import { loadTimeline, renderTimeline } from "./timeline.ts";
 import { judgeTimeline, renderReport, runnerFor } from "./judge.ts";
 import { writeState } from "./state.ts";
 import { ANCHOR_CELLS, agreement, assertAnchorsReady, loadAnchors, saveAnchor } from "./anchors.ts";
+import { listSessions } from "./sessions.ts";
 import { VERDICTS, type Verdict } from "./types.ts";
 
 export function sentinelFiles(): string[] {
@@ -150,6 +151,22 @@ export async function runCli(args: string[], io: CliIo): Promise<number> {
       else io.stdout(`${name}：评委识破（${applicable.map((r) => `${r.id} ${r.verdict}`).join("，")}）\n`);
     }
     return alarms ? 1 : 0;
+  }
+
+  if (cmd === "list") {
+    const idx = args.indexOf("--latest");
+    const latest = idx >= 0 ? Number(args[idx + 1]) || 10 : 10;
+    for (const s of listSessions(latest)) {
+      let id = path.basename(s.file, ".jsonl");
+      let first = "";
+      try {
+        const t = loadTimeline(s.file);
+        id = t.id;
+        first = t.events.find((e) => e.kind === "owner")?.text ?? "";
+      } catch { /* 读不了的会话只列文件名 */ }
+      io.stdout(`${s.mtime.toISOString().slice(0, 16).replace("T", " ")}  ${s.client.padEnd(6)}  ${id.slice(0, 12).padEnd(12)}  ${first}\n`);
+    }
+    return 0;
   }
 
   io.stderr(`未知命令：${cmd}\n${USAGE}`);
