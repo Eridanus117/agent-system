@@ -59,7 +59,7 @@ export function parseOmp(jsonl: string): RawEvent[] {
         events.push({ at, kind: "edit", text: p, path: p, tags: [] });
       } else if (name === "bash" || name === "shell" || name === "powershell") {
         const command = String(args.command ?? "");
-        events.push({ at, kind: "shell", text: short(command, 110), tags: tagCommand(command) });
+        events.push({ at, kind: "shell", text: short(command, 110), command, tags: tagCommand(command) });
       } else if (name === "subagent" || name === "agent") {
         events.push({ at, kind: "subagent", text: short(args.description ?? args.task, 80), tags: [] });
       } else if (name === "ask" || name === "ask_user") {

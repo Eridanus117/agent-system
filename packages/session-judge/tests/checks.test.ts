@@ -129,6 +129,23 @@ describe("isCodeWrite：shell 重定向 / tee / sed -i / writeFileSync", () => {
   test("(e) 重定向到 /tmp/ 临时文件不算代码写入", () => {
     expect(isCodeWrite(sh("cat > /tmp/probe.json <<'EOF'"))).toBe(false);
   });
+  test("(f) text 被截断成噪音（110 字里没有重定向），command 保留完整写入目标：记录类不算", () => {
+    // 模拟真实场景：真正的 `cat >> ...` 落在第 110 字之后，text 截不到它，得靠 command 才能判定。
+    const noise = "cd C:/Workspace/desk && git pull --rebase -q origin main 2>&1 | tail -2; git push -q origin main 2>&1 | tail -1";
+    expect(noise.length).toBeGreaterThan(100); // 确认这段噪音本身接近／超过截断长度，且不含任何真实重定向
+    const full = `${noise}; cat >> C:/Workspace/desk/70-工作日志/x.md <<'EOF'\n内容\nEOF`;
+    const e = ev("shell", { text: noise.slice(0, 110), command: full, tags: tagCommand(full) });
+    expect(shellWriteTarget(e.text)).toBeNull(); // 截断后的 text 确实看不到写入目标
+    expect(isCodeWrite(e)).toBe(false);
+  });
+  test("(g) text 被截断，command 里的写入目标是代码文件：算代码写入", () => {
+    const noise = "cd C:/Workspace/worktrees/agent-config/one-router/80-agent配置 && grep -n 拓扑 10-说明/10-拓扑.md | head -80 | tail -60";
+    expect(noise.length).toBeGreaterThan(100);
+    const full = `${noise}; cat > C:/repo/src/a.ts <<'EOF'\ncode\nEOF`;
+    const e = ev("shell", { text: noise.slice(0, 110), command: full, tags: tagCommand(full) });
+    expect(shellWriteTarget(e.text)).toBeNull();
+    expect(isCodeWrite(e)).toBe(true);
+  });
   test("shell 写代码事件驱动 M1（此前没有 brainstorming → 不符合）", () => {
     n = 0;
     const t = tl([ev("owner", { text: "建" }), sh("cat > C:/repo/src/a.ts <<'EOF'")]);

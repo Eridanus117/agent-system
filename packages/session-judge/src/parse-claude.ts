@@ -43,7 +43,7 @@ export function parseClaude(jsonl: string): RawEvent[] {
         case "Bash":
         case "PowerShell": {
           const command = String(input.command ?? "");
-          events.push({ at, kind: "shell", text: short(command, 110), tags: tagCommand(command) });
+          events.push({ at, kind: "shell", text: short(command, 110), command, tags: tagCommand(command) });
           break;
         }
         case "Agent":

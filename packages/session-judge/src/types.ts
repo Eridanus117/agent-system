@@ -16,9 +16,10 @@ export type EventTag = "push" | "test" | "write";
 export interface RawEvent {
   at: string;          // ISO 时间
   kind: EventKind;
-  text: string;        // 发言正文、命令、工具名等，已截断
+  text: string;        // 发言正文、命令、工具名等，已截断（渲染用）
   path?: string;       // write / edit 的目标
   skill?: string;      // skill 名
+  command?: string;    // shell 事件的完整命令，不截断（机械检查用；渲染仍用 text）
   tags: EventTag[];
 }
 

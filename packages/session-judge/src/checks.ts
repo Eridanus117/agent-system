@@ -42,7 +42,8 @@ export function shellWriteTarget(command: string): string | null {
 export function isCodeWrite(e: Event): boolean {
   if ((e.kind === "write" || e.kind === "edit") && !!e.path) return !isRecordPath(e.path) && !isScratchPath(e.path);
   if (e.kind === "shell" && e.tags.includes("write")) {
-    const target = shellWriteTarget(e.text);
+    // 机械检查要看完整命令，不能用给人看的截断摘要——写入目标常常落在 110 字之后。
+    const target = shellWriteTarget(e.command ?? e.text);
     return !(target && (isRecordPath(target) || isScratchPath(target)));
   }
   return false;
