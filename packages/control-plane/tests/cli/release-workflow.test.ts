@@ -8,7 +8,7 @@ test('release workflow is registered, pinned, deterministic, and attested', asyn
   // PR 门禁自 PR #41 起统一在 packages-checks.yml；release 工作流只在打 tag / 手动触发时跑。
   expect(workflow).not.toContain('pull_request:');
   const gate = await readFile(path.resolve(import.meta.dir, '../../../../.github/workflows/packages-checks.yml'), 'utf8');
-  expect(gate).toContain('package: [control-plane, harness-engine, sk]');
+  expect(gate).toContain('package: [control-plane, harness-engine, sk, mounts]');
   expect(gate).toContain('bun-version: 1.3.14');
   expect(workflow).toContain('workflow_dispatch:');
   expect(workflow).toContain('bun-version: 1.3.14');
