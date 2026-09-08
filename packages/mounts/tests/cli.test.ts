@@ -236,3 +236,42 @@ describe("assess-public-tree", () => {
     expect(result.stderr).toContain("用法");
   });
 });
+
+describe("post-checkout hook 与 worktree", () => {
+  // hook 脚本是测试在临时仓里生成的，不是仓内资产；它只调用 CLI 的 --hook 模式。
+  const installHook = (): string => {
+    const log = path.join(sandbox, "hook.log");
+    const hook = path.join(repo, ".git", "hooks", "post-checkout");
+    const bun = process.execPath.replaceAll("\\", "/");
+    const cli = CLI.replaceAll("\\", "/");
+    fs.mkdirSync(path.dirname(hook), { recursive: true });
+    fs.writeFileSync(hook, `#!/bin/sh\n"${bun}" "${cli}" sync --hook --checkout "$PWD" >> "${log.replaceAll("\\", "/")}" 2>&1\n`, { mode: 0o755 });
+    return log;
+  };
+
+  test("root 缺失时 checkout 照常完成，hook 只报告 unavailable 且不写任何东西", () => {
+    const log = installHook();
+    writeRoots(path.join(sandbox, "gone"));
+    git(["checkout", "-q", "-b", "feature"]);
+    expect(git(["branch", "--show-current"])).toBe("feature");
+    expect(fs.readFileSync(log, "utf8")).toContain("private overlay unavailable");
+    expect(fs.existsSync(path.join(repo, ".omp"))).toBe(false);
+  });
+
+  test("root 就绪后 checkout 触发的 hook 创建链接；新 worktree 共享同一份 manifest", () => {
+    const log = installHook();
+    git(["checkout", "-q", "-b", "feature"]);
+    expect(fs.readFileSync(log, "utf8")).not.toContain("unavailable");
+    expect(fs.lstatSync(targetPath()).isSymbolicLink()).toBe(true);
+    // git worktree add 也会触发 post-checkout，所以新 worktree 一建好 hook 就已经同步过了。
+    const worktree = path.join(sandbox, "wt");
+    git(["worktree", "add", "-q", worktree, "-b", "wt-branch"]);
+    expect(fs.lstatSync(path.join(worktree, ".omp", "local", "nav")).isSymbolicLink()).toBe(true);
+    const inWorktree = json(["plan", "--checkout", worktree]);
+    expect(inWorktree.status).toBe(0);
+    expect(inWorktree.body.writes).toEqual([]);
+    expect(inWorktree.body.keeps.map((k: { target: string }) => k.target)).toEqual([".omp/local/nav"]);
+    expect(run(["sync", "--checkout", worktree]).status).toBe(0);
+    expect(git(["status", "--porcelain"], worktree)).toBe("");
+  });
+});
