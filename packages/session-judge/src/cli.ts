@@ -40,7 +40,13 @@ export async function runCli(args: string[], io: CliIo): Promise<number> {
   if (cmd === "judge") {
     const file = args[1];
     if (!file) { io.stderr("用法：sj judge <会话文件> [--judge claude|omp]\n"); return 2; }
-    const kind = args.includes("--judge") && args[args.indexOf("--judge") + 1] === "omp" ? "omp" : "claude";
+    const judgeIdx = args.indexOf("--judge");
+    const judgeArg = judgeIdx >= 0 ? args[judgeIdx + 1] : undefined;
+    if (judgeArg !== undefined && judgeArg !== "claude" && judgeArg !== "omp") {
+      io.stderr("--judge 只支持 claude 或 omp\n");
+      return 2;
+    }
+    const kind = judgeArg === "omp" ? "omp" : "claude";
     try {
       const t = loadTimeline(file);
       const outcome = await judgeTimeline(t, runnerFor(kind));

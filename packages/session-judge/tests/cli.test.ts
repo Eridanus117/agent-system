@@ -53,16 +53,45 @@ describe("sj extract", () => {
     ].join("\n"));
     process.env.SJ_STATE_DIR = path.join(tmp, "state");
     process.env.SJ_JUDGE_CMD = `node ${fake}`;
-    const out: string[] = [];
+    try {
+      const out: string[] = [];
+      const fixture = path.join(import.meta.dir, "..", "fixtures", "claude.jsonl");
+      const code = await runCli(["judge", fixture], { stdout: (s) => out.push(s), stderr: (s) => out.push(s) });
+      expect(code).toBe(0);
+      const text = out.join("");
+      expect(text).toContain("| M1 | 符合 |");
+      expect(text).toContain("| J1 | 不适用 |");
+      const written = fs.readdirSync(path.join(tmp, "state"), { recursive: true }).map(String);
+      expect(written.some((f) => f.endsWith("claude.md"))).toBe(true);
+    } finally {
+      delete process.env.SJ_STATE_DIR;
+      delete process.env.SJ_JUDGE_CMD;
+    }
+  });
+
+  test("sj judge 评委进程非零退出返回 1", async () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "sj-"));
+    const fake = path.join(tmp, "fake-judge-fail.mjs");
+    fs.writeFileSync(fake, "process.exit(1);\n");
+    process.env.SJ_STATE_DIR = path.join(tmp, "state");
+    process.env.SJ_JUDGE_CMD = `node ${fake}`;
+    try {
+      const err: string[] = [];
+      const fixture = path.join(import.meta.dir, "..", "fixtures", "claude.jsonl");
+      const code = await runCli(["judge", fixture], { stdout: () => {}, stderr: (s) => err.push(s) });
+      expect(code).toBe(1);
+      expect(err.join("")).toContain("评委进程退出");
+    } finally {
+      delete process.env.SJ_STATE_DIR;
+      delete process.env.SJ_JUDGE_CMD;
+    }
+  });
+
+  test("sj judge --judge 传非法值返回 2", async () => {
     const fixture = path.join(import.meta.dir, "..", "fixtures", "claude.jsonl");
-    const code = await runCli(["judge", fixture], { stdout: (s) => out.push(s), stderr: (s) => out.push(s) });
-    expect(code).toBe(0);
-    const text = out.join("");
-    expect(text).toContain("| M1 | 符合 |");
-    expect(text).toContain("| J1 | 不适用 |");
-    const written = fs.readdirSync(path.join(tmp, "state"), { recursive: true }).map(String);
-    expect(written.some((f) => f.endsWith("claude.md"))).toBe(true);
-    delete process.env.SJ_STATE_DIR;
-    delete process.env.SJ_JUDGE_CMD;
+    const err: string[] = [];
+    const code = await runCli(["judge", fixture, "--judge", "xyz"], { stdout: () => {}, stderr: (s) => err.push(s) });
+    expect(code).toBe(2);
+    expect(err.join("")).toContain("--judge 只支持 claude 或 omp");
   });
 });

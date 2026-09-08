@@ -14,9 +14,11 @@ export function loadRubric(): string {
   return readFileSync(path.join(here, "..", "rubric", "default.md"), "utf8");
 }
 
-export function renderMechanical(results: CheckResult[]): string {
-  const rows = results.map((r) => `| ${r.id} | ${r.verdict} | ${r.evidence.length ? "事件 " + r.evidence.join("、") : "—"}${r.note ? "；" + r.note : ""} |`);
-  return ["| 检查 | 判决 | 证据 |", "|---|---|---|", ...rows].join("\n");
+/** 渲染检查/判据表；heading 控制首列表头文字（机械检查用「检查」，评委判决用「判据」）。 */
+export function renderMechanical(results: CheckResult[], heading = "检查"): string {
+  const esc = (s: string) => s.replaceAll("|", "｜"); // 证据/说明里的竖线会破坏表格，换成全角
+  const rows = results.map((r) => `| ${r.id} | ${r.verdict} | ${esc(r.evidence.length ? "事件 " + r.evidence.join("、") : "—")}${r.note ? "；" + esc(r.note) : ""} |`);
+  return [`| ${heading} | 判决 | 证据 |`, "|---|---|---|", ...rows].join("\n");
 }
 
 export function buildPrompt(rubric: string, timelineText: string, mechanical: CheckResult[]): string {
@@ -27,7 +29,7 @@ export function buildPrompt(rubric: string, timelineText: string, mechanical: Ch
 export function parseVerdicts(text: string): CheckResult[] | null {
   const out: CheckResult[] = [];
   for (const id of JUDGE_IDS) {
-    const m = text.match(new RegExp(`^\\|\\s*${id}\\s*\\|\\s*([^|]+?)\\s*\\|\\s*([^|]+?)\\s*\\|`, "m"));
+    const m = text.match(new RegExp(`^\\s*\\|\\s*${id}\\s*\\|\\s*([^|]+?)\\s*\\|\\s*([^|]+?)\\s*\\|`, "m"));
     if (!m) return null;
     const verdict = m[1] as Verdict;
     if (!VERDICTS.includes(verdict) || verdict === "需主人看") return null;
@@ -83,7 +85,7 @@ export async function judgeTimeline(t: Timeline, runner: JudgeRunner): Promise<J
 
 export function renderReport(t: Timeline, o: JudgeOutcome, judgeName: string): string {
   const judgedTable = o.judged
-    ? renderMechanical(o.judged).replace("| 检查 |", "| 判据 |")
+    ? renderMechanical(o.judged, "判据")
     : `评委失败（重试 ${o.attempts} 次，输出不合格式）。原文：\n\n${o.raw.trim()}`;
   return [
     `# 评分：会话 ${t.id}（${t.client}）`, "",

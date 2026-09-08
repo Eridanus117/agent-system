@@ -1,7 +1,7 @@
 // 评委层：只测提示词拼装、输出解析与重试；评委本身用假函数。
 import { describe, expect, test } from "bun:test";
 import path from "node:path";
-import { buildPrompt, judgeTimeline, loadRubric, parseVerdicts } from "../src/judge.ts";
+import { buildPrompt, judgeTimeline, loadRubric, parseVerdicts, renderMechanical } from "../src/judge.ts";
 import { loadTimeline } from "../src/timeline.ts";
 import { runChecks } from "../src/checks.ts";
 
@@ -27,6 +27,23 @@ describe("parseVerdicts", () => {
     expect(parseVerdicts(GOOD.replace("| J4 | 判不了 | 事件 8，看不出测试目录 |\n", ""))).toBeNull();
     expect(parseVerdicts(GOOD.replace("| J1 | 符合 |", "| J1 | 大概符合 |"))).toBeNull();
     expect(parseVerdicts(GOOD.replace("| J2 | 符合 | 事件 6 |", "| J2 | 符合 |  |"))).toBeNull();
+  });
+  test("表格行前有缩进（前导空白）也能解析", () => {
+    const indented = GOOD.split("\n").map((line) => (line.startsWith("| J") ? `  ${line}` : line)).join("\n");
+    const r = parseVerdicts(indented)!;
+    expect(r).not.toBeNull();
+    expect(r.map((x) => x.id)).toEqual(["J1", "J2", "J3", "J4"]);
+  });
+});
+
+describe("renderMechanical", () => {
+  test("证据/说明里的竖线转成全角，不破坏表格", () => {
+    const table = renderMechanical([
+      { id: "M5", verdict: "需主人看", evidence: [1], note: "主人说「a|b」" },
+    ]);
+    const row = table.split("\n").find((l) => l.startsWith("| M5"))!;
+    expect(row.split("|").length).toBe(5); // 首尾空 + 三列，竖线没有多切出列
+    expect(row).toContain("a｜b");
   });
 });
 
