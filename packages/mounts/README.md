@@ -90,6 +90,10 @@ bun /path/to/agent-system@<pinned-sha>/packages/mounts/src/cli.ts sync --hook --
 
 版本消费：目标仓记录所依赖的 agent-system commit SHA（或 `mounts` 包版本），不用指向 agent-system 工作树的实时软链；升级 agent-system 不会隐式改变目标仓行为。
 
+## GitHub 公共面门禁
+
+`.github/workflows/public-gate.yml` 在 PR 与 main 上先跑 `scripts/public-gate-smoke.ts`（合成违规 tree 必须 blocked、合规必须 allowed、缺策略必须失败），再对 HEAD 的最终 tree 跑 `assess-public-tree --policy .github/public-tree-policy.json`。策略里的 `contentExemptPaths` 是既有违规的显式豁免清单，收缩它就是收紧门禁；决定与理由见 `docs/adr/0002-公共面门禁扫最终tree并显式豁免.md`，验收证据见 `docs/2026-09-08-验收记录.md`。
+
 ## 开发
 
 ```
