@@ -1,7 +1,7 @@
 ---
 name: clarify
 description: >-
-  主人冒出一个念头、想建个东西、或者说某处别扭时，先把「解」翻回「问题」，判断该不该做。触发语包括「我想建/我想做/要不要搞一个/有没有必要弄个/能不能做个工具/这个流程好烦/这里不对劲」，以及 /clarify。**动手之前**用；不产出文件，只产出三行结论。不用于压力测试已成型的计划（那是 grilling，且需显式请求），也不用于执行途中的停滞与交接（那是 adaptive-problem-solving）。 Use before work starts, when an itch arrives phrased as a solution ("I want to build X"), to turn it back into a problem and judge whether it is worth solving. Produces three lines and writes no files. Not for stress-testing an already-formed plan (that is grilling, and it requires an explicit request), not for stalls mid-execution (that is adaptive-problem-solving), and not for bugs.
+  主人冒出「想建 X／要不要搞一个／这个流程好烦」一类念头时，把「解」翻回「问题」，判断该不该做；只产出三行结论，不落文件。Turn an itch phrased as a solution back into a problem and judge whether it is worth solving; three lines, no files.
 ---
 
 # 把念头变成判断

@@ -1,7 +1,7 @@
 ---
 name: release-observe
 description: >-
-  改动要放出去时用：legacy-change 的分流开关就是灰度开关，定放量三档（白名单 → 百分比 → 全量，每档写放谁停多久）、回滚点就是关开关不回滚代码、每条需求句配一个观测点且老路径看四个黄金信号、档一放开后用需求翻译的例子在线上打一条比对、留。每档放量与进下一档由主人定。触发语「怎么灰度」「怎么发布」「发布后看什么」。由 workcoding 确认路线、integration 联调过之后进入。不用于接入顺序与联调（那是 integration），不用于证明老流程没变的仓内回放（那是 evidence-regression），不用于 SLO 与错误预算设计。Ship a change behind its own routing toggle: three rollout tiers, rollback equals switching the toggle off, one observation point per requirement sentence plus the four golden signals on the old path, smoke-check tier one with the requirement examples. The owner decides every tier.
+  改动要放出去时用：分流开关当灰度开关，定放量三档、回滚点、每条需求句一个观测点加老路径四个黄金信号、线上比对。触发语「怎么灰度」「怎么发布」「发布后看什么」。Ship behind a toggle in three tiers, with a rollback point and observation points.
 ---
 
 # 发布与观测：放量三档，回滚即关开关，一句一观测

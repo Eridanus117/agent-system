@@ -1,7 +1,7 @@
 ---
 name: requirement-insight
 description: >-
-  外来需求的实际问题、现有做法或验收判据尚未收口时使用；由 workcoding 为这一缺口选中，或用户明确要求澄清需求。保留原话、提出问题假设、准备向提出方核实的历史行为问题、查现成并收口。已有经确认的问题与规则直接交给后续工作，不因「产品要／来了个需求」重做访谈。用户自己的建工具念头用 clarify；已收口但缺可验证行为句用 requirement-translation。Clarify an unresolved incoming requirement, not every request: recover the problem, verify historical behavior, and close an observable acceptance criterion.
+  外来需求的实际问题、现有做法或验收判据还没收口时用：保留原话、提出问题假设、核实历史行为、查现成、收口成一句可观察的验收判据。Clarify an unresolved incoming requirement down to an observable acceptance criterion.
 ---
 
 # 需求洞察：先翻回问题，再让主人去问

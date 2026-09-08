@@ -1,7 +1,7 @@
 ---
 name: evidence-regression
 description: >-
-  要证明老流程一点没变、新流程是对的时候用：从需求翻译的例子加真实流量里选一批样本（覆盖新路径每条需求句、老路径每个主要分支），改代码之前用 Arthas 或日志把出入参原样录成仓内母版文件，改后回放，老类别逐字节比对母版、新类别比对需求翻译的期望值，母版与回放测试同一个 PR 入仓。证据是仓里的文件，「跑过了」不算。这是 Golden Master / Approval Testing。触发语「怎么证明没改坏」「回归」「出入参采集」。由 workcoding 确认路线后进入，母版必须在改代码之前采。不用于单条入参的特征化测试（那在 legacy-change 里），不用于线上灰度抽样（那是 release-observe），不用于讲解 Approval Testing 本身。Golden-master regression: record real inputs and outputs in the repo before the change, replay after, byte-compare the old path, check the new path against the examples.
+  要证明老流程没变、新流程是对的时用：改代码前把真实出入参录成仓内母版，改后回放逐字节比对（Golden Master／Approval Testing）。触发语「怎么证明没改坏」「回归」「出入参采集」。Golden-master regression: record real inputs and outputs before the change, replay and compare after.
 ---
 
 # 证据回归：母版改前采，改后逐字节比
