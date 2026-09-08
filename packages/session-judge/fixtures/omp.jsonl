@@ -1,0 +1,9 @@
+{"type":"title","v":1,"title":"","updatedAt":"2026-09-08T11:00:00.000Z"}
+{"type":"session","version":3,"id":"01a0fixture","timestamp":"2026-09-08T11:00:00.000Z","cwd":"C:/Workspace"}
+{"type":"message","id":"m1","timestamp":"2026-09-08T11:00:01.000Z","message":{"role":"user","content":[{"type":"text","text":"帮我修一下"}]}}
+{"type":"message","id":"m2","timestamp":"2026-09-08T11:00:05.000Z","message":{"role":"assistant","content":[{"type":"thinking","thinking":"..."},{"type":"toolCall","id":"t1","name":"read","arguments":{"path":"skill://brainstorming"}}]}}
+{"type":"message","id":"m3","timestamp":"2026-09-08T11:00:06.000Z","message":{"role":"toolResult","content":[{"type":"text","text":"skill body"}]}}
+{"type":"message","id":"m4","timestamp":"2026-09-08T11:00:09.000Z","message":{"role":"assistant","content":[{"type":"text","text":"我先看看。"},{"type":"toolCall","id":"t2","name":"bash","arguments":{"command":"bun test"}}]}}
+{"type":"message","id":"m5","timestamp":"2026-09-08T11:00:20.000Z","message":{"role":"assistant","content":[{"type":"toolCall","id":"t3","name":"write","arguments":{"path":"C:/repo/src/a.ts","content":"x"}}]}}
+{"type":"message","id":"m6","timestamp":"2026-09-08T11:00:25.000Z","message":{"role":"assistant","content":[{"type":"toolCall","id":"t4","name":"edit","arguments":{"path":"C:/repo/src/b.ts"}}]}}
+{"type":"message","id":"m7","timestamp":"2026-09-08T11:00:30.000Z","message":{"role":"assistant","content":[{"type":"toolCall","id":"t5","name":"glob","arguments":{"path":"**/*.ts"}}]}}

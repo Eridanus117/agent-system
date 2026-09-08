@@ -1,0 +1,212 @@
+// 机械检查：只看顺序与有无，用手工拼的时间线覆盖每条的三种结论。
+import { describe, expect, test } from "bun:test";
+import { classifyShellWrite, isCodeWrite, isPlanPath, isRecordPath, isScratchPath, runChecks, shellWriteTarget } from "../src/checks.ts";
+import { tagCommand } from "../src/types.ts";
+import type { Event, Timeline } from "../src/types.ts";
+
+let n = 0;
+const ev = (kind: Event["kind"], extra: Partial<Event> = {}): Event => ({
+  n: ++n, at: `2026-09-08T10:00:${String(n).padStart(2, "0")}.000Z`, kind, text: extra.text ?? "", tags: extra.tags ?? [], ...extra,
+});
+// shell 事件按真实解析路径来：tags 由 tagCommand(命令) 算，text 就是命令本身（测试里不做截断）。
+const sh = (command: string): Event => ev("shell", { text: command, tags: tagCommand(command) });
+const tl = (events: Event[]): Timeline => ({ id: "t", client: "claude", events });
+const byId = (t: Timeline) => Object.fromEntries(runChecks(t).map((r) => [r.id, r]));
+
+describe("路径分类", () => {
+  test("记录类与计划路径", () => {
+    expect(isRecordPath("C:/Workspace/desk/30-提案/x.md")).toBe(true);
+    expect(isRecordPath("C:/repo/docs/superpowers/specs/a.md")).toBe(true);
+    expect(isRecordPath("C:/repo/src/a.ts")).toBe(false);
+    expect(isPlanPath("C:/repo/docs/superpowers/plans/a.md")).toBe(true);
+    expect(isPlanPath("C:/repo/src/plan.ts")).toBe(false);
+  });
+  test("反斜杠路径", () => {
+    expect(isRecordPath("C:\\Workspace\\desk\\30-提案\\x.md")).toBe(true);
+    expect(isPlanPath("C:\\repo\\docs\\superpowers\\plans\\a.md")).toBe(true);
+  });
+  test("临时/草稿路径", () => {
+    expect(isScratchPath("/tmp/probe-settings.json")).toBe(true);
+    expect(isScratchPath("D:/Work/AppData/Local/Temp/a.md")).toBe(true);
+    expect(isScratchPath("C:/repo/src/a.ts")).toBe(false);
+  });
+});
+
+describe("runChecks", () => {
+  test("纯咨询会话：M1–M4 不适用，M5 不适用", () => {
+    n = 0;
+    const r = byId(tl([ev("owner", { text: "看看" }), ev("shell", { text: "cat a" })]));
+    expect(r.M1?.verdict).toBe("不适用");
+    expect(r.M4?.verdict).toBe("不适用");
+    expect(r.M5?.verdict).toBe("不适用");
+  });
+  test("规矩全走：M1–M4 符合", () => {
+    n = 0;
+    const t = tl([
+      ev("owner", { text: "建" }), ev("skill", { skill: "brainstorming" }), ev("agent-text", { text: "方案" }),
+      ev("owner", { text: "行" }), ev("write", { path: "C:/r/docs/superpowers/plans/p.md" }),
+      ev("write", { path: "C:/r/src/a.ts" }), ev("shell", { text: "bun test", tags: ["test"] }),
+    ]);
+    const r = byId(t);
+    expect(r.M1?.verdict).toBe("符合");
+    expect(r.M1?.evidence).toEqual([2, 6]);
+    expect(r.M2?.verdict).toBe("符合");
+    expect(r.M3?.verdict).toBe("符合");
+    expect(r.M3?.evidence).toEqual([3, 4, 6]);
+    expect(r.M4?.verdict).toBe("符合");
+  });
+  test("直接开写：M1–M3 不符合，M4 不符合", () => {
+    n = 0;
+    const r = byId(tl([ev("owner", { text: "建" }), ev("write", { path: "C:/r/src/a.ts" })]));
+    expect(r.M1?.verdict).toBe("不符合");
+    expect(r.M2?.verdict).toBe("不符合");
+    expect(r.M3?.verdict).toBe("不符合");
+    expect(r.M4?.verdict).toBe("不符合");
+  });
+  test("只写记录类文件不算建东西", () => {
+    n = 0;
+    const r = byId(tl([ev("owner", { text: "记一下" }), ev("write", { path: "C:/Workspace/desk/40-收件箱/a.md" })]));
+    expect(r.M1?.verdict).toBe("不适用");
+    expect(isCodeWrite(ev("write", { path: "C:/Workspace/desk/40-收件箱/a.md" }))).toBe(false);
+  });
+  test("edit 事件处理", () => {
+    expect(isCodeWrite(ev("edit", { path: "C:/Workspace/desk/40-收件箱/a.md" }))).toBe(false);
+    expect(isCodeWrite(ev("edit", { path: "C:/repo/src/a.ts" }))).toBe(true);
+  });
+  test("第一个代码写入是 edit：M1–M4 符合", () => {
+    n = 0;
+    const t = tl([
+      ev("owner", { text: "建" }), ev("skill", { skill: "brainstorming" }), ev("agent-text", { text: "方案" }),
+      ev("owner", { text: "行" }), ev("edit", { path: "C:/repo/src/a.ts" }), ev("shell", { text: "bun test", tags: ["test"] }),
+    ]);
+    const r = byId(t);
+    expect(r.M1?.verdict).toBe("符合");
+    expect(r.M1?.evidence).toEqual([2, 5]);
+    expect(r.M2?.verdict).toBe("不符合");
+    expect(r.M3?.verdict).toBe("符合");
+    expect(r.M4?.verdict).toBe("符合");
+  });
+  test("M5 列出每次 push 与之前主人最近一句", () => {
+    n = 0;
+    const r = byId(tl([
+      ev("owner", { text: "推吧" }), ev("shell", { text: "git push", tags: ["push"] }),
+      ev("shell", { text: "git push", tags: ["push"] }),
+    ]));
+    expect(r.M5?.verdict).toBe("需主人看");
+    expect(r.M5?.evidence).toEqual([2, 1, 3, 1]);
+    expect(r.M5?.note).toContain("事件 2 push，之前主人最近一句是事件 1『推吧』");
+  });
+});
+
+describe("shellWriteTarget", () => {
+  test("取重定向 > / >> 之后的路径，去引号、遇空白停", () => {
+    expect(shellWriteTarget("cat > C:/repo/src/a.ts <<'EOF'")).toBe("C:/repo/src/a.ts");
+    expect(shellWriteTarget("cat >> \"C:/Workspace/desk/70-工作日志/x.md\" <<'EOF'")).toBe("C:/Workspace/desk/70-工作日志/x.md");
+  });
+  test("tee 与 sed -i 的目标参数", () => {
+    expect(shellWriteTarget("echo hi | tee C:/repo/src/a.ts")).toBe("C:/repo/src/a.ts");
+    expect(shellWriteTarget("sed -i 's/a/b/' C:/repo/src/a.ts")).toBe("C:/repo/src/a.ts");
+  });
+  test("取不到路径时返回 null", () => {
+    expect(shellWriteTarget("node -e 'fs.writeFileSync(\"x\")'")).toBeNull();
+    expect(shellWriteTarget("echo hi 2>/dev/null")).toBeNull();
+  });
+  test("引号内目标含空格时取完整内容，不在空白处截断", () => {
+    expect(shellWriteTarget("cat > \"C:/path with spaces/a.md\" <<EOF")).toBe("C:/path with spaces/a.md");
+  });
+});
+
+describe("isCodeWrite：shell 重定向 / tee / sed -i / writeFileSync", () => {
+  test("(a) 重定向到代码文件算代码写入", () => {
+    expect(isCodeWrite(sh("cat > C:/repo/src/a.ts <<'EOF'"))).toBe(true);
+  });
+  test("(b) 重定向到记录类路径（desk/）不算", () => {
+    expect(isCodeWrite(sh("cat >> C:/Workspace/desk/70-工作日志/x.md <<'EOF'"))).toBe(false);
+  });
+  test("(c) writeFileSync 调用取不到路径，按代码算", () => {
+    expect(isCodeWrite(sh("node -e 'fs.writeFileSync(\"x\")'"))).toBe(true);
+  });
+  test("(d) 只重定向 stderr 到 /dev/null，不算写文件", () => {
+    expect(isCodeWrite(sh("echo hi 2>/dev/null"))).toBe(false);
+  });
+  test("(e) 重定向到 /tmp/ 临时文件不算代码写入", () => {
+    expect(isCodeWrite(sh("cat > /tmp/probe.json <<'EOF'"))).toBe(false);
+  });
+  test("(f) text 被截断成噪音（110 字里没有重定向），command 保留完整写入目标：记录类不算", () => {
+    // 模拟真实场景：真正的 `cat >> ...` 落在第 110 字之后，text 截不到它，得靠 command 才能判定。
+    const noise = "cd C:/Workspace/desk && git pull --rebase -q origin main 2>&1 | tail -2; git push -q origin main 2>&1 | tail -1";
+    expect(noise.length).toBeGreaterThan(100); // 确认这段噪音本身接近／超过截断长度，且不含任何真实重定向
+    const full = `${noise}; cat >> C:/Workspace/desk/70-工作日志/x.md <<'EOF'\n内容\nEOF`;
+    const e = ev("shell", { text: noise.slice(0, 110), command: full, tags: tagCommand(full) });
+    expect(shellWriteTarget(e.text)).toBeNull(); // 截断后的 text 确实看不到写入目标
+    expect(isCodeWrite(e)).toBe(false);
+  });
+  test("(g) text 被截断，command 里的写入目标是代码文件：算代码写入", () => {
+    const noise = "cd C:/Workspace/worktrees/agent-config/one-router/80-agent配置 && grep -n 拓扑 10-说明/10-拓扑.md | head -80 | tail -60";
+    expect(noise.length).toBeGreaterThan(100);
+    const full = `${noise}; cat > C:/repo/src/a.ts <<'EOF'\ncode\nEOF`;
+    const e = ev("shell", { text: noise.slice(0, 110), command: full, tags: tagCommand(full) });
+    expect(shellWriteTarget(e.text)).toBeNull();
+    expect(isCodeWrite(e)).toBe(true);
+  });
+  test("shell 写代码事件驱动 M1（此前没有 brainstorming → 不符合）", () => {
+    n = 0;
+    const t = tl([ev("owner", { text: "建" }), sh("cat > C:/repo/src/a.ts <<'EOF'")]);
+    const r = byId(t);
+    expect(r.M1?.verdict).toBe("不符合");
+    expect(r.M1?.evidence).toEqual([2]);
+  });
+  test("shell 写代码事件驱动 M1（先 brainstorming → 符合）", () => {
+    n = 0;
+    const t = tl([ev("owner", { text: "建" }), ev("skill", { skill: "brainstorming" }), sh("cat > C:/repo/src/a.ts <<'EOF'")]);
+    const r = byId(t);
+    expect(r.M1?.verdict).toBe("符合");
+    expect(r.M1?.evidence).toEqual([2, 3]);
+  });
+});
+
+describe("classifyShellWrite：写入目标是 shell 变量引用时按命令内路径特征分类", () => {
+  test("(a) 变量目标 $LOG，命令里带工作日志标记、不带代码标记：不算代码写入", () => {
+    const cmd = 'LOG="70-工作日志/x.md"; cat >> "$LOG" <<\'EOF\'';
+    expect(shellWriteTarget(cmd)).toBe("$LOG");
+    expect(classifyShellWrite(cmd)).toBe("record");
+    expect(isCodeWrite(sh(cmd))).toBe(false);
+  });
+  test("(b) 变量目标 $F，命令里带 /packages/ 与 /src/：算代码写入", () => {
+    const cmd = 'F="C:/repo/packages/sk/src/a.ts"; cat > "$F" <<\'EOF\'';
+    expect(shellWriteTarget(cmd)).toBe("$F");
+    expect(classifyShellWrite(cmd)).toBe("code");
+    expect(isCodeWrite(sh(cmd))).toBe(true);
+  });
+  test("(c) node -e 里的 writeFileSync，命令里没有任何标记：仍按代码算（不变）", () => {
+    const cmd = "node -e 'fs.writeFileSync(\"x\")'";
+    expect(shellWriteTarget(cmd)).toBeNull();
+    expect(classifyShellWrite(cmd)).toBe("code");
+    expect(isCodeWrite(sh(cmd))).toBe(true);
+  });
+  test("(d) 变量目标未知，命令里读取的源文件恰好在 /tmp/ 下：草稿判定只看写入目标，不被源文件路径误伤", () => {
+    // F 是未知变量，真正写入目标抽出来是 "$F" 本身；命令里提到的 /tmp/frag.txt 只是读取源，不是写入目标，
+    // 不该让 classifyShellWrite 把这条命令误判成 scratch。
+    const cmd = 'cat /tmp/frag.txt >> "$F"';
+    expect(shellWriteTarget(cmd)).toBe("$F");
+    expect(classifyShellWrite(cmd)).not.toBe("scratch");
+  });
+});
+
+describe("重定向识别统一：更早出现的假箭头/比较运算符不偷走后面真重定向的目标（终审回归）", () => {
+  test("(a) commit message 里的 -> 不是重定向，后面 >> 到 desk 路径才是真目标", () => {
+    const cmd = 'git commit -m "fix: a->b" && cat >> C:/Workspace/desk/70-工作日志/x.md';
+    expect(shellWriteTarget(cmd)).toBe("C:/Workspace/desk/70-工作日志/x.md");
+    expect(isCodeWrite(sh(cmd))).toBe(false);
+  });
+  test("(b) grep 字符串里的 => 不是重定向", () => {
+    const cmd = 'grep -rn "x=>y" src && cat >> C:/Workspace/desk/70-工作日志/x.md';
+    expect(shellWriteTarget(cmd)).toBe("C:/Workspace/desk/70-工作日志/x.md");
+    expect(isCodeWrite(sh(cmd))).toBe(false);
+  });
+  test("(c) echo 字符串里的比较运算符 > 不是重定向", () => {
+    const cmd = 'echo "a > b" && cat > C:/Workspace/desk/40-收件箱/a.md';
+    expect(shellWriteTarget(cmd)).toBe("C:/Workspace/desk/40-收件箱/a.md");
+    expect(isCodeWrite(sh(cmd))).toBe(false);
+  });
+});
