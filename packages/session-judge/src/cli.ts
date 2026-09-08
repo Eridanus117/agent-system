@@ -2,9 +2,13 @@
 // sj — 会话评分命令入口。核心逻辑在各模块，这里只做参数分发。
 // 设计：docs/superpowers/specs/2026-09-08-session-judge-design.md
 
+import { readFileSync } from "node:fs";
+import { createInterface } from "node:readline/promises";
 import { loadTimeline, renderTimeline } from "./timeline.ts";
 import { judgeTimeline, renderReport, runnerFor } from "./judge.ts";
 import { writeState } from "./state.ts";
+import { ANCHOR_CELLS, agreement, assertAnchorsReady, loadAnchors, saveAnchor } from "./anchors.ts";
+import type { Verdict } from "./types.ts";
 
 export interface CliIo {
   stdout: (s: string) => void;
@@ -55,6 +59,50 @@ export async function runCli(args: string[], io: CliIo): Promise<number> {
       io.stdout(report.split("## 时间线")[0] ?? report);
       io.stdout(`状态文件：${written}\n`);
       return outcome.judged ? 0 : 1;
+    } catch (err) {
+      io.stderr(`${(err as Error).message}\n`);
+      return 1;
+    }
+  }
+
+  if (cmd === "anchor") {
+    const file = args[1];
+    if (!file) { io.stderr("用法：sj anchor <会话文件> [--from <json>]\n"); return 2; }
+    try {
+      const t = loadTimeline(file);
+      const outcome = await judgeTimeline(t, runnerFor("claude"));
+      const judge: Record<string, Verdict> = {};
+      for (const r of [...outcome.mechanical, ...(outcome.judged ?? [])]) judge[r.id] = r.verdict;
+      const owner: Record<string, Verdict> = { ...judge };
+      const fromIdx = args.indexOf("--from");
+      if (fromIdx >= 0) {
+        const given = JSON.parse(readFileSync(String(args[fromIdx + 1]), "utf8")) as Record<string, Verdict>;
+        Object.assign(owner, given);
+      } else {
+        io.stdout(renderTimeline(t));
+        const rl = createInterface({ input: process.stdin, output: process.stdout });
+        for (const c of ANCHOR_CELLS) {
+          const ans = (await rl.question(`${c}：评委判「${judge[c] ?? "无"}」。回车接受，或输 1 符合 / 2 不符合 / 3 不适用 / 4 判不了：`)).trim();
+          const map: Record<string, Verdict> = { "1": "符合", "2": "不符合", "3": "不适用", "4": "判不了" };
+          if (map[ans]) owner[c] = map[ans]!;
+        }
+        rl.close();
+      }
+      const saved = saveAnchor({ id: t.id, client: t.client, file, judgedAt: new Date().toISOString(), owner, judge });
+      io.stdout(`已保存标准答案：${saved}\n`);
+      return 0;
+    } catch (err) {
+      io.stderr(`${(err as Error).message}\n`);
+      return 1;
+    }
+  }
+  if (cmd === "agreement") {
+    try {
+      const anchors = loadAnchors();
+      assertAnchorsReady(anchors);
+      const r = agreement(anchors);
+      io.stdout(`标准答案 ${anchors.length} 道，${r.cells} 格，评委一致 ${r.matched} 格，一致率 ${(r.rate * 100).toFixed(0)}%${r.rate < 0.8 ? "（低于 80%，评委不算数）" : ""}\n`);
+      return r.rate < 0.8 ? 1 : 0;
     } catch (err) {
       io.stderr(`${(err as Error).message}\n`);
       return 1;

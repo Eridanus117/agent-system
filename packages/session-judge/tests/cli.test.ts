@@ -5,6 +5,20 @@ import os from "node:os";
 import path from "node:path";
 import { runCli } from "../src/cli.ts";
 
+// 假评委：J1–J4 一律判「不适用」，事件 1 为证据。写入 tmp/fake-judge.mjs，
+// 并把 SJ_STATE_DIR / SJ_JUDGE_CMD 指到 tmp，供 sj judge / sj anchor 复用。
+function withFakeJudge(tmp: string): void {
+  const fake = path.join(tmp, "fake-judge.mjs");
+  fs.writeFileSync(fake, [
+    "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{",
+    "console.log('| 判据 | 判决 | 证据 |');console.log('|---|---|---|');",
+    "for (const j of ['J1','J2','J3','J4']) console.log(`| ${j} | 不适用 | 事件 1 |`);",
+    "console.log('');console.log('总评：假评委。');});",
+  ].join("\n"));
+  process.env.SJ_STATE_DIR = path.join(tmp, "state");
+  process.env.SJ_JUDGE_CMD = `node ${fake}`;
+}
+
 describe("sj --help", () => {
   test("打印用法并退出 0", async () => {
     const out: string[] = [];
@@ -44,15 +58,7 @@ describe("sj extract", () => {
 
   test("sj judge 用假评委落状态文件", async () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "sj-"));
-    const fake = path.join(tmp, "fake-judge.mjs");
-    fs.writeFileSync(fake, [
-      "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{",
-      "console.log('| 判据 | 判决 | 证据 |');console.log('|---|---|---|');",
-      "for (const j of ['J1','J2','J3','J4']) console.log(`| ${j} | 不适用 | 事件 1 |`);",
-      "console.log('');console.log('总评：假评委。');});",
-    ].join("\n"));
-    process.env.SJ_STATE_DIR = path.join(tmp, "state");
-    process.env.SJ_JUDGE_CMD = `node ${fake}`;
+    withFakeJudge(tmp);
     try {
       const out: string[] = [];
       const fixture = path.join(import.meta.dir, "..", "fixtures", "claude.jsonl");
@@ -93,5 +99,26 @@ describe("sj extract", () => {
     const code = await runCli(["judge", fixture, "--judge", "xyz"], { stdout: () => {}, stderr: (s) => err.push(s) });
     expect(code).toBe(2);
     expect(err.join("")).toContain("--judge 只支持 claude 或 omp");
+  });
+
+  test("sj anchor --from 写标准答案，sj agreement 不足十道拒绝", async () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "sj-"));
+    withFakeJudge(tmp);
+    process.env.SJ_ANCHORS_DIR = path.join(tmp, "anchors");
+    const from = path.join(tmp, "owner.json");
+    fs.writeFileSync(from, JSON.stringify({ J1: "不符合" }));
+    const fixture = path.join(import.meta.dir, "..", "fixtures", "claude.jsonl");
+    const out: string[] = [];
+    try {
+      expect(await runCli(["anchor", fixture, "--from", from], { stdout: (s) => out.push(s), stderr: (s) => out.push(s) })).toBe(0);
+      const saved = JSON.parse(fs.readFileSync(path.join(tmp, "anchors", "claude.json"), "utf8"));
+      expect(saved.owner.J1).toBe("不符合");
+      expect(saved.owner.M1).toBe("符合");
+      const err: string[] = [];
+      expect(await runCli(["agreement"], { stdout: () => {}, stderr: (s) => err.push(s) })).toBe(1);
+      expect(err.join("")).toContain("标准答案不足");
+    } finally {
+      delete process.env.SJ_ANCHORS_DIR; delete process.env.SJ_STATE_DIR; delete process.env.SJ_JUDGE_CMD;
+    }
   });
 });
