@@ -1,8 +1,8 @@
 name: Packages checks
 
-# 三个 Bun 包（control-plane、harness-engine、sk）的 PR 门禁统一在这一条工作流：
+# Bun 包（control-plane、harness-engine、sk、mounts）的 PR 门禁统一在这一条工作流：
 # 包 × 平台矩阵，仓库根装一次依赖，各作业进包目录跑 package.json 里的 typecheck 与 test。
-# 方案与裁决见 PR #41。
+# 方案与裁决见 PR #41（ADR-0001）；mounts 于 Issue #60 加入矩阵。
 
 on:
   pull_request:
@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [control-plane, harness-engine, sk]
+        package: [control-plane, harness-engine, sk, mounts]
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
