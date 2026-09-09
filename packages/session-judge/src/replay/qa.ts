@@ -64,13 +64,14 @@ export function qaRunner(model: string): JudgeRunner {
   return commandRunner(process.env.SJ_QA_CMD ?? `claude -p --model ${model} --no-session-persistence --output-format text`);
 }
 
-export async function nextQaTurn(runner: JudgeRunner, script: string, transcript: TranscriptLine[]): Promise<QaTurn & { parseFailed?: true }> {
+export async function nextQaTurn(runner: JudgeRunner, script: string, transcript: TranscriptLine[]): Promise<QaTurn & { parseFailed?: true; prompt: string; raw: string }> {
   const prompt = buildQaPrompt(script, transcript);
   let raw = "";
   for (let attempt = 1; attempt <= 2; attempt++) {
     raw = await runner(prompt);
     const t = parseQaTurn(raw);
-    if (t) return t;
+    // 两条产物线（qa.jsonl）都要能回放当时问了什么、QA 原话是什么，成功/失败两条路径都带上 prompt/raw。
+    if (t) return { ...t, prompt, raw };
   }
-  return { done: true, reason: `QA agent 两次输出都不合格式：${raw.trim().slice(0, 120)}`, parseFailed: true };
+  return { done: true, reason: `QA agent 两次输出都不合格式：${raw.trim().slice(0, 120)}`, parseFailed: true, prompt, raw };
 }

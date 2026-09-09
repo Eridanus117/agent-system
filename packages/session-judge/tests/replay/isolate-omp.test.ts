@@ -44,6 +44,12 @@ describe("prepareOmpProfile", () => {
     fs.rmSync(path.join(s.host, "agent", "agent.db"));
     expect(() => prepareOmpProfile({ name: "sj-test", tmpDir: path.join(s.root, "tmp"), candidate: s.cand, promptFile: s.prompt, workDir: s.work, hostOmpDir: s.host })).toThrow("agent.db");
   });
+  test("候选缺 skill 清单，半途炸了也不留凭证副本", () => {
+    const s = scaffold();
+    fs.rmSync(path.join(s.cand, "profiles", "daily", "manifest.json"));
+    expect(() => prepareOmpProfile({ name: "sj-test", tmpDir: path.join(s.root, "tmp"), candidate: s.cand, promptFile: s.prompt, workDir: s.work, hostOmpDir: s.host })).toThrow(/manifest|清单/);
+    expect(fs.existsSync(path.join(s.host, "profiles", "sj-test"))).toBe(false);
+  });
 });
 
 describe("ompCli（假 omp）", () => {

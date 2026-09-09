@@ -28,17 +28,24 @@ export function prepareOmpProfile(o: OmpProfileOptions): OmpEnv {
   const profileDir = path.join(host, "profiles", o.name);
   const agentDir = path.join(profileDir, "agent");
   mkdirSync(agentDir, { recursive: true });
-  copyFileSync(db, path.join(agentDir, "agent.db"));
-  writeFileSync(path.join(agentDir, "config.yml"), CONFIG);
-  copyFileSync(o.promptFile, path.join(agentDir, "AGENTS.md"));
-  const skillsDir = path.join(o.workDir, ".agents", "skills");
-  mkdirSync(skillsDir, { recursive: true });
-  for (const s of readManifest(o.candidate)) {
-    symlinkSync(path.join(o.candidate, s.target), path.join(skillsDir, s.name), "junction");
+  // agent.db 一旦拷进 profileDir 就是一份凭证副本：后面清单/junction 任何一步炸了，
+  // run.ts 那边还没来得及注册 cleanup（prepareOmpProfile 都没返回），只能这里自己兜底删掉，不能让它漏在 host 的 profiles/ 下。
+  try {
+    copyFileSync(db, path.join(agentDir, "agent.db"));
+    writeFileSync(path.join(agentDir, "config.yml"), CONFIG);
+    copyFileSync(o.promptFile, path.join(agentDir, "AGENTS.md"));
+    const skillsDir = path.join(o.workDir, ".agents", "skills");
+    mkdirSync(skillsDir, { recursive: true });
+    for (const s of readManifest(o.candidate)) {
+      symlinkSync(path.join(o.candidate, s.target), path.join(skillsDir, s.name), "junction");
+    }
+    const sessionDir = path.join(o.tmpDir, "omp-sessions");
+    mkdirSync(sessionDir, { recursive: true });
+    return { profile: o.name, profileDir, sessionDir, env: { ...process.env } };
+  } catch (err) {
+    rmSync(profileDir, { recursive: true, force: true });
+    throw err;
   }
-  const sessionDir = path.join(o.tmpDir, "omp-sessions");
-  mkdirSync(sessionDir, { recursive: true });
-  return { profile: o.name, profileDir, sessionDir, env: { ...process.env } };
 }
 
 /** profile 里有 agent.db 凭证副本，无论成败都要删。 */

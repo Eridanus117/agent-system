@@ -41,9 +41,13 @@ describe("nextQaTurn（假 QA）", () => {
     try {
       const r = qaRunner("m");
       const a = await nextQaTurn(r, "剧本", [{ role: "owner", text: "开场" }, { role: "agent", text: "范围？" }]);
-      expect(a).toEqual({ done: false, reply: "按你推荐的" });
+      expect(a).toMatchObject({ done: false, reply: "按你推荐的" });
+      expect(a.prompt).toContain("剧本");
+      expect(a.raw.length).toBeGreaterThan(0);
       const b = await nextQaTurn(r, "剧本", [{ role: "owner", text: "开场" }, { role: "agent", text: "范围？" }, { role: "owner", text: "按你推荐的" }, { role: "agent", text: "好" }]);
       expect(b.done).toBe(true);
+      expect(b.prompt).toContain("剧本");
+      expect(b.raw.length).toBeGreaterThan(0);
     } finally { delete process.env.SJ_QA_CMD; delete process.env.FAKE_QA_MAX; }
   });
   test("两次不合格式 → done 且 parseFailed", async () => {
@@ -54,6 +58,8 @@ describe("nextQaTurn（假 QA）", () => {
       expect(r.done).toBe(true);
       expect(r.parseFailed).toBe(true);
       expect(r.reason).toContain("不合格式");
+      expect(r.prompt).toContain("剧本");
+      expect(r.raw.length).toBeGreaterThan(0);
     } finally { delete process.env.SJ_QA_CMD; delete process.env.FAKE_QA_BROKEN; }
   });
 });

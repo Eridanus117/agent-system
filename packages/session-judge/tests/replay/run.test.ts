@@ -83,7 +83,11 @@ describe("replayOne（假 claude）", () => {
       expect(v.bankSha).toBe(gitHead(path.join(w.root, "agent-config")));
       for (const f of ["session.jsonl", "trajectory.md", "qa.jsonl", "usage.json", "verdict.json"]) expect(fs.existsSync(path.join(v.runDir, f))).toBe(true);
       // 第 1 轮后问了 QA 一次；第 2 轮到 max_turns 直接停，不再问 → qa.jsonl 一行
-      expect(fs.readFileSync(path.join(v.runDir, "qa.jsonl"), "utf8").trim().split("\n").length).toBe(1);
+      const qaLines = fs.readFileSync(path.join(v.runDir, "qa.jsonl"), "utf8").trim().split("\n");
+      expect(qaLines.length).toBe(1);
+      const qaRow = JSON.parse(qaLines[0]!);
+      expect(Object.keys(qaRow).sort()).toEqual(["parsed", "prompt", "raw", "turn"]);
+      expect(qaRow.parsed.done).toBe(false);
       expect(fs.readdirSync(w.tmp)).toEqual([]);
     } finally {
       for (const k of ["SJ_AGENT_CMD", "FAKE_TURNS", "SJ_QA_CMD", "FAKE_QA_MAX", "SJ_JUDGE_CMD"]) delete process.env[k];

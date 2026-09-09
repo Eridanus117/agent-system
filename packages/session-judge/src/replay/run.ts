@@ -102,7 +102,7 @@ export async function replayOne(o: RunOptions): Promise<Verdict> {
       transcript.push({ role: "agent", text: r.text });
       if (turns >= o.story.meta.max_turns) break;
       const q = await nextQaTurn(qa, o.story.script, transcript);
-      qaLog.push(JSON.stringify({ turn: turns, parsed: q }));
+      qaLog.push(JSON.stringify({ turn: turns, prompt: q.prompt, raw: q.raw, parsed: { done: q.done, reply: q.reply, reason: q.reason, parseFailed: q.parseFailed } }));
       if (q.done || !q.reply) break;
       next = q.reply;
     }
