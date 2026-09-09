@@ -26,6 +26,12 @@ describe("parseQaTurn", () => {
     expect(parseQaTurn('{"done":false}')).toBeNull();
     expect(parseQaTurn("不是")).toBeNull();
   });
+  test("文本里有两个 JSON 对象，取第一个配平的", () => {
+    expect(parseQaTurn('{"done":false,"reply":"先这个"} 然后 {"done":true}')).toEqual({ done: false, reply: "先这个" });
+  });
+  test("reply 字符串里带花括号不打断配平", () => {
+    expect(parseQaTurn('{"done":false,"reply":"用 {x} 占位"}')).toEqual({ done: false, reply: "用 {x} 占位" });
+  });
 });
 
 describe("nextQaTurn（假 QA）", () => {

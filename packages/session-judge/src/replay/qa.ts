@@ -18,11 +18,39 @@ export function buildQaPrompt(script: string, transcript: TranscriptLine[]): str
   ].join("\n") + "\n";
 }
 
+/** 从文本里取出第一个配平的 JSON 对象子串：从第一个 `{` 起，逐字符数花括号深度，
+ * 字符串字面量内的花括号（以及被转义的引号）不计入深度；配不平就换下一个 `{` 重试。 */
+export function extractFirstJsonObject(text: string): string | null {
+  let start = text.indexOf("{");
+  while (start !== -1) {
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (let i = start; i < text.length; i++) {
+      const ch = text[i];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (ch === "\\") escaped = true;
+        else if (ch === '"') inString = false;
+        continue;
+      }
+      if (ch === '"') inString = true;
+      else if (ch === "{") depth++;
+      else if (ch === "}") {
+        depth--;
+        if (depth === 0) return text.slice(start, i + 1);
+      }
+    }
+    start = text.indexOf("{", start + 1);
+  }
+  return null;
+}
+
 export function parseQaTurn(text: string): QaTurn | null {
-  const m = text.match(/\{[\s\S]*\}/);
+  const m = extractFirstJsonObject(text);
   if (!m) return null;
   let j: Record<string, unknown>;
-  try { j = JSON.parse(m[0]); } catch { return null; }
+  try { j = JSON.parse(m); } catch { return null; }
   if (typeof j.done !== "boolean") return null;
   if (!j.done && typeof j.reply !== "string") return null;
   const out: QaTurn = { done: j.done };
