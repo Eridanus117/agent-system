@@ -11,7 +11,18 @@ sj anchor <会话文件> [--from <json>] [--force]  主人判标准答案（已�
 sj agreement                                评委与标准答案的一致率（不足 10 道拒绝）
 sj sentinel [--judge claude|omp]            跑哨兵题，评委全给满分即报警
 sj list [--latest N]                        列最近会话
+sj replay <题号或题目录> [--client claude|omp] [--candidate <路径>] [--prompt <文件>] [--model <m>] [--qa-model <m>] [--judge claude|omp] [--keep]
+sj score  [--bank <题库目录>] [--client claude|omp] [--candidate <路径>] [--runs N] [--only <题号,...>]
 ```
+
+## 回放台（第二片）
+
+一道题 = 题库目录下的 `story.md`（题头 + 给 QA agent 的剧本 + 「## 验收判据」）+ `setup.ts`（造场景，调运行器给的动词）+ `checks.ts`（机械检查，调运行器给的动词）。`sj replay` 在临时目录造场景、造干净的客户端环境（Claude 用临时 `CLAUDE_CONFIG_DIR`，OMP 用临时 profile），无头起会话喂第一句，Haiku 按剧本扮主人回话到 `max_turns`，再用第一片的时间线做机械检查、评委按判据出三值。产物在 `~/.agent-system-state/session-judge/replay/<runId>/`。
+
+- 安全：场景仓的 `origin` 永远指向运行目录里的裸仓；起会话前校验，不过不起。
+- 环境变量：`SJ_BANK_DIR`（题库）、`SJ_WORKSPACE_ROOT`、`SJ_AGENT_CMD`（替换被测 CLI 可执行名，测试用）、`SJ_QA_CMD`（整条 QA 命令，测试用）。
+- 默认模型：被测 Claude `claude-sonnet-5`、被测 OMP `luna`、QA `claude-haiku-4-5-20251001`；都可用参数换。
+- 题库在 agent-config `80-agent配置/60-回放题库/`，私有；设计见 `docs/superpowers/specs/2026-09-09-session-judge-replay-design.md`。
 
 ## 环境变量
 
@@ -22,6 +33,10 @@ sj list [--latest N]                        列最近会话
 | `SJ_JUDGE_CMD` | 未设 → `claude -p --model claude-haiku-4-5-20251001`（`--judge omp` 时为 `omp -p --no-skills`） | 整体覆盖评委外部命令，主要供测试用假评委 |
 | `SJ_CLAUDE_DIR` | `~/.claude/projects` | `list` 扫 Claude 会话的根目录 |
 | `SJ_OMP_DIR` | `~/.omp/agent/sessions` | `list` 扫 OMP 会话的根目录 |
+| `SJ_BANK_DIR` | 向上查找 `agent-config/80-agent配置/60-回放题库` | `replay`/`score` 读题库的目录 |
+| `SJ_WORKSPACE_ROOT` | 题库目录往上三层 | 回放推导 `--candidate`/`--prompt` 默认值的工作区根 |
+| `SJ_AGENT_CMD` | 未设 → 各客户端自己的正常可执行名（`claude`/`omp`） | 整体替换被测 CLI 可执行名，仅测试用假脚本 |
+| `SJ_QA_CMD` | 未设 → `claude -p --model <qa-model> --no-session-persistence --output-format text` | 整条 QA 扮演命令，仅测试用假脚本 |
 
 ## 边界
 
