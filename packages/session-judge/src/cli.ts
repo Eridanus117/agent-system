@@ -192,6 +192,7 @@ export async function runCli(args: string[], io: CliIo): Promise<number> {
     try {
       const bank = flag("--bank") ?? bankDir();
       const story = loadStory(which, bank);
+      if (c && !story.meta.clients.includes(c)) { io.stderr(`题 ${story.meta.id} 不跑 ${c}（clients: ${story.meta.clients.join(", ")}）\n`); return 2; }
       if (story.meta.status !== "ready") { io.stderr(`题 ${story.meta.id} 的 status 是 ${story.meta.status}，不是 ready\n`); return 1; }
       const common = commonRunOpts(bank);
       const clients = c ? [c] : story.meta.clients;
