@@ -1,0 +1,150 @@
+// 主循环：全用假脚本（假 claude / 假 omp / 假 QA / 假评委），断言轮数、产物、三值、清理。
+import { describe, expect, test } from "bun:test";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { git, gitHead } from "../../src/replay/git.ts";
+import { replayOne, runId } from "../../src/replay/run.ts";
+import { parseStory } from "../../src/replay/story.ts";
+
+const FIX = path.join(import.meta.dir, "..", "..", "fixtures", "replay");
+const FAKE = path.join(FIX, "fake");
+
+interface World { root: string; bank: string; storyDir: string; candidate: string; hostClaude: string; hostOmp: string; prompt: string; state: string; tmp: string }
+
+function world(): World {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "sj-run-"));
+  // 工作区根下：fixture-repo（源仓）、agent-config/80-agent配置/60-回放题库/10-fixture（题库）、candidate（候选）
+  const src = path.join(root, "fixture-repo");
+  fs.mkdirSync(src);
+  git(["init", "-q", "-b", "main"], src);
+  fs.writeFileSync(path.join(src, "tool.ts"), "export {}\n");
+  git(["add", "."], src);
+  git(["-c", "user.email=t@x", "-c", "user.name=t", "commit", "-q", "-m", "初始"], src);
+  const bank = path.join(root, "agent-config", "80-agent配置", "60-回放题库");
+  const storyDir = path.join(bank, "10-fixture");
+  fs.cpSync(path.join(FIX, "story-ok"), storyDir, { recursive: true });
+  git(["init", "-q", "-b", "main"], path.join(root, "agent-config"));
+  git(["add", "."], path.join(root, "agent-config"));
+  git(["-c", "user.email=t@x", "-c", "user.name=t", "commit", "-q", "-m", "题库"], path.join(root, "agent-config"));
+  const candidate = path.join(root, "candidate");
+  fs.mkdirSync(path.join(candidate, "profiles", "daily"), { recursive: true });
+  fs.writeFileSync(path.join(candidate, "profiles", "daily", "manifest.json"), JSON.stringify({ skills: [] }));
+  git(["init", "-q", "-b", "main"], candidate);
+  git(["add", "."], candidate);
+  git(["-c", "user.email=t@x", "-c", "user.name=t", "commit", "-q", "-m", "候选"], candidate);
+  const hostClaude = path.join(root, "host-claude");
+  fs.mkdirSync(hostClaude);
+  fs.writeFileSync(path.join(hostClaude, ".credentials.json"), "{}");
+  const hostOmp = path.join(root, "host-omp", "agent");
+  fs.mkdirSync(hostOmp, { recursive: true });
+  fs.writeFileSync(path.join(hostOmp, "agent.db"), "db");
+  const prompt = path.join(root, "CLAUDE.md");
+  fs.writeFileSync(prompt, "# 规则\n");
+  return { root, bank, storyDir, candidate, hostClaude, hostOmp: path.join(root, "host-omp"), prompt, state: path.join(root, "state"), tmp: path.join(root, "tmp") };
+}
+
+function fakeJudge(root: string, verdict: string): string {
+  const f = path.join(root, "judge.mjs");
+  fs.writeFileSync(f, `let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{console.log('判决：${verdict}\\n证据：事件 2\\n说明：假评委。')});`);
+  return f;
+}
+
+function opts(w: World, client: "claude" | "omp") {
+  const story = parseStory(fs.readFileSync(path.join(w.storyDir, "story.md"), "utf8"), w.storyDir);
+  story.meta.commit = gitHead(path.join(w.root, "fixture-repo"));
+  return { story, client, candidate: w.candidate, promptFile: w.prompt, model: "m", qaModel: "q", judgeKind: "claude" as const, keep: false, bankDir: w.bank, workspaceRoot: w.root, stateRoot: w.state, tmpRoot: w.tmp, hostClaudeDir: w.hostClaude, hostOmpDir: w.hostOmp, log: () => {} };
+}
+
+describe("runId", () => {
+  test("形如 YYYYMMDD-HHmmss-<题>-<CLI>", () => {
+    expect(runId("10-fixture", "claude", new Date("2026-09-09T20:51:09Z"))).toBe("20260909-205109-10-fixture-claude");
+  });
+});
+
+describe("replayOne（假 claude）", () => {
+  test("agent 问范围、主人回、agent 停：两轮，pass，产物齐全，临时目录已删", async () => {
+    const w = world();
+    const turns = path.join(w.root, "turns.json");
+    // 第一轮 agent 只问；第二轮 agent 说好（没写码）
+    fs.writeFileSync(turns, JSON.stringify([{ text: "只给 list 吗？", rows: [] }, { text: "好，那就只给 list。", rows: [] }]));
+    process.env.SJ_AGENT_CMD = `node ${path.join(FAKE, "fake-claude.mjs")}`;
+    process.env.FAKE_TURNS = turns;
+    process.env.SJ_QA_CMD = `node ${path.join(FAKE, "fake-qa.mjs")}`;
+    process.env.FAKE_QA_MAX = "2";
+    process.env.SJ_JUDGE_CMD = `node ${fakeJudge(w.root, "pass")}`;
+    try {
+      const v = await replayOne(opts(w, "claude"));
+      expect(v.verdict).toBe("pass");
+      expect(v.turns).toBe(2);
+      expect(v.mechanical.every((m) => m.pass)).toBe(true);
+      expect(v.usage.costUsd).toBeCloseTo(0.02);
+      expect(v.candidateSha).toBe(gitHead(w.candidate));
+      expect(v.bankSha).toBe(gitHead(path.join(w.root, "agent-config")));
+      for (const f of ["session.jsonl", "trajectory.md", "qa.jsonl", "usage.json", "verdict.json"]) expect(fs.existsSync(path.join(v.runDir, f))).toBe(true);
+      // 第 1 轮后问了 QA 一次；第 2 轮到 max_turns 直接停，不再问 → qa.jsonl 一行
+      expect(fs.readFileSync(path.join(v.runDir, "qa.jsonl"), "utf8").trim().split("\n").length).toBe(1);
+      expect(fs.readdirSync(w.tmp)).toEqual([]);
+    } finally {
+      for (const k of ["SJ_AGENT_CMD", "FAKE_TURNS", "SJ_QA_CMD", "FAKE_QA_MAX", "SJ_JUDGE_CMD"]) delete process.env[k];
+    }
+  });
+  test("agent 直接写码：机械不过 → fail，评委不调用", async () => {
+    const w = world();
+    const turns = path.join(w.root, "turns.json");
+    fs.writeFileSync(turns, JSON.stringify([{ text: "改好了", rows: [{ type: "assistant", timestamp: "2026-09-09T00:00:00.000Z", message: { role: "assistant", content: [{ type: "tool_use", id: "x", name: "Write", input: { file_path: "C:/repo/tool.ts", content: "x" } }] } }] }]));
+    process.env.SJ_AGENT_CMD = `node ${path.join(FAKE, "fake-claude.mjs")}`;
+    process.env.FAKE_TURNS = turns;
+    process.env.SJ_QA_CMD = `node ${path.join(FAKE, "fake-qa.mjs")}`;
+    process.env.FAKE_QA_MAX = "1";
+    process.env.SJ_JUDGE_CMD = "node -e \"process.exit(9)\"";  // 评委若被调用会炸
+    try {
+      const v = await replayOne(opts(w, "claude"));
+      expect(v.verdict).toBe("fail");
+      expect(v.judge).toBeNull();
+      expect(v.mechanical.find((m) => m.id === "ownerReplyBeforeFirstCodeWrite")?.pass).toBe(false);
+    } finally {
+      for (const k of ["SJ_AGENT_CMD", "FAKE_TURNS", "SJ_QA_CMD", "FAKE_QA_MAX", "SJ_JUDGE_CMD"]) delete process.env[k];
+    }
+  });
+  test("被测 CLI 起不来 → indeterminate 带 reason，临时目录仍清理", async () => {
+    const w = world();
+    // 用独立脚本文件而不是 `node -e`：Node 在脚本路径之后就不再把追加的 claude 参数当自己的
+    // option 解析（`-e` 后紧跟 `--model` 这类参数会被 Node 自己吃掉，报 bad option，退出码不是 7）。
+    const exit7 = path.join(w.root, "exit7.mjs");
+    fs.writeFileSync(exit7, "process.exit(7);\n");
+    process.env.SJ_AGENT_CMD = `node ${exit7}`;
+    try {
+      const v = await replayOne(opts(w, "claude"));
+      expect(v.verdict).toBe("indeterminate");
+      expect(v.reason).toContain("退出 7");
+      expect(fs.existsSync(path.join(v.runDir, "verdict.json"))).toBe(true);
+      expect(fs.readdirSync(w.tmp)).toEqual([]);
+    } finally { delete process.env.SJ_AGENT_CMD; }
+  });
+});
+
+describe("replayOne（假 omp）", () => {
+  test("跑通两轮，profile 已删", async () => {
+    const w = world();
+    const turns = path.join(w.root, "turns.json");
+    // 两轮：第一轮 agent 问范围，第二轮主人真的回了一句，让 ownerReplyBeforeFirstCodeWrite 有据可循。
+    fs.writeFileSync(turns, JSON.stringify([{ text: "范围？", rows: [] }, { text: "好", rows: [] }]));
+    process.env.SJ_AGENT_CMD = `node ${path.join(FAKE, "fake-omp.mjs")}`;
+    process.env.FAKE_TURNS = turns;
+    process.env.SJ_QA_CMD = `node ${path.join(FAKE, "fake-qa.mjs")}`;
+    process.env.FAKE_QA_MAX = "2";
+    process.env.SJ_JUDGE_CMD = `node ${fakeJudge(w.root, "pass")}`;
+    try {
+      const v = await replayOne(opts(w, "omp"));
+      expect(v.verdict).toBe("pass");
+      expect(v.turns).toBe(2);
+      // 第 1 轮后问了 QA 一次；第 2 轮到 max_turns 直接停，不再问 → qa.jsonl 一行
+      expect(fs.readFileSync(path.join(v.runDir, "qa.jsonl"), "utf8").trim().split("\n").length).toBe(1);
+      expect(fs.existsSync(path.join(w.hostOmp, "profiles"))).toBe(true);
+      expect(fs.readdirSync(path.join(w.hostOmp, "profiles"))).toEqual([]);
+    } finally {
+      for (const k of ["SJ_AGENT_CMD", "FAKE_TURNS", "SJ_QA_CMD", "FAKE_QA_MAX", "SJ_JUDGE_CMD"]) delete process.env[k];
+    }
+  });
+});
