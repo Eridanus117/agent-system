@@ -50,8 +50,8 @@ export function parseSummary(text: string): string | null {
 
 export type JudgeRunner = (prompt: string) => Promise<string>;
 
-/** 起一条外部命令，prompt 走 stdin，收 stdout；退出非 0 抛错。评委与 QA agent 共用。 */
-export function commandRunner(cmd: string): JudgeRunner {
+/** 起一条外部命令，prompt 走 stdin，收 stdout；退出非 0 抛错。评委与 QA agent 共用，label 区分错误信息里说的是谁。 */
+export function commandRunner(cmd: string, label = "评委"): JudgeRunner {
   return (prompt) => new Promise((resolve, reject) => {
     const child = spawn(cmd, { shell: true, stdio: ["pipe", "pipe", "pipe"] });
     let out = "";
@@ -59,7 +59,7 @@ export function commandRunner(cmd: string): JudgeRunner {
     child.stdout.on("data", (d) => { out += d; });
     child.stderr.on("data", (d) => { err += d; });
     child.on("error", reject);
-    child.on("close", (code) => (code === 0 ? resolve(out) : reject(new Error(`评委进程退出 ${code}：${err.slice(0, 300)}`))));
+    child.on("close", (code) => (code === 0 ? resolve(out) : reject(new Error(`${label}进程退出 ${code}：${err.slice(0, 300)}`))));
     // 评委进程可能不读 stdin 就提前退出（比如假评委 process.exit(3)）：写大 prompt 时会撞 EPIPE，
     // 不接住就是未捕获异常、能把测试进程带崩。这里吞掉 stdin 的 error，交由上面的 close 处理器
     // （对端已退出，close 事件仍会触发并给出「评委进程退出 N」）负责真正的失败报告。
@@ -75,7 +75,7 @@ export function runnerFor(kind: "claude" | "omp"): JudgeRunner {
     ? override
     : kind === "omp"
       ? "omp -p --no-skills"
-      : "claude -p --model claude-haiku-4-5-20251001";
+      : "claude -p --model claude-haiku-4-5-20251001 --no-session-persistence";
   return commandRunner(cmd);
 }
 

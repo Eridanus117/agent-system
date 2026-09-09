@@ -34,8 +34,8 @@ const USAGE = `用法：
   sj agreement                      评委与标准答案的一致率（不足 10 道拒绝）
   sj sentinel [--judge claude|omp]           跑哨兵题，评委全给满分即报警
   sj list [--latest N]              列最近会话
-  sj replay <题号或题目录> [--client claude|omp] [--candidate <路径>] [--prompt <文件>] [--model <m>] [--qa-model <m>] [--judge claude|omp] [--keep]   做一道题
-  sj score [--bank <题库目录>] [--client claude|omp] [--candidate <路径>] [--runs N] [--only <题号,...>]   整个题库做一遍，出表和两个 SHA
+  sj replay <题号或题目录> [--client claude|omp] [--bank <题库目录>] [--candidate <路径>] [--prompt <文件>] [--model <m>] [--qa-model <m>] [--judge claude|omp] [--keep]   做一道题
+  sj score [--bank <题库目录>] [--client claude|omp] [--candidate <路径>] [--runs N] [--only <题号,...>] [--model <m>] [--keep]   整个题库做一遍，出表和两个 SHA
 `;
 
 export async function runCli(args: string[], io: CliIo): Promise<number> {

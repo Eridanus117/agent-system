@@ -61,7 +61,7 @@ export function parseQaTurn(text: string): QaTurn | null {
 
 /** QA agent 的外部命令：SJ_QA_CMD 整体覆盖，否则用 Haiku 的 print 模式且不留会话。 */
 export function qaRunner(model: string): JudgeRunner {
-  return commandRunner(process.env.SJ_QA_CMD ?? `claude -p --model ${model} --no-session-persistence --output-format text`);
+  return commandRunner(process.env.SJ_QA_CMD ?? `claude -p --model ${model} --no-session-persistence --output-format text`, "QA agent");
 }
 
 export async function nextQaTurn(runner: JudgeRunner, script: string, transcript: TranscriptLine[]): Promise<QaTurn & { parseFailed?: true; prompt: string; raw: string }> {

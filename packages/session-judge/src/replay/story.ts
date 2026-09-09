@@ -78,6 +78,9 @@ export function parseStory(md: string, dir: string): Story {
   const script = body.slice(0, idx).trim();
   const criterion = body.slice(idx).replace(/^## 验收判据\s*$/m, "").trim();
   if (!criterion) throw new Error("「## 验收判据」下面没有内容");
+  // 剧本必须用「」标出第一句原话，QA agent 与 run.ts 的 firstOpening 都靠这对括号找开场白；
+  // 没有的话之前会静默退化成剧本第一行，读错剧本也不报错，这里当场拦掉。
+  if (!/「[\s\S]*?」/.test(script)) throw new Error("剧本里缺第一句原话（用「」括起来）");
   return { dir, meta: m, script, criterion };
 }
 

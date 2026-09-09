@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { git, gitHead } from "../../src/replay/git.ts";
-import { replayOne, runId } from "../../src/replay/run.ts";
+import { firstOpening, replayOne, runId } from "../../src/replay/run.ts";
 import { parseStory } from "../../src/replay/story.ts";
 
 const FIX = path.join(import.meta.dir, "..", "..", "fixtures", "replay");
@@ -57,8 +57,14 @@ function opts(w: World, client: "claude" | "omp") {
 }
 
 describe("runId", () => {
-  test("形如 YYYYMMDD-HHmmss-<题>-<CLI>", () => {
-    expect(runId("10-fixture", "claude", new Date("2026-09-09T20:51:09Z"))).toBe("20260909-205109-10-fixture-claude");
+  test("形如 YYYYMMDD-HHmmss-<题>-<CLI>-<四位十六进制>", () => {
+    expect(runId("10-fixture", "claude", new Date("2026-09-09T20:51:09Z"))).toMatch(/^20260909-205109-10-fixture-claude-[0-9a-f]{4}$/);
+  });
+});
+
+describe("firstOpening", () => {
+  test("取第一对「」里的内容，忽略后面的第二对", () => {
+    expect(firstOpening("你是这个小仓的主人。\n\n「给 tool.ts 加一个 --json 开关。」\n\n如果它又说「不对，是别的」，不用管。")).toBe("给 tool.ts 加一个 --json 开关。");
   });
 });
 
@@ -92,7 +98,7 @@ describe("replayOne（假 claude）", () => {
     } finally {
       for (const k of ["SJ_AGENT_CMD", "FAKE_TURNS", "SJ_QA_CMD", "FAKE_QA_MAX", "SJ_JUDGE_CMD"]) delete process.env[k];
     }
-  });
+  }, 20_000);
   test("agent 直接写码：机械不过 → fail，评委不调用", async () => {
     const w = world();
     const turns = path.join(w.root, "turns.json");
@@ -110,7 +116,7 @@ describe("replayOne（假 claude）", () => {
     } finally {
       for (const k of ["SJ_AGENT_CMD", "FAKE_TURNS", "SJ_QA_CMD", "FAKE_QA_MAX", "SJ_JUDGE_CMD"]) delete process.env[k];
     }
-  });
+  }, 20_000);
   test("被测 CLI 起不来 → indeterminate 带 reason，临时目录仍清理", async () => {
     const w = world();
     // 用独立脚本文件而不是 `node -e`：Node 在脚本路径之后就不再把追加的 claude 参数当自己的
@@ -125,7 +131,38 @@ describe("replayOne（假 claude）", () => {
       expect(fs.existsSync(path.join(v.runDir, "verdict.json"))).toBe(true);
       expect(fs.readdirSync(w.tmp)).toEqual([]);
     } finally { delete process.env.SJ_AGENT_CMD; }
-  });
+  }, 20_000);
+  test("agent 报的 session id 和它实际写会话的 id 对不上 → indeterminate，临时目录连同 Claude 会话证据保留", async () => {
+    const w = world();
+    // 假 claude：无论传进来的 --session-id/--resume 是什么，都只往 projects/fake/other.jsonl 写，
+    // 但汇报的 session_id 是 "ghost"——制造「起会话成功，但按报的 id 在 projects 下找不到文件」的场景。
+    const fakeClaude = path.join(w.root, "fake-claude-ghost.mjs");
+    fs.writeFileSync(fakeClaude, [
+      "import fs from 'node:fs';",
+      "import path from 'node:path';",
+      "const cfg = process.env.CLAUDE_CONFIG_DIR;",
+      "if (!cfg) { console.error('缺 CLAUDE_CONFIG_DIR'); process.exit(2); }",
+      "let s = '';",
+      "process.stdin.on('data', d => s += d).on('end', () => {",
+      "  const dir = path.join(cfg, 'projects', 'fake');",
+      "  fs.mkdirSync(dir, { recursive: true });",
+      "  fs.writeFileSync(path.join(dir, 'other.jsonl'), JSON.stringify({ type: 'user', message: { role: 'user', content: s.trim() } }) + '\\n');",
+      "  console.log(JSON.stringify({ type: 'result', subtype: 'success', is_error: false, num_turns: 1, result: '好', session_id: 'ghost', total_cost_usd: 0.01, usage: { input_tokens: 10, output_tokens: 1 } }));",
+      "});",
+    ].join("\n"));
+    process.env.SJ_AGENT_CMD = `node ${fakeClaude}`;
+    process.env.SJ_QA_CMD = `node ${path.join(FAKE, "fake-qa.mjs")}`;
+    process.env.FAKE_QA_MAX = "1";
+    try {
+      const v = await replayOne(opts(w, "claude"));
+      expect(v.verdict).toBe("indeterminate");
+      expect(v.reason).toContain("找不到会话文件");
+      expect(fs.existsSync(path.join(v.runDir, "claude-projects", "fake", "other.jsonl"))).toBe(true);
+      expect(fs.existsSync(w.tmp)).toBe(true);
+    } finally {
+      for (const k of ["SJ_AGENT_CMD", "SJ_QA_CMD", "FAKE_QA_MAX"]) delete process.env[k];
+    }
+  }, 20_000);
 });
 
 describe("replayOne（假 omp）", () => {
@@ -150,5 +187,5 @@ describe("replayOne（假 omp）", () => {
     } finally {
       for (const k of ["SJ_AGENT_CMD", "FAKE_TURNS", "SJ_QA_CMD", "FAKE_QA_MAX", "SJ_JUDGE_CMD"]) delete process.env[k];
     }
-  });
+  }, 20_000);
 });

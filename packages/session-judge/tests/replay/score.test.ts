@@ -102,6 +102,8 @@ describe("scoreAll（假脚本）", () => {
         hostClaudeDir: w.hostClaude, hostOmpDir: w.hostOmp, log: () => {},
       });
       expect(r.verdicts.length).toBe(3);
+      // runId 现在带随机后缀，三次跑各自的 runDir 不该互相覆盖。
+      expect(new Set(r.verdicts.map((v) => v.runDir)).size).toBe(3);
       expect(r.cells).toEqual([{ story: "10-fixture", client: "claude", verdict: "pass" }]);
       const candidateSha = gitHead(w.candidate);
       const bankSha = gitHead(path.join(w.root, "agent-config"));

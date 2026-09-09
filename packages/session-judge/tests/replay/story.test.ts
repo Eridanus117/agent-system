@@ -37,6 +37,10 @@ describe("parseStory", () => {
     const md = fs.readFileSync(path.join(FIX, "story-ok", "story.md"), "utf8").replace("## 验收判据", "## 别的");
     expect(() => parseStory(md, FIX)).toThrow("验收判据");
   });
+  test("剧本没有「」括起来的第一句原话抛错", () => {
+    const md = fs.readFileSync(path.join(FIX, "story-ok", "story.md"), "utf8").replace(/[「」]/g, "");
+    expect(() => parseStory(md, FIX)).toThrow("剧本里缺第一句原话");
+  });
 });
 
 describe("题库定位", () => {

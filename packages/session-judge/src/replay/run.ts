@@ -1,6 +1,7 @@
 // 一题一 CLI 的主循环：造场景 → 隔离环境 → 一轮轮跑（被测 CLI ↔ QA agent）→ 时间线 → 机械动词 → 评委 → 三值 → 落盘 → 清理。
 // 任何一步抛错都收成 indeterminate 带 reason；凭证副本无论成败都删。
-import { copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { runnerFor } from "../judge.ts";
 import { loadTimeline, renderTimeline } from "../timeline.ts";
@@ -38,7 +39,9 @@ export interface RunOptions {
 export function runId(storyId: string, client: Client, now = new Date()): string {
   const p = (n: number) => String(n).padStart(2, "0");
   const stamp = `${now.getUTCFullYear()}${p(now.getUTCMonth() + 1)}${p(now.getUTCDate())}-${p(now.getUTCHours())}${p(now.getUTCMinutes())}${p(now.getUTCSeconds())}`;
-  return `${stamp}-${storyId}-${client}`;
+  // 秒级时间戳撞车（比如 --runs 3 三次连着跑）会覆盖自己的 runDir/tmpDir，加四位随机十六进制后缀避免。
+  const suffix = randomBytes(2).toString("hex");
+  return `${stamp}-${storyId}-${client}-${suffix}`;
 }
 
 function firstLine(s: string): string {
@@ -61,7 +64,16 @@ export async function replayOne(o: RunOptions): Promise<Verdict> {
   const cleanups: Array<() => void> = [];
   let sessionCopied = false;
   let sessionId = "";
+  let claudeConfigDir: string | undefined;
   const promptFile = o.promptFileFor?.(o.client) ?? o.promptFile;
+  // Ctrl-C／被杀（SIGINT/SIGTERM）不会走 finally：这里单独兜底，跑一遍已注册的清理再退出，
+  // 避免半途留下凭证副本（临时 CLAUDE_CONFIG_DIR／OMP profile）。finally 里会移除这两个监听。
+  const onSignal = () => {
+    for (const c of cleanups) { try { c(); } catch { /* 清理失败不影响退出 */ } }
+    process.exit(130);
+  };
+  process.once("SIGINT", onSignal);
+  process.once("SIGTERM", onSignal);
   try {
     // 1. 造场景
     const { setup, checks } = await loadStoryModules(o.story);
@@ -76,6 +88,7 @@ export async function replayOne(o: RunOptions): Promise<Verdict> {
     const timeoutMs = o.story.meta.turn_timeout_min * 60_000;
     if (o.client === "claude") {
       const env = prepareClaudeHome({ tmpDir, candidate: o.candidate, promptFile, ...(o.hostClaudeDir ? { hostConfigDir: o.hostClaudeDir } : {}) });
+      claudeConfigDir = env.configDir;
       cleanups.push(() => removeClaudeHome(env));
       cli = claudeCli(env, { model: o.model, workDir, timeoutMs });
     } else {
@@ -100,14 +113,15 @@ export async function replayOne(o: RunOptions): Promise<Verdict> {
       sessionId = r.sessionId;
       usage = addUsage(usage, r.usage);
       transcript.push({ role: "agent", text: r.text });
+      // 每轮收到结果就立刻记，不等循环跑完：后面某一轮再抛错的话，verdict.json 也能报出已经跑完的轮数与花费。
+      base.turns = turns;
+      base.usage = usage;
       if (turns >= o.story.meta.max_turns) break;
       const q = await nextQaTurn(qa, o.story.script, transcript);
       qaLog.push(JSON.stringify({ turn: turns, prompt: q.prompt, raw: q.raw, parsed: { done: q.done, reply: q.reply, reason: q.reason, parseFailed: q.parseFailed } }));
       if (q.done || !q.reply) break;
       next = q.reply;
     }
-    base.turns = turns;
-    base.usage = usage;
     writeFileSync(path.join(runDir, "qa.jsonl"), qaLog.length ? qaLog.join("\n") + "\n" : "");
     writeFileSync(path.join(runDir, "usage.json"), JSON.stringify(usage, null, 2) + "\n");
 
@@ -132,9 +146,18 @@ export async function replayOne(o: RunOptions): Promise<Verdict> {
     base.reason = (err as Error).message;
     log(`出错：${base.reason}`);
   } finally {
-    for (const c of cleanups) { try { c(); } catch { /* 清理失败不掩盖主错误 */ } }
+    process.off("SIGINT", onSignal);
+    process.off("SIGTERM", onSignal);
     // 只有「agent 跑了、却找不到会话文件」这种情况保留临时目录供查（等同 --keep）；起不来、造场景失败都照删。
     const keepForInspection = !sessionCopied && sessionId !== "";
+    // Claude 的会话证据落在 configDir/projects 下，不在 tmpDir 里；cleanups 里的 removeClaudeHome
+    // 会把整个 configDir（包括 projects）一起删掉。要保留证据就得在清理跑之前，先把 projects 拷到
+    // runDir，不能指望「跳过删 tmpDir」能保住它。
+    if (keepForInspection && o.client === "claude" && claudeConfigDir) {
+      const projectsDir = path.join(claudeConfigDir, "projects");
+      if (existsSync(projectsDir)) cpSync(projectsDir, path.join(runDir, "claude-projects"), { recursive: true });
+    }
+    for (const c of cleanups) { try { c(); } catch { /* 清理失败不掩盖主错误 */ } }
     if (!o.keep && !keepForInspection) rmSync(tmpDir, { recursive: true, force: true });
     writeFileSync(path.join(runDir, "verdict.json"), JSON.stringify(base, null, 2) + "\n");
   }
