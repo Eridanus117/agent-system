@@ -71,4 +71,33 @@ describe("claudeCli（假 claude）", () => {
       delete process.env.FAKE_TURNS;
     }
   });
+  test("隔离目录在环境合并里必须赢：环境里的 CLAUDE_CONFIG_DIR 不能冲掉隔离的", async () => {
+    // 回归测试：确保 mergedEnv = { ...process.env, ...env.env } 的顺序正确。
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "sj-claude-"));
+    const host = path.join(root, "host-claude");
+    fs.mkdirSync(host);
+    fs.writeFileSync(path.join(host, ".credentials.json"), "{}");
+    fs.writeFileSync(path.join(root, "CLAUDE.md"), "");
+    const env = prepareClaudeHome({ tmpDir: path.join(root, "tmp"), candidate: makeCandidate(root), promptFile: path.join(root, "CLAUDE.md"), hostConfigDir: host });
+    const turns = path.join(root, "turns.json");
+    fs.writeFileSync(turns, JSON.stringify([{ text: "不该用 decoy", rows: [] }]));
+    const decoy = path.join(root, "decoy");
+    process.env.CLAUDE_CONFIG_DIR = decoy;
+    process.env.SJ_AGENT_CMD = `node ${FAKE}`;
+    process.env.FAKE_TURNS = turns;
+    try {
+      const cli = claudeCli(env, { model: "m", workDir: root, timeoutMs: 20000 });
+      const a = await cli.start("测试隔离");
+      const f = cli.sessionFile(a.sessionId);
+      expect(f).not.toBeNull();
+      // 确保会话文件落在真实隔离目录下，而不是虚假的 decoy
+      expect(f!.startsWith(env.configDir)).toBe(true);
+      // 验证虚假目录从未被创建
+      expect(fs.existsSync(decoy)).toBe(false);
+    } finally {
+      delete process.env.CLAUDE_CONFIG_DIR;
+      delete process.env.SJ_AGENT_CMD;
+      delete process.env.FAKE_TURNS;
+    }
+  });
 });

@@ -40,8 +40,8 @@ export function claudeCli(env: ClaudeEnv, o: { model: string; workDir: string; t
   if (!env.env.CLAUDE_CONFIG_DIR) throw new Error("被测 Claude 进程缺 CLAUDE_CONFIG_DIR，拒绝起会话");
   const base = ["-p", "--model", o.model, "--output-format", "json", "--dangerously-skip-permissions"];
   const run = async (extra: string[], prompt: string) => {
-    // 合并当前 process.env 和捕获的 env.env，使 SJ_AGENT_CMD / FAKE_TURNS 等测试时设的变量能传到子进程。
-    const mergedEnv = { ...env.env, ...process.env };
+    // 合并顺序：先 process.env 后 env.env，确保隔离的 CLAUDE_CONFIG_DIR 赢过环境里的同名变量。
+    const mergedEnv = { ...process.env, ...env.env };
     const r = await runCommand(agentExecutable("claude"), [...base, ...extra], { cwd: o.workDir, env: mergedEnv, stdin: prompt, timeoutMs: o.timeoutMs });
     if (r.timedOut) throw new Error(`被测 Claude 超时（${Math.round(o.timeoutMs / 60000)} 分钟）`);
     if (r.code !== 0) throw new Error(`被测 Claude 退出 ${r.code}：${r.stderr.slice(0, 300)}`);
