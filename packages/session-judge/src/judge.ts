@@ -50,14 +50,8 @@ export function parseSummary(text: string): string | null {
 
 export type JudgeRunner = (prompt: string) => Promise<string>;
 
-/** 起外部评委进程，prompt 走 stdin。SJ_JUDGE_CMD 可整体覆盖（测试用）。 */
-export function runnerFor(kind: "claude" | "omp"): JudgeRunner {
-  const override = process.env.SJ_JUDGE_CMD;
-  const cmd = override
-    ? override
-    : kind === "omp"
-      ? "omp -p --no-skills"
-      : "claude -p --model claude-haiku-4-5-20251001";
+/** 起一条外部命令，prompt 走 stdin，收 stdout；退出非 0 抛错。评委与 QA agent 共用。 */
+export function commandRunner(cmd: string): JudgeRunner {
   return (prompt) => new Promise((resolve, reject) => {
     const child = spawn(cmd, { shell: true, stdio: ["pipe", "pipe", "pipe"] });
     let out = "";
@@ -72,6 +66,17 @@ export function runnerFor(kind: "claude" | "omp"): JudgeRunner {
     child.stdin.on("error", () => {});
     child.stdin.end(prompt);
   });
+}
+
+/** 起外部评委进程，prompt 走 stdin。SJ_JUDGE_CMD 可整体覆盖（测试用）。 */
+export function runnerFor(kind: "claude" | "omp"): JudgeRunner {
+  const override = process.env.SJ_JUDGE_CMD;
+  const cmd = override
+    ? override
+    : kind === "omp"
+      ? "omp -p --no-skills"
+      : "claude -p --model claude-haiku-4-5-20251001";
+  return commandRunner(cmd);
 }
 
 export interface JudgeOutcome {
