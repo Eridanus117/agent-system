@@ -91,7 +91,7 @@
 2. **造场景。** 跑题的 `setup.ts`。
 3. **造干净的客户端环境。**
    - Claude：临时目录当 `CLAUDE_CONFIG_DIR`，里面放三样：从主配置目录拷来的登录凭证文件、只含「已完成引导」一项的 `.claude.json`、候选版本的 skill 与共用提示词。skill 按候选检出的 `profiles/daily/manifest.json` 逐条以 junction 投到 `<dir>/skills/<name>`；共用提示词拷到 `<dir>/CLAUDE.md`。工作区信任对话框在 print 模式下自动跳过。
-   - OMP：`--profile sj-<runid>` 隔离设置、会话与缓存；登录走全局的 auth-broker，不动。用 `--config` 叠加一份只关掉用户级 skill 与扩展、开项目级 skill 的配置；候选 skill 投到 `work/.agents/skills/`，共用提示词放 profile 的 `AGENTS.md`。`--session-dir` 指到运行目录。
+   - OMP：`--profile sj-<runid>` 隔离设置、会话与缓存。探针（2026-09-09）证实新 profile 没有登录态，要把主 profile 的 `agent/agent.db` 拷进 `profiles/sj-<runid>/agent/`；规则读的是 `profiles/sj-<runid>/agent/AGENTS.md`。profile 自己的 `agent/config.yml` 只关掉用户级 skill 与扩展、开项目级 skill；候选 skill 投到 `work/.agents/skills/`。`--session-dir` 指到临时目录。跑完无论成败删掉整个 profile 目录，因为里面有凭证副本。
    - 候选版本是 `--candidate <agent-system 检出路径>`，默认工作区里的主检出；共用提示词是 `--prompt <文件>`，默认工作区根的 `CLAUDE.md`（OMP 用同目录 `AGENTS.md`）。
 4. **第一轮。** 无头起会话喂剧本里的第一句原话，等 agent 停下。Claude：`claude -p --model <m> --dangerously-skip-permissions --session-id <uuid> --output-format json`；OMP：`omp -p --model <m> --auto-approve --mode json --max-time <n>m`。超过 `turn_timeout_min` 杀进程，该题 indeterminate。
 5. **QA 回话。** 把剧本上半、到目前为止的对话（主人每句、agent 每次最后那段话全文）交给 QA agent，要它按 JSON 回 `{ done, reply, reason }`。`done` 为假就用 `--resume` 续同一个会话喂 `reply`，回到第 4 步；`done` 为真或已到 `max_turns` 就停。QA 与评委调用都加 `--no-session-persistence`，不在主配置目录留垃圾会话。
