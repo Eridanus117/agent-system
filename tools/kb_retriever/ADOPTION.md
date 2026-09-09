@@ -21,7 +21,7 @@ python -m kb_retriever '{"stage":"pre-capacity-decision","object":"codex.token-b
 如果卡片文件不在 CLI 的默认向上查找路径，调用方仍需让 `kb_retriever` 包可导入，并显式传入只读卡片路径：
 
 ```text
-python -m kb_retriever "stage=pre-worktree-delete; object=orca.worktree; signals=dispatched running 任务绑定 worktree 两仓 main 保护对象 零未提交 零未推送" --cards C:\path\to\agent-control\knowledge\retrieval-cards.md --json
+python -m kb_retriever "stage=pre-worktree-delete; object=orca.worktree; signals=dispatched running 任务绑定 worktree 两仓 main 保护对象 零未提交 零未推送" --cards C:\path\to\agent-control\_archive\knowledge\retrieval-cards.md --json
 ```
 
 仓库根目录提供一个 Python 接线示例：

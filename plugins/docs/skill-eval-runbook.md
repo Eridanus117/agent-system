@@ -4,7 +4,7 @@
 
 ## 跑法（2026-09-02 改：隔离 HOME + 全量日志）
 
-本段命令使用 POSIX shell；macOS、Linux 和 Windows Git Bash 共用。先把 `WORKSPACE_ROOT` 设为包含 `agent-system`、`desk`、`knowledge` 等目录的工作区根目录；不要把盘符、用户名或机器绝对路径写进评测。
+本段命令使用 POSIX shell；macOS、Linux 和 Windows Git Bash 共用。先把 `WORKSPACE_ROOT` 设为包含 `agent-system`、`desk`、`logistics-kb` 等目录的工作区根目录；个人知识库位于 `desk/knowledge/`，不要把盘符、用户名或机器绝对路径写进评测。
 
 ```bash
 # 一次性准备：空 HOME、关记忆的 config 覆盖
@@ -73,7 +73,7 @@ omp -p --no-session --skills=<skill> --model <model> "只回答：你当前可�
 
 ```bash
 # 跑之前
-for r in agent-system delivery-spec-runtime knowledge desk work-spec; do
+for r in agent-system delivery-spec-runtime desk logistics-kb work-spec; do
   (cd "$WORKSPACE_ROOT/$r" && git status --short)
 done
 for w in "$WORKSPACE_ROOT"/worktrees/*/*; do
