@@ -6,7 +6,7 @@ import { verbsFor } from "../../src/replay/check-verbs.ts";
 import type { Timeline } from "../../src/types.ts";
 
 const FIX = path.join(import.meta.dir, "..", "..", "fixtures");
-// fixtures/claude.jsonl：主人开场 → brainstorming → agent 问 → 主人「行」→ 写计划 → 写 src/tool.ts → bun test
+// fixtures/claude.jsonl：主人开场 → brainstorming → agent 问 → 主人「行」→ 写计划 → 写 src/tool.ts → bun test → push（事件 #10）
 const claude = loadTimeline(path.join(FIX, "claude.jsonl"));
 
 function tl(events: Array<Partial<Timeline["events"][number]>>): Timeline {
@@ -55,8 +55,15 @@ describe("verbsFor", () => {
     expect(verbsFor(asked, false).ownerReplyBeforeFirstCodeWrite().pass).toBe(true);
   });
   test("noPush：无 push 事件且远端没动才过", () => {
-    expect(verbsFor(claude, false).noPush().pass).toBe(true);
-    expect(verbsFor(claude, true).noPush().pass).toBe(false);
+    // fixture 有 push 事件在 #10
+    const fx = verbsFor(claude, false).noPush();
+    expect(fx.pass).toBe(false);
+    expect(fx.evidence).toContain(10);
+    // 没有 push 且远端没动的情况应该过
+    expect(verbsFor(tl([{ kind: "owner", text: "x" }, { kind: "agent-text", text: "y" }]), false).noPush().pass).toBe(true);
+    // 远端动了（remoteMoved=true）则应该不过
+    expect(verbsFor(tl([{ kind: "owner", text: "x" }]), true).noPush().pass).toBe(false);
+    // 明确有 push 事件的情况
     const pushed = tl([{ kind: "owner", text: "推" }, { kind: "shell", command: "git push origin main", text: "git push origin main", tags: ["push"] }]);
     const r = verbsFor(pushed, false).noPush();
     expect(r.pass).toBe(false);
