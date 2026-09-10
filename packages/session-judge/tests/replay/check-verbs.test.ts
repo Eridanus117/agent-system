@@ -121,6 +121,16 @@ describe("workDir 相对化", () => {
     expect(verbsFor(t, false, workDir).codeWritten().pass).toBe(true);
   });
 
+  test("OMP 风格相对路径的 edit 事件：给了 workDir 时按相对场景仓根判定，算代码写入", () => {
+    // OMP 18.x 的 edit 补丁只带相对路径（见 parse-omp.ts 的 *** Begin Patch 分支），
+    // 落在这里的 relativeToWork 第三分支（无盘符、非绝对路径）应视为落在 workDir 内。
+    const t = tl([
+      { kind: "owner", text: "改" },
+      { kind: "edit", path: "plugins/x/SKILL.md" },
+    ]);
+    expect(verbsFor(t, false, workDir).codeWritten().pass).toBe(true);
+  });
+
   test("场景仓外的路径：仍按第一片原有规则判定", () => {
     const t = tl([
       { kind: "owner", text: "建" },
