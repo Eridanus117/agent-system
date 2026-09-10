@@ -138,7 +138,8 @@ export async function replayOne(o: RunOptions): Promise<Verdict> {
     const mechanical = (checks as (v: ReturnType<typeof verbsFor>) => CheckOutcome[])(verbsFor(t, remoteMoved, workDir));
     base.mechanical = mechanical;
     let judge: JudgeVerdict | null = null;
-    if (mechanical.every((m) => m.pass)) judge = await judgeReplay(t, o.story.criterion, runnerFor(o.judgeKind));
+    // transcript 里是每轮完整的原文（时间线里 agent 发言只截前 80 字），判「那句话说了什么」要靠它。
+    if (mechanical.every((m) => m.pass)) judge = await judgeReplay(t, o.story.criterion, runnerFor(o.judgeKind), transcript);
     base.judge = judge;
     base.verdict = combine(mechanical, judge);
   } catch (err) {

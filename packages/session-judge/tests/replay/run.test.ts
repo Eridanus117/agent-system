@@ -44,9 +44,14 @@ function world(): World {
   return { root, bank, storyDir, candidate, hostClaude, hostOmp: path.join(root, "host-omp"), prompt, state: path.join(root, "state"), tmp: path.join(root, "tmp") };
 }
 
-function fakeJudge(root: string, verdict: string): string {
+// capturePromptFile 给了就把收到的 prompt 整段落盘，供测试断言评委实际看到了什么
+// （比如「每轮的完整对话」一节有没有传进去）；不给就是原来的纯打分假评委。
+function fakeJudge(root: string, verdict: string, capturePromptFile?: string): string {
   const f = path.join(root, "judge.mjs");
-  fs.writeFileSync(f, `let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{console.log('判决：${verdict}\\n证据：事件 2\\n说明：假评委。')});`);
+  // .mjs 是 ESM，没有 require；要落盘就在顶部 import node:fs（不给 capturePromptFile 就不加这行）。
+  const importLine = capturePromptFile ? "import { writeFileSync } from 'node:fs';\n" : "";
+  const capture = capturePromptFile ? "writeFileSync(process.argv[2], s);" : "";
+  fs.writeFileSync(f, `${importLine}let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{${capture}console.log('判决：${verdict}\\n证据：事件 2\\n说明：假评委。')});`);
   return f;
 }
 
@@ -74,11 +79,12 @@ describe("replayOne（假 claude）", () => {
     const turns = path.join(w.root, "turns.json");
     // 第一轮 agent 只问；第二轮 agent 说好（没写码）
     fs.writeFileSync(turns, JSON.stringify([{ text: "只给 list 吗？", rows: [] }, { text: "好，那就只给 list。", rows: [] }]));
+    const capturedPrompt = path.join(w.root, "judge-prompt.txt");
     process.env.SJ_AGENT_CMD = `node ${path.join(FAKE, "fake-claude.mjs")}`;
     process.env.FAKE_TURNS = turns;
     process.env.SJ_QA_CMD = `node ${path.join(FAKE, "fake-qa.mjs")}`;
     process.env.FAKE_QA_MAX = "2";
-    process.env.SJ_JUDGE_CMD = `node ${fakeJudge(w.root, "pass")}`;
+    process.env.SJ_JUDGE_CMD = `node ${fakeJudge(w.root, "pass", capturedPrompt)} ${capturedPrompt}`;
     try {
       const v = await replayOne(opts(w, "claude"));
       expect(v.verdict).toBe("pass");
@@ -95,6 +101,10 @@ describe("replayOne（假 claude）", () => {
       expect(Object.keys(qaRow).sort()).toEqual(["parsed", "prompt", "raw", "turn"]);
       expect(qaRow.parsed.done).toBe(false);
       expect(fs.readdirSync(w.tmp)).toEqual([]);
+      // 评委实际收到的 prompt 里要有完整对话一节，而且 agent 那句话没被砍到只剩前 80 字。
+      const judgePrompt = fs.readFileSync(capturedPrompt, "utf8");
+      expect(judgePrompt).toContain("每轮的完整对话");
+      expect(judgePrompt).toContain("只给 list 吗？");
     } finally {
       for (const k of ["SJ_AGENT_CMD", "FAKE_TURNS", "SJ_QA_CMD", "FAKE_QA_MAX", "SJ_JUDGE_CMD"]) delete process.env[k];
     }

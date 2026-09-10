@@ -12,6 +12,30 @@ describe("buildReplayPrompt", () => {
     expect(p).not.toContain("{{判据}}");
     expect(p.indexOf("## 时间线")).toBeGreaterThan(p.indexOf("## 判据"));
   });
+
+  test("不给 transcript 时不含「每轮的完整对话」一节", () => {
+    const p = buildReplayPrompt(loadReplayRubric(), "判据", "# 时间线\n1. x");
+    expect(p).not.toContain("### 第 1 轮");
+    expect(p).not.toContain("## 每轮的完整对话（主人的话与 agent 那一轮最后一段完整回复）");
+  });
+
+  test("给 transcript 时按轮追加完整对话，超长文本截断", () => {
+    const longAgentText = "只给".repeat(1300); // 2600 字，超过 2000
+    const p = buildReplayPrompt(loadReplayRubric(), "判据", "# 时间线\n1. x", [
+      { role: "owner", text: "第一句主人的话" },
+      { role: "agent", text: "第一轮 agent 的完整回复" },
+      { role: "owner", text: "第二句主人的话" },
+      { role: "agent", text: longAgentText },
+    ]);
+    expect(p).toContain("## 每轮的完整对话（主人的话与 agent 那一轮最后一段完整回复）");
+    expect(p).toContain("### 第 1 轮");
+    expect(p).toContain("主人：第一句主人的话");
+    expect(p).toContain("agent：第一轮 agent 的完整回复");
+    expect(p).toContain("### 第 2 轮");
+    expect(p).toContain("主人：第二句主人的话");
+    expect(p).toContain(longAgentText.slice(0, 2000) + "…（截断）");
+    expect(p).not.toContain(longAgentText);
+  });
 });
 
 describe("parseReplayVerdict", () => {
