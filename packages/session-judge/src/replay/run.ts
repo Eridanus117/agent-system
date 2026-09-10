@@ -155,7 +155,9 @@ export async function replayOne(o: RunOptions): Promise<Verdict> {
     // runDir，不能指望「跳过删 tmpDir」能保住它。
     if (keepForInspection && o.client === "claude" && claudeConfigDir) {
       const projectsDir = path.join(claudeConfigDir, "projects");
-      if (existsSync(projectsDir)) cpSync(projectsDir, path.join(runDir, "claude-projects"), { recursive: true });
+      try {
+        if (existsSync(projectsDir)) cpSync(projectsDir, path.join(runDir, "claude-projects"), { recursive: true });
+      } catch { /* 证据保留尽力而为，不能掩盖主错误、不能跳过凭证清理 */ }
     }
     for (const c of cleanups) { try { c(); } catch { /* 清理失败不掩盖主错误 */ } }
     if (!o.keep && !keepForInspection) rmSync(tmpDir, { recursive: true, force: true });
