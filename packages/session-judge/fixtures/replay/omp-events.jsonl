@@ -1,0 +1,6 @@
+{"type":"session","version":3,"id":"01a087f0-f33c-70f7-9308-88a747c110e0","timestamp":"2026-09-09T20:51:50.204Z","cwd":"C:/repo/work"}
+{"type":"agent_start"}
+{"type":"turn_start"}
+{"type":"message_end","message":{"role":"user","content":[{"type":"text","text":"只回复两个字母：ok"}]}}
+{"type":"turn_end","message":{"role":"assistant","content":[{"type":"text","text":"ok"}],"model":"gpt-5.6-luna","usage":{"input":2688,"output":5,"cacheRead":0,"cacheWrite":0,"totalTokens":2693,"cost":{"input":0.0005376,"output":0.000006,"total":0.0005436}},"stopReason":"stop"},"toolResults":[]}
+{"type":"agent_end","messages":[],"isTerminal":true}

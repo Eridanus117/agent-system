@@ -4,14 +4,18 @@
 
 import { readFileSync, readdirSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadTimeline, renderTimeline } from "./timeline.ts";
 import { judgeTimeline, renderReport, runnerFor } from "./judge.ts";
-import { writeState } from "./state.ts";
+import { stateDir, writeState } from "./state.ts";
 import { ANCHOR_CELLS, agreement, assertAnchorsReady, loadAnchors, saveAnchor } from "./anchors.ts";
 import { listSessions } from "./sessions.ts";
-import { VERDICTS, type Verdict } from "./types.ts";
+import { bankDir, listStories, loadStory, parseStory, workspaceRootFrom } from "./replay/story.ts";
+import { replayOne } from "./replay/run.ts";
+import { DEFAULT_QA_MODEL, defaultModel, scoreAll } from "./replay/score.ts";
+import { VERDICTS, type Client, type Verdict } from "./types.ts";
 
 export function sentinelFiles(): string[] {
   const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "fixtures", "sentinels");
@@ -30,6 +34,8 @@ const USAGE = `用法：
   sj agreement                      评委与标准答案的一致率（不足 10 道拒绝）
   sj sentinel [--judge claude|omp]           跑哨兵题，评委全给满分即报警
   sj list [--latest N]              列最近会话
+  sj replay <题号或题目录> [--client claude|omp] [--bank <题库目录>] [--candidate <路径>] [--prompt <文件>] [--model <m>] [--qa-model <m>] [--judge claude|omp] [--keep]   做一道题
+  sj score [--bank <题库目录>] [--client claude|omp] [--candidate <路径>] [--runs N] [--only <题号,...>] [--model <m>] [--keep]   整个题库做一遍，出表和两个 SHA
 `;
 
 export async function runCli(args: string[], io: CliIo): Promise<number> {
@@ -163,6 +169,71 @@ export async function runCli(args: string[], io: CliIo): Promise<number> {
       else io.stdout(`${name}：评委识破（${applicable.map((r) => `${r.id} ${r.verdict}`).join("，")}）\n`);
     }
     return alarms ? 1 : 0;
+  }
+
+  const flag = (name: string): string | undefined => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
+  const clientArg = (): Client | undefined | null => {
+    const c = flag("--client");
+    if (c === undefined) return undefined;
+    return c === "claude" || c === "omp" ? c : null;
+  };
+  const commonRunOpts = (bank: string) => {
+    const root = workspaceRootFrom(bank);
+    const candidate = flag("--candidate") ?? path.join(root, "agent-system");
+    return { candidate, root, bankDir: bank, workspaceRoot: root, stateRoot: stateDir(), tmpRoot: path.join(os.tmpdir(), "sj-replay"), qaModel: flag("--qa-model") ?? DEFAULT_QA_MODEL, judgeKind: (flag("--judge") === "omp" ? "omp" : "claude") as "claude" | "omp", keep: args.includes("--keep"), log: (s: string) => io.stderr(s + "\n") };
+  };
+  const promptFor = (root: string, client: Client) => flag("--prompt") ?? path.join(root, client === "claude" ? "CLAUDE.md" : "AGENTS.md");
+
+  if (cmd === "replay") {
+    const which = args[1];
+    if (!which || which.startsWith("--")) { io.stderr("用法：sj replay <题号或题目录> [--client claude|omp] …\n"); return 2; }
+    const c = clientArg();
+    if (c === null) { io.stderr("--client 只支持 claude 或 omp\n"); return 2; }
+    try {
+      const bank = flag("--bank") ?? bankDir();
+      const story = loadStory(which, bank);
+      if (c && !story.meta.clients.includes(c)) { io.stderr(`题 ${story.meta.id} 不跑 ${c}（clients: ${story.meta.clients.join(", ")}）\n`); return 2; }
+      if (story.meta.status !== "ready") { io.stderr(`题 ${story.meta.id} 的 status 是 ${story.meta.status}，不是 ready\n`); return 1; }
+      const common = commonRunOpts(bank);
+      const clients = c ? [c] : story.meta.clients;
+      let bad = 0;
+      for (const client of clients) {
+        const v = await replayOne({ ...common, story, client, model: flag("--model") ?? defaultModel(client), promptFile: promptFor(common.root, client) });
+        io.stdout(`${story.meta.id} × ${client}：${v.verdict}${v.reason ? `（${v.reason}）` : ""}，${v.turns} 轮，$${v.usage.costUsd.toFixed(4)}\n`);
+        for (const m of v.mechanical) io.stdout(`  ${m.pass ? "✓" : "✗"} ${m.id}${m.note ? "：" + m.note : ""}\n`);
+        if (v.judge) io.stdout(`  评委：${v.judge.verdict}，事件 ${v.judge.evidence.join("、") || "—"}${v.judge.note ? "，" + v.judge.note : ""}\n`);
+        io.stdout(`  产物：${v.runDir}\n`);
+        if (v.verdict !== "pass") bad++;
+      }
+      return bad ? 1 : 0;
+    } catch (err) {
+      io.stderr(`${(err as Error).message}\n`);
+      return 1;
+    }
+  }
+
+  if (cmd === "score") {
+    const c = clientArg();
+    if (c === null) { io.stderr("--client 只支持 claude 或 omp\n"); return 2; }
+    const runs = Number(flag("--runs") ?? 1);
+    if (!Number.isInteger(runs) || runs < 1) { io.stderr("--runs 要是正整数\n"); return 2; }
+    try {
+      const bank = flag("--bank") ?? bankDir();
+      const only = flag("--only")?.split(",").map((s) => s.trim()).filter(Boolean);
+      const stories = listStories(bank)
+        .map((d) => parseStory(readFileSync(path.join(d, "story.md"), "utf8"), d))
+        .filter((s) => s.meta.status === "ready")
+        .filter((s) => !only || only.some((id) => s.meta.id.startsWith(id)));
+      if (!stories.length) { io.stderr(`题库里没有题：${bank}\n`); return 1; }
+      const common = commonRunOpts(bank);
+      const r = await scoreAll({ ...common, stories, runs, ...(c ? { clients: [c] } : {}), promptFile: promptFor(common.root, "claude"), promptFileFor: (client) => promptFor(common.root, client), modelFor: (client) => flag("--model") ?? defaultModel(client) });
+      io.stdout(r.table);
+      io.stdout(`汇总：${path.join(common.stateRoot, "replay", "summary.md")}\n`);
+      return r.cells.every((x) => x.verdict === "pass") ? 0 : 1;
+    } catch (err) {
+      io.stderr(`${(err as Error).message}\n`);
+      return 1;
+    }
   }
 
   if (cmd === "list") {

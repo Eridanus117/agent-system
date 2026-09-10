@@ -5,6 +5,7 @@ import path from "node:path";
 import { ompSessionId, parseOmp } from "../src/parse-omp.ts";
 
 const FIXTURE = readFileSync(path.join(import.meta.dir, "..", "fixtures", "omp.jsonl"), "utf8");
+const EDIT_PATCH_FIXTURE = readFileSync(path.join(import.meta.dir, "..", "fixtures", "omp-edit-patch.jsonl"), "utf8");
 
 describe("parseOmp", () => {
   const events = parseOmp(FIXTURE);
@@ -45,5 +46,41 @@ describe("parseOmp", () => {
     expect(result[0]?.text).toHaveLength(110);
     expect(result[0]?.command).toBe(command);
     expect(result[0]?.command?.length).toBeGreaterThan(110);
+  });
+
+  test("OMP 18.x 的 edit 补丁（arguments.input）：按方括号头部拆成多条 edit 事件，外加 task 派子任务", () => {
+    const events = parseOmp(EDIT_PATCH_FIXTURE);
+    const edits = events.filter((e) => e.kind === "edit");
+    expect(edits.map((e) => e.path)).toEqual([
+      "plugins/workcoding/skills/workcoding/SKILL.md",
+      "plugins/workcoding/skills/other/SKILL.md",
+    ]);
+    const subagents = events.filter((e) => e.kind === "subagent");
+    expect(subagents).toHaveLength(1);
+    expect(subagents[0]?.text).toBe("查一下测试");
+  });
+
+  test("edit 仍认 arguments.path（未走补丁分支）", () => {
+    const row = {
+      type: "message",
+      timestamp: "2026-09-09T10:00:00.000Z",
+      message: { role: "assistant", content: [{ type: "toolCall", name: "edit", arguments: { path: "C:/repo/src/c.ts" } }] },
+    };
+    const result = parseOmp(JSON.stringify(row));
+    expect(result).toHaveLength(1);
+    expect(result[0]?.kind).toBe("edit");
+    expect(result[0]?.path).toBe("C:/repo/src/c.ts");
+  });
+
+  test("edit 既无 path 也无可解析的补丁：退回空路径的单条事件", () => {
+    const row = {
+      type: "message",
+      timestamp: "2026-09-09T10:00:01.000Z",
+      message: { role: "assistant", content: [{ type: "toolCall", name: "edit", arguments: { input: "随便写点什么" } }] },
+    };
+    const result = parseOmp(JSON.stringify(row));
+    expect(result).toHaveLength(1);
+    expect(result[0]?.kind).toBe("edit");
+    expect(result[0]?.path).toBe("");
   });
 });
