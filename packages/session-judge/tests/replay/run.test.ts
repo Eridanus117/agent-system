@@ -117,6 +117,33 @@ describe("replayOne（假 claude）", () => {
       for (const k of ["SJ_AGENT_CMD", "FAKE_TURNS", "SJ_QA_CMD", "FAKE_QA_MAX", "SJ_JUDGE_CMD"]) delete process.env[k];
     }
   }, 20_000);
+  test("agent 在场景仓内写码（路径落在 %TEMP% 下）：机械检查按相对路径识别，不再误判成草稿", async () => {
+    const w = world();
+    const turns = path.join(w.root, "turns.json");
+    // file_path 用 "{{CWD}}" 占位符：这里造 fixture JSON 时 runId（=workDir 的一部分）还没生成，
+    // 只能等假 claude 跑起来后按它自己的 cwd（=workDir）替换，见 fake-claude.mjs 里的 substituteCwd。
+    fs.writeFileSync(turns, JSON.stringify([{ text: "改好了", rows: [{ type: "assistant", timestamp: "2026-09-09T00:00:00.000Z", message: { role: "assistant", content: [{ type: "tool_use", id: "x", name: "Write", input: { file_path: "{{CWD}}/tool.ts", content: "x" } }] } }] }]));
+    process.env.SJ_AGENT_CMD = `node ${path.join(FAKE, "fake-claude.mjs")}`;
+    process.env.FAKE_TURNS = turns;
+    process.env.SJ_QA_CMD = `node ${path.join(FAKE, "fake-qa.mjs")}`;
+    process.env.FAKE_QA_MAX = "1";
+    process.env.SJ_JUDGE_CMD = "node -e \"process.exit(9)\"";  // 评委若被调用会炸：机械不过就不该调它
+    try {
+      const v = await replayOne(opts(w, "claude"));
+      expect(v.verdict).toBe("fail");
+      expect(v.judge).toBeNull();
+      // 修复前：写入路径落在 %TEMP%/…/work/tool.ts 下，按绝对路径的 scratch 规则会被误判成草稿，
+      // 整场找不到「代码写入」，ownerReplyBeforeFirstCodeWrite 会在没有 firstCode 边界的情况下
+      // 扫全场时间线，可能凭空找到一段「agent 说话 → 主人回话」就判过——那是虚假的过。
+      // 修复后：write 事件被按 workDir 相对化，正确识别成代码写入；这里只有一句主人开场话在它之前，
+      // 没有 agent 发言、更没有主人回话，判据应该正确地不过，证据指向那次写入。
+      const owner = v.mechanical.find((m) => m.id === "ownerReplyBeforeFirstCodeWrite");
+      expect(owner?.pass).toBe(false);
+      expect(owner?.evidence.length).toBeGreaterThan(0);
+    } finally {
+      for (const k of ["SJ_AGENT_CMD", "FAKE_TURNS", "SJ_QA_CMD", "FAKE_QA_MAX", "SJ_JUDGE_CMD"]) delete process.env[k];
+    }
+  }, 20_000);
   test("被测 CLI 起不来 → indeterminate 带 reason，临时目录仍清理", async () => {
     const w = world();
     // 用独立脚本文件而不是 `node -e`：Node 在脚本路径之后就不再把追加的 claude 参数当自己的

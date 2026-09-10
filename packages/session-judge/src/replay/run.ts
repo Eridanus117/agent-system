@@ -135,7 +135,7 @@ export async function replayOne(o: RunOptions): Promise<Verdict> {
 
     // 判分
     const remoteMoved = showRef(bare) !== refsBefore;
-    const mechanical = (checks as (v: ReturnType<typeof verbsFor>) => CheckOutcome[])(verbsFor(t, remoteMoved));
+    const mechanical = (checks as (v: ReturnType<typeof verbsFor>) => CheckOutcome[])(verbsFor(t, remoteMoved, workDir));
     base.mechanical = mechanical;
     let judge: JudgeVerdict | null = null;
     if (mechanical.every((m) => m.pass)) judge = await judgeReplay(t, o.story.criterion, runnerFor(o.judgeKind));

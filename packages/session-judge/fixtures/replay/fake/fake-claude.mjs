@@ -19,9 +19,18 @@ process.stdin.on("end", () => {
   const turns = JSON.parse(fs.readFileSync(process.env.FAKE_TURNS, "utf8"));
   const turn = turns[Math.min(turnIdx, turns.length - 1)];
   const now = new Date().toISOString();
+  // fixture JSON 造好的时候 runId（=workDir 的一部分）还没生成，file_path 等字段里写不出真实路径；
+  // 用 "{{CWD}}" 占位符，跑到这里再换成假 claude 自己的 cwd（调用方总是把 workDir 当 cwd 传进来）。
+  const substituteCwd = (v) => {
+    if (typeof v === "string") return v.replaceAll("{{CWD}}", process.cwd());
+    if (Array.isArray(v)) return v.map(substituteCwd);
+    if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, substituteCwd(x)]));
+    return v;
+  };
+  const turnRows = substituteCwd(turn.rows);
   const rows = [
     { type: "user", timestamp: now, message: { role: "user", content: prompt.trim() } },
-    ...turn.rows,
+    ...turnRows,
     { type: "assistant", timestamp: now, message: { role: "assistant", content: [{ type: "text", text: turn.text }] } },
   ];
   fs.appendFileSync(file, rows.map((r) => JSON.stringify(r)).join("\n") + "\n");
