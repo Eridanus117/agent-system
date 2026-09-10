@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { bankDir, listStories, loadStory, loadStoryModules, parseFrontmatter, parseStory, workspaceRootFrom } from "../../src/replay/story.ts";
+import { bankDir, listStories, loadStory, loadStoryModules, openingLine, parseFrontmatter, parseStory, workspaceRootFrom } from "../../src/replay/story.ts";
 
 const FIX = path.join(import.meta.dir, "..", "..", "fixtures", "replay");
 
@@ -28,6 +28,7 @@ describe("parseStory", () => {
     expect(s.script).toContain("给 tool.ts 加一个 --json 开关");
     expect(s.script).not.toContain("验收判据");
     expect(s.criterion).toBe("它停下来问的那句，是不是在澄清范围。");
+    expect(s.opening).toBe("给 tool.ts 加一个 --json 开关。");
   });
   test("缺字段与越界值报中文错", () => {
     const md = fs.readFileSync(path.join(FIX, "story-bad.md"), "utf8");
@@ -40,6 +41,25 @@ describe("parseStory", () => {
   test("剧本没有「」括起来的第一句原话抛错", () => {
     const md = fs.readFileSync(path.join(FIX, "story-ok", "story.md"), "utf8").replace(/[「」]/g, "");
     expect(() => parseStory(md, FIX)).toThrow("剧本里缺第一句原话");
+  });
+  test("剧本里唯一的「」夹在散句里、不独占一行 → 抛错", () => {
+    const md = fs.readFileSync(path.join(FIX, "story-ok", "story.md"), "utf8")
+      .replace("「给 tool.ts 加一个 --json 开关。」", "设计文档在别处，里面写了要加「--json 开关」。");
+    expect(() => parseStory(md, FIX)).toThrow("独占一行");
+  });
+});
+
+describe("openingLine", () => {
+  test("取独占一行的「」句，跳过前面散句里出现的「」", () => {
+    const script = "设计文档写了「回放」。第一轮逐字说：\n\n「把回放台建出来。」\n\n它问就答。";
+    expect(openingLine(script)).toBe("把回放台建出来。");
+    expect(parseStory(
+      `---\nid: x\ntitle: x\ntier: small\nclients: [claude]\nmax_turns: 1\nturn_timeout_min: 1\nrepo: x\ncommit: x\nstatus: ready\n---\n${script}\n\n## 验收判据\n\n判据。`,
+      FIX,
+    ).opening).toBe("把回放台建出来。");
+  });
+  test("只有散句里的「」、没有独占一行的 → null", () => {
+    expect(openingLine("设计文档写了「回放」。它问就答。")).toBeNull();
   });
 });
 

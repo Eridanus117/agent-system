@@ -20,6 +20,7 @@ sj score  [--bank <题库目录>] [--client claude|omp] [--candidate <路径>] [
 一道题 = 题库目录下的 `story.md`（题头 + 给 QA agent 的剧本 + 「## 验收判据」）+ `setup.ts`（造场景，调运行器给的动词）+ `checks.ts`（机械检查，调运行器给的动词）。`sj replay` 在临时目录造场景、造干净的客户端环境（Claude 用临时 `CLAUDE_CONFIG_DIR`，OMP 用临时 profile），无头起会话喂第一句，Haiku 按剧本扮主人回话到 `max_turns`，再用第一片的时间线做机械检查、评委按判据出三值。产物在 `~/.agent-system-state/session-judge/replay/<runId>/`。
 
 - 安全：场景仓的 `origin` 永远指向运行目录里的裸仓；起会话前校验，不过不起。被测 agent 以 `--dangerously-skip-permissions` 跑、继承主机环境与 PATH，裸仓规则只保护场景仓；默认共用提示词照抄工作区的 `CLAUDE.md`，含写 desk 日志的规则，真跑前应用 `--prompt` 指定裁过的副本或确认接受。
+- 剧本里第一句原话要独占一行、用「」括起来，正文里别处的「」不算。
 - 环境变量：`SJ_BANK_DIR`（题库）、`SJ_WORKSPACE_ROOT`、`SJ_AGENT_CMD`（替换被测 CLI 可执行名，测试用）、`SJ_QA_CMD`（整条 QA 命令，测试用）。
 - 默认模型：被测 Claude `claude-sonnet-5`、被测 OMP `luna`、QA `claude-haiku-4-5-20251001`；都可用参数换。
 - 题库在 agent-config `80-agent配置/60-回放题库/`，私有；设计见 `docs/superpowers/specs/2026-09-09-session-judge-replay-design.md`。

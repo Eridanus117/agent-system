@@ -63,8 +63,8 @@ describe("runId", () => {
 });
 
 describe("firstOpening", () => {
-  test("取第一对「」里的内容，忽略后面的第二对", () => {
-    expect(firstOpening("你是这个小仓的主人。\n\n「给 tool.ts 加一个 --json 开关。」\n\n如果它又说「不对，是别的」，不用管。")).toBe("给 tool.ts 加一个 --json 开关。");
+  test("取独占一行的「」句，独占一行的赢过更早出现的散句里的「」", () => {
+    expect(firstOpening("设计文档写了「回放」。第一轮逐字说：\n\n「把回放台建出来。」\n\n如果它又说「不对，是别的」，不用管。")).toBe("把回放台建出来。");
   });
 });
 

@@ -21,6 +21,7 @@ export interface Story {
   meta: StoryMeta;
   script: string;     // 给 QA agent 的剧本（判据之前的正文）
   criterion: string;  // 主人写的一句判据（只给评委）
+  opening: string;    // 剧本里第一句原话（独占一行、用「」括起来的那句），由 openingLine 解出
 }
 
 const TIERS = ["small", "medium", "large", "negative"];
@@ -78,10 +79,24 @@ export function parseStory(md: string, dir: string): Story {
   const script = body.slice(0, idx).trim();
   const criterion = body.slice(idx).replace(/^## 验收判据\s*$/m, "").trim();
   if (!criterion) throw new Error("「## 验收判据」下面没有内容");
-  // 剧本必须用「」标出第一句原话，QA agent 与 run.ts 的 firstOpening 都靠这对括号找开场白；
-  // 没有的话之前会静默退化成剧本第一行，读错剧本也不报错，这里当场拦掉。
-  if (!/「[\s\S]*?」/.test(script)) throw new Error("剧本里缺第一句原话（用「」括起来）");
-  return { dir, meta: m, script, criterion };
+  // 剧本必须用独占一行的「」标出第一句原话，QA agent 与 run.ts 都靠 openingLine 找开场白；
+  // 正文散句里夹的「」（比如提到别处说过什么）不算，只认整行就是一对「」的那一行。
+  // 之前只检查「存在任意一对「」」，会把散句里最先出现的那对当成开场白，读错剧本也不报错。
+  const opening = openingLine(script);
+  if (opening === null) throw new Error("剧本里缺第一句原话（要独占一行、用「」括起来）");
+  return { dir, meta: m, script, criterion, opening };
+}
+
+/** 剧本里第一句原话：从头找第一行——trim 后整行正好是「…」——取里面的文字并 trim。
+ * 正文里夹在散句中的「」不算，必须独占一行才当开场白；没有这样的行就返回 null。 */
+export function openingLine(script: string): string | null {
+  for (const raw of script.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (line.length >= 2 && line.startsWith("「") && line.endsWith("」")) {
+      return line.slice(1, -1).trim();
+    }
+  }
+  return null;
 }
 
 export function listStories(bank: string): string[] {

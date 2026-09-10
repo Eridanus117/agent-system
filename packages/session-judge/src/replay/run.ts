@@ -13,7 +13,7 @@ import { claudeCli, prepareClaudeHome, removeClaudeHome } from "./isolate-claude
 import { ompCli, ompProfileName, prepareOmpProfile, removeOmpProfile } from "./isolate-omp.ts";
 import { type TranscriptLine, nextQaTurn, qaRunner } from "./qa.ts";
 import { assertOriginIsBare, bareDirOf, setupVerbsFor } from "./setup-verbs.ts";
-import { type Story, loadStoryModules } from "./story.ts";
+import { type Story, loadStoryModules, openingLine } from "./story.ts";
 import { type JudgeVerdict, type Verdict, combine, judgeReplay } from "./verdict.ts";
 
 export interface RunOptions {
@@ -98,7 +98,7 @@ export async function replayOne(o: RunOptions): Promise<Verdict> {
     }
 
     // 3–5. 一轮轮跑
-    const opening = firstOpening(o.story.script);
+    const opening = o.story.opening;
     const transcript: TranscriptLine[] = [];
     const qaLog: string[] = [];
     let usage: Usage = ZERO_USAGE;
@@ -170,8 +170,7 @@ function safeHead(dir: string): string {
   try { return gitHead(dir); } catch { return "unknown"; }
 }
 
-/** 剧本里第一句原话：取第一对「」里的内容；没有就整段剧本的第一行。 */
+/** 剧本里第一句原话：委托给 story.ts 的 openingLine（独占一行的「」才算），保留导出只为兼容旧测试。 */
 export function firstOpening(script: string): string {
-  const m = script.match(/「([\s\S]*?)」/);
-  return (m?.[1] ?? firstLine(script)).trim();
+  return openingLine(script) ?? "";
 }
