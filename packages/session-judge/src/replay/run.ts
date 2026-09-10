@@ -10,7 +10,7 @@ import { type AgentCli, type Usage, ZERO_USAGE, addUsage } from "./agent-cli.ts"
 import { type CheckOutcome, verbsFor } from "./check-verbs.ts";
 import { gitHead, showRef } from "./git.ts";
 import { claudeCli, prepareClaudeHome, removeClaudeHome } from "./isolate-claude.ts";
-import { ompCli, prepareOmpProfile, removeOmpProfile } from "./isolate-omp.ts";
+import { ompCli, ompProfileName, prepareOmpProfile, removeOmpProfile } from "./isolate-omp.ts";
 import { type TranscriptLine, nextQaTurn, qaRunner } from "./qa.ts";
 import { assertOriginIsBare, bareDirOf, setupVerbsFor } from "./setup-verbs.ts";
 import { type Story, loadStoryModules } from "./story.ts";
@@ -92,7 +92,7 @@ export async function replayOne(o: RunOptions): Promise<Verdict> {
       cleanups.push(() => removeClaudeHome(env));
       cli = claudeCli(env, { model: o.model, workDir, timeoutMs });
     } else {
-      const env = prepareOmpProfile({ name: `sj-${id}`, tmpDir, candidate: o.candidate, promptFile, workDir, ...(o.hostOmpDir ? { hostOmpDir: o.hostOmpDir } : {}) });
+      const env = prepareOmpProfile({ name: ompProfileName(id), tmpDir, candidate: o.candidate, promptFile, workDir, ...(o.hostOmpDir ? { hostOmpDir: o.hostOmpDir } : {}) });
       cleanups.push(() => removeOmpProfile(env));
       cli = ompCli(env, { model: o.model, workDir, timeoutMs });
     }

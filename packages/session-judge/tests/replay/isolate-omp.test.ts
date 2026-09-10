@@ -3,7 +3,9 @@ import { describe, expect, test } from "bun:test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { ompCli, prepareOmpProfile, removeOmpProfile } from "../../src/replay/isolate-omp.ts";
+import { ompCli, ompProfileName, prepareOmpProfile, removeOmpProfile } from "../../src/replay/isolate-omp.ts";
+
+const PROFILE_NAME_RE = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 
 const FAKE = path.join(import.meta.dir, "..", "..", "fixtures", "replay", "fake", "fake-omp.mjs");
 
@@ -49,6 +51,38 @@ describe("prepareOmpProfile", () => {
     fs.rmSync(path.join(s.cand, "profiles", "daily", "manifest.json"));
     expect(() => prepareOmpProfile({ name: "sj-test", tmpDir: path.join(s.root, "tmp"), candidate: s.cand, promptFile: s.prompt, workDir: s.work, hostOmpDir: s.host })).toThrow(/manifest|清单/);
     expect(fs.existsSync(path.join(s.host, "profiles", "sj-test"))).toBe(false);
+  });
+});
+
+describe("ompProfileName", () => {
+  test("runId 带中文题号，转出的名字合法且保留可辨认片段", () => {
+    const id = "20260910-013027-10-sk加json-omp-6a54";
+    const name = ompProfileName(id);
+    expect(name).toMatch(PROFILE_NAME_RE);
+    expect(name.startsWith("sj-")).toBe(true);
+    expect(name).toContain("20260910-013027");
+    expect(name).toContain("omp-6a54");
+    expect(name).not.toContain("--");
+  });
+
+  test("超长 runId 截到 64 字符，仍然合法", () => {
+    const id = `20260910-013027-${"x".repeat(100)}-omp-6a54`;
+    const name = ompProfileName(id);
+    expect(name.length).toBeLessThanOrEqual(64);
+    expect(name).toMatch(PROFILE_NAME_RE);
+  });
+
+  test("题号全是中文，退回 sj- 加 8 位随机十六进制", () => {
+    const id = "加油加油加油";
+    const name = ompProfileName(id);
+    expect(name).toMatch(/^sj-[0-9a-f]{8}$/);
+  });
+
+  test("结果不以 . 结尾", () => {
+    const id = "20260910-013027-10-story...-omp-6a54";
+    const name = ompProfileName(id);
+    expect(name.endsWith(".")).toBe(false);
+    expect(name).toMatch(PROFILE_NAME_RE);
   });
 });
 

@@ -1,6 +1,7 @@
 // OMP 的干净环境：~/.omp/profiles/<name>/ 隔离设置、会话、缓存；登录态靠拷主 profile 的 agent.db；
 // 规则读 profiles/<name>/agent/AGENTS.md；用户级 skill 关掉、项目级 skill 从 work/.agents/skills 读（探针 2026-09-09 证实）。
 import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { type AgentCli, agentExecutable, parseOmpEvents, runCommand } from "./agent-cli.ts";
@@ -8,6 +9,21 @@ import { readManifest } from "./isolate-claude.ts";
 
 export interface OmpEnv { profile: string; profileDir: string; sessionDir: string; env: NodeJS.ProcessEnv }
 export interface OmpProfileOptions { name: string; tmpDir: string; candidate: string; promptFile: string; workDir: string; hostOmpDir?: string }
+
+// 真实 omp 校验 profile 名：`^[a-z0-9][a-z0-9._-]{0,63}$`，不能是 "." 或 ".."，不能以 "." 结尾，
+// 也不能是 Windows 保留设备名（CON/PRN/AUX/NUL/COM0-9/LPT0-9 及其带扩展名形式）。
+// runId 里的 storyId 可能含中文（如「10-sk加json」），这里把 runId 收窄成合法 profile 名：
+// 转小写 → 丢弃非 [a-z0-9._-] 字符（含中文）→ 折叠连续的 "-" → 掐头去尾的 "."/"-" → 加 "sj-" 前缀 → 截到 64 字符。
+// 前缀之后什么都不剩（比如 storyId 全是中文）就退回 "sj-" 加 8 位随机十六进制。
+export function ompProfileName(runId: string): string {
+  let cleaned = runId.toLowerCase().replace(/[^a-z0-9._-]/g, "");
+  cleaned = cleaned.replace(/-+/g, "-").replace(/^[.-]+/, "").replace(/[.-]+$/, "");
+  if (cleaned.length === 0) return `sj-${randomBytes(4).toString("hex")}`;
+  let name = `sj-${cleaned}`;
+  if (name.length > 64) name = name.slice(0, 64);
+  // 截断可能正好切在结尾的 "."/"-" 上，再掐一次，保证不以 "." 结尾。
+  return name.replace(/[.-]+$/, "");
+}
 
 const CONFIG = `# 由 sj replay 生成：只读项目级 skill（候选版本投在 work/.agents/skills），不读用户级；不加载扩展。
 skills:
