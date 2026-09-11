@@ -31,6 +31,7 @@ describe('runtime garbage collection', () => {
       const expiredContext = path.join(contextDir, 'expired.json');
       const activeContext = path.join(contextDir, 'active.json');
       const legacyContext = path.join(contextDir, 'legacy.json');
+      const closedActiveContext = path.join(contextDir, 'closed-active.json');
       await writeFile(expiredContext, JSON.stringify({
         version: 1,
         operationId: 'op-expired',
@@ -41,9 +42,15 @@ describe('runtime garbage collection', () => {
         operationId: 'op-active',
         lifecycle: { state: 'started', ownerPid: 202, leaseExpiresAt: '2026-09-10T10:00:00.000Z' },
       }));
+      await writeFile(closedActiveContext, JSON.stringify({
+        version: 1,
+        operationId: 'op-closed-active',
+        lifecycle: { state: 'closed', ownerPid: 202, leaseExpiresAt: '2026-09-10T10:00:00.000Z' },
+      }));
       await writeFile(legacyContext, JSON.stringify({ version: 1, operationId: 'op-legacy' }));
       olden(expiredContext, nowMs, 3_600_000);
       olden(activeContext, nowMs, 3_600_000);
+      olden(closedActiveContext, nowMs, 3_600_000);
       olden(legacyContext, nowMs, 3_600_000);
 
       const staleStaging = `${databasePath}.staging-unowned`;
@@ -72,6 +79,7 @@ describe('runtime garbage collection', () => {
       expect(existsSync(legacyContext)).toBe(true);
       expect(existsSync(staleStaging)).toBe(true);
       expect(existsSync(activeStaging)).toBe(true);
+      expect(existsSync(closedActiveContext)).toBe(true);
       expect(existsSync(lockPath)).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });

@@ -154,6 +154,7 @@ export function collectRuntimeGarbage(options: RuntimeGarbageCollectionOptions):
           const age = ageMs(filePath, nowMs);
           if (age < contextMaxAgeMs) continue;
           if (lifecycle.state === 'closed') {
+            if (!validPid(lifecycle.ownerPid) || !leaseExpired(lifecycle.leaseExpiresAt, nowMs, leaseGraceMs) || isProcessAlive(lifecycle.ownerPid)) continue;
             removeFile(filePath);
             contextRemoved += 1;
             continue;
@@ -171,7 +172,6 @@ export function collectRuntimeGarbage(options: RuntimeGarbageCollectionOptions):
       errors += 1;
     }
   }
-
   const lockPath = `${databasePath}.migration.lock`;
   let lockStat: RuntimeFileStats | null = null;
   let migrationLease: MigrationLease | null = null;
