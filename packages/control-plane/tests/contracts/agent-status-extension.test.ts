@@ -112,6 +112,30 @@ describe('OMP agent status launch context', () => {
       expect(detail).toContain(contextPath);
     });
   });
+  test('reports a directory context path as unreadable', async () => {
+    const contextPath = await mkdtemp(path.join(os.tmpdir(), 'agent-status-extension-unreadable-'));
+    try {
+      await withLaunchContext(contextPath, async () => {
+        const handlers = registeredHandlers();
+        let status = '';
+        await handlers.sessionStart({ type: 'session_start' }, {
+          ...context,
+          ui: { setStatus: (_key, text) => { status = text ?? ''; } },
+        });
+        expect(status).toBe('Agent System: managed launch context unavailable (unreadable)');
+        let detail = '';
+        await handlers.commands['agent-config']?.([], {
+          ...context,
+          ui: { notify: (message) => { detail = message; } },
+        });
+        expect(detail).toContain('managed launch context unavailable');
+        expect(detail).toContain('unreadable');
+        expect(detail).toContain(contextPath);
+      });
+    } finally {
+      await rm(contextPath, { recursive: true, force: true });
+    }
+  });
 
   test('reports malformed and invalid contexts without disabling tool_call', async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'agent-status-extension-invalid-'));
