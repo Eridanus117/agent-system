@@ -449,10 +449,18 @@ function formatStatusLine(status: LaunchContextStatus): string {
   return `Agent System: ${context.configName}@${context.revisionId} [${context.client}]`;
 }
 
-function formatDetail(context: LaunchContextFile | null): string {
-  if (context === null) {
-    return 'Agent System launch context is unavailable (AGENT_SYSTEM_LAUNCH_CONTEXT not set or unreadable).';
+function formatDetail(status: LaunchContextStatus): string {
+  if (status.kind === 'direct') {
+    return 'Agent System: direct OMP launch';
   }
+  if (status.kind === 'managed-unavailable') {
+    return [
+      'Agent System: managed launch context unavailable',
+      `reason: ${status.reason}`,
+      `path: ${status.path}`,
+    ].join('\n');
+  }
+  const context = status.context;
   return [
     `configName: ${context.configName}`,
     `revisionId: ${context.revisionId}`,
@@ -472,8 +480,8 @@ export default function registerAgentStatusExtension(pi: MinimalExtensionAPI): v
   pi.registerCommand('agent-config', {
     description: 'Show the Agent System configuration and launch status for this OMP session',
     handler: async (_args, ctx) => {
-      const context = await readLaunchContext();
-      ctx.ui.notify(formatDetail(context));
+      const status = await readLaunchContextStatus();
+      ctx.ui.notify(formatDetail(status));
     },
   });
 
