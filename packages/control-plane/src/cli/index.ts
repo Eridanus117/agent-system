@@ -38,7 +38,17 @@ import { readSelfUpdateState, writeSelfUpdateState, isCheckDue } from '../adapte
 import { GithubReleaseUpdater } from '../adapters/self-update/github-release-updater';
 import type { SelfUpdatePort } from '../application/ports/self-update';
 import type { AgentAdapterRegistry } from '../application/ports/agent-adapter';
+import { collectRuntimeGarbage, type RuntimeGarbageCollectionResult } from '../adapters/runtime-gc';
 import { runTui } from './tui';
+
+const EMPTY_RUNTIME_GARBAGE_COLLECTION_RESULT: RuntimeGarbageCollectionResult = {
+  contextScanned: 0,
+  contextRemoved: 0,
+  stagingScanned: 0,
+  stagingRemoved: 0,
+  lockRemoved: 0,
+  errors: 0,
+};
 
 export interface CliOverrides {
   readonly databasePath?: string;
@@ -59,6 +69,7 @@ export interface FullDeps extends Omit<ActivationDependencies, 'configurations'>
   readonly dispatches: DispatchOperationRepository;
   readonly schedulerFactory: () => AgentSchedulerPort;
   readonly now?: () => string;
+  readonly runtimeGarbageCollection: RuntimeGarbageCollectionResult;
 }
 
 function createDefaultOrcaCommand(): OrcaCommandPort {
@@ -80,7 +91,11 @@ function createAgentRegistry(overrides: CliOverrides): AgentRegistry {
 }
 
 export function openDeps(overrides: CliOverrides = {}): FullDeps {
-  const store = new SqliteStore(overrides.databasePath ?? defaultDbPath(), { readOnly: overrides.readOnly });
+  const databasePath = overrides.databasePath ?? defaultDbPath();
+  const runtimeGarbageCollection = databasePath === ':memory:' || overrides.readOnly
+    ? EMPTY_RUNTIME_GARBAGE_COLLECTION_RESULT
+    : collectRuntimeGarbage({ databasePath });
+  const store = new SqliteStore(databasePath, { readOnly: overrides.readOnly });
   const configurations = overrides.configurations ?? new SqliteConfigRevisionRepository(store);
   const operations = new SqliteActivationOperationRepository(store);
   const observations = new SqliteLaunchObservationRepository(store);
@@ -89,7 +104,7 @@ export function openDeps(overrides: CliOverrides = {}): FullDeps {
   const schedules = overrides.schedules ?? new SqliteScheduleRepository(store);
   const dispatches = overrides.dispatches ?? new SqliteDispatchOperationRepository(store);
   const schedulerFactory = () => overrides.scheduler ?? createOrcaScheduler(createDefaultOrcaCommand());
-  return { store, configurations, operations, observations, adapters, registry, schedules, dispatches, schedulerFactory, now: overrides.now };
+  return { store, configurations, operations, observations, adapters, registry, schedules, dispatches, schedulerFactory, now: overrides.now, runtimeGarbageCollection };
 }
 
 function closeDeps(deps: FullDeps): void { deps.store.close(); }

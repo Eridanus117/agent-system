@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { AgentAdapter, AgentAdapterInput, AgentAdapterRegistry, AgentCapabilitySnapshot, ObservedLaunch, PreparedActivation, StartedProcess } from '../../application/ports/agent-adapter';
 import type { ObservedText, SupportLevel } from '../../domain/agent';
@@ -7,6 +7,7 @@ import { agentId, emptyUnknownReasons, type AgentId, type AgentKey } from '../..
 import type { ConfigurationRevision } from '../../domain/configuration';
 import { defaultDbPath } from '../../cli/db-path';
 import { buildOmpArgv, defaultExtensionPath } from '../omp/process-port';
+import { createLaunchContextLifecycle, type LaunchContextLifecycle } from '../runtime-gc';
 import { FsClaudeContentMaterializer, type ClaudeContentMaterializationResult } from './claude/content-materializer';
 
 function known(value: string): ObservedText {
@@ -19,6 +20,17 @@ function unknown(reason: string): ObservedText {
 
 function hash(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
+}
+
+async function updateLaunchContextLifecycle(contextPath: string, lifecycle: LaunchContextLifecycle): Promise<void> {
+  const parsed = JSON.parse(await readFile(contextPath, 'utf8')) as Record<string, unknown>;
+  const temporaryPath = `${contextPath}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    await writeFile(temporaryPath, JSON.stringify({ ...parsed, lifecycle }, null, 2));
+    await rename(temporaryPath, contextPath);
+  } finally {
+    await rm(temporaryPath, { force: true });
+  }
 }
 
 function safeErrorCode(prefix: string): string {
@@ -88,23 +100,28 @@ abstract class IsolatedAgentAdapter implements AgentAdapter {
     const context = await this.prepareContext(input);
     return { manifestHash: hash({ agentId: this.agentId, revision: input.revision, context }), context };
   }
-
   async start(input: AgentAdapterInput & { readonly prepared: PreparedActivation }): Promise<StartedProcess> {
     const context = input.prepared.context;
+    let child: Bun.Subprocess | undefined;
     try {
       const executable = Bun.which(this.binary);
       if (executable === null) throw new Error(`${this.binary}-binary-not-found`);
       const options = this.spawnOptions(context);
-      const child = Bun.spawn([executable, ...this.buildArgv(input, context)], {
+      child = Bun.spawn([executable, ...this.buildArgv(input, context)], {
         cwd: options.cwd,
         env: options.env,
         stdin: 'inherit',
         stdout: 'inherit',
         stderr: 'inherit',
       });
-      const waitForExit = child.exited.then((exitCode) => ({ exitCode, signal: child.signalCode }));
-      return { processReference: { pid: child.pid, token: `${this.agentId}:${hash(input.operationId).slice(0, 32)}` }, exitCode: null, signal: null, context, terminate: async () => { child.kill(); }, waitForExit };
+      const runningChild = child;
+      if (typeof context.contextPath === 'string') {
+        await updateLaunchContextLifecycle(context.contextPath, createLaunchContextLifecycle('started', runningChild.pid));
+      }
+      const waitForExit = runningChild.exited.then((exitCode) => ({ exitCode, signal: runningChild.signalCode }));
+      return { processReference: { pid: runningChild.pid, token: `${this.agentId}:${hash(input.operationId).slice(0, 32)}` }, exitCode: null, signal: null, context, terminate: async () => { runningChild.kill(); }, waitForExit };
     } catch (error) {
+      try { child?.kill(); } catch { }
       try { await this.cleanup(context); } catch { }
       throw error;
     }
@@ -139,7 +156,14 @@ export class OmpAgentAdapter extends IsolatedAgentAdapter {
     await mkdir(directory, { recursive: true });
     const contextPath = path.join(directory, `${hash(input.operationId).slice(0, 32)}.json`);
     const extensionPath = defaultExtensionPath();
-    await writeFile(contextPath, JSON.stringify({ version: 1, operationId: input.operationId, revisionId: input.revision.revisionId, configName: input.revision.configName, client: this.agentId }, null, 2));
+    await writeFile(contextPath, JSON.stringify({
+      version: 1,
+      operationId: input.operationId,
+      revisionId: input.revision.revisionId,
+      configName: input.revision.configName,
+      client: this.agentId,
+      lifecycle: createLaunchContextLifecycle('prepared', process.pid),
+    }, null, 2));
     return { cwd: process.cwd(), contextPath, extensionPath };
   }
   protected buildArgv(input: AgentAdapterInput, context: Record<string, unknown>): readonly string[] {
@@ -149,8 +173,13 @@ export class OmpAgentAdapter extends IsolatedAgentAdapter {
     return { cwd: String(context.cwd), env: { ...process.env, AGENT_SYSTEM_LAUNCH_CONTEXT: String(context.contextPath) } };
   }
   protected async cleanup(context: Record<string, unknown>): Promise<void> {
-    if (typeof context.contextPath === 'string') await rm(context.contextPath, { force: true });
+    if (typeof context.contextPath !== 'string') return;
+    try {
+      await updateLaunchContextLifecycle(context.contextPath, createLaunchContextLifecycle('closed', process.pid));
+    } catch { }
+    await rm(context.contextPath, { force: true });
   }
+
 }
 
 export class ClaudeAgentAdapter extends IsolatedAgentAdapter {
