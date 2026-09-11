@@ -31,11 +31,17 @@ describe('runtime garbage collection', () => {
       const expiredContext = path.join(contextDir, 'expired.json');
       const activeContext = path.join(contextDir, 'active.json');
       const legacyContext = path.join(contextDir, 'legacy.json');
+      const expiredPreparedContext = path.join(contextDir, 'expired-prepared.json');
       const closedActiveContext = path.join(contextDir, 'closed-active.json');
       await writeFile(expiredContext, JSON.stringify({
         version: 1,
         operationId: 'op-expired',
         lifecycle: { state: 'started', ownerPid: 101, leaseExpiresAt: '2026-09-10T10:00:00.000Z' },
+      }));
+      await writeFile(expiredPreparedContext, JSON.stringify({
+        version: 1,
+        operationId: 'op-expired-prepared',
+        lifecycle: { state: 'prepared', ownerPid: 101, leaseExpiresAt: '2026-09-10T10:00:00.000Z' },
       }));
       await writeFile(activeContext, JSON.stringify({
         version: 1,
@@ -49,10 +55,10 @@ describe('runtime garbage collection', () => {
       }));
       await writeFile(legacyContext, JSON.stringify({ version: 1, operationId: 'op-legacy' }));
       olden(expiredContext, nowMs, 3_600_000);
+      olden(expiredPreparedContext, nowMs, 3_600_000);
       olden(activeContext, nowMs, 3_600_000);
       olden(closedActiveContext, nowMs, 3_600_000);
       olden(legacyContext, nowMs, 3_600_000);
-
       const staleStaging = `${databasePath}.staging-unowned`;
       const activeStaging = `${databasePath}.staging-active`;
       await writeFile(staleStaging, 'stale');
@@ -72,10 +78,10 @@ describe('runtime garbage collection', () => {
         isProcessAlive: (pid) => pid === 202,
       });
 
-      expect(result.contextRemoved).toBe(1);
+      expect(result.contextRemoved).toBe(2);
       expect(result.stagingRemoved).toBe(0);
+      expect(existsSync(expiredPreparedContext)).toBe(false);
       expect(existsSync(expiredContext)).toBe(false);
-      expect(existsSync(activeContext)).toBe(true);
       expect(existsSync(legacyContext)).toBe(true);
       expect(existsSync(staleStaging)).toBe(true);
       expect(existsSync(activeStaging)).toBe(true);
@@ -118,6 +124,28 @@ describe('runtime garbage collection', () => {
       expect(existsSync(lock)).toBe(false);
       expect(existsSync(unrelated)).toBe(true);
       expect((await readdir(root)).filter((entry) => entry.includes('.staging-'))).toEqual([path.basename(unrelated)]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+  test('retains a dead-owner lock when staging ownership is not provable', async () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), 'agent-system-runtime-gc-'));
+    const databasePath = path.join(root, 'control-plane.sqlite3');
+    const nowMs = Date.parse('2026-09-10T12:00:00.000Z');
+    try {
+      const staging = `${databasePath}.staging-unowned`;
+      const lock = `${databasePath}.migration.lock`;
+      await writeFile(staging, 'unowned');
+      await writeFile(lock, JSON.stringify({ version: 1, processPid: 404, stagingPath: `${databasePath}.staging-not-present`, createdAt: '2026-09-10T10:00:00.000Z' }));
+      olden(staging, nowMs, 3_600_000);
+      olden(lock, nowMs, 3_600_000);
+
+      const result = collectRuntimeGarbage({ databasePath, nowMs, stagingMaxAgeMs: 1_000, isProcessAlive: () => false });
+
+      expect(result.stagingRemoved).toBe(0);
+      expect(result.lockRemoved).toBe(0);
+      expect(existsSync(staging)).toBe(true);
+      expect(existsSync(lock)).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

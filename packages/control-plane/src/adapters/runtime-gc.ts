@@ -159,7 +159,8 @@ export function collectRuntimeGarbage(options: RuntimeGarbageCollectionOptions):
             contextRemoved += 1;
             continue;
           }
-          if (lifecycle.state !== 'started' || !validPid(lifecycle.ownerPid)) continue;
+          if (lifecycle.state !== 'started' && lifecycle.state !== 'prepared') continue;
+          if (!validPid(lifecycle.ownerPid)) continue;
           if (!leaseExpired(lifecycle.leaseExpiresAt, nowMs, leaseGraceMs)) continue;
           if (isProcessAlive(lifecycle.ownerPid)) continue;
           removeFile(filePath);
@@ -197,7 +198,11 @@ export function collectRuntimeGarbage(options: RuntimeGarbageCollectionOptions):
     : null;
   const ownerDead = migrationLease?.version === 1 && validPid(lockPid) && !isProcessAlive(lockPid);
   const lockExpired = lockStat !== null && ageMs(lockPath, nowMs) >= stagingMaxAgeMs;
-  const canCollectStaging = ownerDead === true && lockExpired && ownedStaging !== null;
+  const ownedStagingCandidate = ownedStaging === null ? null : candidateStaging.find((stagingPath) => stagingPath === ownedStaging) ?? null;
+  const canCollectStaging = ownerDead === true
+    && lockExpired
+    && ownedStagingCandidate !== null
+    && stagingFamilyExpired(ownedStagingCandidate, nowMs, stagingMaxAgeMs);
 
   for (const stagingPath of candidateStaging) {
     stagingScanned += 1;
@@ -209,7 +214,7 @@ export function collectRuntimeGarbage(options: RuntimeGarbageCollectionOptions):
       errors += 1;
     }
   }
-  if (lockStat !== null && ownerDead === true && lockExpired) {
+  if (lockStat !== null && canCollectStaging) {
     try {
       removeFile(lockPath);
       lockRemoved = 1;
