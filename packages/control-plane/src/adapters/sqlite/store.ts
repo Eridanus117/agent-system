@@ -7,8 +7,8 @@ import CANONICAL_SQL from '../../../migrations/0001_canonical.sql' with { type: 
 import LEGACY_SQL from '../../../migrations/0002_legacy_preservation.sql' with { type: 'text' };
 import SEARCH_SQL from '../../../migrations/0003_search.sql' with { type: 'text' };
 import AGENT_SCHEDULING_SQL from '../../../migrations/0004_agent_scheduling.sql' with { type: 'text' };
+import { createRuntimeMigrationLease } from '../runtime-gc';
 import { openReadonlySqliteDatabase, openSqliteDatabase } from './connection';
-
 interface MigrationDefinition {
   readonly version: number;
   readonly name: string;
@@ -412,7 +412,7 @@ export class SqliteStore {
     const target = path.resolve(databasePath);
     const staging = `${target}.staging-${randomUUID()}`;
     const lockPath = `${target}.migration.lock`;
-    writeFileSync(lockPath, '', { flag: 'wx' });
+    writeFileSync(lockPath, JSON.stringify(createRuntimeMigrationLease(staging)), { flag: 'wx' });
     let openDb: Database | undefined;
     try {
       const snapshotVersion = copyDatabaseConsistently(target, staging);

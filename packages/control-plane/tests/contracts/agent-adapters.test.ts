@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'bun:test';
+import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { materializeClaudeContent } from '../../src/adapters/clients/claude/content-materializer';
+import { OmpAgentAdapter } from '../../src/adapters/clients/agent-adapters';
 import { buildOmpArgv, findDenylistedForwardedArg } from '../../src/adapters/omp/process-port';
 import { configurationName, configurationRevisionId, type ConfigurationRevision } from '../../src/domain/configuration';
 const defineRevision = (capabilities: ConfigurationRevision['capabilities']): ConfigurationRevision => ({
@@ -24,6 +26,30 @@ describe('agent adapter contracts', () => {
     const revision = defineRevision([]);
     expect(buildOmpArgv(revision, 'context.json', 'extension.ts', ['--verbose'])).toEqual(['--no-extensions', '-e', 'extension.ts', '--no-skills', '--verbose']);
     expect(findDenylistedForwardedArg(['--verbose', '--profile=unsafe'])).toBe('--profile=unsafe');
+  });
+
+  test('records a lease for each prepared OMP launch context', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'control-plane-launch-context-'));
+    const previousDbPath = process.env.CONTROL_PLANE_DB_PATH;
+    process.env.CONTROL_PLANE_DB_PATH = path.join(root, 'control-plane.sqlite3');
+    try {
+      const revision = defineRevision([]);
+      const adapter = new OmpAgentAdapter();
+      const prepared = await adapter.prepare({ operationId: 'operation-lease', revision });
+      const contextPath = String(prepared.context.contextPath);
+      const context = JSON.parse(readFileSync(contextPath, 'utf8')) as {
+        lifecycle?: { state?: string; ownerPid?: number; leaseExpiresAt?: string };
+      };
+      expect(context.lifecycle?.state).toBe('prepared');
+      expect(context.lifecycle?.ownerPid).toBe(process.pid);
+      expect(Date.parse(context.lifecycle?.leaseExpiresAt ?? '')).toBeGreaterThan(Date.now());
+      await adapter.abort({ operationId: 'operation-lease', revision, prepared });
+      expect(existsSync(contextPath)).toBe(false);
+    } finally {
+      if (previousDbPath === undefined) delete process.env.CONTROL_PLANE_DB_PATH;
+      else process.env.CONTROL_PLANE_DB_PATH = previousDbPath;
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   test('fails closed on colliding Claude skill materialization names', async () => {
