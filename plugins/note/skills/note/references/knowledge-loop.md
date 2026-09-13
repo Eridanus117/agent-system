@@ -5,7 +5,7 @@
 ## 入口与作用域
 
 - Agent 从当前进程解析 `rhizome`、`memex`、`memex-sync` 的实际可执行文件，并按需读其子命令 `--help`。已安装清单不等于当前入口；源码 dispatcher 或临时脚本跑通不等于正常 CLI 可用。缺入口就明确反馈，不另造包装器或兼容副本。
-- 从当前工作区入口和有效 `kb-sources.toml`（含本机覆盖）取得逻辑 source 名与物理源根；个人 `knowledge` source 的物理根当前为 `desk/20-知识库/`，工作 `logistics-kb` source 沿用现行根。`KB_SOURCES` 是两工具共有的显式 registry 定位；已有设置不改写。源根可以是 Git 仓的子目录，不用外层 Git 仓名或磁盘目录名替代登记 identity。
+- 从当前工作区入口和有效 `kb-sources.toml`（含本机覆盖）取得逻辑 source 名与物理源根；个人 `knowledge` source 的物理根当前为 `wiki/20-知识库/`（2026-09-13 前是 `desk/20-知识库/`，desk#79 拆分后改指向 wiki 仓），工作 `logistics-kb` source 沿用现行根。`KB_SOURCES` 是两工具共有的显式 registry 定位；已有设置不改写。源根可以是 Git 仓的子目录，不用外层 Git 仓名或磁盘目录名替代登记 identity。
 - 下文 `<source>`、`<源根>`、`<compiled目录>`、`<笔记路径>` 都由 Agent 从有效配置和实际文件解析并替换，不让用户填写。确认 Memex lexical 正在读本次编译的 compiled 目录；只核对必要配置，不输出凭据。
 
 ## 先检索并读正文
