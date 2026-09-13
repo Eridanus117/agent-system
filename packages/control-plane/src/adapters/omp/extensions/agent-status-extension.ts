@@ -60,6 +60,25 @@ interface LaunchContextFile {
   readonly client: string;
 }
 
+type LaunchContextStatus =
+  | { readonly kind: 'direct' }
+  | { readonly kind: 'managed'; readonly context: LaunchContextFile }
+  | {
+    readonly kind: 'managed-unavailable';
+    readonly path: string;
+    readonly reason: 'missing-file' | 'unreadable' | 'malformed' | 'invalid-shape';
+  };
+
+function isLaunchContextFile(value: unknown): value is LaunchContextFile {
+  if (value === null || typeof value !== 'object') return false;
+  const context = value as Record<string, unknown>;
+  return context.version === 1
+    && stringValue(context.operationId) !== null
+    && stringValue(context.configName) !== null
+    && stringValue(context.revisionId) !== null
+    && stringValue(context.client) !== null;
+}
+
 export interface RepoContext {
   readonly root: string;
   readonly branch: string | null;
@@ -387,31 +406,61 @@ function blockedReason(
   return `${message} 当前事实：${formatGuardContext(resolutions)} ${recoveryHint(event)}`;
 }
 
-/** 读取一次启动上下文；不轮询、不监听，也不在事件之间重复读取。 */
-async function readLaunchContext(): Promise<LaunchContextFile | null> {
-  const contextPath = process.env.AGENT_SYSTEM_LAUNCH_CONTEXT;
-  if (contextPath === undefined || contextPath.length === 0) {
-    return null;
+/** 读取一次启动上下文并保留 direct/managed/不可用三态。 */
+async function readLaunchContextStatus(): Promise<LaunchContextStatus> {
+  const rawPath = process.env.AGENT_SYSTEM_LAUNCH_CONTEXT;
+  if (rawPath === undefined || rawPath.trim().length === 0) {
+    return { kind: 'direct' };
   }
+  const contextPath = rawPath.trim();
+  if (!existsSync(contextPath)) {
+    return { kind: 'managed-unavailable', path: contextPath, reason: 'missing-file' };
+  }
+  let text: string;
   try {
-    const text = await Bun.file(contextPath).text();
-    return JSON.parse(text) as LaunchContextFile;
+    text = await Bun.file(contextPath).text();
   } catch {
-    return null;
+    return { kind: 'managed-unavailable', path: contextPath, reason: 'unreadable' };
   }
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return { kind: 'managed-unavailable', path: contextPath, reason: 'malformed' };
+  }
+  return isLaunchContextFile(value)
+    ? { kind: 'managed', context: value }
+    : { kind: 'managed-unavailable', path: contextPath, reason: 'invalid-shape' };
 }
 
-function formatStatusLine(context: LaunchContextFile | null): string {
-  if (context === null) {
-    return 'Agent System: launch context unavailable';
+async function readLaunchContext(): Promise<LaunchContextFile | null> {
+  const status = await readLaunchContextStatus();
+  return status.kind === 'managed' ? status.context : null;
+}
+
+function formatStatusLine(status: LaunchContextStatus): string {
+  if (status.kind === 'direct') {
+    return 'Agent System: direct OMP launch';
   }
+  if (status.kind === 'managed-unavailable') {
+    return `Agent System: managed launch context unavailable (${status.reason})`;
+  }
+  const context = status.context;
   return `Agent System: ${context.configName}@${context.revisionId} [${context.client}]`;
 }
 
-function formatDetail(context: LaunchContextFile | null): string {
-  if (context === null) {
-    return 'Agent System launch context is unavailable (AGENT_SYSTEM_LAUNCH_CONTEXT not set or unreadable).';
+function formatDetail(status: LaunchContextStatus): string {
+  if (status.kind === 'direct') {
+    return 'Agent System: direct OMP launch';
   }
+  if (status.kind === 'managed-unavailable') {
+    return [
+      'Agent System: managed launch context unavailable',
+      `reason: ${status.reason}`,
+      `path: ${status.path}`,
+    ].join('\n');
+  }
+  const context = status.context;
   return [
     `configName: ${context.configName}`,
     `revisionId: ${context.revisionId}`,
@@ -422,8 +471,8 @@ function formatDetail(context: LaunchContextFile | null): string {
 
 export default function registerAgentStatusExtension(pi: MinimalExtensionAPI): void {
   pi.on('session_start', async (_event, ctx) => {
-    const context = await readLaunchContext();
-    ctx.ui.setStatus('agent-system-config', formatStatusLine(context));
+    const status = await readLaunchContextStatus();
+    ctx.ui.setStatus('agent-system-config', formatStatusLine(status));
   });
 
   pi.on('tool_call', async (event, ctx) => evaluateWriteGuard(event, ctx.cwd));
@@ -431,8 +480,8 @@ export default function registerAgentStatusExtension(pi: MinimalExtensionAPI): v
   pi.registerCommand('agent-config', {
     description: 'Show the Agent System configuration and launch status for this OMP session',
     handler: async (_args, ctx) => {
-      const context = await readLaunchContext();
-      ctx.ui.notify(formatDetail(context));
+      const status = await readLaunchContextStatus();
+      ctx.ui.notify(formatDetail(status));
     },
   });
 
