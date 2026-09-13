@@ -1,7 +1,7 @@
 ---
 name: clarify
 description: >-
-  主人冒出「想建 X／要不要搞一个／这个流程好烦」一类念头时，把「解」翻回「问题」，判断该不该做；只产出三行结论。不建则收件箱一行，建则挂到 issue tracker。Turn an itch phrased as a solution back into a problem and judge whether it is worth solving; three lines, then either an inbox line or an issue.
+  主人冒出「想建 X／要不要搞一个／这个流程好烦」一类念头时，把「解」翻回「问题」，判断该不该做；只产出三行结论。不建则建一条 issue 写理由后以 wontfix 关闭，建则挂机会 issue。Turn an itch phrased as a solution back into a problem and judge whether it is worth solving; three lines, then either a closed wontfix issue or an opportunity issue.
 ---
 
 # 把念头变成判断
@@ -37,7 +37,7 @@ description: >-
 
 ## 两个出口
 
-- **不建、先不解**：三行原样写进 desk 收件箱一行（`记录.ts --append`），含理由。到此结束，不建目录、不开 change。
+- **不建、先不解**：在 desk 仓 Issues 建一条 issue，标题是第 1 行的问题，正文是三行原样（含理由），建完立即以 `wontfix` 关闭；以后要做再重开。到此结束，不建目录、不开 change。
 - **建**：在 desk 仓 Issues 建一条「机会」issue（念头出现时目标仓可能还不存在，desk 是念头与跨仓决策的家）。标题是第 1 行的问题，不是念头原话；正文四节：念头原话一句、三行各占一节（需要解、价值已立、可行）、「出口」一节留目标仓需求 issue 的回链（仓还没有先空着）；末尾一行「确认：<日期> 主人对三行的划改」。标签留给 tracker 自己的词表，本 skill 不定。这条 issue 是后面对齐的把手：结论被推翻时在它下面追加一条评论，再重跑本 skill，不许直接进下一步。
 
 ## 边界
