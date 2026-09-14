@@ -132,6 +132,17 @@ class VersionTest(unittest.TestCase):
                 pr.replace_once(text, pattern, "y", "t")
 
 
+class SourceRootTest(unittest.TestCase):
+    def test_tilde_expands_to_home_so_targets_json_needs_no_user_name(self) -> None:
+        # targets.json 在公开仓里，源仓位置写 ~ 开头，不写死带用户名的绝对路径。
+        data = {"source": {"repository": "~/workspace/agent-plugins"}}
+        self.assertEqual(pr.source_root_of(data), Path.home() / "workspace" / "agent-plugins")
+
+    def test_absolute_path_is_kept_as_is(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(pr.source_root_of({"source": {"repository": tmp}}), Path(tmp))
+
+
 class CheckStateTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()

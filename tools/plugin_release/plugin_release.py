@@ -134,6 +134,11 @@ def resolve_base(spec: dict[str, Any], environ: dict[str, str], home: Path) -> P
     raise ReleaseError(f"未知的路径基准：{base!r}")
 
 
+def source_root_of(data: dict[str, Any]) -> Path:
+    """源仓位置，允许 ~ 开头，免得公开仓的 targets.json 里写死带用户名的绝对路径。"""
+    return Path(data["source"]["repository"]).expanduser()
+
+
 # ---------------------------------------------------------------- 数据结构
 
 
@@ -327,7 +332,7 @@ def installed_versions(runtime: Runtime, plugin: str) -> list[str]:
 
 
 def check(data: dict[str, Any], runtimes: Sequence[Runtime]) -> Report:
-    source_root = Path(data["source"]["repository"])
+    source_root = source_root_of(data)
     if not source_root.is_dir():
         raise ReleaseError(f"源仓不存在：{source_root}")
     facts = source_facts(source_root)
@@ -665,7 +670,7 @@ def release(
     no_bump: bool = False,
     out=sys.stdout,
 ) -> int:
-    source_root = Path(data["source"]["repository"])
+    source_root = source_root_of(data)
     marketplace = data["source"]["marketplace_name"]
     facts = source_facts(source_root)
     versions = declared_versions(source_root, data)
@@ -836,7 +841,7 @@ def retire(
     从不主动清理旧版本缓存。因此「从仓库删掉」等于留下一份不再被维护、却仍会被加载的
     正文，比不删更危险。不回读确认卸载，就不算退役完成。
     """
-    source_root = Path(data["source"]["repository"])
+    source_root = source_root_of(data)
     marketplace = data["source"]["marketplace_name"]
     facts = source_facts(source_root)
     versions = declared_versions(source_root, data)
@@ -948,7 +953,7 @@ def sync(
     「源码即生产」下这才是真正的发布动作：运行端实时读这份工作树，`git pull` 落地的
     那一刻新 Session 就读到新正文。安装只是让 `plugin list` 的版本账目不说谎。
     """
-    source_root = Path(data["source"]["repository"])
+    source_root = source_root_of(data)
     marketplace = data["source"]["marketplace_name"]
     facts = source_facts(source_root)
 

@@ -11,14 +11,14 @@
 建议把经当前 PR head 构建并核对哈希的单一二进制放到固定位置：
 
 ```text
-C:\Users\Morni\AppData\Local\agent-control\claude-receipt-bridge.exe
+C:\Users\<user>\AppData\Local\agent-control\claude-receipt-bridge.exe
 ```
 
 不安装 PowerShell、Batch 或 Shell 脚本。原始安装样本中的二进制只含 `hook` 与 `listen` 两个固定模式，没有 URL、文件路径或任意命令参数；后续源码的 `wake` 模式继续固定 loopback 端点，只从环境读取精确 Orca Run ID，并在前台运行。
 
 ## 用户级 Hook 配置提案
 
-以下对象应当分别追加到现有 `hooks.UserPromptSubmit`、`hooks.Stop` 和 `hooks.TaskCompleted` 数组；不得用整段示例覆盖 `C:\Users\Morni\.claude\settings.json` 的其他现有配置。
+以下对象应当分别追加到现有 `hooks.UserPromptSubmit`、`hooks.Stop` 和 `hooks.TaskCompleted` 数组；不得用整段示例覆盖 `C:\Users\<user>\.claude\settings.json` 的其他现有配置。
 
 ```json
 {
@@ -28,7 +28,7 @@ C:\Users\Morni\AppData\Local\agent-control\claude-receipt-bridge.exe
         "hooks": [
           {
             "type": "command",
-            "command": "C:\\Users\\Morni\\AppData\\Local\\agent-control\\claude-receipt-bridge.exe",
+            "command": "C:\\Users\\<user>\\AppData\\Local\\agent-control\\claude-receipt-bridge.exe",
             "args": ["hook"],
             "timeout": 1
           }
@@ -40,7 +40,7 @@ C:\Users\Morni\AppData\Local\agent-control\claude-receipt-bridge.exe
         "hooks": [
           {
             "type": "command",
-            "command": "C:\\Users\\Morni\\AppData\\Local\\agent-control\\claude-receipt-bridge.exe",
+            "command": "C:\\Users\\<user>\\AppData\\Local\\agent-control\\claude-receipt-bridge.exe",
             "args": ["hook"],
             "timeout": 1
           }
@@ -52,7 +52,7 @@ C:\Users\Morni\AppData\Local\agent-control\claude-receipt-bridge.exe
         "hooks": [
           {
             "type": "command",
-            "command": "C:\\Users\\Morni\\AppData\\Local\\agent-control\\claude-receipt-bridge.exe",
+            "command": "C:\\Users\\<user>\\AppData\\Local\\agent-control\\claude-receipt-bridge.exe",
             "args": ["hook"],
             "timeout": 1
           }

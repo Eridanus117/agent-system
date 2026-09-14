@@ -34,11 +34,11 @@ python tools\sibling-facts\sibling_facts.py
 ## 非终态 Dispatch
 
 1. 谁：Task task_7dd52ec505e7 / Dispatch ctx_2eeb857690c3 / terminal term_ec9554ec-c76f-45ab-9c63-98745aef70c5（当前调用者）
-   写哪儿：C:/Users/Morni/orca/workspaces/agent-control/a4-sibling-facts
+   写哪儿：C:/Users/<user>/orca/workspaces/agent-control/a4-sibling-facts
 2. 谁：Task task_f613d2dc85a1 / Dispatch ctx_040bbbf074e2 / terminal term_e88d7d26-1b4c-47c3-b9ed-2470971bd6e1（兄弟）
-   写哪儿：C:/Users/Morni/orca/workspaces/agent-control/a6-deadline-wake
+   写哪儿：C:/Users/<user>/orca/workspaces/agent-control/a6-deadline-wake
 3. 谁：Task task_2fd22cb18e43 / Dispatch ctx_bd69fae0d752 / terminal term_7c7fea8d-e83f-4c82-aec3-cc840a06d4e7（兄弟）
-   写哪儿：C:/Users/Morni/orca/workspaces/agent-control/a1-govtext-dedup
+   写哪儿：C:/Users/<user>/orca/workspaces/agent-control/a1-govtext-dedup
 
 ## 采集状态
 
@@ -67,7 +67,7 @@ python tools\sibling-facts\sibling_facts.py --json
   "worktrees": 18,
   "open_prs": 0,
   "unobserved_sources": 0,
-  "first_sibling_where": "C:/Users/Morni/orca/workspaces/agent-control/a6-deadline-wake",
+  "first_sibling_where": "C:/Users/<user>/orca/workspaces/agent-control/a6-deadline-wake",
   "agent_plugins_open_prs": 0
 }
 ```
