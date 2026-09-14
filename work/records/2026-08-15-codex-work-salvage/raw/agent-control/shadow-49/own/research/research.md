@@ -10,16 +10,16 @@
 
 ### 两个 Codex Home 的实体
 
-- F2. 普通路径 Home 为 `C:\Users\Morni\.codex\`，含 `AGENTS.md`（10314 字节，LF 行尾）、独立 `config.toml`（14433 字节）、`hooks.json`（当前为空 `{"hooks":{}}`）。（来源：目录列表与文件读取）
-- F3. Orca 注入的 `CODEX_HOME` 为 `C:\Users\Morni\AppData\Roaming\Orca\codex-runtime-home\home\`，含自己的 `AGENTS.md`、独立 `config.toml`（16408 字节）、独立 `hooks.json`（把 SessionStart／UserPromptSubmit／PreToolUse 等事件全部接到 `C:\Users\Morni\.orca\agent-hooks\codex-hook.cmd`）。（来源：该目录列表、`hooks.json` 读取）
-- F4. Orca Home 的 `plugins` 与 `skills` 是指向 `C:\Users\Morni\.codex\plugins`、`C:\Users\Morni\.codex\skills` 的 NTFS Junction（Reparse Tag 0xa0000003，Mount Point），即插件与技能两侧共享同一份安装内容。（来源：`dir` Junction 列表与 `fsutil reparsepoint query`）
+- F2. 普通路径 Home 为 `C:\Users\<user>\.codex\`，含 `AGENTS.md`（10314 字节，LF 行尾）、独立 `config.toml`（14433 字节）、`hooks.json`（当前为空 `{"hooks":{}}`）。（来源：目录列表与文件读取）
+- F3. Orca 注入的 `CODEX_HOME` 为 `C:\Users\<user>\AppData\Roaming\Orca\codex-runtime-home\home\`，含自己的 `AGENTS.md`、独立 `config.toml`（16408 字节）、独立 `hooks.json`（把 SessionStart／UserPromptSubmit／PreToolUse 等事件全部接到 `C:\Users\<user>\.orca\agent-hooks\codex-hook.cmd`）。（来源：该目录列表、`hooks.json` 读取）
+- F4. Orca Home 的 `plugins` 与 `skills` 是指向 `C:\Users\<user>\.codex\plugins`、`C:\Users\<user>\.codex\skills` 的 NTFS Junction（Reparse Tag 0xa0000003，Mount Point），即插件与技能两侧共享同一份安装内容。（来源：`dir` Junction 列表与 `fsutil reparsepoint query`）
 
 ### 入口正文的当前同步状态
 
 - F5. 两份安装侧 `AGENTS.md`（`.codex\AGENTS.md` 与 Orca Home `AGENTS.md`）SHA-256 全等：`d0444caa4b85c031…`，且 mtime 同为 2026-08-11 10:57——当前入口正文事实上已经一致。（来源：`sha256sum` 与目录列表）
 - F6. 仓库版本化来源 `entrypoints/agent-system.md`（工作区 checkout 为 CRLF、10395 字节）按 LF 规范化后哈希与两份安装副本完全相同——三份正文内容一致，仅行尾表示不同。（来源：`tr -d '\r' | sha256sum` 对照）
 - F7. D5 入口单一真源生成器（PR #47 交付的 `scripts/entry_sync/`）的 `targets.json` 已显式包含目标 `installed-orca-codex`：`base=environment, variable=APPDATA, path=orca/codex-runtime-home/home/AGENTS.md`，与 `installed-codex`（`home/.codex/AGENTS.md`）并列。即生成器已经把 Orca 注入 Home 列为直接写入的安装目标。（来源：`scripts/entry_sync/targets.json`）
-- F8. Orca 自身还有一条独立复制机制的痕迹：Orca Home 下 `.orca-resource-copies\AGENTS.md.json` 记录 `sourcePath = C:\Users\Morni\.codex\AGENTS.md`，说明 Orca 会（或曾经）把普通 Home 的 `AGENTS.md` 作为资源复制进注入 Home。（来源：该 JSON 文件内容）
+- F8. Orca 自身还有一条独立复制机制的痕迹：Orca Home 下 `.orca-resource-copies\AGENTS.md.json` 记录 `sourcePath = C:\Users\<user>\.codex\AGENTS.md`，说明 Orca 会（或曾经）把普通 Home 的 `AGENTS.md` 作为资源复制进注入 Home。（来源：该 JSON 文件内容）
 - F9. Orca 对注入 Home 的 `config.toml` 维护独立的设置基线 `.orca-config-settings-baseline.json`（model、reasoning effort、approval、sandbox 等），且两份 `config.toml` 的 `hooks.state`、`projects` 条目互不相同——配置面并未共享，是有意分离。（来源：基线 JSON 与两份 `config.toml` 的 diff）
 - F10. Orca 在 `AppData\Roaming\Orca\codex-real-home-hooks\` 保留了 `hooks.json.pre-orca`（普通 Home 曾经的 crux session-start hook 备份），普通 Home 现行 `hooks.json` 为空——Orca 接管过普通 Home 的 hooks 并留有回退备份。（来源：该目录与文件内容）
 

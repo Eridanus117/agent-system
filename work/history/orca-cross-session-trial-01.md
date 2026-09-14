@@ -32,9 +32,9 @@
 
 把握程度：高。
 
-1. 本次 Orca 进程的 `CODEX_HOME` 是 `C:\Users\Morni\AppData\Roaming\orca\codex-runtime-home\home`；
+1. 本次 Orca 进程的 `CODEX_HOME` 是 `C:\Users\<user>\AppData\Roaming\orca\codex-runtime-home\home`；
 2. 因此该目录下的 `config.toml` 是 Orca Codex 的用户级配置；
-3. 工作目录是 `C:\Users\Morni`，其中还有 `C:\Users\Morni\.codex\config.toml`；
+3. 工作目录是 `C:\Users\<user>`，其中还有 `C:\Users\<user>\.codex\config.toml`；
 4. Codex 把后者识别为项目级 `.codex\config.toml`；
 5. OpenAI 官方配置参考明确说明：`notify` 出现在项目级配置时会被忽略，应放在用户级配置中。
 
@@ -44,7 +44,7 @@
 - Orca 专用 `CODEX_HOME` 中的那一处仍是用户级配置，可以生效；
 - 被忽略的是从当前工作目录额外发现的重复项目级定义；
 - 所以目前证据指向“产生警告噪声”，而不是“Orca 丢失通知配置”；
-- 普通 Windows Codex 未改写 `CODEX_HOME` 时，`C:\Users\Morni\.codex\config.toml` 本身是用户级配置，不属于这次重复分层情形。
+- 普通 Windows Codex 未改写 `CODEX_HOME` 时，`C:\Users\<user>\.codex\config.toml` 本身是用户级配置，不属于这次重复分层情形。
 
 ### 方案和成本
 

@@ -361,9 +361,9 @@ Issue [#1](https://github.com/Eridanus117/agent-control/issues/1) 已更新批�
 
 `github-collaboration 0.1.0` 已安装并启用到：
 
-- 普通 Codex：`C:\Users\Morni\.codex\plugins\cache\agent-plugins\github-collaboration\0.1.0`；
-- Orca Codex：`C:\Users\Morni\AppData\Roaming\orca\codex-runtime-home\home\plugins\cache\agent-plugins\github-collaboration\0.1.0`；
-- Claude：`C:\Users\Morni\.claude\plugins\cache\agent-plugins\github-collaboration\0.1.0`。
+- 普通 Codex：`C:\Users\<user>\.codex\plugins\cache\agent-plugins\github-collaboration\0.1.0`；
+- Orca Codex：`C:\Users\<user>\AppData\Roaming\orca\codex-runtime-home\home\plugins\cache\agent-plugins\github-collaboration\0.1.0`；
+- Claude：`C:\Users\<user>\.claude\plugins\cache\agent-plugins\github-collaboration\0.1.0`。
 
 两个 Codex 环境的 Plugin 列表都报告 `installed: true`、`enabled: true`、版本 `0.1.0`；Claude Plugin 列表报告相同版本、用户级启用。源码和三份缓存均含 8 个文件，逐文件 SHA-256 和字节数完全一致。这个证据证明安装和 Marketplace 发现状态，不替代每个端各自的新 Session 行为测试。
 

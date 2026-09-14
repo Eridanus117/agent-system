@@ -23,7 +23,7 @@
 
 由于退出输入已经部分执行，第一份尚未开始任务的 TUI 回到了 PowerShell。当前 Session 在同一 Orca 终端重新启动一个新的 Codex TUI，并选择信任。
 
-可见的信任变化只出现在 Orca 专用 `CODEX_HOME` 中的 `config.toml`：长度由 15,668 增至 15,745 字节，并新增 `agent-control` 项目段及 `trust_level` 键。默认 `C:\Users\Morni\.codex\config.toml` 未变化。
+可见的信任变化只出现在 Orca 专用 `CODEX_HOME` 中的 `config.toml`：长度由 15,668 增至 15,745 字节，并新增 `agent-control` 项目段及 `trust_level` 键。默认 `C:\Users\<user>\.codex\config.toml` 未变化。
 
 ## 第一阶段：恢复验证
 

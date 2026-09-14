@@ -7,7 +7,7 @@
 - **语料**：`knowledge/README.md` 当前列出的 K1–K11 共 11 包，39,230 字符；README 仅用于核对入口，不作为被检索文档。
 - **当前知识复核**：11 包均在正式入口内，最近核验日期均为 2026-08-11；本次没有观察到包内失效条件命中。实验只复用正文作语料，不重新证明各包事实结论。
 - **查询集**：22 条，词面重合 11 条、改述 11 条；每个包各一条词面问题和一条语义等价改述，金标逐包核对。词面问题取自各包“回答的问题与价值门”，改述保留同一真实任务意图但避开关键原词。
-- **环境直接验证**：`where.exe ollama` 返回 `C:\Users\Morni\AppData\Local\Programs\Ollama\ollama.exe`；`ollama list` 返回 `qwen3-embedding:8b`，因此执行词面、BM25、向量三臂，并额外实测 BM25＋向量的 RRF 融合。
+- **环境直接验证**：`where.exe ollama` 返回 `C:\Users\<user>\AppData\Local\Programs\Ollama\ollama.exe`；`ollama list` 返回 `qwen3-embedding:8b`，因此执行词面、BM25、向量三臂，并额外实测 BM25＋向量的 RRF 融合。
 - **方法**：grep/词面基线按“查询拉丁词与中文二元组的去重覆盖数优先、总出现次数次优”排序；BM25 使用相同分词，`k1=1.5,b=0.75`；向量使用 Ollama `qwen3-embedding:8b`、全包向量、查询 instruct 前缀和余弦排序；RRF 对 BM25 与向量排名等权融合，`k=60`。
 - **实验形态**：这是验证关键未知的最小实验，不是产品交付。脚本、查询和逐条结果均在仓外 scratchpad；没有改动仓库、权威或知识正文，也没有建立常驻服务。
 
@@ -104,6 +104,6 @@
 ### 7. 交付与回收事实
 
 - 验收条件“查询集、各方法结果表、分型分析、耗时、9-D3 阈值数据支撑与建议、环境可用性”已逐项覆盖。
-- 本次未改仓库文件；scratchpad 位于 `C:\Users\Morni\workspace\agent-control\codex-work\issue-98-recall\`，包含 `queries.json`、`experiment.py`、`results_final.json` 与本报告。它们不在仓库版本化范围内。
+- 本次未改仓库文件；scratchpad 位于 `C:\Users\<user>\workspace\agent-control\codex-work\issue-98-recall\`，包含 `queries.json`、`experiment.py`、`results_final.json` 与本报告。它们不在仓库版本化范围内。
 - 本 Issue 没有开放子项或依赖阻塞，类型为“实验”。按 [关联 #44（规则只加不减的收敛实施）规则回执](https://github.com/Eridanus117/agent-control/issues/44#issuecomment-5255408590)的三条件预授权，本实验交付具备收口条件；关联 #9（诉求：让有价值的知识能够可信复用）仍保持开放，具体阈值批准和诉求满足判断均归负责人。
 

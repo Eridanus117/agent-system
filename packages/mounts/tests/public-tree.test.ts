@@ -181,6 +181,25 @@ describe("内容规则", () => {
     expectBlocked(assess([entry("docs/a.md", "see D:/Users/someone/x")]), "local-path");
   });
 
+  test("JSON 转义的双反斜杠与 WSL 挂载写法的本机路径也被拒绝", () => {
+    // 评测记录 jsonl 里的 cwd 是 JSON 转义写法，每个分隔符落盘为两个反斜杠。
+    expectBlocked(assess([entry("runs/a.jsonl", '{"cwd": "C:\\\\Users\\\\someone\\\\AppData"}')]), "local-path");
+    // WSL 里访问 Windows 家目录：/Users 前面紧挨着盘符字母。
+    expectBlocked(assess([entry("docs/a.md", 'REPO="/mnt/c/Users/someone/x"')]), "local-path");
+  });
+
+  test("用户名换成 <user> 占位后的路径放行", () => {
+    // 测试策略 maxFileBytes 为 64，每种写法单独一条，免得被大小规则误拦。
+    for (const text of [
+      "see C:\\Users\\<user>\\.codex",
+      '{"cwd": "C:\\\\Users\\\\<user>\\\\AppData"}',
+      'REPO="/mnt/c/Users/<user>/x"',
+      "see /home/<user>/venv",
+    ]) {
+      expect(assess([entry("docs/a.md", text)]).status).toBe("allowed");
+    }
+  });
+
   test("内网地址与内部主机名被拒绝", () => {
     expectBlocked(assess([entry("docs/a.md", "host 10.1.2.3")]), "internal-address");
     expectBlocked(assess([entry("docs/a.md", "host 192.168.0.9")]), "internal-address");

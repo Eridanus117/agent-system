@@ -53,7 +53,7 @@ Orca 适合承担需要监督、跨 Codex／Claude、任务／Dispatch provenanc
 
 这意味着它已经能完成快速的同环境并行分析、独立报告和分层委派，但共享文件系统本身不提供写入隔离。Skill 必须要求唯一写入所有权或唯一报告路径，否则并行编辑会互相覆盖。当前工具也没有向本报告证明跨 Session 的 durable Run／Task／Dispatch、可读取的完整 worker transcript、显式 typed outcome、资源释放状态或跨 Codex／Claude 调度；不能把这些能力从 Orca 反向假定给原生工具。
 
-当前 Session 的 Available Skills 中没有 `orchestration`。当前 `CODEX_HOME` 为 `C:\Users\Morni\AppData\Roaming\orca\codex-runtime-home\home`；其 `skills` 目录只有 `.system`，而 `orchestration` 也不在当前插件 Skill 清单中。因此“Codex 运行在 Orca 宿主里”不等于“Codex 已加载 Orca orchestration Skill”。Codex 仍可从 shell 调用 `orca`，但若要正确使用，应先读取二进制提供的版本匹配指南。
+当前 Session 的 Available Skills 中没有 `orchestration`。当前 `CODEX_HOME` 为 `C:\Users\<user>\AppData\Roaming\orca\codex-runtime-home\home`；其 `skills` 目录只有 `.system`，而 `orchestration` 也不在当前插件 Skill 清单中。因此“Codex 运行在 Orca 宿主里”不等于“Codex 已加载 Orca orchestration Skill”。Codex 仍可从 shell 调用 `orca`，但若要正确使用，应先读取二进制提供的版本匹配指南。
 
 ### 2. 当前 Orca
 
@@ -79,8 +79,8 @@ Orca 适合承担需要监督、跨 Codex／Claude、任务／Dispatch provenanc
 ### 3. 当前 Claude
 
 - `claude --version` 返回 `2.1.221`；
-- `C:\Users\Morni\.claude\settings.json` 中 `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`；本机存在历史 `teams` 和 `tasks` 状态目录；
-- `C:\Users\Morni\.claude\skills\orchestration` 是指向 `C:\Users\Morni\.agents\skills\orchestration` 的 junction；因此 Claude 当前有 Orca orchestration 的发现入口；
+- `C:\Users\<user>\.claude\settings.json` 中 `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`；本机存在历史 `teams` 和 `tasks` 状态目录；
+- `C:\Users\<user>\.claude\skills\orchestration` 是指向 `C:\Users\<user>\.agents\skills\orchestration` 的 junction；因此 Claude 当前有 Orca orchestration 的发现入口；
 - Claude 的 `grilling` 与 `self-improvement` Plugin 当前启用。
 
 上述是配置与文件层证据。本轮没有启动新的 Claude 会话，因此没有重新验证一个全新 Claude Session 是否实际暴露 Agent Teams 的每个工具，也没有验证它与 Orca Run 的联动。Orca 自己可以通过 `worker-start --agent claude` 启动受监督 Claude worker；这不依赖把 Claude Agent Teams 当成同一个 orchestration 后端。
@@ -91,8 +91,8 @@ Orca 适合承担需要监督、跨 Codex／Claude、任务／Dispatch provenanc
 
 | 对象 | 当前事实 | 判断 |
 | --- | --- | --- |
-| `C:\Users\Morni\workspace\orca\skills\orchestration\SKILL.md` | 253 行，SHA-256 `13ED91F...CD2BA1D`；包含旧的 `run`／`run-stop` 叙述，缺少当前 `run-create`、`worker-start`、Delivery ack、worker release／retain／abandon 等契约 | 旧 checkout 材料；不得安装或用来定义当前方法 |
-| `C:\Users\Morni\.agents\skills\orchestration\SKILL.md` | 82 行，SHA-256 `9CA22813...C0BD7F`；Claude junction 指向它 | 发现 stub；要求先执行 `orca skills get orchestration`，避免缓存命令漂移 |
+| `C:\Users\<user>\workspace\orca\skills\orchestration\SKILL.md` | 253 行，SHA-256 `13ED91F...CD2BA1D`；包含旧的 `run`／`run-stop` 叙述，缺少当前 `run-create`、`worker-start`、Delivery ack、worker release／retain／abandon 等契约 | 旧 checkout 材料；不得安装或用来定义当前方法 |
+| `C:\Users\<user>\.agents\skills\orchestration\SKILL.md` | 82 行，SHA-256 `9CA22813...C0BD7F`；Claude junction 指向它 | 发现 stub；要求先执行 `orca skills get orchestration`，避免缓存命令漂移 |
 | `orca skills get orchestration --full` | 当前二进制动态提供的 406 行版本匹配指南 | 当前 Orca 命令与生命周期事实的首选来源；不是本系统产品边界的权威 |
 
 旧 workspace Skill 中仍有一些值得重新验证的行为思想：区分监督式协调与完整 handoff、要求任务边界、worker report、唯一 owner、等待 completion 而非用 heartbeat 猜完成。但当前权威已经独立推出了其中的大部分需求；这些内容只能作为候选证据，不能原样吸收。

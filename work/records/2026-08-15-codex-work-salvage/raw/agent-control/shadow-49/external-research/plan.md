@@ -10,7 +10,7 @@
 entrypoints/agent-system.md
         │  既有安装/投影责任
         ▼
-C:\Users\Morni\.codex\AGENTS.md
+C:\Users\<user>\.codex\AGENTS.md
         │  Orca 资源复制（运行目录唯一写者）
         ▼
 当前 Orca CODEX_HOME\AGENTS.md

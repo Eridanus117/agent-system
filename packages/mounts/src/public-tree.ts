@@ -40,8 +40,10 @@ const CONTENT_RULES: ContentRule[] = [
     name: "assigned-secret",
     pattern: /\b(?:api[_-]?key|access[_-]?token|client[_-]?secret|password)\s*[:=]\s*["'][A-Za-z0-9_./+=-]{12,}["']/i,
   },
-  { code: "local-path", name: "posix-home", pattern: /(?:^|[^A-Za-z0-9_])\/(?:Users|home)\/[A-Za-z0-9_.-]+\// },
-  { code: "local-path", name: "windows-home", pattern: /\b[A-Za-z]:[\\/]Users[\\/][A-Za-z0-9_.-]+[\\/]/ },
+  // WSL 挂载写法 /mnt/c/Users/<name>/ 里 /Users 前面紧挨着盘符字母，用后行断言单独放行这一种前缀。
+  { code: "local-path", name: "posix-home", pattern: /(?:^|[^A-Za-z0-9_]|(?<=\/mnt\/[A-Za-z]))\/(?:Users|home)\/[A-Za-z0-9_.-]+\// },
+  // 分隔符允许连写：JSON 转义后的 C:\\Users\\<name>\\ 每处是两个反斜杠。
+  { code: "local-path", name: "windows-home", pattern: /\b[A-Za-z]:[\\/]+Users[\\/]+[A-Za-z0-9_.-]+[\\/]/ },
   {
     code: "internal-address",
     name: "private-ipv4",
