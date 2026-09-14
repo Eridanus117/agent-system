@@ -11,14 +11,14 @@
 
 Codex 需要覆盖本机现有的两条启动路径：
 
-1. 默认 `CODEX_HOME=C:\Users\Morni\.codex` 的普通 Windows 终端；
-2. Orca 注入 `CODEX_HOME=C:\Users\Morni\AppData\Roaming\orca\codex-runtime-home\home` 的宿主路径。
+1. 默认 `CODEX_HOME=C:\Users\<user>\.codex` 的普通 Windows 终端；
+2. Orca 注入 `CODEX_HOME=C:\Users\<user>\AppData\Roaming\orca\codex-runtime-home\home` 的宿主路径。
 
 当前 Session 位于第二条路径。安装完成后，由负责人重新启动并恢复本 Session，作为真实加载验收。
 
 ## 已授权行动
 
-- 从 `C:\Users\Morni\workspace\agent-plugins` 添加本地 `agent-plugins` marketplace；
+- 从 `C:\Users\<user>\workspace\agent-plugins` 添加本地 `agent-plugins` marketplace；
 - 只安装 `grilling@agent-plugins`；
 - Claude Code 使用用户级安装；
 - 分别从两条 Codex 路径及 Claude Code 启动一次全新、只读检查，只确认插件和 Skill 是否可发现；
@@ -79,7 +79,7 @@ Codex 有两个独立的 `CODEX_HOME`，因此 Codex 的两条命令必须在普
 
 负责人按恢复锚点重新进入了原 Session，并发送“已恢复”。恢复后的运行事实是：
 
-- `CODEX_HOME` 仍为 `C:\Users\Morni\AppData\Roaming\orca\codex-runtime-home\home`；
+- `CODEX_HOME` 仍为 `C:\Users\<user>\AppData\Roaming\orca\codex-runtime-home\home`；
 - `CODEX_THREAD_ID` 仍为 `019fdbe9-4f7e-79d1-95d4-25c7a83cff69`；
 - 本 Session 的可用 Skill 清单已经包含 `grilling:grilling`；
 - Skill 来源为 Orca 专用插件缓存中的 `agent-plugins/grilling/0.1.0`；

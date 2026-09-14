@@ -3,8 +3,8 @@
 ## 范围
 
 - 任务：为 `agent-control#49` 的外部插件侧影子对照，调查真实问题“Orca 注入专用 `CODEX_HOME` 时，Codex 如何取得当前权威入口”。
-- 环境：Windows；仓库根目录 `C:\Users\Morni\workspace\agent-control`；核验日期 2026-08-11。
-- 当前会话：`CODEX_HOME=C:\Users\Morni\AppData\Roaming\orca\codex-runtime-home\home`，`USERPROFILE=C:\Users\Morni`。
+- 环境：Windows；仓库根目录 `C:\Users\<user>\workspace\agent-control`；核验日期 2026-08-11。
+- 当前会话：`CODEX_HOME=C:\Users\<user>\AppData\Roaming\orca\codex-runtime-home\home`，`USERPROFILE=C:\Users\<user>`。
 - 边界：只读 GitHub Issue、官方文档、仓库和本机配置；没有修改 GitHub、配置或受跟踪文件，也没有启动会写入运行状态的新 Codex 会话。
 - 本阶段只记录事实、约束、冲突和未知，不提出或选择方案。
 
@@ -32,8 +32,8 @@ OpenAI 官方文档 [Custom instructions with AGENTS.md](https://learn.chatgpt.c
 
 | 启动环境 | Codex home | 全局入口 |
 | --- | --- | --- |
-| 未设置 `CODEX_HOME` 的普通 Windows | `C:\Users\Morni\.codex` | `C:\Users\Morni\.codex\AGENTS.md` |
-| 当前 Orca 宿主 | `C:\Users\Morni\AppData\Roaming\orca\codex-runtime-home\home` | `C:\Users\Morni\AppData\Roaming\orca\codex-runtime-home\home\AGENTS.md` |
+| 未设置 `CODEX_HOME` 的普通 Windows | `C:\Users\<user>\.codex` | `C:\Users\<user>\.codex\AGENTS.md` |
+| 当前 Orca 宿主 | `C:\Users\<user>\AppData\Roaming\orca\codex-runtime-home\home` | `C:\Users\<user>\AppData\Roaming\orca\codex-runtime-home\home\AGENTS.md` |
 
 当前 Orca home 中没有 `AGENTS.override.md`，因此按照官方发现顺序，其 `AGENTS.md` 是该启动路径的全局入口候选。
 
@@ -41,25 +41,25 @@ OpenAI 官方文档 [Custom instructions with AGENTS.md](https://learn.chatgpt.c
 
 将 CRLF 规范化为 LF 后，下列四份文件的 UTF-8 长度均为 10,314 字节，SHA-256 均为 `D0444CAA4B85C0319A0A394C9BE9852489011D865A36D1A0A0A6C33EED07DDF4`：
 
-- `C:\Users\Morni\workspace\agent-control\entrypoints\agent-system.md`
-- `C:\Users\Morni\.codex\AGENTS.md`
-- `C:\Users\Morni\AppData\Roaming\orca\codex-runtime-home\home\AGENTS.md`
-- `C:\Users\Morni\workspace\agent-control\build\entry-sync\installed\orca-codex\AGENTS.md`（既有未跟踪生成物，只读观察）
+- `C:\Users\<user>\workspace\agent-control\entrypoints\agent-system.md`
+- `C:\Users\<user>\.codex\AGENTS.md`
+- `C:\Users\<user>\AppData\Roaming\orca\codex-runtime-home\home\AGENTS.md`
+- `C:\Users\<user>\workspace\agent-control\build\entry-sync\installed\orca-codex\AGENTS.md`（既有未跟踪生成物，只读观察）
 
 仓库源文件与两份实际入口的物理字节数不同只来自换行形式；`git diff --no-index` 没有正文差异。普通入口与 Orca 入口的文件时间也相同，均为 2026-08-11 10:57:30（本机时间）。
 
 ### Orca 资源形态
 
-- Orca home 中的 `plugins` 和 `skills` 是分别指向 `C:\Users\Morni\.codex\plugins` 与 `C:\Users\Morni\.codex\skills` 的目录 junction。
+- Orca home 中的 `plugins` 和 `skills` 是分别指向 `C:\Users\<user>\.codex\plugins` 与 `C:\Users\<user>\.codex\skills` 的目录 junction。
 - Orca home 中的 `AGENTS.md` 是普通文件，不是符号链接、junction 或 reparse point。
-- `C:\Users\Morni\AppData\Roaming\orca\codex-runtime-home\home\.orca-resource-copies\AGENTS.md.json` 内容为 `sourcePath: C:\Users\Morni\.codex\AGENTS.md`。该标记把 Orca 副本直接关联到普通 Codex 入口，但标记自身没有记录刷新频率、失败策略或版本号。
+- `C:\Users\<user>\AppData\Roaming\orca\codex-runtime-home\home\.orca-resource-copies\AGENTS.md.json` 内容为 `sourcePath: C:\Users\<user>\.codex\AGENTS.md`。该标记把 Orca 副本直接关联到普通 Codex 入口，但标记自身没有记录刷新频率、失败策略或版本号。
 
 据此，本次样本能观察到的数据流是：
 
 ```text
 entrypoints/agent-system.md（仓库版本化来源）
           │
-          ├── 内容相同 ──> C:\Users\Morni\.codex\AGENTS.md
+          ├── 内容相同 ──> C:\Users\<user>\.codex\AGENTS.md
           │                         │
           │                         └── Orca 资源复制来源标记
           │                                  │

@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable MD013 -->
 
-本文记录 2026-08-14 在 WSL Ubuntu 24.04 上完成的真实运行。环境位于 `/home/morni/venvs/vllm-cpu-0271`，只使用 vLLM 官方发布的 `v0.27.1` CPU wheel；没有使用 `sudo`、`apt`、系统 Python、全局 pip、GPU 依赖或源码编译。
+本文记录 2026-08-14 在 WSL Ubuntu 24.04 上完成的真实运行。环境位于 `/home/<user>/venvs/vllm-cpu-0271`，只使用 vLLM 官方发布的 `v0.27.1` CPU wheel；没有使用 `sudo`、`apt`、系统 Python、全局 pip、GPU 依赖或源码编译。
 
 完整 DEBUG 样本见 [`samples/vllm-cpu-opt-125m-debug.log`](./samples/vllm-cpu-opt-125m-debug.log)，共 337 行。下文行号均按 `\n` 计数并固定到这份样本，可在本目录用 `sed -n '<N>p' samples/vllm-cpu-opt-125m-debug.log` 复现。
 
@@ -46,7 +46,7 @@ for path in sorted(libs.iterdir()):
 '
 ```
 
-本机实测目录为 `/home/morni/venvs/vllm-cpu-0271/lib/python3.12/site-packages/vllm/libs/`，内容只有：
+本机实测目录为 `/home/<user>/venvs/vllm-cpu-0271/lib/python3.12/site-packages/vllm/libs/`，内容只有：
 
 ```text
 libtcmalloc_minimal.so.4 163240
@@ -60,7 +60,7 @@ libtcmalloc_minimal.so.4 163240
 
 ```bash
 VENV="$HOME/venvs/vllm-cpu-0271"
-REPO="/mnt/c/Users/Morni/orca/workspaces/agent-control/f277a-vllm-cpu"
+REPO="/mnt/c/Users/<user>/orca/workspaces/agent-control/f277a-vllm-cpu"
 LOG="$REPO/learning/teaching/pilot-vllm/samples/vllm-cpu-opt-125m-debug.log"
 
 VLLM_LOGGING_LEVEL=DEBUG \
@@ -110,7 +110,7 @@ PY
 运行时的 `LD_PRELOAD` 在初始化前为 `None`，初始化后实测为：
 
 ```text
-/home/morni/venvs/vllm-cpu-0271/lib/python3.12/site-packages/vllm/libs/libtcmalloc_minimal.so.4:/home/morni/venvs/vllm-cpu-0271/lib/python3.12/site-packages/torch/lib/libgomp.so.1
+/home/<user>/venvs/vllm-cpu-0271/lib/python3.12/site-packages/vllm/libs/libtcmalloc_minimal.so.4:/home/<user>/venvs/vllm-cpu-0271/lib/python3.12/site-packages/torch/lib/libgomp.so.1
 ```
 
 这是推理进程中用 `os.environ.get("LD_PRELOAD")` 取得的运行时值；命令没有手工设置它。

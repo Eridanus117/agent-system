@@ -31,7 +31,7 @@
 
 Windows Codex 的当前权威入口同时覆盖两种启动路径：
 
-1. 未设置 `CODEX_HOME` 的普通 Windows 环境，使用默认 `C:\Users\Morni\.codex`；
+1. 未设置 `CODEX_HOME` 的普通 Windows 环境，使用默认 `C:\Users\<user>\.codex`；
 2. Orca 宿主注入专用 `CODEX_HOME` 的环境。
 
 版本化公共入口来源是 [`../entrypoints/agent-system.md`](../../entrypoints/agent-system.md)，仓库级 Codex 入口是 [`../AGENTS.md`](../../AGENTS.md)，Claude 通过 [`../CLAUDE.md`](../../CLAUDE.md) 导入同一入口规则。普通 Codex 与 Orca Codex 的 Plugin／Skills 存储已用 NTFS Junction 收敛为单份；配置文件与用户级 `AGENTS.md` 仍是两套独立文件，入口一致性继续由现有同步验收检查。Junction 消失或指向变化时，该安装事实失效，必须重新核验。

@@ -37,10 +37,10 @@
 ## S05：版本化与安装文件
 
 - `entrypoints/agent-system.md`
-- `C:\Users\Morni\.codex\AGENTS.md`
-- `C:\Users\Morni\AppData\Roaming\orca\codex-runtime-home\home\AGENTS.md`
-- `C:\Users\Morni\.claude\CLAUDE.md`
-- `C:\Users\Morni\workspace\agent-plugins\plugins\orchestrated-collaboration\skills\orchestrated-collaboration\SKILL.md`
+- `C:\Users\<user>\.codex\AGENTS.md`
+- `C:\Users\<user>\AppData\Roaming\orca\codex-runtime-home\home\AGENTS.md`
+- `C:\Users\<user>\.claude\CLAUDE.md`
+- `C:\Users\<user>\workspace\agent-plugins\plugins\orchestrated-collaboration\skills\orchestrated-collaboration\SKILL.md`
 - 三端安装缓存中的 `orchestrated-collaboration/0.1.2/.../SKILL.md`
 - 用途：检查入口和 Skill 的版本化来源、安装副本与哈希一致性。
 
@@ -61,7 +61,7 @@
 
 ## S07：`issue-to-merge` 安装源码
 
-- 路径：`C:\Users\Morni\.codex\plugins\cache\codex-marketplace\issue-to-merge\0.1.0`
+- 路径：`C:\Users\<user>\.codex\plugins\cache\codex-marketplace\issue-to-merge\0.1.0`
 - 对象：Plugin `0.1.0`，17 个 `SKILL.md`，合计 1491 行、94929 字节。
 - 复查：`rg --files --hidden <path>`，逐个读取 `SKILL.md` 及 `references/repository-work-files.md`。
 - 用途：确认它实际的流程、授权语义、外部 Skill 依赖、本地资产规则和默认串行边界。

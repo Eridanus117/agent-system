@@ -15,14 +15,14 @@
 3. Windows 用户级 Codex/Claude 配置；
 4. WSL 和 Orca 遗留或现用的入口、Hooks 与 Skills。
 
-盘点时，`agent-control` 只会在会话从该仓库范围内启动时自动进入项目指令链。从 `C:\Users\Morni` 等其他目录启动的新会话没有新的用户级入口把它带回当前权威。后续已实施这个最小改进，结果见下一节。
+盘点时，`agent-control` 只会在会话从该仓库范围内启动时自动进入项目指令链。从 `C:\Users\<user>` 等其他目录启动的新会话没有新的用户级入口把它带回当前权威。后续已实施这个最小改进，结果见下一节。
 
 ## 实施后补充
 
 - 已新建 Windows 用户级 `.codex\AGENTS.md` 与 `.claude\CLAUDE.md`；
 - Claude Code 的全新只读会话已正确恢复当前权威入口；
-- 从普通 Windows 终端环境启动、默认使用 `C:\Users\Morni\.codex` 的 Codex 全新只读会话也已正确恢复入口；
-- 当前宿主进程另外注入了 `CODEX_HOME=C:\Users\Morni\AppData\Roaming\orca\codex-runtime-home\home`，而 Windows 用户级和机器级都没有持久设置该变量；
+- 从普通 Windows 终端环境启动、默认使用 `C:\Users\<user>\.codex` 的 Codex 全新只读会话也已正确恢复入口；
+- 当前宿主进程另外注入了 `CODEX_HOME=C:\Users\<user>\AppData\Roaming\orca\codex-runtime-home\home`，而 Windows 用户级和机器级都没有持久设置该变量；
 - Orca 已把 `.codex\AGENTS.md` 复制到该专用目录，并用一个只含来源路径的标记文件声明这是它维护的副本；两份文件的内容和 SHA-256 相同；
 - Orca 当前版本的本机代码会在同步时刷新这个受管副本，宿主路径不需要再手工建立第二份入口；
 - 全新、临时、只读的 Orca 宿主 Codex Session 已正确恢复全部入口信息；因此普通 Windows 和 Orca 两种 Codex 启动路径均已验证。
@@ -34,7 +34,7 @@
 | 项目 | Codex | Claude Code |
 |---|---|---|
 | 版本 | `0.147.0` | `2.1.221` |
-| 用户配置 | 普通 Windows 环境使用 `C:\Users\Morni\.codex\config.toml`；当前宿主进程的 `CODEX_HOME` 指向另一目录 | `C:\Users\Morni\.claude\settings.json` |
+| 用户配置 | 普通 Windows 环境使用 `C:\Users\<user>\.codex\config.toml`；当前宿主进程的 `CODEX_HOME` 指向另一目录 | `C:\Users\<user>\.claude\settings.json` |
 | 用户级持久指令 | 盘点时没有；现已创建并验证普通 Windows 启动路径；Orca 已生成同内容的受管副本 | 盘点时没有；现已创建并通过全新会话验证 |
 | `agent-control` 项目入口 | 根目录有 `AGENTS.md` | 根目录 `CLAUDE.md` 导入 `AGENTS.md` |
 | 项目专属配置 | 没有 `.codex\config.toml` | 没有 `.claude\settings.json` |
@@ -42,7 +42,7 @@
 | 自动记忆 | 关闭 | 关闭 |
 | 多 Agent 能力 | 功能开关已开，最多 15 个并发线程、深度 3 | Agent Teams 环境开关已开 |
 
-当前会话从 `C:\Users\Morni` 启动，而不是从 `agent-control` 启动。它能保持当前方向主要依赖本次长对话和已经建立的仓内记录；这不能证明全新的 Session 会自动找到权威。
+当前会话从 `C:\Users\<user>` 启动，而不是从 `agent-control` 启动。它能保持当前方向主要依赖本次长对话和已经建立的仓内记录；这不能证明全新的 Session 会自动找到权威。
 
 ### Codex 的当前扩展
 
@@ -69,7 +69,7 @@ Hook 当前主要承担本机事件转发，并没有在入口脚本中注入 `a
 
 ### 共享 Skills 与 `grilling`
 
-- `C:\Users\Morni\.agents\skills` 目前有 `find-skills`、三个 Orca Skill 和 `orchestration`，但该目录不是 Git 仓库，不能直接跨主机恢复；
+- `C:\Users\<user>\.agents\skills` 目前有 `find-skills`、三个 Orca Skill 和 `orchestration`，但该目录不是 Git 仓库，不能直接跨主机恢复；
 - 这些 Skill 文件存在，但本次 Codex 会话提供的可用 Skill 清单没有列出它们；原因尚未验证；
 - `agent-plugins` 是干净的 Git 仓库并已连接 GitHub；
 - 其中已经存在 `grilling` `0.1.0`，同时有 Codex 与 Claude manifest，共用一份 `skills/grilling/SKILL.md`；
@@ -139,7 +139,7 @@ Codex 的 OpenAI 官方文档 MCP 使用了非空的静态 `Authorization` 值�
 
 ### 4. Orca 启动时的配置分层警告
 
-Orca 宿主验证从 `C:\Users\Morni` 启动时，Codex 把 `.codex\config.toml` 额外识别为项目级配置，并报告其中的 `notify` 不支持项目级设置而被忽略。原因是 Orca 使用另一处专用 `CODEX_HOME`，同时工作目录正好包含默认 `.codex` 目录。
+Orca 宿主验证从 `C:\Users\<user>` 启动时，Codex 把 `.codex\config.toml` 额外识别为项目级配置，并报告其中的 `notify` 不支持项目级设置而被忽略。原因是 Orca 使用另一处专用 `CODEX_HOME`，同时工作目录正好包含默认 `.codex` 目录。
 
 后续窄复核确认：默认配置与 Orca 专用用户配置都在第 10 行定义了顶层 `notify`，两处定义完全相同。被忽略的是额外发现的项目级重复项，Orca 专用 `CODEX_HOME` 中的用户级定义仍然存在。因此当前证据只显示警告噪声，没有显示通知配置丢失。
 
@@ -147,7 +147,7 @@ Orca 宿主验证从 `C:\Users\Morni` 启动时，Codex 把 `.codex\config.toml`
 
 ### 5. `agent-control` 的 Orca 登记与信任
 
-为执行负责人批准的可观察交接重试，现有本地仓 `C:\Users\Morni\workspace\agent-control` 已登记到 Orca，没有新建 Git worktree、分支或远程。
+为执行负责人批准的可观察交接重试，现有本地仓 `C:\Users\<user>\workspace\agent-control` 已登记到 Orca，没有新建 Git worktree、分支或远程。
 
 负责人明确允许把该当前权威仓标记为受信任项目。可见变化只出现在 Orca 专用 `CODEX_HOME` 的 `config.toml`：新增该项目段及 `trust_level` 键；默认 Windows `.codex\config.toml` 未变化。新 TUI 的只读任务没有再修改仓或配置。
 

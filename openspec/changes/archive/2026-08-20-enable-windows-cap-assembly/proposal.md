@@ -67,7 +67,7 @@
 - 本机 CPython **原生可用**的接口：`os.lstat` 不跟随 junction，且 `st_file_attributes` 可判出重解析点（实测 junction 得 `attrs=0x410`、`st_reparse_tag=0xa0000003`，真实目录得 `attrs=0x10`）；`st_dev` 与 `st_ino` 均有值且能区分对象；`st_nlink` 正确反映硬链接数（建立硬链接后两个名字均报 `nlink=2`）。
 - `_staged_auth`（`cli.py:1304-1364`）三个客户端路径不同：codex 与 qoder 用 `_create_auth_symlink` 暂存凭据文件／目录，**omp 只读取 `broker.json` 与 `token` 的值并经 `OMP_AUTH_BROKER_URL`／`OMP_AUTH_BROKER_TOKEN` 传入，不在磁盘上产生任何凭据副本**。
 - `git ls-files -s` 显示仓内仅 `tools/public_surface_check/public_surface_check.py` 为 `100755`，`.cap`、`plugins`、`.agents` 下 138 个文件全部为 `100644`；即锁定输入与渲染源中不存在可执行资产。
-- `omp` 客户端已安装于 `C:\Users\Morni\.bun\bin\omp.exe`。
+- `omp` 客户端已安装于 `C:\Users\<user>\.bun\bin\omp.exe`。
 
 ## 官方一手来源
 
