@@ -61,8 +61,8 @@ python tools/plugin_release/plugin_release.py release <插件> --apply    # 默�
 三个运行端的 `agent-plugins` Marketplace 都注册为**本机目录源，直接指向工作树**：
 
 ```
-Claude      {"source": "directory", "path": "C:\\Users\\Morni\\workspace\\agent-plugins"}
-Codex       source_type = "local", source = '\\?\C:\Users\Morni\workspace\agent-plugins'
+Claude      {"source": "directory", "path": "C:\\Users\\<user>\\workspace\\agent-plugins"}
+Codex       source_type = "local", source = '\\?\C:\Users\<user>\workspace\agent-plugins'
 Orca Codex  同上
 ```
 
@@ -73,7 +73,7 @@ Orca Codex  同上
 实测：Orca 的 Codex home 里 `plugins` 是指向 `~/.codex/plugins` 的 junction。
 
 ```
-%APPDATA%/orca/codex-runtime-home/home/plugins  ->  C:\Users\Morni\.codex\plugins
+%APPDATA%/orca/codex-runtime-home/home/plugins  ->  C:\Users\<user>\.codex\plugins
 ```
 
 因此**「Orca 内的 Codex」与「普通 Codex」共用同一份插件缓存**，只有 home（配置、会话、hooks、`AGENTS.md`）是分开的。物理缓存是 **2 份，不是 3**。

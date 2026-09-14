@@ -128,13 +128,13 @@ describe('OMP branch-aware write guard', () => {
     // （~/multica_workspaces/<workspace>/<run>/workdir）不是 Git 仓库，旧实现把
     // 「确证仓外」和「说不清」都压成拒绝，于是整条派工路不可用——连只读命令都被拦。
     await expect(evaluateWriteGuard(
-      toolCall('write', { path: 'C:/Users/Morni/multica_workspaces/ws/run/workdir/report.md' }),
-      'C:/Users/Morni/multica_workspaces/ws/run/workdir',
+      toolCall('write', { path: 'D:/multica_workspaces/ws/run/workdir/report.md' }),
+      'D:/multica_workspaces/ws/run/workdir',
       outside,
     )).resolves.toBeUndefined();
     await expect(evaluateWriteGuard(
       toolCall('bash', { command: 'multica issue get ERID-1 --output json' }),
-      'C:/Users/Morni/multica_workspaces/ws/run/workdir',
+      'D:/multica_workspaces/ws/run/workdir',
       outside,
     )).resolves.toBeUndefined();
   });

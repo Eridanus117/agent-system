@@ -21,13 +21,13 @@
 ```text
 orca skills get orchestration --full
 orca skills get orca-cli
-python tools/worktree-gc/worktree_gc.py --workspace-root C:/Users/Morni/orca/workspaces/agent-control
+python tools/worktree-gc/worktree_gc.py --workspace-root C:/Users/<user>/orca/workspaces/agent-control
 ```
 
 把完整 dry-run 报告发布到对应合同 Issue，人工确认通过集后才显式执行：
 
 ```text
-python tools/worktree-gc/worktree_gc.py --workspace-root C:/Users/Morni/orca/workspaces/agent-control --execute
+python tools/worktree-gc/worktree_gc.py --workspace-root C:/Users/<user>/orca/workspaces/agent-control --execute
 ```
 
 执行模式会先重新生成一次计划，并在每个删除动作前再次读取全部活动终端与 Dispatch；新出现的绑定会让该对象转为保留。最后把 dry-run 的通过集、实际移除集、清理前后数量、保留原因和动作失败逐项写回合同 Issue。

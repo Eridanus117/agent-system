@@ -3,7 +3,7 @@
   "version": 1,
   "source": {
     "comment": "三个运行端的 agent-plugins Marketplace 都注册为本机目录源，指向这个工作树本身；因此「源」就是它当前检出的内容，不是 origin/main。切分支会改变运行端下次安装到的东西，check 因此必须报告分支。",
-    "repository": "C:/Users/Morni/workspace/agent-plugins",
+    "repository": "~/workspace/agent-plugins",
     "plugins_path": "plugins",
     "declaration": "tests/workflow-routing.json",
     "declaration_key": "pluginVersions",

@@ -49,14 +49,8 @@
     "openspec/changes/archive/",
     "tests/fixtures/public-surface/",
     "packages/mounts/tests/public-tree.test.ts",
-    "packages/control-plane/tests/contracts/omp-write-guard.test.ts",
     "packages/harness-engine/tests/quality/stage6b.test.ts",
-    "plugins/workcoding/skills/workcoding/evals/runs/2026-09-06/baseline.zip",
-    "tools/claude_receipt_bridge/INSTALLATION_PROPOSAL.md",
-    "tools/plugin_release/README.md",
-    "tools/plugin_release/targets.json",
-    "tools/sibling-facts/VERIFICATION.md",
-    "tools/worktree-gc/README.md"
+    "plugins/workcoding/skills/workcoding/evals/runs/2026-09-06/baseline.zip"
   ],
   "deniedTokenHashes": [],
   "maxFileBytes": 1000000,
