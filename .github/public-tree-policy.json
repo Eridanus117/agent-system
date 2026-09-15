@@ -44,9 +44,6 @@
     ".claude/settings.local.json"
   ],
   "contentExemptPaths": [
-    "_archive/",
-    "work/",
-    "openspec/changes/archive/",
     "tests/fixtures/public-surface/",
     "packages/mounts/tests/public-tree.test.ts",
     "packages/harness-engine/tests/quality/stage6b.test.ts",

@@ -4,7 +4,7 @@
 
 本文记录 2026-08-14 在 WSL Ubuntu 24.04 上完成的真实运行。环境位于 `/home/<user>/venvs/vllm-cpu-0271`，只使用 vLLM 官方发布的 `v0.27.1` CPU wheel；没有使用 `sudo`、`apt`、系统 Python、全局 pip、GPU 依赖或源码编译。
 
-完整 DEBUG 样本见 [`samples/vllm-cpu-opt-125m-debug.log`](./samples/vllm-cpu-opt-125m-debug.log)，共 337 行。下文行号均按 `\n` 计数并固定到这份样本，可在本目录用 `sed -n '<N>p' samples/vllm-cpu-opt-125m-debug.log` 复现。
+完整 DEBUG 样本见 [`samples/vllm-cpu-opt-125m-debug.log`](https://github.com/Eridanus117/agent-system/blob/0a2875d860a105f17c4f22551d6919818c3cb389/_archive/learning/teaching/pilot-vllm/samples/vllm-cpu-opt-125m-debug.log)，共 337 行。下文行号均按 `\n` 计数并固定到这份样本，可在本目录用 `sed -n '<N>p' samples/vllm-cpu-opt-125m-debug.log` 复现。日志样本已于 2026-09-14 从仓内删除（#103），下文链接指向删除前的提交 `0a2875d`，行号不变。
 
 ## 环境与隔离安装
 
