@@ -1,3 +1,3 @@
-error: Cannot find module 'react/jsx-dev-runtime' from '/Users/a123/work/worktrees/agent-system/clearify/packages/control-plane/src/cli/tui.tsx'
+error: Cannot find module 'react/jsx-dev-runtime' from '/Users/<user>/work/worktrees/agent-system/clearify/packages/control-plane/src/cli/tui.tsx'
 
 Bun v1.3.14 (macOS arm64)

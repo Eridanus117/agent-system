@@ -19,7 +19,7 @@ SERVER INFO 08-14 08:27:41 [triton_utils/importing.py:53] Triton is installed bu
 SERVER WARNING 08-14 08:27:41 [triton_utils/importing.py:65] Triton is installed, but doesn't include CPU backend. Disabling Triton.
 SERVER INFO 08-14 08:27:41 [triton_utils/importing.py:88] Triton not installed or not compatible; certain GPU-related functions will not be available.
 SERVER DEBUG 08-14 08:27:42 [utils/flashinfer.py:53] FlashInfer unavailable since package was not found
-SERVER OBSERVE_R2_SERVER_ARGV=vllm serve facebook/opt-125m --host 127.0.0.1 --port 44561 --dtype float32 --max-model-len 128 --max-num-seqs 2 --enforce-eager --enable-logging-iteration-details --enable-log-requests --chat-template /mnt/c/Users/Morni/AppData/Local/Temp/f277c_r2_chat_template.jinja
+SERVER OBSERVE_R2_SERVER_ARGV=vllm serve facebook/opt-125m --host 127.0.0.1 --port 44561 --dtype float32 --max-model-len 128 --max-num-seqs 2 --enforce-eager --enable-logging-iteration-details --enable-log-requests --chat-template /mnt/c/Users/<user>/AppData/Local/Temp/f277c_r2_chat_template.jinja
 SERVER DEBUG 08-14 08:27:43 [entrypoints/.../utils/api_utils.py:166] Setting VLLM_WORKER_MULTIPROC_METHOD to 'spawn'
 SERVER DEBUG 08-14 08:27:43 [plugins/__init__.py:52] Available plugins for group vllm.general_plugins:
 SERVER DEBUG 08-14 08:27:43 [plugins/__init__.py:54] - lora_filesystem_resolver -> vllm.plugins.lora_resolvers.filesystem_resolver:register_filesystem_resolver
@@ -31,7 +31,7 @@ SERVER (APIServer pid=671) INFO 08-14 08:27:43 [entrypoints/.../utils/api_utils.
 SERVER (APIServer pid=671) INFO 08-14 08:27:43 [entrypoints/.../utils/api_utils.py:345]   █▄█▀ █     █     █     █  model   facebook/opt-125m
 SERVER (APIServer pid=671) INFO 08-14 08:27:43 [entrypoints/.../utils/api_utils.py:345]    ▀▀  ▀▀▀▀▀ ▀▀▀▀▀ ▀     ▀
 SERVER (APIServer pid=671) INFO 08-14 08:27:43 [entrypoints/.../utils/api_utils.py:345] 
-SERVER (APIServer pid=671) INFO 08-14 08:27:43 [entrypoints/.../utils/api_utils.py:273] non-default args: {'model_tag': 'facebook/opt-125m', 'chat_template': '/mnt/c/Users/Morni/AppData/Local/Temp/f277c_r2_chat_template.jinja', 'host': '127.0.0.1', 'port': 44561, 'model': 'facebook/opt-125m', 'dtype': 'float32', 'max_model_len': 128, 'enforce_eager': True, 'enable_logging_iteration_details': True, 'max_num_seqs': 2, 'enable_log_requests': True}
+SERVER (APIServer pid=671) INFO 08-14 08:27:43 [entrypoints/.../utils/api_utils.py:273] non-default args: {'model_tag': 'facebook/opt-125m', 'chat_template': '/mnt/c/Users/<user>/AppData/Local/Temp/f277c_r2_chat_template.jinja', 'host': '127.0.0.1', 'port': 44561, 'model': 'facebook/opt-125m', 'dtype': 'float32', 'max_model_len': 128, 'enforce_eager': True, 'enable_logging_iteration_details': True, 'max_num_seqs': 2, 'enable_log_requests': True}
 SERVER (APIServer pid=671) Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
 SERVER (APIServer pid=671) WARNING 08-14 08:27:44 [engine/arg_utils.py:1678] The global random seed is set to 0. Since VLLM_ENABLE_V1_MULTIPROCESSING is set to False, this may affect the random state of the Python process that launched vLLM.
 SERVER (APIServer pid=671) DEBUG 08-14 08:27:46 [model_executor/models/registry.py:990] Loaded model info for class vllm.model_executor.models.opt.OPTForCausalLM from cache
@@ -76,7 +76,7 @@ SERVER INFO 08-14 08:27:54 [triton_utils/importing.py:53] Triton is installed bu
 SERVER WARNING 08-14 08:27:54 [triton_utils/importing.py:65] Triton is installed, but doesn't include CPU backend. Disabling Triton.
 SERVER INFO 08-14 08:27:54 [triton_utils/importing.py:88] Triton not installed or not compatible; certain GPU-related functions will not be available.
 SERVER DEBUG 08-14 08:27:54 [utils/flashinfer.py:53] FlashInfer unavailable since package was not found
-SERVER OBSERVE_R2_SERVER_ARGV=vllm serve facebook/opt-125m --host 127.0.0.1 --port 44561 --dtype float32 --max-model-len 128 --max-num-seqs 2 --enforce-eager --enable-logging-iteration-details --enable-log-requests --chat-template /mnt/c/Users/Morni/AppData/Local/Temp/f277c_r2_chat_template.jinja
+SERVER OBSERVE_R2_SERVER_ARGV=vllm serve facebook/opt-125m --host 127.0.0.1 --port 44561 --dtype float32 --max-model-len 128 --max-num-seqs 2 --enforce-eager --enable-logging-iteration-details --enable-log-requests --chat-template /mnt/c/Users/<user>/AppData/Local/Temp/f277c_r2_chat_template.jinja
 SERVER (EngineCore pid=701) DEBUG 08-14 08:27:54 [v1/engine/core.py:1252] Waiting for init message from front-end.
 SERVER (APIServer pid=671) DEBUG 08-14 08:27:54 [v1/engine/utils.py:1341] HELLO from local core engine process 0.
 SERVER (EngineCore pid=701) DEBUG 08-14 08:27:54 [v1/engine/core.py:1263] Received init message: EngineHandshakeMetadata(addresses=EngineZmqAddresses(inputs=['ipc:///tmp/16b90592-8bc1-43df-8be6-3afd4d2bc9e9'], outputs=['ipc:///tmp/554974c9-103c-4f5a-91ca-2b7e4c727569'], coordinator_input=None, coordinator_output=None, frontend_stats_publish_address=None), parallel_config={})
@@ -546,10 +546,10 @@ SERVER (APIServer pid=671) DEBUG 08-14 08:28:18 [v1/engine/core_client.py:431] [
 SERVER (APIServer pid=671) DEBUG 08-14 08:28:18 [v1/engine/core_client.py:488] [shutdown] MPClient: background resource cleanup complete
 SERVER (APIServer pid=671) ERROR 08-14 08:28:18 [v1/engine/async_llm.py:724] AsyncLLM output_handler failed.
 SERVER (APIServer pid=671) ERROR 08-14 08:28:18 [v1/engine/async_llm.py:724] Traceback (most recent call last):
-SERVER (APIServer pid=671) ERROR 08-14 08:28:18 [v1/engine/async_llm.py:724]   File "/home/morni/venvs/vllm-cpu-0271/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py", line 680, in output_handler
+SERVER (APIServer pid=671) ERROR 08-14 08:28:18 [v1/engine/async_llm.py:724]   File "/home/<user>/venvs/vllm-cpu-0271/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py", line 680, in output_handler
 SERVER (APIServer pid=671) ERROR 08-14 08:28:18 [v1/engine/async_llm.py:724]     outputs = await engine_core.get_output_async()
 SERVER (APIServer pid=671) ERROR 08-14 08:28:18 [v1/engine/async_llm.py:724]               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-SERVER (APIServer pid=671) ERROR 08-14 08:28:18 [v1/engine/async_llm.py:724]   File "/home/morni/venvs/vllm-cpu-0271/lib/python3.12/site-packages/vllm/v1/engine/core_client.py", line 1101, in get_output_async
+SERVER (APIServer pid=671) ERROR 08-14 08:28:18 [v1/engine/async_llm.py:724]   File "/home/<user>/venvs/vllm-cpu-0271/lib/python3.12/site-packages/vllm/v1/engine/core_client.py", line 1101, in get_output_async
 SERVER (APIServer pid=671) ERROR 08-14 08:28:18 [v1/engine/async_llm.py:724]     raise self._format_exception(outputs) from None
 SERVER (APIServer pid=671) ERROR 08-14 08:28:18 [v1/engine/async_llm.py:724] vllm.v1.engine.exceptions.EngineDeadError: EngineCore encountered an issue. See stack trace (above) for the root cause.
 SERVER (APIServer pid=671) INFO 08-14 08:28:18 [v1/engine/core_client.py:693] [shutdown] MPClient: complete
@@ -559,7 +559,7 @@ SERVER (APIServer pid=671) INFO 08-14 08:28:18 [entrypoints/launcher.py:161] [sh
 SERVER (APIServer pid=671) INFO:     Shutting down
 SERVER (APIServer pid=671) INFO:     Waiting for application shutdown.
 SERVER (APIServer pid=671) INFO:     Application shutdown complete.
-SERVER /home/morni/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/multiprocessing/resource_tracker.py:279: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+SERVER /home/<user>/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/multiprocessing/resource_tracker.py:279: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
 SERVER   warnings.warn('resource_tracker: There appear to be %d '
 OBSERVE_R2_SERVER_EXIT returncode=0
 OBSERVE_R2_DONE

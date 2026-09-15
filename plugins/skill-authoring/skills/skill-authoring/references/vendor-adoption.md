@@ -15,7 +15,7 @@
 | skill-creator | 从反馈泛化不过拟合；读执行记录不只读最终产物；重复手写的脚本固化进 `scripts/` | 迭代纪律 |
 | skill-creator | 如实描述内容不让主人意外 | 装进 manifest 等于一次批准长期生效 |
 | Anthropic 指南 | 路径正斜杠；正文 <500 行；`scripts/`／`references/`／`assets/`；引用不嵌套 | 硬约束 |
-| Matt | 只由人敲的 skill 用 `disable-model-invocation: true`，描述只给人看 | 就是手动调用的 skill 的机制（ADR-0003） |
+| Matt | 只由人敲的 skill 用 `disable-model-invocation: true`，描述只给人看 | 就是手动调用的 skill 的机制（ADR-0004） |
 | Matt | 路由 skill：一个 user-invoked 的 skill 列出其余 skill 各自何时用，只提示不触发 | 流程 skill 的形态 |
 | Matt | 每步写完成判据；剪枝四查；正面陈述不靠禁令 | 文档组织判据，与调用方式无关 |
 

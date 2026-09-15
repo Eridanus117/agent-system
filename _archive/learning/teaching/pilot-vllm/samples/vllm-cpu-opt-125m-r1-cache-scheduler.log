@@ -289,20 +289,20 @@ WARNING 08-14 08:15:57 [v1/worker/cpu_worker.py:153] CPU backend doesn't allow t
 DEBUG 08-14 08:15:57 [renderers/base.py:249] Warming up chat template processing...
 DEBUG 08-14 08:16:01 [renderers/hf.py:283] Failed to load AutoTokenizer chat template for facebook/opt-125m
 DEBUG 08-14 08:16:01 [renderers/hf.py:283] Traceback (most recent call last):
-DEBUG 08-14 08:16:01 [renderers/hf.py:283]   File "/home/morni/venvs/vllm-cpu-0271/lib/python3.12/site-packages/vllm/renderers/hf.py", line 281, in resolve_chat_template
+DEBUG 08-14 08:16:01 [renderers/hf.py:283]   File "/home/<user>/venvs/vllm-cpu-0271/lib/python3.12/site-packages/vllm/renderers/hf.py", line 281, in resolve_chat_template
 DEBUG 08-14 08:16:01 [renderers/hf.py:283]     return tokenizer.get_chat_template(chat_template, tools=tools)
 DEBUG 08-14 08:16:01 [renderers/hf.py:283]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-DEBUG 08-14 08:16:01 [renderers/hf.py:283]   File "/home/morni/venvs/vllm-cpu-0271/lib/python3.12/site-packages/transformers/tokenization_utils_base.py", line 3270, in get_chat_template
+DEBUG 08-14 08:16:01 [renderers/hf.py:283]   File "/home/<user>/venvs/vllm-cpu-0271/lib/python3.12/site-packages/transformers/tokenization_utils_base.py", line 3270, in get_chat_template
 DEBUG 08-14 08:16:01 [renderers/hf.py:283]     raise ValueError(
 DEBUG 08-14 08:16:01 [renderers/hf.py:283] ValueError: Cannot use chat template functions because tokenizer.chat_template is not set and no template argument was passed! For information about writing templates and setting the tokenizer.chat_template attribute, please see the documentation at https://huggingface.co/docs/transformers/main/en/chat_templating
 DEBUG 08-14 08:16:01 [renderers/hf.py:302] There is no chat template fallback for facebook/opt-125m
 INFO 08-14 08:16:01 [renderers/hf.py:540] Detected the chat template content format to be 'string'. You can set `--chat-template-content-format` to override this.
 DEBUG 08-14 08:16:01 [renderers/hf.py:283] Failed to load AutoTokenizer chat template for facebook/opt-125m
 DEBUG 08-14 08:16:01 [renderers/hf.py:283] Traceback (most recent call last):
-DEBUG 08-14 08:16:01 [renderers/hf.py:283]   File "/home/morni/venvs/vllm-cpu-0271/lib/python3.12/site-packages/vllm/renderers/hf.py", line 281, in resolve_chat_template
+DEBUG 08-14 08:16:01 [renderers/hf.py:283]   File "/home/<user>/venvs/vllm-cpu-0271/lib/python3.12/site-packages/vllm/renderers/hf.py", line 281, in resolve_chat_template
 DEBUG 08-14 08:16:01 [renderers/hf.py:283]     return tokenizer.get_chat_template(chat_template, tools=tools)
 DEBUG 08-14 08:16:01 [renderers/hf.py:283]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-DEBUG 08-14 08:16:01 [renderers/hf.py:283]   File "/home/morni/venvs/vllm-cpu-0271/lib/python3.12/site-packages/transformers/tokenization_utils_base.py", line 3270, in get_chat_template
+DEBUG 08-14 08:16:01 [renderers/hf.py:283]   File "/home/<user>/venvs/vllm-cpu-0271/lib/python3.12/site-packages/transformers/tokenization_utils_base.py", line 3270, in get_chat_template
 DEBUG 08-14 08:16:01 [renderers/hf.py:283]     raise ValueError(
 DEBUG 08-14 08:16:01 [renderers/hf.py:283] ValueError: Cannot use chat template functions because tokenizer.chat_template is not set and no template argument was passed! For information about writing templates and setting the tokenizer.chat_template attribute, please see the documentation at https://huggingface.co/docs/transformers/main/en/chat_templating
 DEBUG 08-14 08:16:01 [renderers/base.py:257] This model does not support chat template.

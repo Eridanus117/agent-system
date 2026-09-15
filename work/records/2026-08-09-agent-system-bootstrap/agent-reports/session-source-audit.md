@@ -9,11 +9,11 @@
 当前根 Session 的实际 Codex 原始事件记录是一个仍在追加的 rollout JSONL：
 
 ```text
-C:\Users\Morni\AppData\Roaming\orca\codex-runtime-home\home\sessions\2026\08\07\rollout-2026-08-07T07-08-48-019fdbe9-4f7e-79d1-95d4-25c7a83cff69.jsonl
+C:\Users\<user>\AppData\Roaming\orca\codex-runtime-home\home\sessions\2026\08\07\rollout-2026-08-07T07-08-48-019fdbe9-4f7e-79d1-95d4-25c7a83cff69.jsonl
 ```
 
 - 根 `thread_id` / `session_id`：`019fdbe9-4f7e-79d1-95d4-25c7a83cff69`；
-- `CODEX_HOME`：`C:\Users\Morni\AppData\Roaming\orca\codex-runtime-home\home`；
+- `CODEX_HOME`：`C:\Users\<user>\AppData\Roaming\orca\codex-runtime-home\home`；
 - `session_meta` 表明：`source=cli`、`thread_source=user`、`originator=codex-tui`、`cli_version=0.146.0`；
 - Orca 的 `ai-vault\session-parse-cache.json` 中有一个匹配条目，其 `session.filePath` 和 `session.codexHome` 分别与上述 rollout 和当前 `CODEX_HOME` 完全一致。这是派生缓存对原始来源的直接指向，不是另一份完整原始记录。
 
@@ -34,7 +34,7 @@ C:\Users\Morni\AppData\Roaming\orca\codex-runtime-home\home\sessions\2026\08\07\
 Orca 派生缓存：
 
 ```text
-C:\Users\Morni\AppData\Roaming\orca\ai-vault\session-parse-cache.json
+C:\Users\<user>\AppData\Roaming\orca\ai-vault\session-parse-cache.json
 ```
 
 匹配条目保存了根 Session 的标题、工作目录、原始 `filePath`、`codexHome`、消息计数、`lastUserPrompt`、恢复命令及 5 条截断的预览消息。它因此也含有会话正文片段，但只是可重建、会变化的 UI/解析缓存；不应当作为原始层或长期追溯锚点。该条目当时报告 `subagentTranscriptCount=0`，而 rollout 元数据图实际找到了 25 个子 Session，说明也不能只依赖这个缓存字段发现 Codex 多 Agent 转录。

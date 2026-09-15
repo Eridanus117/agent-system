@@ -8,7 +8,7 @@
 
 - 类型：Codex rollout JSONL；
 - 根线程：`019fdbe9-4f7e-79d1-95d4-25c7a83cff69`；
-- `CODEX_HOME`：`C:\Users\Morni\AppData\Roaming\orca\codex-runtime-home\home`；
+- `CODEX_HOME`：`C:\Users\<user>\AppData\Roaming\orca\codex-runtime-home\home`；
 - 根路径：`sessions\2026\08\07\rollout-2026-08-07T07-08-48-019fdbe9-4f7e-79d1-95d4-25c7a83cff69.jsonl`；
 - 保存状态：仅当前主机可用，根文件仍在增长；未核验平台长期保留策略；
 - 观察快照：12:37 扫描得到 17,107 条完整 JSONL、0 个解析错误；根约 37.7 MiB，根与 25 个直接子文件合计约 87 MiB；
@@ -75,7 +75,7 @@
 ## S03｜`agent-plugins` Git 历史、来源与安装缓存
 
 - 类型：跨 Codex／Claude 的版本化 Plugin 源码；
-- 位置：`C:\Users\Morni\workspace\agent-plugins`；远程 `https://github.com/Eridanus117/agent-plugins`；
+- 位置：`C:\Users\<user>\workspace\agent-plugins`；远程 `https://github.com/Eridanus117/agent-plugins`；
 - 已推送基线：`87c0322`（`self-improvement` `0.1.0`）；`self-improvement` `0.1.2` 首次进入 `712c4be`，`knowledge-maintenance` `0.1.0` 进入 `d35ff98`，`orchestrated-collaboration` `0.1.0` 进入 `e84975c`，后端中立的 `0.1.1` 进入 `389eda3`；
 - 真实入口：普通 Codex、Orca Codex 和 Claude 的 Plugin 安装缓存；
 - 保存状态：源码由 Git 保存；安装缓存只表示本机运行状态，不是权威来源；
@@ -124,7 +124,7 @@
 
 ## Orca 派生缓存
 
-- 位置：`C:\Users\Morni\AppData\Roaming\orca\ai-vault\session-parse-cache.json`；
+- 位置：`C:\Users\<user>\AppData\Roaming\orca\ai-vault\session-parse-cache.json`；
 - 用途：帮助发现根 rollout 路径；
 - 状态：可变化的 UI／解析缓存，不是原始来源；
 - 限制：包含少量会话正文预览，且 `subagentTranscriptCount` 与实际子文件不一致；不提交、不作为完整性依据。

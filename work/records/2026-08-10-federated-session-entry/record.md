@@ -295,7 +295,7 @@ agent-control[#29](https://github.com/Eridanus117/agent-control/issues/29) 已�
 
 - Provider Session：`019feef5-b5d3-7143-8268-d6cc6fde5e52`；
 - Orca terminal：`term_a2ff5020-bc9c-43fa-b73b-879f02710076`；
-- worktree：`C:/Users/Morni/orca/workspaces/agent-control/pr33-p2-fix-fresh`，创建 head `84c1a2b3eefdee9b6e897abe008727be688fb146`；
+- worktree：`C:/Users/<user>/orca/workspaces/agent-control/pr33-p2-fix-fresh`，创建 head `84c1a2b3eefdee9b6e897abe008727be688fb146`；
 - Task：`task_f9a8353a44ce`；
 - Dispatch：`ctx_a8bed7e1a659`。
 
@@ -476,7 +476,7 @@ GitHub CLI 已安装在 `C:\Program Files\GitHub CLI\gh.exe`，机器 PATH 也�
 
 低层 Dispatch 的 `dispatch-show` 能看到 capability hash，但被派发终端发送 `heartbeat` 和 `worker_done` 时均被 Orca 拒绝为 `dispatch_capability_invalid`（capability missing）；普通 status 和 Delivery 仍可送达，被拒绝的 `worker_done` 正文也进入高优先级消息。复核评论没有丢失，但 Task／Dispatch 不能正常 settle。事件已追加到 [#31](https://github.com/Eridanus117/agent-control/issues/31#issuecomment-5251708510)。该终端报告 `ORCA_APP_VERSION=1.4.176`，与先前记录的 1.4.177 环境不同，版本按现场原值保留。
 
-Claude 的 Marketplace 来源配置实际指向 `C:\Users\Morni\workspace\agent-plugins`，本次 Skill 从源码目录加载；版本化缓存仍存在且与源码哈希一致。当前没有偏差，但源码工作树未提交修改或分支切换可能改变新 Session 行为，而缓存版本继续显示正常。事件已追加并压缩到 [#32](https://github.com/Eridanus117/agent-control/issues/32#issuecomment-5251708961)；后续安装回执必须同时核验 Marketplace 来源、实际解析路径、提交、工作树和缓存哈希。
+Claude 的 Marketplace 来源配置实际指向 `C:\Users\<user>\workspace\agent-plugins`，本次 Skill 从源码目录加载；版本化缓存仍存在且与源码哈希一致。当前没有偏差，但源码工作树未提交修改或分支切换可能改变新 Session 行为，而缓存版本继续显示正常。事件已追加并压缩到 [#32](https://github.com/Eridanus117/agent-control/issues/32#issuecomment-5251708961)；后续安装回执必须同时核验 Marketplace 来源、实际解析路径、提交、工作树和缓存哈希。
 
 标准 `worker-release` 再次返回 `dispatch_not_found` 且没有恢复动作。远端评论持久化、工作树干净、单 pane 终端／worktree 身份唯一、删除连带影响四项证明齐全后，当前 Session先精确关闭该 tab，再无 force 删除 worktree并复查；最终只剩两个 main worktree 和根终端。
 

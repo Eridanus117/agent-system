@@ -35,7 +35,7 @@
       "claim": "Skill 发现路径为 managed、user(=CLAUDE_CONFIG_DIR)、project、plugin、bundled 五类",
       "status": "confirmed",
       "verified_by": "experiment",
-      "evidence": "日志原文：'Loading skills from: managed=C:\\Program Files\\ClaudeCode\\.claude\\skills, user=C:\\Users\\Morni\\.claude\\skills, project=[]'；'getSkills returning: 0 skill dir commands, 1 plugin skills, 42 bundled skills, 0 builtin plugin skills'。",
+      "evidence": "日志原文：'Loading skills from: managed=C:\\Program Files\\ClaudeCode\\.claude\\skills, user=C:\\Users\\<user>\\.claude\\skills, project=[]'；'getSkills returning: 0 skill dir commands, 1 plugin skills, 42 bundled skills, 0 builtin plugin skills'。",
       "notes": "不存在『自定义 skills 目录』的设置项；但 plugin 是一条独立且可控的交付通道。"
     },
     {
@@ -147,7 +147,7 @@
       "claim": "Windows 上的配置与管理路径",
       "status": "confirmed",
       "verified_by": "experiment",
-      "evidence": "用户级 C:\\Users\\<user>\\.claude 与 C:\\Users\\<user>\\.claude.json；管理层 C:\\Program Files\\ClaudeCode\\。可执行文件 C:\\Users\\Morni\\.local\\bin\\claude.exe。",
+      "evidence": "用户级 C:\\Users\\<user>\\.claude 与 C:\\Users\\<user>\\.claude.json；管理层 C:\\Program Files\\ClaudeCode\\。可执行文件 C:\\Users\\<user>\\.local\\bin\\claude.exe。",
       "notes": "长路径与 symlink 限制未单独实验验证，仍按保守设计处理。"
     },
     {

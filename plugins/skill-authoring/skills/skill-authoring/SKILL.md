@@ -6,7 +6,7 @@ description: >-
 
 # 写一条自建 skill
 
-用词按本仓词汇表（`plugins/CONTEXT.md`）：是不是路由 skill 决定路线长短，手动调用还是自动调用决定 frontmatter，反馈是用中撞到的问题，上线待办是出口的另一半。frontmatter 与可见档的取舍已在 ADR-0003 定过，这里只执行，不重新论证。
+用词按本仓词汇表（`plugins/CONTEXT.md`）：是不是路由 skill 决定路线长短，手动调用还是自动调用决定 frontmatter，反馈是用中撞到的问题，上线待办是出口的另一半。frontmatter 与可见档的取舍已在 ADR-0004 定过，这里只执行，不重新论证。
 
 ## 什么时候用
 
@@ -60,6 +60,6 @@ description: >-
 
 ## 为什么在哪
 
-- 决定与取舍：desk#139（方案对齐记录）、agent-system#104（spec）、ADR-0003（frontmatter 与可见档）。
+- 决定与取舍：desk#139（方案对齐记录）、agent-system#104（spec）、ADR-0004（frontmatter 与可见档）。
 - 三家指南吸收与排除：[vendor-adoption.md](./references/vendor-adoption.md)。
 - 词汇：`plugins/CONTEXT.md`。
