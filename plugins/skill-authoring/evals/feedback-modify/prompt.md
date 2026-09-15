@@ -13,4 +13,4 @@ allowed_tools: [Read, Glob, Grep, Skill, Write]
 - 哪一步：`wrap-up` 第 3 步「收尾」。
 - 它让做什么（原文）：「把分支本地 merge 进 main，然后删除分支。」
 - 我实际做了什么、为什么：没有照做。工作区规则说改代码的授权不含 push、合并、发布，所以我开了 PR、写了停靠记录，分支留着。
-- 任务现场：memex 仓，issue #58，第 7 段。
+- 任务现场：notes 仓，issue #12，第 7 段。

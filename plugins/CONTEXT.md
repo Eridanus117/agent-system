@@ -13,11 +13,11 @@ _Avoid_: 入口 skill、流程 skill（那是某一条具体路由 skill 的名�
 ### 决定 frontmatter 怎么写
 
 **手动调用**（manual invocation）:
-只有主人敲 `/名` 才用的 skill；agent 只能说「请敲 /名」然后停下。frontmatter 带 `disable-model-invocation: true`。
+只有主人敲 `/名` 才用的 skill；agent 只能说「请敲 /名」然后停下。
 _Avoid_: 门 skill、user-invoked
 
 **自动调用**（automatic invocation）:
-规则点名后由 agent 自己用的 skill。frontmatter 不带 `disable-model-invocation`。
+规则点名后由 agent 自己用的 skill。
 _Avoid_: 步 skill、model-invoked
 
 ### 写完之后
@@ -36,8 +36,8 @@ _Avoid_: 路由待办、部署待办
 SKILL.md 还是占位、或不装 skill 时跑出来的结果；正文只针对它写。
 
 **对照组**（control group）:
-`claude plugin eval` 里不装 skill 的那一组运行，用来算差值。
-_Avoid_: 臂、without arm
+评测里不装 skill 的那一组运行；装了 skill 的那一组叫**有 skill 组**，两组之差就是差值。
+_Avoid_: 臂、with arm、without arm
 
 **fixture**:
 用例开跑前准备好的仓库状态与文件。

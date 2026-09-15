@@ -1,11 +1,9 @@
-// 把 claude plugin eval 的结果 JSON 里的本机路径抹掉，再提交进仓。
+// 把 claude plugin eval 的结果 JSON 里家目录路径中的本机用户名换成 `<user>`，再提交进仓。
 // 运行：node plugins/skill-authoring/skills/skill-authoring/scripts/scrub-eval-results.ts <结果目录>
-// 只改 *.json：家目录（C:\Users\<名>、/Users/<名>、/home/<名>）→ <home>，仓库根（含 worktree）→ <repo>。
-// 公共面门禁扫最终 tree，家目录路径是它拦的一类（见 docs/adr/0002）。
+// 只改 *.json，只动用户名那一段，其余字节不动（占位约定见 docs/adr/0003）。
+// 覆盖的写法：C:\Users\<名>、C:\\Users\\<名>（JSON 转义）、C:/Users/<名>、/Users/<名>、/home/<名>、/mnt/c/Users/<名>。
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { execSync } from 'node:child_process';
 
 const target = process.argv[2];
 if (!target) {
@@ -13,29 +11,13 @@ if (!target) {
   process.exit(2);
 }
 
-/** 把一个绝对路径变成能同时匹配正斜杠、反斜杠和 JSON 转义反斜杠的正则 */
-function pathPattern(p: string): RegExp {
-  const escaped = p
-    .replace(/\\/gu, '/')
-    .replace(/[.*+?^${}()|[\]]/gu, '\\$&')
-    .replace(/\//gu, '(?:\\/|\\\\\\\\|\\\\)');
-  return new RegExp(escaped, 'giu');
-}
-
-const home = homedir();
-let repoRoot = '';
-try {
-  repoRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
-} catch {
-  repoRoot = '';
-}
-
-const patterns: Array<[RegExp, string]> = [];
-if (repoRoot) patterns.push([pathPattern(repoRoot), '<repo>']);
-patterns.push([pathPattern(home), '<home>']);
-// 家目录的通用形态（其他机器上跑出来的结果也能抹）
-patterns.push([/[A-Za-z]:(?:\\\\|\\|\/)Users(?:\\\\|\\|\/)[^\\\/"]+/gu, '<home>']);
-patterns.push([/\/(?:Users|home)\/[^\/"]+/gu, '<home>']);
+const patterns: Array<[RegExp, string]> = [
+  // 盘符:\Users\<名>、盘符:\\Users\\<名>、盘符:/Users/<名>；分隔符原样保留
+  [/([A-Za-z]:)(\\\\|\\|\/)(Users)(\\\\|\\|\/)(?!<user>)[^\\\/"'\s]+/gu, '$1$2$3$4<user>'],
+  // /Users/<名>、/home/<名>、/mnt/<盘符>/Users/<名>
+  [/(\/(?:Users|home)\/)(?!<user>)[^\/"'\s]+/gu, '$1<user>'],
+  [/(\/mnt\/[a-z]\/Users\/)(?!<user>)[^\/"'\s]+/gu, '$1<user>'],
+];
 
 function walk(dir: string): string[] {
   const out: string[] = [];
@@ -57,4 +39,4 @@ for (const file of walk(resolve(target))) {
     changed += 1;
   }
 }
-console.log(`已抹去本机路径：${changed} 个文件`);
+console.log(`已把用户名换成 <user>：${changed} 个文件`);

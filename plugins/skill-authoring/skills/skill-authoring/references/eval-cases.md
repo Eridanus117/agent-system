@@ -11,9 +11,9 @@ plugins/<插件>/evals/
     prompt.md               frontmatter + 提示词正文
     case.yaml               可选：scaffold_script、history_file、add_dirs
     graders/<名>.md         一个 grader 一个文件
-    fixtures/               可选：fixture（git bundle、示例文件）
-  mocks/<server>/<tool>.md  可选：MCP 工具mock
-  results/<时间戳>/         运行结果；提交 aggregate-result.json，不提交 report.html
+    fixtures/               可选：fixture （git bundle、示例文件）
+  mocks/<server>/<tool>.md  可选：MCP 工具 mock
+  results/<日期>-<标签>/     运行结果；提交 aggregate-result.json，不提交 report.html
 ```
 
 ## prompt.md 的 frontmatter
@@ -22,7 +22,7 @@ plugins/<插件>/evals/
 
 ## case.yaml 的 context
 
-- `scaffold_script`：一段 bash，运行前在空工作区里建fixture（`git init`、提交、分支、从 bundle 克隆）。只有传了 `--scaffold` 才跑，跑在沙箱外、以你的身份。
+- `scaffold_script`：一段 bash，运行前在空工作区里建 fixture （`git init`、提交、分支、从 bundle 克隆）。只有传了 `--scaffold` 才跑，跑在沙箱外、以你的身份。
 - `history_file`：一份 `.jsonl` 对话，从它续接。多轮行为（一轮一题的「想清楚」类 skill）靠它把前几轮当假历史贴进去。
 - `add_dirs`：只读挂进来的目录。
 
@@ -37,7 +37,7 @@ plugins/<插件>/evals/
 | `llm` | 是 | 按正文里的判据由裁判模型打分（三票多数） | `weight`、`focus` |
 | `baseline` | 是 | 与一份参考对话比 | `baseline_file`、`criteria` |
 
-`arm: with-only` 的 grader（包括 `tool_used: Skill`）只是「skill 被点到」的指示器，不进分数，两组才可比。
+`arm: with-only` 的 grader （包括 `tool_used: Skill`）只是「skill 被点到」的指示器，不进分数，两组才可比。
 
 ## 用例纪律
 
@@ -50,22 +50,21 @@ plugins/<插件>/evals/
 ## 跑
 
 ```
-# 写完用例、SKILL.md 还是占位时：记基线
-claude plugin eval plugins/<插件> --runs 1 --ablation none --no-publish --trust-plugin \
-  --output-dir plugins/<插件>/evals/results/<日期>-red-placeholder --json <同目录>/run.json
+# 写完用例、SKILL.md 还是占位时：记基线（默认带对照组；基线看对照组那一列）
+claude plugin eval plugins/<插件> --runs 1 --allow-tools Write --judge-model sonnet --no-publish --trust-plugin   --output-dir plugins/<插件>/evals/results/<日期>-baseline
 
 # 写完正文：有 skill 组对对照组，默认 3 次
-claude plugin eval plugins/<插件> -j 4 --max-cost-usd 20 --no-publish --trust-plugin --json <结果目录>/run.json
+claude plugin eval plugins/<插件> -j 4 --allow-tools Write --judge-model sonnet --max-cost-usd 20 --no-publish --trust-plugin   --output-dir plugins/<插件>/evals/results/<日期>-gate
 ```
 
 常用旗标：`--case <glob>` 只跑某个用例；`--runs`；`--threshold`（默认 1.0，低于则退出 1）；`--allow-tools`（授 Bash、Write 等被门控的工具）；`--scaffold`；`--keep-temp`（留下沙箱目录查执行记录）；`--report <路径>`；`--model`／`--judge-model`。
 
-提交前跑 `node plugins/skill-authoring/skills/skill-authoring/scripts/scrub-eval-results.ts <结果目录>`，把 JSON 里的家目录与仓库根路径换成占位符。
+提交前跑 `node plugins/skill-authoring/skills/skill-authoring/scripts/scrub-eval-results.ts <结果目录>`，把 JSON 里家目录路径中的用户名换成 `<user>`（ADR-0003）。裁判模型固定用 `--judge-model sonnet`：默认的 haiku 对满足判据的回答也投过三票 FAIL。
 
-读结果：`aggregate-result.json` 里每个用例的 `aggregates.score`、`delta`（with 减 without）、每次运行每条 grader 的 `passed` 与 `evidence`。看执行记录（`--keep-temp` 后的 `out/trace.jsonl`）不只看最终答案。
+读结果：`aggregate-result.json` 里每个用例的 `aggregates.score`、`delta`（有 skill 组减对照组）、每次运行每条 grader 的 `passed` 与 `evidence`。看执行记录（`--keep-temp` 后的 `out/trace.jsonl`）不只看最终答案。对照组也通过的用例没有区分力，只能当回归守卫，要在 README 说明。
 
 ## 工具与沙箱
 
 - 只读工具加 `Write` 的用例在原生 Windows 直接跑。
-- 授 `Bash` 的用例要求 OS 级沙箱。原生 Windows 的沙箱是灰度特性（环境变量 `CLAUDE_CODE_NANKEEN_KESTREL=1` 开门，`/sandbox install` 装），本机 2026-09-14 实测起不来（desk#145）；这类用例先写成dry run：提示词里说明 Bash 不可用，让 agent 把要执行的命令按顺序写进 `commands.sh`，用 `file_exists` 加 `regex`（`target: {source: file, path: commands.sh}`）断言命令与参数。沙箱可用后再改回真跑。
-- 要真执行时的可选步：Codex 原生沙箱 `codex exec --json --ephemeral --ignore-user-config --ignore-rules -C <fixture> -s workspace-write -o 最后一条.md "<提示词>"`（skill 放在fixture的 `.agents/skills/<名>` 下，`$名` 调用）；OMP 借 Codex 沙箱 `codex sandbox -- omp -p --mode=json --no-session --no-rules --skills=<名> "/skill:<名> <提示词>" < /dev/null`。判分自己读记录。只在 skill 涉及客户端差异（调用语法、命名空间、可见档）时跑。
+- 授 `Bash` 的用例要求 OS 级沙箱。原生 Windows 的沙箱是灰度特性（环境变量 `CLAUDE_CODE_NANKEEN_KESTREL=1` 开门，`/sandbox install` 装），本机 2026-09-14 实测起不来（desk#145）；这类用例先写成 dry run：提示词里说明 Bash 不可用，让 agent 把要执行的命令按顺序写进 `commands.sh`，用 `file_exists` 加 `regex`（`target: {source: file, path: commands.sh}`）断言命令与参数。沙箱可用后再改回真跑。
+- 要真执行时的可选步：Codex 原生沙箱 `codex exec --json --ephemeral --ignore-user-config --ignore-rules -C <fixture> -s workspace-write -o 最后一条.md "<提示词>"`（skill 放在 fixture 的 `.agents/skills/<名>` 下，`$名` 调用）；OMP 借 Codex 沙箱 `codex sandbox -- omp -p --mode=json --no-session --no-rules --skills=<名> "/skill:<名> <提示词>" < /dev/null`。判分自己读记录。只在 skill 涉及客户端差异（调用语法、命名空间、可见档）时跑。

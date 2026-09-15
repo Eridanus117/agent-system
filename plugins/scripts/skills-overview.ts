@@ -13,16 +13,14 @@ const read = (path: string): string => readFileSync(path, 'utf8').replace(/^﻿/
 const dirs = (path: string): string[] =>
   readdirSync(path).filter((entry) => statSync(join(path, entry)).isDirectory());
 
-/** 插件级 evals/ 里是否有 claude plugin eval 用例（<case>/prompt.md 或 <case>/case.yaml，可嵌套一层子目录） */
+/**
+ * 插件级 evals/ 里是否有 claude plugin eval 用例（evals/<case>/prompt.md 或 case.yaml）。
+ * 插件级用例属于整个插件，所以该插件下每条 skill 的 evals 列都记「有」。
+ */
 function hasPluginEvals(pluginDir: string): boolean {
   const root = join(pluginDir, 'evals');
   if (!existsSync(root)) return false;
-  const isCase = (dir: string): boolean => existsSync(join(dir, 'prompt.md')) || existsSync(join(dir, 'case.yaml'));
-  return dirs(root).some((entry) => {
-    if (entry === 'results' || entry === 'mocks') return false;
-    const dir = join(root, entry);
-    return isCase(dir) || dirs(dir).some((sub) => isCase(join(dir, sub)));
-  });
+  return dirs(root).some((entry) => existsSync(join(root, entry, 'prompt.md')) || existsSync(join(root, entry, 'case.yaml')));
 }
 
 type Row = { skill: string; plugin: string; version: string; description: string; l2Bytes: number; evals: boolean };

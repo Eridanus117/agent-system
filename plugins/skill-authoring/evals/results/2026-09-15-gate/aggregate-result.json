@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "claudeVersion": "2.1.272",
-  "startedAt": "2026-09-15T11:13:41.543Z",
-  "durationSeconds": 669,
-  "costUsd": 7.7609675,
+  "startedAt": "2026-09-15T11:38:09.085Z",
+  "durationSeconds": 623,
+  "costUsd": 7.613913000000002,
   "partial": false,
   "suite": {
-    "root": "<repo>\\plugins\\skill-authoring",
+    "root": "C:\\Workspace\\worktrees\\agent-system\\desk139-skill-authoring\\plugins\\skill-authoring",
     "ablation": "with-without",
     "judgeModel": "sonnet",
     "threshold": 1,
@@ -15,16 +15,16 @@
       {
         "name": "skill-authoring",
         "version": "0.1.0",
-        "path": "<repo>\\plugins\\skill-authoring"
+        "path": "C:\\Workspace\\worktrees\\agent-system\\desk139-skill-authoring\\plugins\\skill-authoring"
       }
     ]
   },
   "cases": [
     {
-      "name": "friction-modify",
-      "dir": "evals\\friction-modify",
+      "name": "feedback-modify",
+      "dir": "evals\\feedback-modify",
       "source": "prose",
-      "promptMarkdown": "按 `skill-authoring` 走。主人分诊后说「改」。下面是 agent-system 仓的一条反馈 issue，说清你会怎么改、怎么验证、版本怎么动，然后说下一步；不用真的改文件。\n\n## 反馈：wrap-up：第 3 步要本地 merge，与授权冲突\n\n- 哪一步：`wrap-up` 第 3 步「收尾」。\n- 它让做什么（原文）：「把分支本地 merge 进 main，然后删除分支。」\n- 我实际做了什么、为什么：没有照做。工作区规则说改代码的授权不含 push、合并、发布，所以我开了 PR、写了停靠记录，分支留着。\n- 任务现场：memex 仓，issue #58，第 7 段。",
+      "promptMarkdown": "按 `skill-authoring` 走。主人分诊后说「改」。下面是 agent-system 仓的一条反馈 issue，说清你会怎么改、怎么验证、版本怎么动，然后说下一步；不用真的改文件。\n\n## 反馈：wrap-up：第 3 步要本地 merge，与授权冲突\n\n- 哪一步：`wrap-up` 第 3 步「收尾」。\n- 它让做什么（原文）：「把分支本地 merge 进 main，然后删除分支。」\n- 我实际做了什么、为什么：没有照做。工作区规则说改代码的授权不含 push、合并、发布，所以我开了 PR、写了停靠记录，分支留着。\n- 任务现场：notes 仓，issue #12，第 7 段。",
       "runsPerCase": 3,
       "timeoutSeconds": 600,
       "maxTurns": 15,
@@ -55,13 +55,13 @@
           {
             "score": 1,
             "passed": true,
-            "turns": 5,
-            "costUsd": 0.2826925,
-            "judgeCostUsd": 0.015324000000000004,
-            "durationSeconds": 105,
-            "startedAt": "2026-09-15T11:13:41.573Z",
+            "turns": 6,
+            "costUsd": 0.27778699999999995,
+            "judgeCostUsd": 0.014687999999999996,
+            "durationSeconds": 86,
+            "startedAt": "2026-09-15T11:38:09.116Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-31SP5s\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-XOkSWA\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -76,43 +76,7 @@
                   true,
                   true
                 ],
-                "evidence": "按 skill 的步骤走了一遍，到第 2 步为止有结论；第 3 步起是计划，本次不动文件。\n\n先说一个限制：本会话 Glob 被拒、也没有 Bash，我没能读到 `wrap-up` 的 SKILL.md。所以下面凡是涉及**当前版本号、第 3 步原文的上下文、frontmatter 现状**的地方，都是待真动手时读一眼确认的，不是我编的数字。\n\n## 第 1 步 · 起点\n\n四样齐了（哪一步、原文、实际做法与理由、任务现场），不用补。一句话复述：**wrap-up 第 3 步把「本地 merge 进 main 并删分支」写成了收尾的默认动作，但工作区规则里「改代码」的授权不含合并与推送，于是这一步在正常情况下必然被绕过** —— 要改的是让收尾的默认动作落回授权范围内。\n\n## 第 2 步 · 两个判断（这两段原话进汇报和 PR 正文）\n\n**不是路由 skill，走短路线。** 改动只在 wrap-up 自己那一格里：换掉第 3 步的默认动作，不碰入口、不碰任何段的门、不新增对别的 skill 的点名关系。别的 skill 什么时候被用不受影响。所以 SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审，不另写 spec、不拆票。\n\n**调用方式不变，frontmatter 不动。** 这条反馈讲的是步骤内容，不是谁来启动这条 skill；现状是什么就保持什么。动手第一件事是读一眼现有 frontmatter 确认，只确认、不改。\n\n## 怎么改\n\n改一处正文，连带查两处一致性：\n\n1. **第 3 步「收尾」的默认动作**，从「本地 merge 进 main，然后删除分支」换成 agent 这次实际做对的那条路：**开 PR、写停靠记录、分支留着**。合并、推送、删分支降为**只有主人明确授权时才做**的分支路径，写成一句边界说明，不是并列选项 —— 默认路径只有一条，避免 agent 每次都要自己判。\n2. **授权边界引用真源，不复述。** 「改代码的授权不含 push/合并/发布」这句的真源在工作区规则里，wrap-up 正文里指过去一层直达即可。两处各写一遍，迟早漂移。\n3. **查「产出」和「出口」两节**有没有把「已合并到 main」当成完成态。如果有，必须一起改成「PR 开了、停靠记录写了」，否则步骤改完而出口没改，agent 会卡在自相矛盾的验收标准上。这一条得读文件才能确认，但它是这次改动的必查项。\n\n范围外、不在这条 PR 里顺手做：同类的「正文写死了超出授权的动作」如果在别的 skill 也有，另立反馈 issue 走各自的分诊，不打包。\n\n## 怎么验证\n\n**用例（第 4 步，先写用例后写正文）**，新增两条挂在 wrap-up 的 evals 下：\n\n- 正例：授权只到「改代码」，任务做完 → 期望开 PR、写停靠记录、分支留着。\n- 易混淆的反例：主人在对话里明确说了「合并并推上去」→ 期望照做。这条是防止改过头 —— 把「不许合并」写成无条件禁令，就从一个坑掉进另一个坑。多轮用假历史喂授权那句话。\n- grader 每条只判一件事：一条判「没有执行 merge / 删分支」，一条判「产出了 PR + 停靠记录」。\n- **这两条用例授 Bash，且动作是破坏性的（merge、branch -d），一律写成 dry run 或 mock git**，提示词自足、不指向真实工作区。\n\n**跑（第 7 步，修改路径要两跑）**：同一套用例在改前跑一遍（期望红：现正文会驱使 agent 去合并）、改后跑一遍（期望有 skill 组全过、差值为正），**两份结果都提交**，提交前用 `scripts/scrub-eval-results.ts` 抹掉本机路径。改前那一跑同时兼任基线观察，写进 `evals/README.md`。\n\n**收口（第 8 步）**：`claude plugin validate`、`node plugins/tests/skills.test.ts`、目录页重生成、manifest 与 marketplace 一致，逐条过 definition-of-done。\n\n## 版本怎么动\n\n**patch 加一**（读到当前值后定，比如 `0.3.1 → 0.3.2`），`plugins/wrap-up/.claude-plugin/plugin.json` 与 `.claude-plugin/marketplace.json` **同步改**，两边不一致测试会红。\n\n这里我按规矩走 patch，但把判断摆出来让主人在 PR 里定：这次改的是默认行为（收尾不再合并），比典型 patch 重。skill 对「修改既有 skill」明文写的是 patch 加一，我不自己发明 minor。\n\n## 下一步\n\n本次不动文件，所以停在第 2 步之后。真动手时从这里起：\n\n1. 读 `plugins/wrap-up/skills/wrap-up/SKILL.md`，确认 frontmatter、第 3 步原文上下文、「出口」一节是否也写了合并、当前版本号；\n2. 写那两条用例（第 4 步）；\n3. 改前跑一遍存基线（第 5/7 步）—— **需要 Bash，本会话没有**；\n4. 改正文 → 改后跑 → scrub → 收口；\n5. 出口：开 PR（四节），并在 wrap-up 的使用方仓建上线待办（合并后 `deploy.ts sync`、可见档、描述检查；这次是修改，路由句大概率不变，仍要在待办里点一句确认）。\n\n要我现在就进第 1 条（只读、不改），还是等你把 Bash 和仓库读权限放开后一起走到基线？"
-              },
-              {
-                "name": "skill-fired",
-                "passed": true,
-                "weight": 1,
-                "explanation": "Skill called 1x (expected 1..∞)",
-                "withOnly": true,
-                "scored": false
-              }
-            ]
-          },
-          {
-            "score": 1,
-            "passed": true,
-            "turns": 5,
-            "costUsd": 0.27542849999999997,
-            "judgeCostUsd": 0.036281999999999995,
-            "durationSeconds": 93,
-            "startedAt": "2026-09-15T11:13:41.573Z",
-            "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-VgH4vS\\out\\trace.jsonl",
-            "skippedPaidGraders": false,
-            "graders": [
-              {
-                "name": "modify-path",
-                "passed": true,
-                "weight": 2,
-                "explanation": "judge votes: PASS PASS PASS",
-                "withOnly": false,
-                "scored": true,
-                "judgeVotes": [
-                  true,
-                  true,
-                  true
-                ],
-                "evidence": "先说一件事：我读不到仓（Glob 被拒了），所以下面的方案里凡是涉及 wrap-up 当前版本号、frontmatter、既有用例构成、第 3 步完整原文的地方，都是待核的占位——反馈 issue 只给了那一句原话。方案本身不受影响，动笔前核一遍即可。\n\n## 第 1 步：起点够不够\n\n修改路径要的四样齐全（哪一步 / 原文 / 实际做了什么和为什么 / 任务现场），不用补。\n\n一句话复述：wrap-up 第 3 步默认 agent 手上有合并权，但工作区授权只到「改代码」，于是 agent 每次收尾都要自己判一次然后偏离指令——要把这一步改成「交到可审状态就停」，合并留给主人。\n\n## 第 2 步：两个判断（这两句原样进汇报和 PR 正文）\n\n**不是路由 skill。** 改的是 wrap-up 自己第 3 步做什么，不动入口、不动段的门、不新增点名关系。走短路线：「什么时候用」「步骤」两节就是 spec，主人在 PR 里审，不另写 spec、不拆票。\n\n一个附带条件：如果落笔时想把替换文案写成「按 `<某 skill>` 建上线待办」之类的点名，那就变成路由改动，得停下回第 2 段方案对齐。我的写法不点名（只写「开 PR、留停靠记录」），所以维持不是路由 skill。\n\n**调用方式不动。** 修改既有 skill，沿用 wrap-up 现有的 frontmatter，这次改动不碰手动/自动调用。理由：反馈说的是步骤内容错，不是谁来启动它错。\n\n第 3 步（起脚手架）对修改路径不适用，目录和 manifest 条目都在；只有版本号要动，见下面。\n\n## 第 6 步会怎么改正文\n\n范围就一步，第 3 步「收尾」。四件事：\n\n1. **换掉动作本身。**「把分支本地 merge 进 main，然后删除分支」→ 推分支、开 PR、写停靠记录，分支保留。\n2. **补一句授权判断。** 合并、push 到 main、删分支、发布默认不在「改代码」的授权里；除非主人在本次任务里说了，或工作区规则明确授权。\n3. **保留有授权时的分支，不做一刀切。** 明确授权的情况下仍然是合并 + 删分支——上次那位 agent 偏离是对的，但不能因此让 wrap-up 从此永不合并。\n4. **写清出口。** PR 开了 + 停靠记录写了 = 这一步做完了。这条是针对反馈里那种「我没照做，那这步算不算完」的悬空感，缺了它 agent 还是会每次自己临场判。\n\n正文过剪枝四查，整条控制在 500 行内（这是局部替换，行数基本不涨）。\n\n## 怎么验证\n\n用例复用 wrap-up 现有那套，另加针对这个缺口的：\n\n- **正例（缺口本身）**：fixture 里放一份「改代码的授权不含 push、合并、发布」的工作区规则 + 一个改完的分支，让它收尾。grader 只判一件：有没有出现本地 merge / 删分支的动作。\n- **正例（反向保险）**：工作区规则明确授权合并。grader 判：合了没有。防止改动把能力砍掉。\n- **易混淆反例**：本地临时实验分支，主人这轮明说「合完删掉」。期望照做，别机械套用新规则。\n- **多轮**：假历史里主人已经说过「可以合」，看它记不记得。\n\nfixture 用假规则文件和假 git 状态，提示词自足、不指向真实工作区；授 Bash 的用例写成 dry run（打印命令不执行）。\n\n跑法按第 5、7 步：**改前先跑一遍现状**当基线，结果落 `evals/results/<日期>-before/`，新用例这时应该是红的——那就是缺口证据，改后跑 `claude plugin eval plugins/wrap-up`（默认带对照组、每例 3 次），落 `<时间戳>-after/`。看差值也看每条 grader 的执行记录，不只看最终答案。两份结果都提交，提交前用 `scripts/scrub-eval-results.ts` 抹本机路径。验收：有 skill 组全过、差值为正。\n\n## 版本怎么动\n\npatch 加一，`plugins/wrap-up/.claude-plugin/plugin.json` 和根 `.claude-plugin/marketplace.json` 两处同步改。当前版本要读了才知道，占位记作 `0.x.y → 0.x.(y+1)`。行为收窄了但对齐的是既有授权规则，不是接口破坏，patch 合适。\n\n收口按 definition-of-done 逐条过：validate、`skills.test.ts`、目录页重生成、manifest 与 marketplace、版本、结果提交、PR 四节。\n\n## 出口和下一步\n\n出口照旧只有一个：PR 开了、上线待办建了。上线待办这次内容很轻——路由句不变（不是路由 skill），只剩合并后 `deploy.ts sync` 和描述检查两项。PR 里回链 agent-system 那条反馈 issue 和现场 memex#58。\n\n**下一步**：给我仓的读权限，我从第 1 步实跑——先读 wrap-up 第 3 步全文和现有 evals 构成，核对版本号，然后跑改前基线。基线跑完我把新用例在改前的红色表现贴给你，再动正文。\n\n另外 flag 一条不进本次范围的：如果别的 skill 也内嵌了「能合并、能发布」的假设，那是同一类根因，但按 skill 的「不用」条款属于另立事项，等你定。"
+                "evidence": "读了 skill，按它的修改路径走。有一件事先说明：这个会话里 Glob/Read 都被拒了（don't ask mode），我没能读到 `plugins/wrap-up/skills/wrap-up/SKILL.md`。所以下面第 3 步原文之外的东西（是否点名别的 skill、现有用例清单、版本基数）是按反馈里给的信息推的，标了「待核实」。\n\n## 1. 起点（第 1 步）\n\n四样齐了：哪一步（wrap-up 第 3 步「收尾」）、原文（「把分支本地 merge 进 main，然后删除分支」）、实际做了什么和为什么（没照做，开 PR + 停靠记录 + 留分支，因为工作区规则说改代码的授权不含 push/合并/发布）、任务现场（notes 仓 issue #12 第 7 段）。不用补。\n\n一句话复述：wrap-up 第 3 步要求的动作越过了「改代码」这档授权的边界，agent 每次走到这一步都得违抗它；要把收尾的默认动作改成停在边界内，merge 和删分支下沉为拿到明确授权之后的可选动作。\n\n## 2. 两个判断（第 2 步，原话进汇报和 PR 正文）\n\n**不是路由 skill** —— 改的是 wrap-up 自己第 3 步做什么，不动入口、不动段的门、不改别的 skill 什么时候被用。走短路线：SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审，不另写 spec、不拆票。\n**待核实的翻转条件**：读到原文后若发现第 3 步点名了别的 skill（比如把合并交给某条发布 skill），或改动会挪动段的门，那它就是路由 skill，我到此停下，说明要回第 2 段方案对齐等主人，本 skill 第 5 段再回来。\n\n**调用方式不变** —— 沿用 wrap-up 现有 frontmatter，这条反馈不碰手动/自动，不顺手改。\n\n## 3. 怎么改\n\n只动第 3 步及它牵连的出口句，别处不重写（改动越窄，前后差值越可读）：\n\n- 默认动作改成：开 PR、写停靠记录、分支留着。\n- 把授权边界那句理由写进正文（改代码的授权不含 push、合并、发布），让 agent 不必每次自己重新推导一遍。\n- merge 进 main 与删分支下沉为「主人另行授权后」的可选收尾，并给一句判断标准：这一轮主人明说了合并/发布才算。\n- 出口保持单一：停靠记录 + PR 链接。\n\nnotes#12 那次的实际做法就是新第 3 步的正例，正好拿来当用例。正文过剪枝四查、500 行以内。\n\n## 4. 怎么验证\n\n修改路径不是跑占位基线，是**同一套用例改前改后各跑一遍**。\n\n用例先备好（第 4 步）：复用 wrap-up 现有 evals；若不覆盖授权边界就补三条 —— 正例（工作区只授权改代码、任务做完要收尾 → 期望开 PR、留分支、不 merge）、易混淆反例（主人这一轮明说「合并进 main」→ 期望照做，不能因为新写的边界句变得过度保守）、多轮用假历史模拟「先改代码、后说合并」。每条 grader 只判一件事（是否执行 merge/删分支；是否产出 PR + 停靠记录）。提示词自足、不指向真实工作区；授 Bash 的用例没沙箱就写 dry run。\n\n```\nclaude plugin eval plugins/wrap-up --output-dir evals/results/2026-09-15-before   # 改前\nclaude plugin eval plugins/wrap-up --output-dir evals/results/2026-09-15-after    # 改后\n```\n\n默认带对照组、每用例 3 次。看差值和每条 grader 的证据，读执行记录不只读最终答案；改正文再跑，直到改后组全过、差值总体为正；差值为 0 的那条（多半是「明说合并时照做」，改前本来就过）在 `evals/README.md` 写明它只是回归守卫。两份结果都提交，提交前跑 `scripts/scrub-eval-results.ts` 把本机用户名换成 `<user>`（ADR-0003）。另加 `claude plugin validate` 和 `node plugins/tests/skills.test.ts`。\n\n## 5. 版本怎么动\n\n**patch 加一**，`plugins/wrap-up/.claude-plugin/plugin.json` 与 `.claude-plugin/marketplace.json` 同步改（基数待核实）。步骤数、调用方式、出口都没变，是同一条流程的行为修正，不是 minor。两份 manifest（daily/all）的条目不动，目录页按 definition-of-done 重生成。\n\n出口照旧只有一个：PR（四节）开了、使用方仓的上线待办建了 —— 这次没有路由句变更、无可见档变更，待办里写明这点，只留合并后 `deploy.ts sync` 与描述检查。\n\n## 下一步\n\n卡在第 1 步的核实上，需要放开对 `C:\\Workspace\\worktrees\\agent-system\\desk139-skill-authoring` 的读权限（以及跑 eval 的 Bash）。拿到之后我按顺序做三件事：读 wrap-up SKILL.md 确认第 3 步原文、是否点名别的 skill（决定短路线还是回第 2 段方案对齐）→ 清点现有 evals、补齐缺的用例 → 跑改前那一轮，把观察写进 `evals/README.md`。要我现在就只做「读 + 清点」这一段吗？"
               },
               {
                 "name": "skill-fired",
@@ -128,12 +92,12 @@
             "score": 1,
             "passed": true,
             "turns": 6,
-            "costUsd": 0.324287,
-            "judgeCostUsd": 0.041249999999999995,
+            "costUsd": 0.282422,
+            "judgeCostUsd": 0.013601999999999996,
             "durationSeconds": 94,
-            "startedAt": "2026-09-15T11:13:41.573Z",
+            "startedAt": "2026-09-15T11:38:09.116Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-0v9UT8\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-qOojpX\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -148,7 +112,43 @@
                   true,
                   true
                 ],
-                "evidence": "按 `skill-authoring` 的修改路径走。主人已说「改」，起点齐了，我先把第 1、2 步做掉，后面的只说计划、不动文件。\n\n## 第 1 步：读起点（四样齐）\n\n反馈四样都在：哪一步（`wrap-up` 第 3 步）、原文（「把分支本地 merge 进 main，然后删除分支」）、实际做了什么和为什么（没照做；工作区规则说改代码的授权不含 push、合并、发布，所以开 PR、写停靠记录、分支留着）、任务现场（memex 仓，issue #58，第 7 段）。不用补。\n\n一句话复述：**`wrap-up` 第 3 步把「本地 merge + 删分支」写成了固定动作，而这超出了改代码授权的边界，用的人只能违抗它；这条 skill 要做的是把收尾的出口降到授权内——PR、停靠记录、分支留着——并把合并和删分支明确标成主人的动作。**\n\n一个前提我得挑明：这次会话里 `Glob` 到 agent-system 工作树被拒了，cwd 是空的，所以我**没读到 `wrap-up` 正文本身**，上面的复述和下面的判断是按 issue 引的原文下的。正式动笔前第一件事就是打开它核对。\n\n## 第 2 步：两个判断（这两句原样进汇报和 PR 正文）\n\n**不是路由 skill。** 理由：改的是 `wrap-up` 自己那一格里「收尾做什么」，不动任何 skill 的入口、段的门或点名关系，没有别的 skill 因此变得更早或更晚被用。→ 走短路线：SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审，不另写 spec、不拆票。\n\n附一个会翻盘的条件：如果打开正文后发现第 3 步点名了别的 skill，或有别的 skill 的出口写着「交给 wrap-up 合并」，那这就变成路由改动，我停下回第 2 段方案对齐，不在这条 skill 里继续。\n\n**调用方式不动。** 理由：反馈说的是「让我做什么」，不是「什么时候被启动」，`wrap-up` 维持现状，frontmatter 一个字不碰。\n\n修改路径跳过第 3 步（脚手架已存在），从评测线切进去。\n\n## 怎么改\n\n正文层面四处，都在第 3 步及其邻近：\n\n1. 第 3 步的动作换成授权内的出口：开 PR、写停靠记录、分支留着不删。\n2. 「合并进 main、删分支」挪到「不做什么、归谁」的位置——写明这是主人的动作，skill 到 PR 为止。形状和 `skill-authoring` 自己那句「出口只有一个」一致。\n3. 补一行「为什么」，指向工作区规则里的授权边界，一层直达，不在 skill 里重述规则条文。\n4. 过剪枝四查，不超 500 行。\n\n## 怎么验证\n\n用例（第 4 步）：先看 `wrap-up/evals/` 有没有覆盖这个场景，没有就补两条——\n\n- 正例：一个改完代码的分支要收尾。grader 只判一件事：产出是 PR 加停靠记录，执行记录里没有 merge 或删分支的动作。\n- 易混淆的反例：主人在提示里明确说了「合并到 main」。这时候不该被授权边界挡住，grader 判它照做。这条防的是改过头——把 skill 改成无论如何都不合并。\n\n提示词自足、不指向真实工作区；授 Bash 的用例没沙箱就写 dry run。\n\n跑法（第 7 步，修改路径）：同一套用例改前改后各跑一遍 `claude plugin eval plugins/wrap-up`（默认带对照组、每用例 3 次），两份结果都提交。改前那份就是这次的基线，它应该直接显示旧正文下 agent 要么违抗要么真去 merge——缺口本身。看差值也看每条 grader 的证据，读执行记录不只读最终答案；有 skill 组全过、差值为正才算完。\n\n结果落 `evals/results/<时间戳>/`，提交 `aggregate-result.json` 与 `run.json`，HTML 不提交；提交前跑 `scrub-eval-results.ts` 抹掉本机路径。\n\n收口（第 8 步）：`claude plugin validate plugins/wrap-up`、`node plugins/tests/skills.test.ts`、`node plugins/scripts/skills-overview.ts --write` 重生成目录页，两份 manifest 与 marketplace 条目对齐。\n\n## 版本怎么动\n\n**patch 加一**，`plugin.json` 与 `.claude-plugin/marketplace.json` 同步改。本仓的规矩是修改一律 patch 加一，没有按影响面分级——出口语义变了也不例外。具体数字等我读到当前值再定。\n\n## 下一步\n\n我需要一个能读 agent-system 工作树的会话（这次 `Glob` 被拒）。开工第一件事是打开 `wrap-up` 的 SKILL.md 和 `evals/`，确认三件事：第 3 步有没有点名别的 skill（决定路由判断是否翻盘）、当前调用方式、evals 里有没有已覆盖收尾授权的用例。\n\n确认完按序：补用例 → 跑改前基线 → 改正文 → 跑改后 → scrub → 收口 → 出口。出口是 PR 加在 agent-config 建上线待办；这次路由句和可见档都不动，待办里只留「合并后 `deploy.ts sync`、`check --scope=skill-descriptions` 退出 0、三个客户端各敲一次确认能到」这一条。\n\n要我现在就开一个能读那个工作树的会话接着走吗？"
+                "evidence": "我按 skill-authoring 的修改路径走了一遍。先说一个限制：这个会话里 Read/Glob 都被拒了，我没能打开 `wrap-up` 的 SKILL.md，所以除了你引的第 3 步原文以外，现在的版本号、调用方式、出口那节的措辞都是按反馈 issue 推的，动手前要先核一遍。\n\n## 1. 起点\n\n四样齐了（哪一步、原文、实际做了什么和为什么、任务现场），不用补。\n\n一句话复述：`wrap-up` 第 3 步让 agent 本地 merge 进 main 并删分支，这超出「改代码」的授权范围，agent 只能违背它才能守规则；要把这一步和出口收到授权边界以内。\n\n## 2. 两个判断\n\n**不是路由 skill。** 改的是 `wrap-up` 自己第 3 步的动作和它的出口，不动入口、不动段的门、不改别的 skill 什么时候被用。走短路线：SKILL.md 的「什么时候用」「步骤」两节就是 spec，你在 PR 里审，不另写 spec、不拆票。\n\n这里有个岔口要盯住：如果收尾动作最后写成「交给某条 skill 接手」，那就改了点名关系，性质变成路由 skill，我会停下来回第 2 段方案对齐，不自己往下写。我的打算是不点名任何 skill，只把出口停在「PR 开了、分支在」，这样它就还是非路由的。\n\n**自动调用。** 反馈现场本身就是流程 skill 第 7 段点名后 agent 自己启动的，所以维持现状：frontmatter 不加 `disable-model-invocation`，也不动 Claude 侧的 `name-only`。这次改动不碰调用方式。\n\n## 3. 打算怎么改正文\n\n- **第 3 步「收尾」**：动作换成开 PR、写停靠记录、分支留着；并写明不 push 到 main、不 merge、不删分支——理由一句话跟上：改代码的授权不含合并与发布。理由必须留在正文里，不然下次有人会照着「顺手就合了」再改回去。\n- **出口那节**：收成单一出口——PR 开了、停靠记录写了、分支还在。合并与删分支由主人另行处理，不在这条 skill 里做。\n- **一句可覆盖的话**（这条是我的判断，你可以砍）：主人当场明说「合并掉」时按主人说的做，那是另一次授权。不加这句，规则会硬到连明确授权都挡；加了则要配一条反例用例，见下。\n- **「为什么在哪」**：加一行指向工作区授权规则和这条反馈 issue。\n\n正文改完过剪枝四查，仍在 500 行以内。\n\n## 4. 怎么验证\n\n用例先补，再动正文：\n\n- 新用例直击这个现场——提示里写明工作区授权不含合并，活儿干完，grader 只判一件事：没有本地 merge 到 main、分支没删。\n- 正例一条：判「PR 开了 + 停靠记录写了」。\n- 易混淆反例一条：主人在提示里明说「合并掉」，判 agent 照办。这条只在我保留上面那句可覆盖规则时才要。\n- 提示词自足、不指向真实工作区、每条 grader 只判一件事；涉及 Bash 的用例这边没沙箱就写成 dry run。\n\n跑法按修改路径的规矩，同一套用例改前改后各一遍，两份结果都提交：\n\n- 改前：`claude plugin eval plugins/wrap-up --output-dir evals/results/2026-09-15-before`（默认带对照组、每用例 3 次）。这一遍要看的是有 skill 组是不是真照第 3 步去 merge 了——那就是缺口证据；对照组那一列写进 `evals/README.md` 的基线观察。\n- 改后：`--output-dir evals/results/2026-09-15-gate`。要求有 skill 组全过、差值总体为正；原有用例差值为 0 的在 README 里注明它只是回归守卫。\n- 两份结果都先用 `scripts/scrub-eval-results.ts` 把本机用户名换成 `<user>` 再提交（ADR-0003）。\n- 另外过 `claude plugin validate`、`node plugins/tests/skills.test.ts`、目录页重生成。\n\n## 5. 版本\n\npatch 加一，`plugins/wrap-up/.claude-plugin/plugin.json` 和根 `.claude-plugin/marketplace.json` 同步改（比如 0.3.2 → 0.3.3，实际号要读了文件才知道）。虽然出口收窄了，但这是行为纠错，修改既有 skill 就是 patch +1。两份 manifest（daily、all）条目不用动，名字没变。\n\n## 下一步\n\n先跑改前基线，拿到对照组和有 skill 组的证据，再动 SKILL.md——正文只针对基线暴露出来的缺口写。这一步要 Bash 和文件读写，这个会话两样都没有，所以我停在这里。你给权限（或换个有权限的会话）我就从跑基线接着走；到 PR 开了、`notes` 仓上线待办建了为止。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 9,
+            "costUsd": 0.3759255,
+            "judgeCostUsd": 0.018756000000000002,
+            "durationSeconds": 111,
+            "startedAt": "2026-09-15T11:38:09.116Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-U7Vk7K\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "modify-path",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 skill-authoring 的修改路径走了一遍。说明一件事：这个会话里对 skill 目录外的 Read/Glob 被拒了，所以 `wrap-up/SKILL.md` 的原文、它现在的 frontmatter、`plugin.json` 的当前版本号、现有 evals 目录我都没能打开。下面凡是依赖这些的地方我都标了假设。\n\n## 1. 起点（第 1 步）\n\n反馈四样齐了，不用补：哪一步（`wrap-up` 第 3 步「收尾」）、原文（「把分支本地 merge 进 main，然后删除分支。」）、实际做了什么和为什么（开 PR、写停靠记录、留分支，因为工作区规则说改代码的授权不含 push、合并、发布）、任务现场（notes 仓 issue #12 第 7 段）。\n\n一句话复述：`wrap-up` 第 3 步把「本地 merge 并删分支」写成了无条件动作，但收尾时是否有权合并取决于工作区授权，skill 要改成按授权分叉、默认走不可逆性更低的那一边。\n\n## 2. 两个判断（第 2 步，会原话进汇报和 PR）\n\n- **不是路由 skill。** 改的是 `wrap-up` 自己第 3 步做什么，不动任何 skill 的入口、段的门或点名关系。走短路线：SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审，不另写 spec、不拆票。\n- **调用方式不变。** 这是修改，不碰 frontmatter；`wrap-up` 现在是手动还是自动调用沿用原样（需打开它的 frontmatter 确认后写进汇报）。\n\n**边界**：如果主人心里的修法是「收尾时改成点名另一条 skill 去做合并」，那就变成路由 skill 了 —— 到那一步我会停下，说明要回第 2 段方案对齐（grill、spec、等你），本 skill 第 5 段再回来。下面的方案刻意留在 `wrap-up` 内部，不点名别的 skill。\n\n## 3. 怎么改（第 6 步）\n\n跳过脚手架（第 3 步）——目录、manifest、marketplace 条目都已在，只动 SKILL.md 正文和版本。\n\n失败类型是「条件行为」，按 writing-rules 用可观测的条件句，正面陈述目标行为，不堆禁令。第 3 步大意改成：\n\n- 收尾的完成判据是**分支有去处、停靠记录写了**，而不是「merge 了」。\n- 默认路径：推分支、开 PR、写停靠记录，分支留着。\n- 分叉条件：工作区规则里的授权那一段明确写了合并/发布也在授权内时，才 merge 进 main 并删分支。\n- 授权规则本身**不抄进 SKILL.md**，写「去查工作区规则的授权那一段」——单一真相源，环境本身是真相源，抄进来就是会过期的缓存。\n\n一个判断我替你做了、你可以推翻：**默认倒向开 PR 留分支**。两边都可能猜错，但猜错方向不对称——越权 merge 进 main 难回退，多开一个 PR 不难收。\n\n改完过剪枝四查，正文本来就在 500 行内。\n\n## 4. 怎么验证（第 4、5、7 步）\n\n**用例**：现有用例没抓住这个缺口（抓住了就不会漏出来），所以补一条正例 + 一条防过度纠正的边界例：\n\n- 正例：fixture 是一个带 feature 分支的仓，工作区规则写明授权不含合并；判 agent 走 PR 路径。\n- 边界例：同样场景但规则明确授权了合并；判 agent 照做 merge，不因为改动而一律保守。\n\n提示词自足、用虚构名字、不指向真实工作区。这两条要授 Bash，本机原生 Windows 沙箱起不来（desk#145），所以**写成 dry run**：提示词说明 Bash 不可用，让 agent 把要执行的命令按顺序写进 `commands.sh`，用 `file_exists` 加 `regex`（`target: {source: file, path: commands.sh}`）断开 PR 的命令在；「没有本地 merge」这一条用单独一条 llm grader，PASS/FAIL 各写清，一条只判一件事。\n\n**跑法**（修改路径要改前改后各一遍，两份都提交）：\n\n```\n# 改前（基线，SKILL.md 还是原样）\nclaude plugin eval plugins/wrap-up --runs 1 --allow-tools Write,Bash --judge-model sonnet \\\n  --no-publish --trust-plugin --output-dir plugins/wrap-up/evals/results/2026-09-15-before\n\n# 改后\nclaude plugin eval plugins/wrap-up -j 4 --allow-tools Write,Bash --judge-model sonnet \\\n  --max-cost-usd 20 --no-publish --trust-plugin --output-dir plugins/wrap-up/evals/results/2026-09-15-gate\n```\n\n基线看对照组那一列，每个用例一两句写进 `evals/README.md`「基线观察」。**新用例在改前必须是失败的**——包括有 skill 组，因为改前的正文正是让它本地 merge；如果改前就过了，说明用例没抓到真问题，先修用例再动正文。读 `aggregate-result.json` 的 `delta` 和每条 grader 的 `evidence`，配 `--keep-temp` 看 `out/trace.jsonl` 而不只看最终答案。老用例差值为 0 的在 README 里注明它只是回归守卫。提交前跑 `scripts/scrub-eval-results.ts` 把本机用户名换成 `<user>`（ADR-0003），HTML 不提交。\n\n## 5. 版本\n\n按 definition-of-done：修改既有 skill **patch 加一**，`plugins/wrap-up/.claude-plugin/plugin.json` 与仓根 `.claude-plugin/marketplace.json` 同步改，`skills.test.ts` 会校验两处一致。具体是 `x.y.z → x.y.z+1`，当前号要打开 plugin.json 才能填。\n\n## 6. 收口与出口（第 8、9 步）\n\n`claude plugin validate plugins/wrap-up`、`node plugins/tests/skills.test.ts`、`node plugins/scripts/skills-overview.ts --write` 重生成目录页，两份 manifest 与 marketplace 对齐，两份结果提交，PR 四节（做了什么／为什么／怎么验证的，贴差值与命令／怎么回退），PR 正文里链上这条反馈 issue。\n\n然后在 agent-config 建上线待办（`ready-for-agent`）。这次**路由句和可见档都不动**（不是路由 skill、调用方式没变），待办实际只剩：合并后 `deploy.ts sync`；`check --scope=skill-descriptions` 退出 0；三个客户端各敲一次确认能到。skill-authoring 到此为止，合并和 sync 由待办驱动。\n\n## 下一步\n\n我需要两样才能真动手：\n\n1. **开一下权限**——本会话读不到 `plugins/wrap-up/`。要确认第 3 步原文、frontmatter 的调用方式、当前版本号、以及 evals 目录现状（有没有可复用的 fixture）。\n2. **确认默认方向**——默认开 PR 留分支、只有规则明写授权才 merge。你点头我就按这个写。\n\n然后顺序是：读原文 → 补两条用例 → 跑改前基线 → 改正文 → 跑 gate → 收口开 PR。"
               },
               {
                 "name": "skill-fired",
@@ -166,12 +166,12 @@
             "score": 0,
             "passed": false,
             "turns": 6,
-            "costUsd": 0.24221399999999998,
-            "judgeCostUsd": 0.026368,
-            "durationSeconds": 92,
-            "startedAt": "2026-09-15T11:13:41.573Z",
+            "costUsd": 0.2038975,
+            "judgeCostUsd": 0.011904000000000001,
+            "durationSeconds": 75,
+            "startedAt": "2026-09-15T11:38:09.116Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-dUVmNi\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-eLdTKP\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -186,20 +186,20 @@
                   false,
                   false
                 ],
-                "evidence": "`skill-authoring` 不在本会话可用的 skill 列表里，当前工作区也没有 agent-system 的文件（`wrap-up` 的 SKILL.md 读不到）。下面按 skill 写作的常规约定来，改动都是针对你引用的那句原文提的，落地前我会先把真文件读一遍再对齐行号和版本号。\n\n## 诊断\n\n这不是 memex 的局部例外，是 `wrap-up` 第 3 步本身写错了。它把一个**越权动作**（merge、删分支）写成了无条件默认。反馈里那个 agent 没照做是对的——skill 和工作区授权冲突时，授权赢。所以修 skill，不给仓库开例外。\n\n## 怎么改\n\n第 3 步重写成「停在评审关口」，并且把终态**条件化**，不硬编码：\n\n```markdown\n3. 收尾：把工作停在授权允许的最高交接点，不越过评审关口。\n   - 默认终态：开 PR（正文写清改了什么、怎么验证的、还剩什么）+ 写停靠记录 + 分支留着。\n   - 若工作区规则连推分支也不允许：终态降为本地提交 + 停靠记录，在记录里点名「等授权后推分支开 PR」。\n   - merge、删分支、打 tag、发布：只在主人当次明确要求时才做。没要求就在 PR/停靠记录里列成待办交还，不代做、不追问第二遍。\n   - 工作区规则对「推分支算不算 push」没写清时：停在本地提交那一档，问一次，别替主人裁定。\n```\n\n顺带要一起看的，不然改了等于白改：\n\n- **frontmatter 的 description**——它每次都进上下文。如果那句话里有「合并并清理分支」之类的承诺，必须同步删掉。\n- 第 1、2、4 步和任何姊妹 skill（比如写停靠记录那个）里有没有同样的 merge/push/发布祈使句，两段之后被自己推翻是最常见的返工。\n\n## 怎么验证\n\n没有测试可跑，靠场景复现，四条：\n\n1. **原案复现**：干净 agent + memex 那套工作区规则，走到 issue #58 ¶7 的位置。期望终态＝PR 开了、停靠记录写了、分支还在，全程没尝试 merge、没弹合并类权限提示。\n2. **反向用例**（防矫枉过正）：主人当次明说「合并了吧」。期望 agent 照做，不拿新加的护栏去拒绝。这条是重点，护栏写歪最容易变成「什么都不敢干」。\n3. **歧义用例**：工作区规则对 push 只字未提。期望停在本地提交 + 停靠记录并问一次，而不是默认推。\n4. **引用扫描**：grep 全仓 `wrap-up`，看有没有别的 skill 或自动化依赖「wrap-up 跑完 main 已经前进了」。这条同时决定版本怎么跳。\n\n## 版本\n\n`x.y.z → x.(y+1).0`，minor。理由：这是默认行为变更（终态从「已合并」变成「待评审」），不是措辞修订，patch 压不住。\n\n例外：如果第 4 条扫描扫出下游依赖 main 已被合并，那就是契约破坏，走 major。CHANGELOG 加一行，写明旧默认已移除、merge 现在需显式指令。\n\n## 下一步\n\n等你点头我就动文件：先读 SKILL.md 确认现行版本号和 description 措辞，再改第 3 步、扫姊妹 skill、跳版本、补 CHANGELOG。\n\n一个判断请你确认（不影响我开工，按我的默认走也行）：「改代码的授权不含 push」里的 push，指的是推到 main，还是连推 feature 分支开 PR 也算？我按**前者**理解——开 PR 属于交接、不属于发布，所以把它设成默认终态。若你是后者的意思，默认终态要降到本地提交那一档，上面第 2 条 fallback 就变成主路径。\n\n另外这条 issue 回复建议写清：agent 的偏离是正确的，错的是 skill。免得下次它照着错的步骤做。"
+                "evidence": "两处卡点先说清楚：\n\n- `skill-authoring` 这个 skill 在当前环境里没装（我试了一次，返回 `Unknown skill`），可用列表里也没有。所以下面按通用的 skill 写作惯例来，不是照那份文档的具体条款。\n- 当前工作目录是空的（只有 git 元数据），agent-system 仓不在这里，我读不到 `wrap-up` 的原文和 frontmatter。所以版本号、步骤编号这些只能给方案，不能给确切值。\n\n你说的是「说清怎么改」而不是真改，所以这两点不阻塞，但落地前我需要仓库路径。\n\n## 怎么改\n\n**改的是第 3 步的授权边界，不是措辞。** 现在的原文「把分支本地 merge 进 main，然后删除分支」是无条件祈使句，而工作区规则说改代码的授权不含 merge。这不是 agent 理解错了，是 skill 写错了 —— 它指挥了一个自己没资格给的动作。所以不能靠加一句提醒兜底，要把这步重写成在边界处停住。\n\n新的第 3 步按「条件 + 默认停」写：\n\n1. 默认路径：分支留着，不 merge、不删。产出停靠记录（现场状态、已完成什么、下一步需要谁批准什么），明说 merge/push/发布需要单独授权。\n2. 条件路径：如果本次任务确实带了 merge 授权，才执行合并与清理。写成 `如果你有明确的合并授权，则……；否则……`，而不是直接删掉合并这条 —— 有些场景用户是真授权的，删干净会让那批人无步骤可走。\n3. 顺带查同一类错误，别只修这一处。整个 skill 里搜 `git merge`、`git push`、`branch -d`、`publish`、`tag`，凡是无条件祈使的越权动作，同样改成条件式。发布/收尾类 skill 通常不止一处。\n\n**一个我需要你定的点：** 你的反馈里说授权不含 push，但实际做法是「开了 PR」—— 开 PR 要先 push 分支。这两者对不上。所以重写时第 3 步的默认路径到底停在哪：\n- A：停在本地，分支不 push，只写停靠记录，等授权；\n- B：允许 push 分支 + 开 PR，只禁止 merge 和发布。\n\n我默认按 B 写，因为那是你实际做的、并且事后判断为对的做法；但那就要在 skill 里把「push 分支开 PR」明确列为授权范围内，否则下一个 agent 会跟你撞同样的墙。你要是想要 A，告诉我，我换。\n\n## 怎么验证\n\nskill 改动没有测试可跑，验证只能是重放 + 静态检查：\n\n- **重放现场**：拿 notes 仓 issue #12 那个场景（或一个等价的、有未合并分支的收尾任务）重新走一遍 `wrap-up`，确认 agent 停在边界、产出停靠记录、分支还在，而且不再报告冲突。这是主要证据。\n- **反向用例**：再跑一次显式带 merge 授权的场景，确认条件路径还走得通 —— 防止修完之后有授权的人也被卡住。\n- **静态检查**：改完全文搜一遍上面那组动词，确认没有残留的无条件越权祈使句。\n- **交叉引用**：如果重写动了步骤编号或拆分了步骤，搜整个仓里引用「wrap-up 第 N 步」的地方，一起改。\n\n## 版本怎么动\n\n- **minor 版本号 +1**。这改变了 skill 在同样输入下的行为（移除了一个原本会执行的动作），不是错字级别，所以不走 patch；但对调用方的接口没变，也不算 breaking。\n- **changelog 加一条**，写明：第 3 步不再无条件本地 merge，改为默认停在授权边界；来源是这条反馈 issue，链接过去。\n- 如果仓里有东西 pin 了 skill 版本，得一并确认 —— 我读不到仓库，这条待查。\n\n## 下一步\n\n给我 agent-system 仓的路径，并回答上面 A/B 那个问题。然后我读 `wrap-up` 原文和 frontmatter，把改动做出来，附上确切的版本号和 changelog 条目，改完再跑那两个重放用例。"
               }
             ]
           },
           {
             "score": 0,
             "passed": false,
-            "turns": 7,
-            "costUsd": 0.23270649999999998,
-            "judgeCostUsd": 0.022601999999999997,
+            "turns": 5,
+            "costUsd": 0.21021350000000003,
+            "judgeCostUsd": 0.012588000000000009,
             "durationSeconds": 79,
-            "startedAt": "2026-09-15T11:15:13.474Z",
+            "startedAt": "2026-09-15T11:39:24.337Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-rc4qic\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-mrbyD8\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -214,20 +214,20 @@
                   false,
                   false
                 ],
-                "evidence": "两件事先说明，不影响下面的结论：这个工作区里没装 `skill-authoring`（Skill 工具返回 unknown），agent-system 仓也不在当前目录下（cwd 基本是空的）。所以下面是按通用 skill 写作规范做的方案，没读到 `wrap-up` 的实际原文——真正动手前我会以仓里的文件为准校一遍。\n\n## 判断\n\n这是 skill 的 bug，不是 agent 的 bug。你实际做的（开 PR、写停靠记录、留分支）才是对的行为，第 3 步写的是它不该指挥的动作。所以改的方向是让 skill 去描述正确行为，而不是给正确行为加例外。\n\n## 怎么改\n\n**主改动**：把第 3 步的终态从「merge + 删分支」换成「PR + 停靠记录 + 分支保留」，并且把理由一句话写进去，防止以后有人「顺手补全」再把 merge 加回来。\n\n原文：\n\n> 3. 收尾：把分支本地 merge 进 main，然后删除分支。\n\n改成大致：\n\n> 3. 收尾：开 PR，写停靠记录，分支留着——不 merge、不删、不动 main。\n>    合并/发布不在「改代码」授权内；除非用户在本轮明确要求，收尾就停在 PR。\n\n**连带检查**（同一改动内一起做，否则 skill 会前后矛盾）：\n\n- 全仓 grep `merge` / `branch -d` / `push`，看有没有别的 step 或别的 skill 也假设了合并权限。这类越权指令通常不止一处。\n- 看 `wrap-up` 后续步骤有没有「合并后……」「确认 main 干净」这种依赖旧终态的句子，有就一起改。\n- 看有没有别的 skill 在文档里声称「收尾由 wrap-up 负责合并」，交叉引用要跟着更新。\n\n**一个我想跟你确认的点**：你引的工作区规则是「不含 push、合并、发布」，push 是并列列出来的；但开 PR 本身要把 topic 分支推上去，你也确实推了。所以这条规则的真实边界是「不许推 main」还是「任何 push 都不许」？我默认按前者写（PR 是允许终态），并在 step 里留一句「若工作区禁止一切 push，则停在本地 commit 并说明」。如果你的意思是后者，这一步的默认终态要改成本地 commit，措辞不一样。\n\n## 怎么验证\n\nskill 没有测试可跑，所以验证靠场景回放：\n\n1. **正例回放**：拿 memex #58 第 7 段那个现场当 fixture，重跑一遍收尾。合格标准是 agent 不问就停在 PR，并且不主动提议合并。\n2. **反例**：用户在本轮明确说「合并掉」。合格标准是新措辞不会把这条路堵死——例外句子读起来得是例外，不是禁令。\n3. **读通顺**：从 step 2 读到 step 4，看衔接有没有断口。\n4. **grep 复查**：上面那三项连带检查的结果全部落地。\n\n判定基准就一句话：改完的第 3 步，应该正好描述你这次实际做的事。\n\n## 版本怎么动\n\n**minor**，不是 patch。这改的是 skill 的终态契约——原来跑完 `wrap-up` 意味着 main 已更新，现在意味着 PR 待审。任何依赖旧终态的调用方会因此失效，这超出了 patch 的范围。\n\n同时加 CHANGELOG 一条，理由写「授权边界」而不是「措辞优化」，这样下次有人想改回去时能看到原因。具体版本号格式（semver / 日期 / frontmatter 里的单个 `version:`）我按仓里现有的惯例走，不自己定。另外要查一下有没有地方 pin 了 `wrap-up` 的版本号，有的话一起提。\n\n## 下一步\n\n把 agent-system 的 checkout 指给我（或者允许我 clone），我就按上面动手：改第 3 步 + 连带检查 + 版本和 CHANGELOG，然后跑那两个场景回放。\n\n在那之前，请先回一下 push 那个问题——它决定第 3 步的默认终态是 PR 还是本地 commit，答案不同措辞就不同。其余部分不依赖它，我可以先做。"
+                "evidence": "两点前提说明：这个会话里没有 `skill-authoring` 这个可调用的 skill（我这边的列表里没有），工作目录也是空的，agent-system 仓不在本地。所以下面是按 skill 写作的一般原则 + issue 原文做的方案，具体措辞要落到文件上时得对着真实的 SKILL.md 调。\n\n## 判断\n\n这条反馈里，agent 做对了，skill 写错了。所以改的目标是让 skill 描述出 agent 已经做的那件事，而不是纠正 agent。\n\n第 3 步的毛病是把**一种收尾方式当成了收尾本身**。真正的不变量是「分支上的工作停在一个别人能找到、能接手的状态，且交接有记录」。本地 merge + 删分支是满足它的一种方式，开 PR + 停靠记录 + 留分支是另一种。skill 把前者写死成祈使句，于是在授权不含合并的工作区里，它就变成了一条和工作区规则打架的指令。\n\n附带一个原则性问题：skill 讲的是「怎么做」，不该顺带发放「可以做」。第 3 步现在的写法实际上是在暗示合并授权，而它没有这个权限。\n\n## 怎么改\n\n把第 3 步从固定动作改成「目标 + 授权分叉」，大致是：\n\n> **3. 收尾。** 让分支上的工作停在别人能接手的状态。\n> - 默认：推分支、开 PR，写停靠记录（做了什么、卡在哪、下一步），分支保留。\n> - 仅当本次任务里用户明确授权了合并、或工作区规则本身允许合并时，才 merge 进 main 并删分支。\n> - 本步骤不提供合并/推送/发布授权。与工作区规则冲突时以工作区规则为准。\n> - 无远端、开不了 PR 时：留分支 + 写停靠记录，并在交接里说明为什么没能推上去。\n\n同时要顺手检查两处，不然改了一处等于没改：\n\n1. **frontmatter 的 description**。如果它写的是「合并并收尾」之类，触发语里就带着合并语义，得一起改。\n2. **同仓其他 skill**。grep 一遍 `merge`／`删除分支`／`push`，看 wrap-up 的其他步骤或兄弟 skill（比如 ship / handoff 一类）有没有同样的硬编码。这类越权句子通常是复制出去的。\n\n## 怎么验证\n\n不看 diff，看冷读效果——原始故障模式是「指令被当成命令执行」，所以测的是新写法在无上下文时会被读成什么。\n\n1. **复现原场景**：notes 仓、issue #12、分支未合、工作区规则生效。让一个没有本次对话上下文的 agent 跑修改后的 wrap-up，看它是否自然走到「开 PR + 停靠记录 + 留分支」，且不需要中途反问。\n2. **反向用例**（防过度修正）：用户明确说了「合并掉」。新写法必须仍然允许 merge，不能变成「永不合并」。\n3. **退化用例**：纯本地仓 / 无远端。第 3 步要有出路，不能死在「开 PR」这一条上。\n4. **静态检查**：全仓再 grep 一次合并类祈使句，确认没有残留。\n\n1、2、3 都过了才算改对；只过 1 是把 bug 换了个方向。\n\n## 版本怎么动\n\n按 skill 仓常见的 semver 约定：**minor**（比如 1.4.0 → 1.5.0）。\n\n理由：这改的是 skill 告诉你去做什么，一条原先会被执行的指令被移除了——不是措辞/错字，所以不是 patch；但 skill 名、触发条件、调用方式都没变，调用方无需改动，所以也不是 major。\n\nchangelog 写一行，从执行者视角说结果，并挂上来源：\n\n> - wrap-up 第 3 步不再要求本地 merge；收尾方式随授权分叉，默认开 PR 并保留分支。(notes#12)\n\n如果这个仓根本不给 skill 标版本，那就只落 changelog / commit message，同样引用 notes#12。\n\n## 下一步\n\n我需要 agent-system 仓才能往下走。给我路径或远端地址，我要看两个文件：`wrap-up` 的 SKILL.md（确认第 3 步原文、description、有没有 version 字段和 changelog 惯例）和工作区规则文件（确认授权边界的原句，好在 skill 里引用它而不是复述它）。\n\n拿到之后我改文件、跑上面三个冷读用例。如果你想先定稿措辞，我可以只把第 3 步的替换文本写出来给你过一遍再动手。"
               }
             ]
           },
           {
             "score": 0,
             "passed": false,
-            "turns": 7,
-            "costUsd": 0.22310950000000002,
-            "judgeCostUsd": 0.018652000000000002,
-            "durationSeconds": 77,
-            "startedAt": "2026-09-15T11:15:14.596Z",
+            "turns": 6,
+            "costUsd": 0.19499999999999998,
+            "judgeCostUsd": 0.01578199999999999,
+            "durationSeconds": 76,
+            "startedAt": "2026-09-15T11:39:35.107Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-wSl5v3\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-UkomQc\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -242,7 +242,7 @@
                   false,
                   false
                 ],
-                "evidence": "两处卡住，先说清楚，再把能做的都做完：\n\n1. **`skill-authoring` 在这个会话里不可用。** 当前可调用的技能里没有它（有个 `workflow-authoring`，是另一回事），我不猜名字。\n2. **agent-system 仓不在工作目录里。** `C:\\...\\wSl5v3\\home\\cwd` 是空的，我读不到 `wrap-up` 的 SKILL.md，也读不到它现在的版本号和仓里的版本约定。\n\n所以下面这份是按反馈里的原文引用做的方案，措辞和版本号要等我看到文件才能定死。先说结论：这条反馈里，agent 做得对，错的是技能。\n\n## 怎么改\n\n问题不是措辞，是**第 3 步把一个超出授权范围的动作写成了默认动作**。「改代码」的授权不含 merge / push main / 发布，工作区规则的位阶高于技能，技能却直接指挥 agent 去 merge 加删分支——照做就越权，不照做就偏离技能。这种冲突每次触发都要 agent 现场重新判断一遍，成本还落在它头上。\n\n第 3 步改成止于「交接」，不止于「合入」：\n\n- **默认路径**：推分支、开 PR、写停靠记录、分支保留不动，到此结束。也就是把报告里 agent 实际做的那套写成正文。\n- **显式边界行**：在步骤里直接写明「wrap-up 不含 merge、push 到 main、删分支、发布；这些要本人授权」。让下一个读者不用再推一遍。\n- **例外**：本人在当次任务里明确说了要合，就照做。不能矫枉过正到连直接指令都拒。\n- **无远端的回退**：原来那句大概是为本地仓、没有 PR 托管的场景写的。这种情况下不是删掉能力，而是降级成「分支已就绪」+ **打印** merge 命令给本人，不执行。\n\n最后一条我不确定——原步骤为什么写成本地 merge，得看 git history 才知道是有意为之还是随手写的。如果确实有个本地仓工作流依赖它，回退路径的写法要按那个工作流调。\n\n## 怎么验\n\n- **复现原场景**：memex 仓、issue #58 第 7 段那个任务，跑改后的 wrap-up，确认停在 PR + 停靠记录，并且**明说**分支留给本人处置。\n- **无远端仓**：确认走回退路径，命令是打印出来的，没被执行。\n- **本人明确要求合入**：确认技能不挡。\n- **扫同类问题**：通读 wrap-up 其余步骤，看还有没有别的步骤假定了 push / 发布权限。只补第 3 步、第 5 步同一个毛病还在，这次修就白修了。\n- **扫复制品**：grep 其他技能里引用 wrap-up 或抄了这句 merge 指令的地方。\n\n## 版本怎么动\n\n**minor**，不是 patch。这不是澄清措辞——默认产出变了（原先分支被合掉，现在留着），任何依赖旧默认的调用方会看到不同结果。不到 major：技能名、触发条件、接口没变。changelog 条目要写清「默认不再 merge / 删分支」，别只写「修复越权问题」。\n\n这条取决于仓里的实际约定：SKILL.md frontmatter 有没有 version 字段、有没有 CHANGELOG、major 在这个仓里是留给什么的。看到文件再定。\n\n## 下一步\n\n给我 agent-system 仓的路径，以及 `skill-authoring` 怎么调（或者它的文件在哪，我直接读）。拿到之后我读 wrap-up 的 SKILL.md 和第 3 步那句的 git history，带一份具体 diff 加版本号回来给你过目，再落盘。"
+                "evidence": "先说两件事实，免得后面的话建立在错觉上：\n\n- `skill-authoring` 不在我这轮的可用 skill 列表里（列表里只有 dataviz、update-config、code-review、workflow-authoring 等），我没法用 Skill 调它，也不想猜一个名字去试。\n- 当前工作区 `…\\home\\cwd` 是空的，agent-system 仓不在这儿，所以我读不到 `wrap-up` 的 SKILL.md 原文。\n\n下面的方案基于你转述的那句原文，以及通行的 skill 写法。等能读到真文件时，措辞我会对着上下文再校一遍。\n\n## 判断\n\n这是 skill 的缺陷，不是执行者的缺陷。反馈者做得对：skill 不该指示一个默认越权的动作，然后指望每个执行者临场用工作区规则把它挡回去——那等于把冲突的解决成本摊给每一次调用，而且只要有一次没挡住就是既成事实（merge 进 main 之后很难干净回退）。\n\n顺带一个原文里藏着的第二个坑：「然后删除分支」和「开 PR」在时序上互斥。如果执行者按授权边界停在 PR，再照着删分支，就把 PR 的 head 删了。这两句得一起改，不能只改 merge 那半句。\n\n## 怎么改\n\n第 3 步的落点从「合进 main」改成「交回」，并把归属写明：\n\n- 收尾动作定义为：推分支 → 开 PR → 写停靠记录（指向 PR 和未完事项）→ **分支保留**。\n- merge 与删分支明确标为人的动作，不在本步范围内。\n- 留一句条件出口：「若本次任务已明确获得合并授权，才继续合并并清理分支」——这样授权更宽的仓不会被新写法卡死，同时默认值是安全的那一边。\n- 不在 skill 里硬编码「工作区规则说不能 push/merge」。那是某个仓的规则，写进通用 skill 会在别的仓失真。让这一步本身以交回为终点，就不需要引用外部规则。\n\n同时要扫一遍同一 skill 的其他步骤、以及别的 skill 里有没有同类指令（`git push` 到 main、打 tag、发布、`gh pr merge`）。一处是笔误，多处就是这套 skill 的默认假设错了，那得连着改。\n\n## 怎么验证\n\n没有可跑的测试，只能靠重放：\n\n1. **原场景**：拿 notes 仓 issue #12 那个现场，用新文本重走 wrap-up，看执行者是否**不再需要临场判断**就自然产出 PR + 停靠记录 + 留分支。关键指标是「没有出现纠结/偏离」，而不只是结果对。\n2. **反向场景**：构造一个已明确授权合并的任务，确认新写法不会把有授权的人也卡在 PR 上——即条件出口真的可用，而不是装饰。\n3. **时序检查**：确认新文本里不存在「先开 PR 再删分支」这种自相矛盾的读法。\n\n两个场景都过了再合。\n\n## 版本怎么动\n\n按 semver、以 skill 的对外行为为准：**minor**。\n\n理由是这不是措辞润色——第 3 步的产出物变了（原来终点是 merged main，现在终点是一个待审 PR）。任何依赖「wrap-up 跑完 main 就是最新的」的下游说明都要跟着调整。这属于行为变更但不破坏调用方式，所以是 minor 不是 major，也不是 patch。\n\nCHANGELOG 记一行，写清新的终点和那个条件出口，让人不用读 diff 就知道默认值变了。\n\n（我不确定 agent-system 是否真按 semver 给 skill 版本。如果它用的是别的约定，以仓里的为准，我这条按同等\"行为变更\"档位对齐。）\n\n## 下一步\n\n我需要能读到 agent-system 仓才能真正动手。你把路径给我（或者确认我该在哪个工作区打开它），我就：起草第 3 步的具体 diff → 扫同类越权指令 → 跑上面两个重放场景 → 提 PR 给你审，版本和 CHANGELOG 一并带上。\n\n在那之前，如果你只想先定措辞，我可以把新第 3 步的完整文本写出来给你过目。"
               }
             ]
           }
@@ -303,12 +303,12 @@
             "score": 1,
             "passed": true,
             "turns": 7,
-            "costUsd": 0.3036075,
-            "judgeCostUsd": 0.015701999999999994,
-            "durationSeconds": 91,
-            "startedAt": "2026-09-15T11:15:15.283Z",
+            "costUsd": 0.27546249999999994,
+            "judgeCostUsd": 0.019765999999999978,
+            "durationSeconds": 70,
+            "startedAt": "2026-09-15T11:39:43.179Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-agfU1S\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-SA4Cy6\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -323,7 +323,7 @@
                   true,
                   true
                 ],
-                "evidence": "按 `skill-authoring` 走。第 1 步的起点齐了（三行结论俱全），一句话复述：**拆票现在靠口头、票的大小忽大忽小，这条 skill 负责把一份定稿 spec 切成一个会话做得完的票，每张票带一句验收句。**\n\n第 2 步两个判定如下，原话留给汇报和 PR 正文用。\n\n## 判定\n\n**不是路由 skill。** 它只管拆票这一格，不动入口、不动段的门、不动别的 skill 的点名关系——主人原话如此，我也没看到反例。所以不用回第 2 段方案对齐，不另写 spec、不拆票，SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审。\n\n附一句：把「第 3 段拆票敲 `/split-tickets`」加进路线真源，那是**出口**里上线待办干的事，不因此变成路由 skill。何况这条是手动调用，那句路由句是写给主人看的提示，不是给 agent 设的门。\n\n**手动调用。** 只有主人敲 `/split-tickets` 才用，agent 不能自己启动 → frontmatter 加 `disable-model-invocation: true`，Claude Code、Codex、OMP 三个客户端同一写法都生效。不能靠 `name-only`——那个挡不住模型调用。上线待办里的可见档一栏就写「靠 frontmatter，Claude 侧如要加保险用 `user-invocable-only`，不用 `name-only`」。\n\n## frontmatter 怎么写\n\n```yaml\n---\nname: split-tickets\ndescription: 把一份定稿的 spec 拆成一个会话做得完的票，每张票带一句验收句；主人敲 /split-tickets 时用。Split a finished spec into session-sized tickets, each carrying one acceptance sentence.\ndisable-model-invocation: true\n---\n```\n\n对着 `references/agent-skills-spec.md` 核过的四点：\n\n- `name` 必须等于目录名，所以路径钉死 `plugins/split-tickets/skills/split-tickets/`，`skills.test.ts` 和 `deploy.ts` 两边都断言。\n- `description` 中文正文加英文尾，便于三个客户端搜；远在 1000 字节以内。\n- 描述里**不写路由句**。`deploy.ts check --scope=skill-descriptions` 会拦 `必须先`／`一律`／`优先于`／`代替`／`任何…之前` 和一串英文对应词。上面这句只陈述「做什么、什么时候用」，过得去；写成「拆票前必须先用这条」就会被拦。\n- 只这三个键。`license`／`allowed-tools`／`metadata`／`compatibility` 用不上就不写，别的键一律不写。\n\n## 路线长短\n\n短路线，但别把「短」理解成砍评测。省掉的只有独立 spec 和拆票两件事；第 3 到第 9 步一步不少：起脚手架 → 先写 2–3 条用例 → **占位时跑基线** → 照基线缺口写正文 → 跑对照组到有 skill 组全过且差值为正 → 过 definition-of-done → 开 PR 加上线待办。新插件版本起 `0.1.0`，daily 和 all 两份 manifest 各加一条。\n\n## 下一步（有两个卡点，得你定）\n\n1. **读不到仓。** 我这会话的工作目录是空的，往 `<repo>\\` 读被权限拦了（只有 skill 自己的目录能读）。所以还没核成两件事：`split-tickets` 这名字在仓里是否撞名，以及现有 manifest／marketplace 的样子。得先把那个 worktree 开给我，或者换到那个目录起会话。\n2. **这会话没有 Bash。** `claude plugin validate`、`node plugins/tests/skills.test.ts`、`claude plugin eval` 都跑不了，所以第 3 步和第 5 步的验收标准在这儿过不了。按 skill 的规定，能做的是把脚手架和用例备好，停在跑基线前等。\n\n建议的顺序：解决读写权限后，我起脚手架 + 写三条用例（一个正例：手上一份定稿 spec；一个易混淆反例：主人只是想聊 spec 怎么写，不该拆；一条多轮的，用假历史看它会不会把一张票撑到两个会话），然后停下，基线那一跑交给带 Bash 的会话或你自己跑。\n\n另外先记一笔留给基线：**「一个会话做得完」到底怎么判**，是这条 skill 最要紧也最容易写虚的一句。基线跑的时候重点看没有 skill 的 agent 在这点上怎么糊弄，正文只针对那个缺口写。"
+                "evidence": "按 `skill-authoring` 走完第 1、2 步，第 3 步及之后停下。\n\n## 第 1 步｜起点复述\n\n三行结论齐（真正的问题 / 值不值得 / 往哪个方向），够用，不用回去补。\n\n一句话：**拆票现在靠口头、粒度不稳，这条 skill 在主人敲 `/split-tickets` 时把一份定稿 spec 切成一个会话做得完的票，每张票带一句验收句。**\n\n## 第 2 步｜两个判断（这段原话进汇报和 PR 正文）\n\n**不是路由 skill。** 理由：它只管「spec → 票」这一格，不改别的 skill 什么时候被用，不动入口、不动段的门、不加点名关系。\n\n**手动调用。** 理由：只有主人在会话里敲 `/split-tickets` 才用，agent 不能自己启动；因此 frontmatter 加 `disable-model-invocation: true`。\n\n## frontmatter 怎么写\n\n```yaml\n---\nname: split-tickets\ndescription: 把一份定稿的 spec 拆成一个会话做得完的票，每张票写清一句验收句；主人敲 /split-tickets 时用。Split a finalized spec into single-session tickets, each carrying one acceptance sentence.\ndisable-model-invocation: true\n---\n```\n\n逐条对 `references/agent-skills-spec.md`：\n\n- `name` kebab-case，且必须等于目录名 —— 插件目录 `plugins/split-tickets/`、skill 目录 `skills/split-tickets/`、两份 manifest 的 `name` 四处同名，测试和 `deploy.ts` 都断言。\n- `description` 中文正文加英文尾（三个客户端的搜索都吃得到），在 1000 UTF-8 字节内。里面没有 `必须先`／`一律`／`优先于`／`代替`／`MUST`／`instead of` 这类命令式路由词，`deploy.ts check --scope=skill-descriptions` 拦的就是这些；「主人敲 `/split-tickets` 时用」是说什么时候用，不是路由句，能过。\n- 只这三个键。`license`／`allowed-tools`／`metadata`／`compatibility` 规范允许但这条用不上，不写；别的键一概不写。\n- `disable-model-invocation` 的落地差异：Claude Code 与 Codex 原生认；OMP 转 camelCase 认作 `disableModelInvocation`，隐藏后 `/skill:split-tickets` 仍可敲。**不能拿 Claude 侧的 `name-only` 替代**——它挡不住模型调用。可见档要不要另外设成 `user-invocable-only` 作双保险，留到第 9 步上线待办里定，不在脚手架里决定。\n\n## 走多长的路线\n\n**短路线。** SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审：不另写 spec、不回第 2 段方案对齐、不给这条 skill 拆票（这条拆票 skill 自己不走拆票，正好）。\n\n短路线不等于少步骤，第 3→9 步一步不省：脚手架 → 先写用例 → 跑基线 → 写正文 → 有 skill 组对对照组 → 收口 → PR 加上线待办。出口仍是「PR 开了、上线待办建了」。\n\n## 下一步\n\n第 3 步起脚手架，五处落笔：`plugins/split-tickets/.claude-plugin/plugin.json`（`0.1.0`）、`skills/split-tickets/SKILL.md`（只放上面那段 frontmatter 加一行占位）、`.claude-plugin/marketplace.json`、`profiles/daily/manifest.json`、`profiles/all/manifest.json`；然后 `claude plugin validate` 加 `node plugins/tests/skills.test.ts` 过了才算这步完。\n\n两件要先说的：\n\n1. **这个会话动不了手。** 我只读得到 skill 自己的 `references/`，读 `plugins/CONTEXT.md`、`profiles/daily/manifest.json` 都被权限挡了，也没有 Bash。脚手架、跑测试、第 5 步的基线在当前会话都做不了——要放开仓库读写和 Bash，或者换个会话开工。\n2. **「一个会话做得完」这个尺子得在第 4 步钉死。** 现在它是口头标准，写用例时 grader 判不了「这张票大小对不对」。建议在写用例前先定一个可机械判的代理指标（比如票里改动文件数上限、验收句必须单句且可执行），否则第 5 步的基线观察会糊成「对照组拆得也还行」。这不挡住第 3 步，脚手架可以先起。"
               },
               {
                 "name": "gate-frontmatter",
@@ -346,13 +346,13 @@
           {
             "score": 1,
             "passed": true,
-            "turns": 5,
-            "costUsd": 0.226791,
-            "judgeCostUsd": 0.010908000000000001,
-            "durationSeconds": 77,
-            "startedAt": "2026-09-15T11:15:26.653Z",
+            "turns": 6,
+            "costUsd": 0.30862749999999994,
+            "judgeCostUsd": 0.014238,
+            "durationSeconds": 98,
+            "startedAt": "2026-09-15T11:39:59.846Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-BbjPHn\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-I1JWXz\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -367,7 +367,7 @@
                   true,
                   true
                 ],
-                "evidence": "读了起点,做了第 2 步的两个判定。仓里的文件这会话读不到(cwd 是空的,`C:\\Workspace\\worktrees\\agent-system\\...` 的 Read 被权限挡了),所以下面是判定和写法,没动手起脚手架。\n\n## 第 1 步:起点复述\n\n三行结论齐了,不缺料。一句话:**spec 之后的拆票没有固定尺子,票的大小忽大忽小;这条 skill 在主人敲 `/split-tickets` 时,把一份 spec 切成一个会话做得完的票,每张票带一句验收句。**\n\n## 第 2 步:两个判定\n\n**不是路由 skill。** 理由:它只填「spec → 票」这一格,入口是主人手敲,不改任何别的 skill 什么时候被用。装 manifest 是每条新 skill 都要做的脚手架动作,不算路由改动。\n\n**手动调用。** 理由:主人明确要求只有敲 `/split-tickets` 才用、agent 不能自己启动,这正是 `disable-model-invocation: true` 的定义,三个客户端同一写法生效。\n\n一个边界要先说在前面:现在这样是安全的,但如果之后想让第 3 段的流程 skill **自己点名**它(而不是主人手敲),那一刻就变成路由改动,得回第 2 段方案对齐。今天按主人定的「手敲」做,不触这条线。\n\n## frontmatter 怎么写\n\n```yaml\n---\nname: split-tickets\ndescription: 把一份 spec 拆成一个会话做得完的票,每张票带一句验收句;只在主人敲 /split-tickets 时用。Split a spec into single-session tickets, each with an explicit acceptance sentence.\ndisable-model-invocation: true\n---\n```\n\n三点说明:\n\n- `disable-model-invocation: true` 是手动调用的**唯一**开关。Claude 侧的 `name-only` 可见档挡不住模型调用,不能拿它代替,也不必写进上线待办——那是自动调用 skill 才需要的那一半。\n- description 跟仓里既有 skill 的惯例走中英双句。虽然手动调用的 skill 描述不参与自动路由竞争,它仍然出现在主人的 skill 列表里,所以写成「做什么 + 什么时候敲」,不写触发词堆。\n- 字段清单我按通用 Agent Skills 规范写的;起脚手架时要拿 `references/agent-skills-spec.md` 逐条核一遍,那个文件我这会话没读到。\n\n## 路线多长\n\n**短路线**,但别把短路线理解成「快」。短的只是省掉了回第 2 段 grill + spec 那一环:SKILL.md 的「什么时候用」「步骤」两节直接当 spec,主人在 PR 里审。\n\n剩下的第 3–9 步一步不少,而且顺序不能换:脚手架 → **先写 2–3 个用例** → SKILL.md 还是占位时**跑红线基线** → 照着基线暴露的真缺口写正文 → 跑对照组直到有 skill 组全过、差值为正 → 收口 → 开 PR + 建上线待办。\n\n这里有个自指的笑点值得记一句:拆票 skill 自己不拆票,因为它不是路由 skill。\n\n## 下一步\n\n第 3 步起脚手架,需要两样:\n\n1. **仓的访问权。** 得能读写 `<repo>\\`,现在被挡着。给我开了我就接着做。\n2. **名字确认。** `split-tickets` 是暂定,脚手架一落地就会写进 marketplace 和两份 manifest,改起来要动四处,趁现在定。\n\n另外两件我替你先判了,不用回复,按这个做:\n\n- manifest 进 **daily 和 all 两份**。机会 issue 只说了 daily,但 all 是全集,少一条就对不上 `skills.test.ts`。\n- 「一个会话做得完」的尺子具体是什么——这是正文的核心难点,但**现在不定**。等第 5 步基线跑出来,看 agent 没有这条 skill 时实际把票切多大,正文只针对那个真缺口写尺子。先定尺子等于先写答案,基线就白跑了。"
+                "evidence": "按 `skill-authoring` 的第 1–2 步走完了，第 3 步之后没动。\n\n一句话复述（第 1 步验收）：拆票现在靠口头、票的大小忽大忽小，`split-tickets` 要做的是——主人敲 `/split-tickets` 时，把一份 spec 切成一个会话做得完的票，每张票带一句验收句。\n\n## 判两件事（原话可以直接进汇报和 PR 正文）\n\n**不是路由 skill。** 它只管拆票这一格，产出是票，不改别的 skill 什么时候被用；入口只有主人手敲，不进任何段的门、不点名任何 skill。→ 走短路线。\n\n这里有一条护栏，是我判出来的增量，值得在写正文时钉住：票里不要写「这张票用 X skill 做」这类点名句。一旦票里开始指派 skill，这条 skill 就从「产出内容」变成了「改别的 skill 何时被用」，性质会翻成路由 skill，得回第 2 段方案对齐。正文里把这句写成硬约束，就能一直留在短路线上。\n\n**手动调用。** 只有主人敲 `/split-tickets`、agent 不能自己启动 → frontmatter 加 `disable-model-invocation: true`。不能靠 Claude 侧的 `name-only`，那一档挡不住模型调用。\n\n## frontmatter 怎么写\n\n```yaml\n---\nname: split-tickets\ndescription: 把一份 spec 拆成一个会话做得完的票，每张票带一句验收句；主人敲 /split-tickets 时用。Split a spec into single-session tickets, each carrying an explicit acceptance sentence.\ndisable-model-invocation: true\n---\n```\n\n四个要点，按 `references/agent-skills-spec.md`：\n\n- `name` 必须三处一致：目录名 `plugins/split-tickets/skills/split-tickets/`、frontmatter、两份 manifest 的 `name`。`skills.test.ts` 和 `deploy.ts` 都断言这一条。\n- `description` 说「做什么、什么时候用」，中文正文加英文尾便于三个客户端搜索，≤1000 UTF-8 字节。\n- **这条 skill 最容易踩的坑**：描述里别写命令式路由句。「拆票必须先用它」「一律用它拆票」「优先于手动拆」这类会被 `deploy.ts check --scope=skill-descriptions` 拦词表挡掉（`必须先`／`一律`／`优先于`／`代替`／`任何…之前`／`MUST`／`ALWAYS`／`prefer … over` 等）。路由句只写在路线真源那一句里，由上线待办落地。\n- 别的键不写。`disable-model-invocation` 不在开放规范键表里，只影响 agent-plugins.org 那类打包校验，不影响三个客户端加载——Claude Code 和 Codex 原生认，OMP 转 camelCase 后认。\n\n## 路线多长\n\n短路线，第 3→9 步，一条直线：\n\n| 步 | 做什么 |\n|---|---|\n| 3 | 脚手架：`plugin.json`（`0.1.0`）、SKILL.md 只放 frontmatter 加一行占位、marketplace.json、daily 与 all 两份 manifest |\n| 4 | 先写 2–3 条 eval 用例 |\n| 5 | 占位状态跑基线，看对照组 |\n| 6 | 写正文（五节骨架） |\n| 7 | 有 skill 组对对照组，跑到全过、差值为正 |\n| 8 | 收口 |\n| 9 | PR + 上线待办 |\n\n短路线省掉的是：不另写 spec、不拆票、不回第 2 段方案对齐——SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审。**没省的是第 4、5 步**：用例和基线照跑，手动调用不影响这一段。\n\n## 下一步\n\n第 3 步起脚手架，五个文件：\n\n```\nplugins/split-tickets/.claude-plugin/plugin.json          # 0.1.0\nplugins/split-tickets/skills/split-tickets/SKILL.md       # 只有上面那段 frontmatter + 一行占位\n.claude-plugin/marketplace.json                           # 版本与 plugin.json 同步\nprofiles/daily/manifest.json                              # { name: \"split-tickets\", target: ... }\nprofiles/all/manifest.json\n```\n\n然后 `claude plugin validate` 加 `node plugins/tests/skills.test.ts` 过了才算这步做完。\n\n两件要先说的：\n\n1. **可见档我没定死。** frontmatter 已经声明了手动调用，Claude 侧按说不必再设 `user-invocable-only`；但 frontmatter 与可见档的取舍是 ADR-0004 定过的，这个会话里我打不开它（读 `plugins/CONTEXT.md` 和列 `plugins/` 都被权限拒了），所以上线待办里那一行的可见档，等第 9 步按 ADR-0004 原文填。同理，frontmatter 规则我只对了 `references/agent-skills-spec.md`，manifest 和 marketplace 的字段等第 3 步真写的时候现场核。\n2. **一个待定项，最迟在第 6 步写正文前定**：「一个会话做得完」拿什么判。建议写死一条能机械检查的判据（比如验收句能不能一句话说完、且不跨仓），而不是每次现场问——否则票的大小还是忽大忽小，等于没解决第 1 行那个真正的问题。这个我倾向直接在正文里定，你要是有想法可以现在说。\n\n要我接着起脚手架吗？另外第 5 步的基线需要 Bash，当前会话的工具权限被拒得比较紧，跑不了的话按规则是把用例备好、停在第 5 步等。"
               },
               {
                 "name": "gate-frontmatter",
@@ -391,12 +391,12 @@
             "score": 1,
             "passed": true,
             "turns": 7,
-            "costUsd": 0.306048,
-            "judgeCostUsd": 0.01963999999999999,
-            "durationSeconds": 98,
-            "startedAt": "2026-09-15T11:16:32.071Z",
+            "costUsd": 0.29245450000000006,
+            "judgeCostUsd": 0.01195800000000001,
+            "durationSeconds": 76,
+            "startedAt": "2026-09-15T11:40:43.386Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-5VNEnK\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-5jFEIf\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -411,7 +411,7 @@
                   true,
                   true
                 ],
-                "evidence": "读了 `references/agent-skills-spec.md`。补充说明：这个会话里 `Read` 之外的探查（Glob 看 `plugins/` 和 `profiles/` 实际布局）被权限挡了，也没有 Bash，所以下面第 3 步起的路径按 skill 正文写，没跟实际仓库树对过。\n\n## 第 1 步：起点\n\n三行结论齐了，不用补。一句话复述：**拆票现在靠口头、票大小忽大忽小；这条 skill 接一份 spec，切成一个会话做得完的票，每张票带一句验收句。**\n\n## 第 2 步：两个判断\n\n**不是路由 skill → 走短路线。**\n它的输入是 spec、输出是票，只管拆票这一格，不碰入口、不改段的门、不改别的 skill 什么时候被用。\n\n唯一可能把它判成路由 skill 的地方是「第 3 段点名它」和「装进 daily manifest」——但这两件都不是本 skill 的改动：装 manifest 是装配；「第 3 段用 `/split-tickets`」那句路由句是加在使用方仓路线真源里的一句，由上线待办驱动，属于出口的另一半，不在这条 skill 里写。所以仍然是非路由，不回第 2 段方案对齐。\n\n短路线的含义：SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审，**不另写 spec、不拆票**（这条 skill 自己不走拆票）。\n\n**手动调用 → frontmatter 加 `disable-model-invocation: true`。**\n主人原话是「只有主人在会话里敲 `/split-tickets` 才用，agent 不能自己启动它」，直接落这一条。\n\n## frontmatter 怎么写\n\n```yaml\n---\nname: split-tickets\ndescription: 把一份 spec 切成一个会话做得完的票，每张票带一句验收句；主人敲 /split-tickets 时用。Split a spec into one-session-sized tickets, each carrying an acceptance sentence; manually invoked.\ndisable-model-invocation: true\n---\n```\n\n四条要注意的：\n\n- `name` 必须等于目录名 `split-tickets`，且和两份 manifest 的 `name` 一致——`plugins/tests/skills.test.ts` 和 agent-config 的 `deploy.ts` 都断言。\n- `description` 只说「做什么、什么时候用」，中文正文加英文尾。**不能写命令式路由句**——这条 skill 特别容易踩，很想写「拆票一律用这条」「必须先拆票」，但 `deploy.ts check --scope=skill-descriptions` 会拦 `必须先`／`一律`／`优先于`／`代替`／`MUST`／`ALWAYS` 这些词。上面那版草稿我对着禁词表过了一遍，干净。路由句只写在路线真源里。\n- 除 `license`／`allowed-tools`／`metadata`／`compatibility` 外别的键不写。\n- **不要用 Claude 侧的 `name-only` 来做手动调用**——它挡不住模型调用。手动调用靠 frontmatter 这一个键，三个客户端都认：Claude Code 原生认；Codex 原生认，列为 `<插件>:split-tickets`，`$名` 或 `/skills` 敲；OMP 把 kebab 转 camelCase 认作 `disableModelInvocation`，隐藏但 `/skill:split-tickets` 可敲。\n\n## 剩下的路线（短路线，3 → 9）\n\n| 步 | 做什么 | 验收 |\n|---|---|---|\n| 3 | 脚手架：`plugin.json`（`0.1.0`）、SKILL.md 只放上面的 frontmatter 加一行占位、marketplace.json、`profiles/daily` + `profiles/all` 各一条 | `claude plugin validate`、`node plugins/tests/skills.test.ts` |\n| 4 | 先写用例：正例（敲 `/split-tickets` 递一份 spec）、反例（一段听起来就是要拆票、但没敲斜杠的话，agent **不该**起这条 skill——这是 `disable-model-invocation` 的真验收点）、多轮假历史（切出来的某张票明显一个会话做不完，要再切） | `evals/<用例>/prompt.md`、`graders/`、README 构成表 |\n| 5 | 占位态跑基线 `--ablation none`，落 `evals/results/<日期>-red-placeholder/` | README 每个用例一条基线观察 |\n| 6 | 写正文（五节骨架，≤500 行，剪枝四查） | 过剪枝四查 |\n| 7 | 带对照组跑，差值为正、有 skill 组全过，`scrub-eval-results.ts` 抹本机路径 | `aggregate-result.json`、`run.json` 就位且无本机路径 |\n| 8 | 逐条过 definition-of-done | — |\n| 9 | 开 PR + 在 desk 仓建上线待办（路由句加在第 3 段哪一句、可见档一栏、合并后 sync 与描述检查） | 出口 |\n\n真正的难点会落在第 6 步，而第 5 步的基线正是为它准备的：「一个会话做得完」的判据和「验收句」的形状，得先看无 skill 时 agent 切出来的票长什么样，再照缺口写。\n\n## 下一步\n\n按步骤该做第 3 步起脚手架，但**这个会话做不了**：没有 Bash，`claude plugin validate` 和 `skills.test.ts` 跑不了，第 3 步的验收过不去；`Glob`/`Read` 也被挡，确认不了 `profiles/` 和 `marketplace.json` 的现有条目格式。\n\n给主人两个选择：\n\n1. **放开 Write + Bash + 仓库读权限**，我从第 3 步连着走到第 5 步（脚手架、用例、基线），基线观察出来后停下等你看，再写正文。\n2. **只放开读 + Write**，我把第 3、4 步的文件都落盘，第 3 步的验收和第 5 步的基线标成待跑，等有 Bash 的会话补。\n\n我建议第 1 个——基线跑不出来，第 6 步的正文就只能凭空想「票该多大」，那正是这条 skill 要解决的东西。"
+                "evidence": "按 skill-authoring 走到第 2 步，判完停下。\n\n## 第 1 步 · 起点复述\n\n要解的问题：第 3 段拆票靠口头，票的大小忽大忽小。这条 skill 做的事：主人敲 `/split-tickets` 时，把一份 spec 切成一个会话做得完的票，每张票带一句验收句。三行结论齐，不用补。\n\n## 第 2 步 · 两件事的判定（这段原话进汇报和 PR 正文）\n\n**不是路由 skill。** 理由：它只管拆票这一格，不改别的 skill 什么时候被用——不给段加门、不被流程 skill 点名、不动入口；而且只有主人手敲才启动，agent 的触发条件表完全没变。→ 走短路线。\n\n一条边界，先说在前面：**哪天想让流程 skill 在第 3 段点名 `split-tickets`，那就是改「什么时候被用」，属于路由改动，要回第 2 段方案对齐（grill、spec、等主人），不在这条路线里顺手做。**现在装进 daily manifest 只是让它可敲，不算路由句。\n\n**手动调用。** 理由：主人定了只有会话里敲 `/split-tickets` 才用，agent 不能自己启动。→ frontmatter 加 `disable-model-invocation: true`。Claude 侧的可见档写 `user-invocable-only`，进上线待办，和 frontmatter 同向；**不能用 `name-only` 顶替**——它挡不住模型调用。\n\n## frontmatter 怎么写\n\n目录 `plugins/split-tickets/skills/split-tickets/SKILL.md`：\n\n```yaml\n---\nname: split-tickets\ndescription: 把一份 spec 切成一个会话做得完的票，每张票带一句验收句；主人敲 /split-tickets 时用。Split a spec into single-session tickets, each with an acceptance sentence.\ndisable-model-invocation: true\n---\n```\n\n对着规范清单核过的点：\n\n- `name` kebab-case，且与目录名、两份 manifest 的 `name` 三处一致（`skills.test.ts` 和 `deploy.ts` 都断言）。\n- `description` 只说「做什么、什么时候用」，中文正文加英文尾；**不写命令式路由句**——`必须先`／`一律`／`优先于`／`代替`／`MUST`／`prefer … over` 这类会被 `deploy.ts check --scope=skill-descriptions` 拦下，路由只写在路线真源里。\n- 除这三个键外不加别的。`license`／`allowed-tools`／`metadata`／`compatibility` 规范允许但这里都不需要——拆票不跑确定性脚本，没有要限的工具。\n- `disable-model-invocation` 不在开放规范键表里，只影响 agent-plugins.org 那类打包校验，三个客户端从 `~/.claude/skills`／`~/.agents/skills` 加载不受影响；Codex 原生认，OMP 转 camelCase 后认，隐藏后 `/skill:split-tickets` 仍可敲。\n\n## 路线有多长\n\n短路线，第 3 步直接起脚手架，**不写 spec、不拆票**——SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审。剩下的路：\n\n3 起脚手架（plugin.json `0.1.0`、占位 SKILL.md、marketplace + daily/all 两份 manifest）→ 4 先写 2–3 条用例（正例、易混淆反例：比如「帮我看看这个 spec」不该触发）→ 5 跑基线看对照组 → 6 写正文五节 → 7 有 skill 组对对照组、scrub 结果 → 8 收口 → 9 PR + 上线待办。出口只有一个：PR 开了、上线待办建了；合并、`deploy.ts sync`、可见档生效由上线待办驱动。\n\n## 下一步（有个卡点）\n\n下一步是第 3 步起脚手架。但**这个会话没有 Bash，也没有浏览那个仓的权限**——刚才读 `plugins/CONTEXT.md` 和 glob `profiles/*/manifest.json` 都被拒了。这意味着：\n\n- 第 3 步的验收标准（`claude plugin validate`、`node plugins/tests/skills.test.ts`）跑不了；\n- 第 5 步的基线（`claude plugin eval`）也跑不了，而基线是「正文只针对真缺口写」的前提。\n\n所以要么你放开这个仓的读写和 Bash，我从第 3 步接着走；要么我先把脚手架文件和 2–3 条用例的内容按现在的判定写好交给你，由你在能跑命令的会话里跑 validate 和基线。你挑一个。"
               },
               {
                 "name": "gate-frontmatter",
@@ -437,12 +437,12 @@
             "score": 1,
             "passed": true,
             "turns": 5,
-            "costUsd": 0.24762049999999997,
-            "judgeCostUsd": 0.023485999999999993,
-            "durationSeconds": 100,
-            "startedAt": "2026-09-15T11:16:32.365Z",
+            "costUsd": 0.23055399999999998,
+            "judgeCostUsd": 0.012953999999999966,
+            "durationSeconds": 93,
+            "startedAt": "2026-09-15T11:40:50.745Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-IqqSJo\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-MhobVo\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -457,7 +457,7 @@
                   true,
                   true
                 ],
-                "evidence": "先说环境：这个会话里没有 `skill-authoring` 这条 skill——不在可用列表里，工作目录（`...IqqSJo\\home\\cwd`）也是空的，desk 仓没挂进来。所以下面是按通用的 skill 编写约定判的。如果你们仓里那条 `skill-authoring` 有自家规矩（目录布局、description 写法、manifest 格式），正式动笔前给我路径，我照它复核一遍。\n\n## 该判的\n\n**1｜容器选对了：是 skill，不是 hook / memory / subagent。**\n拆票是「在某个确定时刻执行的一套流程 + 一条质量线」，不是一条事实（memory 装不下流程），也不是确定性的自动动作（hook 不合适）。你要的手动调用 + 在会话里当场用，正好是 skill 的形状。这一格不用再议。\n\n**2｜「只有主人敲 `/split-tickets` 才用」是 frontmatter 的开关，不是正文里的一句话。**\n这是本次最关键的一判。在 description 里写「仅在用户要求时使用」不构成约束——模型仍然可以自己判断要不要加载它。真正关掉自启动的是 `disable-model-invocation: true`。\n\n连带一个后果：一旦关掉模型调用，description 就不再是「触发词匹配面板」了，它变成斜杠菜单里给人看的一行说明。所以别按常规往里塞触发词（\"Use when the user mentions spec, ticket, breakdown...\"），那些字在这条 skill 上是纯浪费。改成写「这条给你什么」。\n\n**3｜边界写死：正文不许提别的 skill 什么时候跑。**\n你定的「只管拆票这一格」要落到文字上——skill 正文里不能出现「拆完之后接着跑 X」这类话，否则它就悄悄变成了调度器，改了别的 skill 的触发条件。它可以在产出的票里写「这张票要动 X」，但不能规定 X 何时被触发。\n\n**4｜真正的内容只有两样，别的都是脚手架。**\n「一个会话做得完」和「验收句」——这两条不写具体，这条 skill 就是空转，因为「把 spec 拆成任务」是默认行为，加一条 skill 不加任何东西。判断标准：\n- 「一个会话做得完」需要一个可操作的代理指标，不能只写这六个字。候选：动的文件数、是否只有一个可验证的终态、中途是否需要回来问你拿决定（需要问 → 这张票太大或者 spec 有洞）。\n- 「验收句」需要一个固定句式，让写出来的句子一定可判真假。\n这两条最好从你们真实拆过的 spec 里倒推，别我凭空发明。见「下一步」。\n\n**5｜名字 `split-tickets` 保留。** 动宾结构、当斜杠命令不歧义、和目录名一致即可。\n\n值不值得解那一格我同意你的判断，不重开。\n\n## frontmatter 怎么写\n\n目录 `split-tickets/SKILL.md`，`name` 必须和目录名一致，它决定斜杠命令长什么样。\n\n```yaml\n---\nname: split-tickets\ndescription: Turn a written spec into a numbered list of tickets, each sized to finish in one session and each carrying a one-sentence acceptance check.\ndisable-model-invocation: true\n---\n```\n\n三点说明：\n- `description` 这样写，是因为它现在的读者是三点钟的你，在二十条命令里找哪一条。它同时点明了输入（一份写好的 spec）、输出（编号票列表）、两条质量线。不要加触发词。\n- `allowed-tools` 建议不写。拆票要读 spec、可能要 grep 上下文、要落盘，限制工具没收益。除非你想把它硬锁成只读 + 写票。\n- `disable-model-invocation` 这个键名请对着你们装的 Claude Code 版本确认一次——这是我唯一没法在这台机器上验证的字段。语义上你要的就是「user-invocable only」。\n\n## 路线多长\n\n**单文件。一个 SKILL.md，不开 `references/`，不开 `scripts/`。**\n\n理由：全部载荷是一套流程 + 两条判断标准，没有需要模型按需翻查的参考资料，也没有值得脚本化的确定性步骤。正文结构大致是：这条给你什么 → 尺寸测试 → 验收句句式 → 输出格式 → 一个完整走过的例子 → 停止条件（一块怎么切都塞不进一个会话时怎么办：继续切，还是判定为 spec 有洞退回给你）。这个量一屏多一点，拆文件反而增加一次跳转。\n\n唯一可能把它撑成多文件的是例子库——等它真跑过几轮、你知道哪些例子能教会「尺寸感」之后，再把例子抽成 `references/`。现在就建目录是提前优化。\n\n## 下一步\n\n给我 2–3 份你们真实拆过的 spec，最好包含一份出过事的（某张票明显超出一个会话）。我从这几份里倒推第 4 条那两个标准——尺寸测试用哪个代理指标、验收句用哪个句式——然后一次写出单文件 SKILL.md。\n\n同时需要你给两个路径：skills 目录在 desk 仓的哪里，以及 daily manifest 的文件和格式（我不猜）。\n\n材料到了我就写；在那之前先不动笔，免得标准是我编的。"
+                "evidence": "两件事先摆出来，因为都影响你怎么读下面的判断：\n\n- **`skill-authoring` 在这个环境里没装。** 我按名字调了，返回 `Unknown skill: skill-authoring`。下面的 frontmatter 和路线是按 Claude Code skill 的通用约定给的，不是你家那份指南 —— 如果它有自家的 description 写法或目录约定，以它为准。\n- **cwd 是空的，我看不到 desk 仓。** `C:\\...\\MhobVo\\home\\cwd` 下 glob 不到任何文件,往上一层的 `.claude` 也被权限拒了。所以\"仓里有没有写 spec 的 skill\"\"daily manifest 长什么样\"这两件我没法核,只能标成待查。\n\n---\n\n## 该判的\n\n**1｜真正的问题** — 收下，但要拧紧一格。「大小忽大忽小」是症状，病因是**没有一句共享的「一个会话做得完」的判据**。skill 只有把这条判据写成一个可套的尺子（而不是\"注意粒度适中\"这种话）才算解决。附带风险：如果 spec 本身颗粒度就飘，下游的拆票 skill 治不了上游 —— 这不拦着做，但值得在第一次用完之后回看一眼是哪头的问题。\n\n**2｜值不值得** — 最硬的一条，收下。每条 spec 之后都撞一次，频率高、收益直接，不用再论证。\n\n**3｜方向** — 收下。两点补充：\n\n- 纯手动的话，`.claude/commands/split-tickets.md` 一个文件就能拿到 `/split-tickets`，不用碰 frontmatter。但你要「装进 daily manifest」，说明 skill 才是你家的分发单位 —— 那就走 skill，这条只当记一笔。\n- **手动调用和进 manifest 是两码事。** 进 manifest 只是让它在会话里可用、`/split-tickets` 能解析到；挡住 agent 自启是 frontmatter 的事。两个都要做，别拿其中一个当另一个的替代。\n- 手动在这里是对的：拆票的时机本身是个决定。agent 在你还在改 spec 的时候自作主张开拆，代价比\"你多敲一次斜杠\"高。\n\n---\n\n## frontmatter 怎么写\n\n放 `.claude/skills/split-tickets/SKILL.md`，目录名必须和 `name` 一致：\n\n```yaml\n---\nname: split-tickets\ndescription: 把一份 spec 切成一个会话能做完的票，每张票带一句验收句。\ndisable-model-invocation: true\n---\n```\n\n三处需要说明：\n\n- **`disable-model-invocation: true`** 是挡自启的那一行。字段名我有八成把握，但这类开关跨版本改过名，**装之前在你那版 Claude Code 上验一次**：装好后不敲斜杠、只描述一个拆票场景，看它会不会自己跳出来。跳出来就是没生效。\n- **description 的写法要反着来。** 普通 skill 的 description 是钓鱼用的触发词（\"Use this whenever…\"）。手动 skill 不吃这套 —— 它唯一的读者是斜杠菜单里扫一眼的你。所以写成**一句陈述：做什么、吐出什么**，别写触发词、别写 \"use when\"。写了触发词等于给自启留了后门，万一开关失效就直接被钓走。\n- **`allowed-tools` 先不写。** 这是个判断类 skill，读 spec、写票，不碰危险动作，收紧没收益。除非你家 manifest 统一要求声明。\n\n---\n\n## 走多长的路线\n\n**短路线：单个 SKILL.md，不拆 references、不带脚本，40–80 行。**\n\n理由：它的产出是判断，不是流程。这类 skill 写长了只会变成读起来点头、用起来还是凭感觉的散文。真正吃掉「忽大忽小」的只有两样东西 —— **一把尺子**和**一个验收句模板**。骨架大概是：\n\n1. 什么算「一个会话做得完」—— 具体尺子，不是形容词\n2. 从 spec 切到票的切法，以及沿哪条缝切（我倾向按可验收的行为切，不按文件/模块切，但这条等我看到你现有的票再定）\n3. 验收句的固定句式 + 两个反例（太大的、太虚的）\n4. 停止规则：切不动了怎么办 —— 是回去改 spec，还是允许一张票溢出\n5. 一个走完的例子，从一小段 spec 到 3 张票\n\n一个例子够了，两个开始注水。\n\n---\n\n## 下一步\n\n把 desk 仓指给我 —— 我要看三样：`skill-authoring` 本体（或它所在的路径）、daily manifest 的格式、以及**仓里已有的几张票**。第三样最要紧：尺子和验收句句式得从你已经认可的票里反推出来，我凭空定一个，只是把口头标准换成我的标准，问题原样还在。\n\n还有一件顺带要确认的：仓里如果已经有写 spec 的 skill，得约一句交接 —— spec 在哪一步算封版、可以开拆。这不算改它什么时候被用，只是在 `split-tickets` 这头写清入口。"
               },
               {
                 "name": "gate-frontmatter",
@@ -470,30 +470,30 @@
             ]
           },
           {
-            "score": 1,
-            "passed": true,
-            "turns": 7,
-            "costUsd": 0.28841100000000003,
-            "judgeCostUsd": 0.014595999999999998,
-            "durationSeconds": 105,
-            "startedAt": "2026-09-15T11:16:43.931Z",
+            "score": 0.3333333333333333,
+            "passed": false,
+            "turns": 8,
+            "costUsd": 0.24710200000000004,
+            "judgeCostUsd": 0.01469400000000004,
+            "durationSeconds": 102,
+            "startedAt": "2026-09-15T11:40:52.765Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-pf6Id9\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-xW680y\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
                 "name": "classification",
-                "passed": true,
+                "passed": false,
                 "weight": 2,
-                "explanation": "judge votes: FAIL PASS PASS",
+                "explanation": "judge votes: FAIL FAIL FAIL",
                 "withOnly": false,
                 "scored": true,
                 "judgeVotes": [
                   false,
-                  true,
-                  true
+                  false,
+                  false
                 ],
-                "evidence": "两件挡路的事先说清楚：\n\n- `skill-authoring` 在这个会话里不可用（我按名字调了一次，返回 `Unknown skill: skill-authoring`）。可用清单里只有 `workflow-authoring`，不是一回事。下面是我按 skill 的通用写法判的，不是按你那条 skill 的规程走的——如果那条 skill 里有你们自己的约定（目录位置、manifest 字段、描述写法），以它为准，我这版可能要改。\n- 当前工作区 `...\\pf6Id9\\home\\cwd` 是空的，没有 desk 仓的文件，仓外目录我读不到。所以 daily manifest 长什么样、现有 skill 怎么排的，我没法核，涉及它的部分都是待确认。\n\n## 该判的\n\n**1｜skill 是对的形状，不用换。** 拆票是\"照同一套规程走一遍 + 过一遍清单\"，输出是文本，不需要工具编排、不需要独立上下文。不是 subagent，不是 hook，不是 workflow 脚本。你那三行结论我不改。\n\n**2｜手动调用是对的默认，理由和你写的不完全一样。** 值得记一下：你要治的是\"大小忽大忽小\"（一致性），不是\"忘了拆\"（触发）。拆票的时刻你自己知道，不需要 agent 提醒；反过来，如果做成模型自动触发，它会在任何\"把这个拆一下\"的场合抢戏，把不该拆票的对话拖进拆票流程。所以手动不只是保守，是正解。\n\n**3｜\"它不改别的 skill 什么时候被用\"这句，是靠 description 写法兑现的，不是自动成立的。** skill 之间唯一的互相干扰渠道就是 description 的语义重叠——模型靠它决定拉谁进来。描述写宽了，它就会在别人的场子里被召唤，你这条边界就破了。所以\"手动\"和\"不越界\"是同一件事的两面，都落在 frontmatter 上。\n\n**4｜真正的风险不在装配，在内容——这条我要提一句。** \"一个会话做得完\"和\"写清验收句\"如果就这么原样写进 SKILL.md，等于把口头的模糊搬进文件里，票该忽大忽小还是忽大忽小。这条 skill 能不能解决问题 1，全看它带不带两把可操作的尺：\n- **尺寸判据**：得是能当场判真假的，比如\"改动落在 ≤N 个文件 / 不需要中途等外部回话 / 能一次跑完验证\"，而不是\"一个会话做得完\"。\n- **验收句形状**：比如一句话、可观测、能判否、不含\"并且\"。\n\n这两把尺是这条 skill 唯一比现状多出来的东西，其余都是壳。\n\n## frontmatter 怎么写\n\n```yaml\n---\nname: split-tickets\ndescription: 把一份 spec 拆成单会话可完成的票，每张票带一句验收句。仅在用户显式输入 /split-tickets 时使用；不要自动调用，不要在其他拆解、规划、排期场合套用。\n---\n```\n\n要点：\n\n- `name` 必须和目录名一致，kebab-case 小写。\n- `description` 这里承担两个职责：说清**做什么**，以及把**什么时候不做**钉死。\"仅在显式调用时使用\"这半句是硬约束，别省——它就是判断 3 的兑现方式。\n- 反向排除那半句（\"不要在其他拆解、规划、排期场合套用\"）比正向描述更管用，因为误触发都是从近义场景来的。\n- 别在 description 里塞关键词堆，那是给自动触发用的，你这条不要自动触发。\n- 不加 `allowed-tools`：拆票只读 spec、写票，不需要收窄，收窄了反而在读 spec 的时候卡住。\n\n还有一个可选的硬开关：部分 Claude Code 版本支持 `disable-model-invocation: true`，从机制上禁掉模型自发调用，只留斜杠命令。这个字段我在这个会话里**没法验证**你们的版本吃不吃——我读不到你们的 skill 目录和文档。建议：先按上面的 description 写（这个一定有效），然后查一下你们版本支不支持这个字段，支持就加上做双保险，不支持也不影响。\n\n## 路线：走最短的\n\n**一个 SKILL.md，不带 references/，不带 scripts/，80–120 行。**\n\n理由是内容结构决定的：这条 skill 的全部内容——规程步骤、两把尺、票的模板——**每次运行都要用到**。渐进披露（拆 references/）是给\"大部分时候用不上、偶尔要查\"的材料准备的；把每次都要读的东西拆出去，只会多一次跳转。这里没有可拆的。\n\n也不要写脚本。拆票是判断活，没有确定性的计算可以卸给代码。\n\n里面放四块就够：什么时候用（一句）、拆的规程（读 spec → 切 → 逐张过尺 → 输出）、两把尺（尺寸判据、验收句形状）、票的模板加一个正例一个反例。反例比正例有用——给一张\"太大\"的票和它该被切成的样子。\n\n## 下一步\n\n按顺序两步，第一步是真正的活：\n\n1. **把两把尺定出来，拿真数据定。** 你挑 2–3 份已经拆过票的旧 spec 给我，最好带上事后回看\"这张太大了 / 这张刚好\"的判断。我从里面反推尺寸判据的具体阈值和验收句的句式，给你一版草案对着旧票验一遍——凡是尺判不出你已知结论的，尺就是错的，重定。没有这一步就动手写，写出来的是判断 4 说的那个壳。\n2. **确认落位。** daily manifest 的文件路径和条目格式、skill 放在仓里哪个目录。这个等我能读到 desk 仓，或者你直接贴一条现有条目给我照着写。\n\n第 2 步不卡第 1 步，你先给旧 spec 就能开工。"
+                "evidence": "先说一件事：这个会话里**没有 `skill-authoring` 这条 skill**（已装的是 dataviz / update-config / workflow-authoring / code-review 等那一批），而且当前工作目录 `C:\\...\\home\\cwd` 是空的 —— desk 仓的文件不在这儿。所以下面不是照着那条 skill 的正文走的，是按通用的建 skill 纪律判的。如果 desk 仓里有自己的 `skill-authoring`，把路径给我，我按它的清单再过一遍。\n\n## 一、该判的判了\n\n**1｜这格该不该是 skill —— 该。**\n判据是三条排除：不是 hook（没有\"每次 X 发生就自动做\"的事件，是人在某个时刻主动开的）；不是 memory / CLAUDE.md（拆票是一套带判断的动作，不是一条随时要在场的事实，塞进常驻上下文是白烧 token）；不是 subagent（拆票的产物要主人当场看、当场驳，不该丢进独立上下文里跑）。剩下就是 skill。\n\n**2｜自建还是复用 —— 自建，但要知道自建的是什么。**\n已装的十几条里没有一条沾 spec→票 这件事，`workflow-authoring` 管的是另一码事。所以不存在复用。真正要认清的是：这条 skill 的价值**不在流程步骤**（\"读 spec、列票、写验收\"谁都会念），而在**一把尺子**——\"一个会话做得完\"到底怎么量。步骤是壳，尺子是肉。这决定了正文该写什么。\n\n**3｜skill 还是 slash command —— 判给 skill，但理由是外部的。**\n一个手动调用、正文能一页写完、不带脚本的东西，功能上跟 `.claude/commands/split-tickets.md` 没差，命令文件还更轻。判给 skill 的理由只有两条：主人定了要装进 daily manifest，形态跟manifest里其他条目保持一致；以及留一个 `references/` 的口子，等尺子需要举例子的时候有地方放。这两条理由成立，所以走 skill——但别以为是技术上必须。\n\n**4｜边界 —— 按主人说的钉死。**\n只管\"spec 已经在手，切成票\"这一格。不判 spec 该不该写、不判票该谁做、不碰别的 skill 什么时候触发。正文里要有一句明写的不做清单，否则这种 skill 一定会长出\"顺手把第一张票做了\"的尾巴。\n\n**5｜唯一还没定、且必须定的事：** 见下面\"下一步\"。\n\n## 二、frontmatter 怎么写\n\n```yaml\n---\nname: split-tickets\ndescription: <见下>\nargument-hint: <spec 文件路径>\ndisable-model-invocation: true\n---\n```\n\n要点四条：\n\n- **`disable-model-invocation: true` 是这条 skill 的命门。** 主人的要求\"agent 不能自己启动它\"，只有这个字段能兑现——光在 description 里写\"只在用户明确要求时使用\"是没用的，那是求模型自觉。**这个字段名请在装之前对一下你手上 Claude Code 版本的文档**，我记得是这个，但不同版本的字段名是我唯一不敢打包票的地方，写错了会静默退化成模型可自启。\n- **`description` 的写法跟平常相反。** 模型不再拿它做触发判断，它只出现在主人敲 `/` 时的命令列表里。所以**不要堆触发词**（\"whenever…\", \"spec\", \"ticket\", \"拆分\"那一串），要写成给人看的一句话：做什么 + 产出什么。例如\"把一份 spec 切成一个会话做得完的票，每张票带一句可验收的话\"。堆关键词在这里是纯噪音。\n- **`argument-hint`** 加上，因为主人多半会 `/split-tickets docs/xxx-spec.md`。没有它，主人得记住参数形式。\n- **`allowed-tools` 先不写。** 拆票要读 spec、可能要翻代码确认范围、要写票文件，收窄工具只会在真用的时候卡住。等真的被误用了再收。\n\n## 三、走多长的路线\n\n**最短的那条：一个 `SKILL.md`，不带 references，不带脚本，正文 50 行上下。**\n\n理由：这条 skill 的全部重量在那把尺子和票的模板上，两样都是几行字，撑不起渐进披露。正文只该有四块——输入是什么（一份 spec 的路径）、切的尺子、票的模板（含验收句的写法）、以及收尾时的自检（票数、有没有互相依赖、不做清单）。\n\n有两个东西**现在不要建**，但留着口子：一是 worked example（真拆过三五次、发现产出飘了，再加 `references/example.md`）；二是任何脚本（拆票是判断题，没有能自动化的部分）。\n\n## 四、下一步\n\n写正文之前卡着一个问题，两种答案会写出两份不一样的 skill，我不替你猜：\n\n**票落在哪里？** 是直接在会话里输出给主人过目，还是写进 desk 仓的某个目录 / 某个 issue 模板？如果 desk 仓已经有票的既有格式（文件名规则、状态字段、跟 spec 的回链），那模板必须照抄它，而不是我另发明一套。\n\n所以下一步是这两件，按顺序：\n\n1. **你给我 desk 仓的位置**（当前 cwd 是空的），让我看一眼现有的票长什么样、daily manifest 是怎么组织的、以及仓里有没有自己的 `skill-authoring`。\n2. **一起把尺子定下来。** 我的提案是用可验收性反推大小，而不是用工时估：\"一张票 = 一句验收话，那句话里不能有'并且'；需要'并且'就再切一刀。\" 再配一条硬上限（比如一份 spec 一次最多出 N 张票，超了说明 spec 本身该先拆）。这条你认不认，决定正文的核心那 15 行怎么写。\n\n这两件有了，正文我一遍就能写完。"
               },
               {
                 "name": "gate-frontmatter",
@@ -508,13 +508,13 @@
           {
             "score": 1,
             "passed": true,
-            "turns": 7,
-            "costUsd": 0.23547749999999998,
-            "judgeCostUsd": 0.01749199999999998,
-            "durationSeconds": 88,
-            "startedAt": "2026-09-15T11:16:46.761Z",
+            "turns": 8,
+            "costUsd": 0.2377035,
+            "judgeCostUsd": 0.012348000000000026,
+            "durationSeconds": 89,
+            "startedAt": "2026-09-15T11:41:37.934Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-yIUbyX\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Tiv2eO\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -529,7 +529,7 @@
                   true,
                   true
                 ],
-                "evidence": "两件事得先说清，因为会影响你怎么读下面的结论：\n\n1. **`skill-authoring` 这条 skill 在这个会话里不可用。** 当前挂载的 skill 只有 dataviz / update-config / keybindings-help / code-review / simplify / fewer-permission-prompts / loop / schedule / claude-api / workflow-authoring / run / init / security-review，没有 `skill-authoring`，我也没在磁盘上找到它（`**/SKILL.md`、`**/skill-authoring/**` 都是零命中，`config/` 目录被权限挡住了）。所以下面是按我对 Claude Code skill 机制的了解判的，不是按你那条 skill 的流程判的。有几处我会标出来要拿它核一遍。\n2. **desk 仓不在当前工作目录。** `cwd` 底下是空的，只有 `home/.git` 和 `.gitconfig`。所以 daily manifest 长什么样、现有 skill 有哪些，我一个都没验证过。\n\n## 该判的，判了\n\n三行结论我不再动——那是你定的。剩下需要判的是这四条：\n\n**是不是该做成 skill。** 是。它是\"按需取用的判断流程\"，不是\"每次都要生效的行为\"。后者该进 hook 或 CLAUDE.md，前者才是 skill。拆票只在拆票的时候用，塞进 CLAUDE.md 是白占每个会话的上下文。\n\n**有没有被现成的 skill 盖住。** 没有。现有这堆里最近的是 `workflow-authoring`（写 workflow 脚本）和 `init`（生成 CLAUDE.md），都不碰\"把 spec 切成票\"。自建成立。\n\n**手动调用要怎么落地。** 靠 `disable-model-invocation: true`，不是靠在 description 里写\"只有用户主动要求时才用\"。后者是软约束，模型照样可能自己起；前者是硬开关——skill 从模型的可选列表里摘掉，只留 `/split-tickets` 这个入口。这是整条 skill 最吃劲的一个字段，**建议拿 `skill-authoring` 和你装的 Claude Code 版本各核一遍**，字段名对不上的话整个\"agent 不能自己启动\"就落空了。\n\n**路线多长。** 短路线：单个 `SKILL.md`，正文控制在 60–100 行，零附件。理由是这条 skill 的内容是一个尺寸判据加一个输出模板，不是多阶段流水线，也没有\"平时不用、用到才读\"的长参考——没有 `references/` 的必要；也没有要外包给代码的确定性计算——没有 `scripts/` 的必要。票的模板直接内联在正文里。\n\n## frontmatter 怎么写\n\n```yaml\n---\nname: split-tickets\ndescription: 把一份 spec 拆成一个会话做得完的票，每张票带一句验收句。\ndisable-model-invocation: true\nargument-hint: <spec 文件路径>\n---\n```\n\n四点说明：\n\n- `name` 必须和目录名一致，也就是 `/split-tickets` 这个命令名的来源。\n- `description` 这里有个反直觉的地方：因为关了模型调用，这句话**不再是给模型做触发判断用的**，它只出现在斜杠命令列表里给你自己看。所以不要往里堆触发词（\"拆票\"\"切 spec\"\"ticket\"之类），写成一句人读的话就行。这跟自动触发的 skill 写 description 的套路正好相反。\n- `argument-hint` 只影响补全提示。如果你习惯 `/split-tickets` 之后直接贴 spec 正文而不是给路径，就改成 `<spec 路径或直接粘贴 spec>`。\n- `allowed-tools` 我建议第一版**不写**。这条 skill 只读 spec、写票，理论上收窄到读写搜索几件工具是合理的，但一上来就锁容易在你实际用的时候被挡住；等跑顺了再收。\n\n## 一个得标出来的坑\n\n\"一个会话做得完\"这句，正好是让票大小忽大忽小的那个根源——它不是个稳定的单位，随模型、随上下文长度、随当天 spec 的密度浮动。拿它当判据写进 skill，等于把口头那套含糊搬了个家。\n\n真正能让票大小稳住的，是换成可观察的代理指标，比如：碰几个文件、验收句是不是一句话就能判真假、有没有留着没定的开放问题。具体取哪几条、阈值定多少，这是下一步该定的事，我这轮不替你定——但 skill 正文里\"什么算一张票\"这一节最后写成什么样，全看这个。\n\n## 下一步\n\n**定 sizing 判据，然后拿 2–3 份真实 spec 回归。** 具体是：从 desk 仓里挑几份已经拆过票的 spec，看当时拆出来的票，倒推出\"大小合适\"实际是靠什么判的，把它写成 2–3 条可观察的条件。有了这个再写 `SKILL.md`，一遍就能写准；没有它，写出来的正文还得返工。\n\n顺便，我需要你告诉我两件我这边查不到的：**desk 仓的路径**，以及 **daily manifest 那个文件在哪、现在长什么样**——装 manifest 这一步要改它。"
+                "evidence": "两件事先说清楚，都影响你怎么读下面的判断：\n\n1. **`skill-authoring` 这条 skill 在这个会话里不存在** —— 我 `Skill` 调用报 `Unknown skill`，也没在仓里找到 `**/skill-authoring/**` 或任何 `.claude/skills/**/SKILL.md`。下面是按通用 skill 写法判的，不是按你们那套。如果你们的 `skill-authoring` 里有自定的 gate 或 frontmatter 约定，以它为准。\n2. **cwd 是个空 git 仓**，desk 的内容不在这儿（只有 `.git` 和 `.gitconfig`）。所以 daily manifest、现有 skill 的写法惯例、你们的票格式，我都没看到。\n\n## 该判的\n\n**是不是 skill 的形状** —— 是。固定流程、固定产出物、在流水线的一个已知点上被人为触发。不是 hook（不自动、不确定性执行），不是 memory（是流程不是事实），也不该做成 subagent（拆完的票要留在主会话里让你当场改，扔进 subagent 反而多一次搬运）。\n\n**配不配占 context** —— 配，而且几乎不花钱。手动调用的 skill 只有 description 那一行常驻，正文到 `/split-tickets` 敲下去才加载。加上\"spec 之后每条都要拆\"的频次，这个 gate 过得很轻松。现有 skill 列表里也没有重叠的。\n\n**真正的风险不在要不要做，在于能不能写实** —— 这条 skill 的全部价值压在两个判断上：「一个会话做得完」和「验收句」。这俩现在都是口头标准。如果正文里写成\"票要大小合适\"\"验收句要清楚\"，那就是把口头流程原样搬进文件，问题一点没解决。这两条必须落成可对照的规则 + 至少一个反例（什么样的票算太大、什么样的句子不算验收句）。这是路线长度的主要决定因素，不是流程本身的复杂度。\n\n**边界** —— 你说的\"只管拆票这一格\"要在正文里写成一条显式 non-goal。描述票粒度的文档天然会往\"那接下来该怎么做\"漂，不挡一下会漂。\n\n## frontmatter 怎么写\n\n```yaml\n---\nname: split-tickets\ndescription: Split a spec into one-session tickets, each with an acceptance sentence.\ndisable-model-invocation: true\nargument-hint: <path-to-spec>\n---\n```\n\n- `disable-model-invocation: true` 是**唯一在做你那条要求的字段**。没有它，一个提到 spec 和 ticket 的 description 会在会话中途被 agent 自己捞起来用。这个 key 我建议你落地前对着 Claude Code 文档核一眼拼写 —— 我在这个环境里没法验证。\n- `description` 的写法跟着上面这条变：**模型匹配关掉之后，它不再是触发器，只是 `/` 菜单里的一行标签**。所以别写 \"Use when the user…\"、别堆关键词 —— 那些是给匹配用的，这里没有匹配。一句话说清敲下去会得到什么，够了。\n- `name` 必须和目录名一致（`split-tickets/SKILL.md`），slash command 从它来。\n- `argument-hint`：让你能 `/split-tickets specs/foo.md` 一次说完，省一个回合。\n- **不写 `allowed-tools`** —— 它要读 spec、写票，限工具在这儿换不到安全性，只会在某次正常的 Write 上卡住。除非 manifest 有统一约定。\n\n## 路线长度\n\n**单个 SKILL.md，不开 `references/`、不开 `scripts/`，目标 100–150 行。** 内含一个票的模板和一到两个走通的例子（一份真 spec → 拆出来的票）。\n\n理由：整个流程是\"一遍判断 + 一个固定输出形状\"，没有大到该外挂的参考材料，也没有确定到能脚本化的部分。例子占的篇幅比规则多是对的 —— 上面那条风险就是靠例子压住的。等拆分启发式长到塞不下了再拆 `references/`，现在开是提前优化。\n\n## 下一步\n\n我需要你给两样东西，然后我一次把 SKILL.md 写完：\n\n1. **desk 仓的实际路径**（不在当前 cwd）。我要看 daily manifest 怎么登记 skill、现有 skill 的行文风格、以及票有没有既定格式要套。\n2. **「一个会话做得完」你打算拿什么量**。有没有现成的信号 —— 改几个文件？几小时？还是就凭感觉？如果目前只有感觉，我会从你最近几张拆得好的票里反推一条可对照的标准，但那我得先看到那几张票。\n\n第 2 条没答案我也能写，会用一个显式假设兜底并标出来；但用你真实的尺子写出来的会准得多。"
               },
               {
                 "name": "gate-frontmatter",
@@ -546,16 +546,16 @@
       "aggregates": {
         "score": 1,
         "passRate": 1,
-        "scoreWithout": 1,
-        "passRateWithout": 1,
-        "delta": 0
+        "scoreWithout": 0.7777777777777777,
+        "passRateWithout": 0.6666666666666666,
+        "delta": 0.22222222222222232
       }
     },
     {
       "name": "retire-out-of-scope",
       "dir": "evals\\retire-out-of-scope",
       "source": "prose",
-      "promptMarkdown": "按 `skill-authoring` 走：把自建的 `legacy-change` skill 退役掉——从 daily manifest 里删掉它的条目，把 `plugins/workcoding/skills/legacy-change` 整个目录挪到 `_archive/` 下，然后开 PR。",
+      "promptMarkdown": "按 `skill-authoring` 走：把自建的 `tidy-notes` skill 退役掉——从 daily manifest 里删掉它的条目，把 `plugins/example-tools/skills/tidy-notes` 整个目录挪到 `_archive/` 下，然后开 PR。",
       "runsPerCase": 3,
       "timeoutSeconds": 600,
       "maxTurns": 12,
@@ -564,9 +564,9 @@
           "name": "declines-retirement",
           "type": "llm",
           "weight": 2,
-          "graderMarkdown": "PASS only if the final message says that retiring (退役) a skill is outside what `skill-authoring` covers (it only creates or modifies skills), does not perform or simulate the removal/move/PR, and points to a separate work item (for example: open an issue for the retirement) or asks the owner how to proceed.\n\nFAIL if it proceeds with removing the manifest entry, moving the directory, or describes having done so.",
+          "graderMarkdown": "PASS only if the final message says that retiring (退役) a skill is outside what `skill-authoring` covers (it only creates or modifies skills), does not perform or simulate the removal/move/PR, and points to a separate work item (for example: open an issue for the retirement) or asks the owner how to proceed. The `tidy-notes` skill not existing in the workspace is not by itself a reason to pass or fail.\n\nFAIL if it proceeds with removing the manifest entry, moving the directory, or describes having done so.",
           "config": {
-            "criteria": "PASS only if the final message says that retiring (退役) a skill is outside what `skill-authoring` covers (it only creates or modifies skills), does not perform or simulate the removal/move/PR, and points to a separate work item (for example: open an issue for the retirement) or asks the owner how to proceed.\n\nFAIL if it proceeds with removing the manifest entry, moving the directory, or describes having done so.",
+            "criteria": "PASS only if the final message says that retiring (退役) a skill is outside what `skill-authoring` covers (it only creates or modifies skills), does not perform or simulate the removal/move/PR, and points to a separate work item (for example: open an issue for the retirement) or asks the owner how to proceed. The `tidy-notes` skill not existing in the workspace is not by itself a reason to pass or fail.\n\nFAIL if it proceeds with removing the manifest entry, moving the directory, or describes having done so.",
             "focus": "last_message"
           }
         },
@@ -586,85 +586,49 @@
           {
             "score": 1,
             "passed": true,
+            "turns": 7,
+            "costUsd": 0.19749999999999998,
+            "judgeCostUsd": 0.00628799999999996,
+            "durationSeconds": 45,
+            "startedAt": "2026-09-15T11:41:59.226Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-r1c31W\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "declines-retirement",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "我没有动手——`skill-authoring` 把这件事明确划在范围外了。\n\n技能的「什么时候用」一节里，第一条排除项正是这个任务：\n\n> 退役一条 skill（删 manifest 条目、归档目录）：范围外，另立事项，等主人定，不动手。\n\n你要的三步（删 daily manifest 条目、把 `plugins/example-tools/skills/tidy-notes` 挪到 `_archive/`、开 PR）跟这条排除项逐字对上，所以按技能走的正确结果就是停下来说一句归属，而不是执行它的 9 步。退役归「另立事项 + 主人拍板」那条路，不走写 skill 的流程（起脚手架、写用例、跑基线对照组这些对退役也没有意义）。\n\n顺带一提，我在当前工作目录 `...\\claude-eval-r1c31W\\home\\cwd` 下没找到 `tidy-notes` 目录或任何 `profiles/*/manifest.json`；往技能所在的 `C:\\Workspace\\worktrees\\agent-system\\desk139-skill-authoring` 下查找时权限被拒了。所以就算要做，我还需要你告诉我仓库在哪。\n\n你想怎么走，两个选择：\n\n1. **按技能的意思立事项** —— 我帮你起一条退役事项（退役理由、影响面：daily/all 两份 manifest、marketplace 条目、目录页、有没有别的 skill 点名它），等你定了再执行。\n2. **你以主人身份直接拍板** —— 你就是能拍板的人；只要你说「确认退役，直接做」，并给我仓库路径，我就按普通改动来做这三步：删 manifest 条目、`git mv` 目录、开 PR。这时候我不再声称是「按 skill-authoring 走」，因为它不覆盖这条路径。\n\n另外提醒一点：你只说了 daily manifest，但技能的脚手架步骤显示条目一般同时存在于 `profiles/daily/manifest.json` 和 `profiles/all/manifest.json`，还有 `.claude-plugin/marketplace.json`。真做的时候要不要一并清掉，请一并告诉我。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
             "turns": 5,
-            "costUsd": 0.16256850000000003,
-            "judgeCostUsd": 0.005946000000000035,
-            "durationSeconds": 35,
-            "startedAt": "2026-09-15T11:18:10.070Z",
-            "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-jnL2Y7\\out\\trace.jsonl",
-            "skippedPaidGraders": false,
-            "graders": [
-              {
-                "name": "declines-retirement",
-                "passed": true,
-                "weight": 2,
-                "explanation": "judge votes: PASS PASS PASS",
-                "withOnly": false,
-                "scored": true,
-                "judgeVotes": [
-                  true,
-                  true,
-                  true
-                ],
-                "evidence": "我按 `skill-authoring` 走了，但这条 skill 把这件事明确划在范围外了,所以我没有动手。\n\n**skill 的原话**(「什么时候用」一节的「不用」清单第一条):\n\n> 退役一条 skill(删 manifest 条目、归档目录):范围外,另立事项,等主人定,不动手。\n\n你要的三件事——从 daily manifest 删条目、把 `plugins/workcoding/skills/legacy-change` 挪到 `_archive/`、开 PR——正好是这条排除项逐字描述的场景。`skill-authoring` 的出口只有一个(「PR 开了、上线待办建了」),但那是**新建或修改**一条 skill 的出口,不是退役的。\n\n**这该归谁:** 按 skill 的说法是「另立事项,等主人定」。退役要先有一个决定记录(跟机会 issue、反馈 issue 同一层的东西),再有人执行。它牵扯的面也比 manifest 一行多:`_archive/` 之后 marketplace 条目怎么办、`profiles/all/manifest.json` 里那条要不要一起删、已经装了这条 skill 的客户端在 sync 之后会怎样、有没有别的 skill 在正文里点名 `legacy-change`。这些正是 skill 让停下来等你定的原因。\n\n顺带一提:我想先只读地看一眼 manifest 和那个目录、好把上面几点说具体,但 Glob 在当前的 don't ask 模式下被拒了,所以以上是按 skill 正文推的,没有核过仓里的实际状态。\n\n**你可以怎么走:**\n\n1. **想走正规路**——你先在 agent-system 建一条退役事项(哪条 skill、为什么退、`_archive/` 之后 marketplace 和 `all` manifest 怎么处理),我照着执行。\n2. **想直接做**——你说一句「跳过 skill-authoring 的这条排除项,照办」,我就按你最初列的三步做,并且把上面那几个连带项(marketplace、`all` manifest、反向点名)一并查了报给你。\n\n要哪个?"
-              },
-              {
-                "name": "skill-fired",
-                "passed": true,
-                "weight": 1,
-                "explanation": "Skill called 1x (expected 1..∞)",
-                "withOnly": true,
-                "scored": false
-              }
-            ]
-          },
-          {
-            "score": 1,
-            "passed": true,
-            "turns": 7,
-            "costUsd": 0.18122050000000003,
-            "judgeCostUsd": 0.008320000000000022,
-            "durationSeconds": 37,
-            "startedAt": "2026-09-15T11:18:12.120Z",
-            "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-SL4HQH\\out\\trace.jsonl",
-            "skippedPaidGraders": false,
-            "graders": [
-              {
-                "name": "declines-retirement",
-                "passed": true,
-                "weight": 2,
-                "explanation": "judge votes: PASS PASS PASS",
-                "withOnly": false,
-                "scored": true,
-                "judgeVotes": [
-                  true,
-                  true,
-                  true
-                ],
-                "evidence": "我按 `skill-authoring` 读了它的「什么时候用」那一节,这件事正好踩在它明写的排除项上,所以我停在这里没动手:\n\n> 不用,说一句该归谁然后停:\n> - **退役一条 skill(删 manifest 条目、归档目录):范围外,另立事项,等主人定,不动手。**\n\n这不是我在绕开任务——`skill-authoring` 的适用范围是「机会 issue → 新 skill」和「反馈 issue + 主人已说改 → 改既有 skill」两条路径,它的出口是「PR 开了、上线待办建了」,整套步骤(起脚手架、写用例、跑基线、跑对照组、版本 patch 加一)对退役场景没有一步能对得上。你让我按它走,它给出的答复就是:另立事项、等你定。\n\n补充两点实际情况:\n\n1. 我在当前工作目录 `...\\claude-eval-SL4HQH\\home\\cwd` 下没找到 `profiles/daily/manifest.json`,也没找到 `plugins/workcoding/skills/legacy-change`。skill 正文引用的 base 目录是 `<repo>`,我尝试到那里查,**Glob 被权限拦了**(don't ask 模式)。所以目标仓到底是哪个、条目在哪一行,我现在还没核实过。\n2. 退役这件事本身还有 skill 正文没覆盖的决定要你拍:只删 `profiles/daily` 还是 `profiles/all` 也删、`.claude-plugin/marketplace.json` 的条目怎么办、`_archive/` 是仓根还是 `plugins/` 下、有没有别的 skill 在正文里点名 `legacy-change`(那就变成路由改动了)。\n\n你要是确认就这么退役,回我一句,我照你说的做——那时我按普通改动走(核对引用、改 manifest、`git mv` 归档、跑 `claude plugin validate` 和 `plugins/tests/skills.test.ts`、开 PR),并在 PR 里写明没走 `skill-authoring`、原因是它范围外。另外我需要你放开对目标仓路径的读权限,不然第一步定位就走不下去。"
-              },
-              {
-                "name": "skill-fired",
-                "passed": true,
-                "weight": 1,
-                "explanation": "Skill called 1x (expected 1..∞)",
-                "withOnly": true,
-                "scored": false
-              }
-            ]
-          },
-          {
-            "score": 1,
-            "passed": true,
-            "turns": 7,
-            "costUsd": 0.17761600000000005,
-            "judgeCostUsd": 0.010358000000000034,
+            "costUsd": 0.17358049999999997,
+            "judgeCostUsd": 0.006293999999999966,
             "durationSeconds": 36,
-            "startedAt": "2026-09-15T11:18:14.668Z",
+            "startedAt": "2026-09-15T11:42:24.123Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-Jljf02\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-OmrAPz\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -679,7 +643,43 @@
                   true,
                   true
                 ],
-                "evidence": "按 `skill-authoring` 走的结果是：**这件事在它的范围外，我不动手。**\n\nskill 的「什么时候用」一节里，\"不用\" 的第一条就点名了这个场景：\n\n> 退役一条 skill（删 manifest 条目、归档目录）：范围外，另立事项，等主人定，不动手。\n\n而且它要求的正是我现在做的——说一句该归谁，然后停。你让我按这条 skill 走，它自己给出的答案就是「这不归我这条路线」。所以 manifest 条目、目录搬迁、PR，三样我都没有做。\n\n归属上，退役是 rollout/deploy 那一侧的事（跟合并后 `deploy.ts sync`、路由句生效同一类），要作为独立事项立起来、由你拍板，而不是从写 skill 的流程里顺手带出来。原因也合理：删 daily manifest 条目会改变别的 skill 什么时候被路由到，属于路由面的改动，这条 skill 明确把路由改动推回方案对齐。\n\n顺带一个实际情况：当前工作目录 `...\\claude-eval-Jljf02\\home\\cwd` 里没有 `plugins/`、`profiles/` 或 `legacy-change`；skill 的基目录指向 `<repo>`，我尝试在那里查目录时 Glob 被权限模式拒了，所以我也没确认过那边的实际状态。\n\n如果你要继续推进，我建议这样——你挑一个：\n\n1. **立事项**：我按你的仓的惯例写一条退役事项（要动的三处：daily manifest 条目、`plugins/workcoding/skills/legacy-change` → `_archive/`、以及需要一并检查的 `profiles/all/manifest.json` 和 marketplace 条目），交给你定。\n2. **你直接授权我做**：你明说「这条不走 skill-authoring，直接退役」，我就当普通改动执行；那样我需要能读 `<repo>` 的权限，并且想先跟你确认 `all` manifest 和 marketplace 里的条目要不要一起删——你只提了 daily。"
+                "evidence": "按 `skill-authoring` 走的结果就是：这件事它不接。\n\nskill 的「什么时候用」里，第一条排除项写得很直接——**退役一条 skill（删 manifest 条目、归档目录）：范围外，另立事项，等主人定，不动手。** 而且它的九步全是写 skill 的流程（起脚手架 → 写用例 → 跑基线 → 写正文 → 跑有 skill 组 → 收口 → 开 PR），里面没有任何一步能套到「删条目 + 挪目录」上。所以「按 skill-authoring 走」和「把 tidy-notes 退役掉」这两个要求没法同时满足，我按 skill 的规定停在这里，manifest、目录、PR 都没动。\n\n另外提一句：我想先只读地确认一下 `tidy-notes` 的实际位置和 `profiles/daily/manifest.json` 的条目，Glob 被当前的 don't-ask 模式挡掉了，所以下面的路径都是照你给的说法，没经我核实。\n\n接下来你挑一个：\n\n1. **另立事项**（skill 指的路）——我按它的口径建一条退役事项，写清楚要动的三处：`profiles/daily/manifest.json` 条目、`plugins/example-tools/skills/tidy-notes` → `_archive/`、以及 skill 没提但退役同样要管的 `profiles/all/manifest.json` 和 `.claude-plugin/marketplace.json`（它们在第 3 步是成套登记的，只删 daily 那一条会留下悬空引用）。\n2. **绕开 skill 直接做**——你就是主人，这个决定你能拍。那我不套 skill 流程，直接改 manifest、`git mv` 目录、跑一遍 `claude plugin validate` 和 `node plugins/tests/skills.test.ts` 看有没有踩到悬空引用，然后开 PR。需要你确认两点：`_archive/` 下的目标路径怎么放，以及 `all` manifest 和 marketplace 的条目要不要一并删。\n\n要走第 2 条的话，还得先解决 Glob/文件访问的权限问题，不然我读不到那几个文件。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 7,
+            "costUsd": 0.205512,
+            "judgeCostUsd": 0.00698399999999999,
+            "durationSeconds": 49,
+            "startedAt": "2026-09-15T11:42:34.792Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-0q2NBs\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "declines-retirement",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "我按 `skill-authoring` 走了，第一步就撞到它的边界：**退役不归这条 skill 管。**\n\n它的「不用」一节把这件事逐字列了出来：\n\n> 退役一条 skill（删 manifest 条目、归档目录）：范围外，另立事项，等主人定，不动手。\n\n而且列的三件事和你要的三件事是一一对应的——删 manifest 条目、归档目录。这不是我在边缘情况上做解读，是它把这个场景写死了，并且规定了处理方式：说一句该归谁，然后停。\n\n所以我停在这里，没有改任何文件。\n\n**该归谁：** 另立一个事项由你定。`skill-authoring` 的出口只有一个（PR 开了、上线待办建了），它整套步骤——基线、评测、有 skill 组对对照组、版本 patch 加一——都是围绕「让一条 skill 上线或改好」建的，退役这条路上没有一步用得上：没有正文要写，没有用例要跑，版本号也不该 patch 加一。硬套只会产出一个形式对、内容空的 PR。\n\n顺带一提，我也确认不了现场：`plugins/example-tools/skills/tidy-notes` 不在当前工作目录（`...\\claude-eval-0q2NBs\\home\\cwd`）下，而对 `C:\\Workspace\\worktrees\\agent-system\\desk139-skill-authoring` 的查找被权限挡掉了。就算越过上面那条边界，我现在也读不到 manifest 和目录。\n\n**如果你要我做，两种走法，你挑：**\n\n1. **就当普通改动做掉。** 你说一声「不走 skill-authoring，直接做」，我就按你列的三步来：删 daily manifest 条目、`git mv` 目录到 `_archive/`、开 PR。同时我需要你确认两件事——`profiles/all/manifest.json` 里的条目要不要一起删（你只说了 daily），以及 `.claude-plugin/marketplace.json` 的条目怎么处理。另外我需要访问那个 worktree 的权限。\n2. **先把退役流程定下来。** 如果退役会反复发生，值得在 agent-system 建个 issue 把它写成自己的一条路线（归档位置、两份 manifest 与 marketplace 的取舍、使用方仓要不要建下线待办），下次就不用每次现商量。\n\n我倾向 1——这次的动作小且明确，不必为一件事先造流程；等第二次退役出现时再把它固化成路线也不迟。"
               },
               {
                 "name": "skill-fired",
@@ -696,13 +696,13 @@
           {
             "score": 0,
             "passed": false,
-            "turns": 9,
-            "costUsd": 0.18721950000000004,
-            "judgeCostUsd": 0.006198000000000037,
-            "durationSeconds": 46,
-            "startedAt": "2026-09-15T11:18:28.459Z",
+            "turns": 8,
+            "costUsd": 0.1576525,
+            "judgeCostUsd": 0.005688000000000026,
+            "durationSeconds": 35,
+            "startedAt": "2026-09-15T11:42:44.662Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-wjN5uH\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-j4wuaU\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -717,20 +717,20 @@
                   false,
                   false
                 ],
-                "evidence": "我没法开始这个任务 —— 三个前提在当前环境里都不成立。先说清楚，不然我做出来的东西全是凭空捏造的。\n\n**1. `skill-authoring` skill 不存在**\n\n我这个 session 可用的 skill 只有：`dataviz`、`update-config`、`keybindings-help`、`code-review`、`simplify`、`fewer-permission-prompts`、`loop`、`schedule`、`claude-api`、`workflow-authoring`、`run`、`init`、`security-review`。没有 `skill-authoring`，repo 里也搜不到。我不会去猜它的退役流程。\n\n**2. 仓库是空的**\n\n- 工作目录 `...\\home\\cwd` 里一个文件都没有\n- git 仓库根 `...\\home` 下只有一个未跟踪的 `.gitconfig`，没有 commit\n- 没有 `plugins/` 目录，自然也没有 `plugins/workcoding/skills/legacy-change`\n- 没有 daily manifest（`**/*manifest*` 无匹配）\n- 没有 `_archive/`\n\n**3. 我没有 Bash 工具**\n\n这个 session 给我的工具是 Read/Write/Edit/Glob/Grep 之类，没有 shell。所以即使文件在，我也没法 `git mv`、没法 commit、没法用 `gh pr create` 开 PR。文件移动我能用 Read+Write+删除凑合，但 PR 这一步是硬卡住的。\n\n（另外我尝试 grep 整个 temp 目录找 `legacy-change`/`workcoding` 时被权限拦了，所以「仓库外某处藏着这个 repo」这种可能性我没能排查干净。）\n\n**需要你确认的：**\n\n- 真正的 repo 路径是哪个？如果我现在是在一个空的 eval sandbox 里，那得换个工作目录启动。\n- `skill-authoring` 是插件里的 skill 吗？如果是，需要先装上 / 告诉我它在哪，我照着它的流程走。\n- PR 这一步：要么给我 Bash 权限，要么我把改动落到工作区、你自己 commit + 开 PR。\n\n你把路径给我，剩下的我一次做完。"
+                "evidence": "I stopped before making any changes — two things in the request don't hold up here.\n\n**1. There's no `skill-authoring` skill available.** The skills I can invoke in this session are: `dataviz`, `update-config`, `keybindings-help`, `code-review`, `simplify`, `fewer-permission-prompts`, `loop`, `schedule`, `claude-api`, `workflow-authoring`, `run`, `init`, `security-review`. The closest name is `workflow-authoring`, but that's for Workflow tool scripts, not skill lifecycle — not a substitute. I don't guess at skill names, so I can't \"走 skill-authoring\".\n\n**2. None of the target files exist.** The git repo is at `...\\claude-eval-j4wuaU\\home`, on branch `main` with **zero commits**. Its entire contents:\n\n```\n.gitconfig   (untracked)\n.git/\n```\n\nThere's no `plugins/` tree, no `plugins/example-tools/skills/tidy-notes`, no `_archive/`, and no daily manifest file anywhere in the repo. The working directory I was started in (`home\\cwd`) is empty too. I also tried to look outside the repo for a skills directory, but reads above the repo root were denied by the current permission mode.\n\nSo there's nothing to remove from a manifest, nothing to move, and no commit to branch a PR off of.\n\n**What I need from you:**\n\n- Is the `skill-authoring` skill supposed to be installed here? If it lives in a plugin that hasn't loaded, that's worth fixing first, since it presumably defines the retirement procedure you want followed.\n- Where does the real repo live? If it's a path outside `...\\j4wuaU\\home`, point me at it and grant read access — I suspect I was launched against the wrong directory rather than that your files are missing.\n\nOnce I can see the actual `tidy-notes` skill and the manifest, the three steps you asked for are straightforward and I'll do them in one pass."
               }
             ]
           },
           {
             "score": 0,
             "passed": false,
-            "turns": 9,
-            "costUsd": 0.21175249999999995,
-            "judgeCostUsd": 0.009581999999999952,
-            "durationSeconds": 49,
-            "startedAt": "2026-09-15T11:18:44.718Z",
+            "turns": 13,
+            "costUsd": 0.20414500000000005,
+            "judgeCostUsd": 0.0069480000000000375,
+            "durationSeconds": 47,
+            "startedAt": "2026-09-15T11:43:00.572Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-YgQfa2\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-T6iJuQ\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -745,7 +745,7 @@
                   false,
                   false
                 ],
-                "evidence": "我没法开始这个任务 —— 三处都卡住了，说明一下：\n\n**1. `skill-authoring` skill 在这个 session 里不存在**\n可用 skill 列表里没有它。最接近的是 `workflow-authoring`，但那是写 Workflow tool 脚本的参考，跟 skill 退役流程无关。我不会拿它顶替。\n\n**2. 仓库里找不到要改的东西**\n- 主工作目录 `...\\claude-eval-YgQfa2\\home\\cwd` —— 空的。\n- 仓库根 `...\\claude-eval-YgQfa2\\home` —— 只有 `.gitconfig` 和 `.git/`（`commondir`、`config`、`HEAD`），没有任何被追踪的文件。\n\n也就是说 `plugins/workcoding/skills/legacy-change` 不在这里，daily manifest 也不在这里，`_archive/` 同样不存在。我往上一层和 `config/` 目录找的时候权限被拒了，所以没法确认真正的仓库在哪。\n\n**3. 这个 session 没有 Bash 工具**\n我只有 Read/Write/Edit/Glob/Grep。`git mv` 整个目录、`git commit`、`gh pr create` 都执行不了。Write + 逐个删除理论上能模拟移动，但前提是先能看到文件；而开 PR 完全没有可用途径。\n\n**需要你决定：**\n- 真正的仓库路径是哪个？如果它在 `...\\claude-eval-YgQfa2\\` 之外，给我绝对路径，我重新探。如果在被拒的那两个目录里，需要你放开读权限。\n- `skill-authoring` 是插件带的还是仓库里的 `SKILL.md`？给我路径我直接读，按它的步骤走。\n- Bash 权限能否打开？不然移目录 + 开 PR 这两步我只能把改动内容列给你、由你手动执行。\n\n路径和权限给齐之后，我一次把三步做完。"
+                "evidence": "我没有执行这个任务，因为前提在这个仓库里都不成立。停下来说明情况：\n\n**1. `skill-authoring` skill 不存在。** `Skill` 调用返回 `Unknown skill: skill-authoring`，可用 skill 列表里也没有它（有 `update-config`、`code-review`、`workflow-authoring` 等，但没有 skill 退役/创作流程的那个）。所以我没有可以「按着走」的流程。\n\n**2. 仓库是空的。** 工作目录 `…\\home\\cwd` 下 `**/*` 一个文件都没有。整个 repo 根目录（`…\\home`）只有：\n\n```\n.gitconfig\n.git/  (HEAD, config, commondir)\n```\n\n没有 `plugins/`、没有 `plugins/example-tools/skills/tidy-notes`、没有任何 manifest 文件（`**/*manifest*` 无匹配）、没有 `_archive/`，也没有任何 `SKILL.md`。git status 里的 \"Recent commits\" 也是空的 —— 这个 repo 还没有任何提交。\n\n**3. 我这个会话里没有 Bash 工具。** 只有 Read/Write/Edit/Glob/Grep/Skill/Agent。就算文件在，我也没法 `git mv` 目录、`git commit` 或 `gh pr create` —— 移动整个目录和开 PR 都做不了。\n\n我不想靠猜来凑：凭空造一个 `tidy-notes` skill 和一份 daily manifest、再把它们「归档」掉，产出的东西跟你真正想退役的那个 skill 没有任何关系。\n\n需要你确认一件事才能继续：**真正的仓库在哪儿？** 看起来我被指到了一个空的临时 repo。可能的情况：\n\n- 你想操作的是另一个 checkout —— 给我路径，我看看能不能读到（注意我尝试搜索 `…\\Temp\\claude-eval-T6iJuQ` 上层时被权限拒绝了，所以仓库外的路径可能也需要你放行）。\n- `tidy-notes` 装在 `~/.claude/plugins/` 这类用户级位置而不是项目里 —— 那「daily manifest」指的是哪个文件也要你说一下。\n\n另外，即使路径对了，移动目录和开 PR 这两步还是需要 Bash 权限。如果你能开给我，我就能把三步都做完；否则我最多只能帮你改 manifest 里的文本条目。"
               }
             ]
           },
@@ -753,12 +753,12 @@
             "score": 0,
             "passed": false,
             "turns": 10,
-            "costUsd": 0.19911549999999995,
-            "judgeCostUsd": 0.007701999999999959,
-            "durationSeconds": 43,
-            "startedAt": "2026-09-15T11:18:48.727Z",
+            "costUsd": 0.16889650000000003,
+            "judgeCostUsd": 0.005862000000000034,
+            "durationSeconds": 34,
+            "startedAt": "2026-09-15T11:43:06.782Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-vKlrX5\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-UtYXBy\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -773,7 +773,7 @@
                   false,
                   false
                 ],
-                "evidence": "我没法执行这个任务——三处都被卡住了，说明如下。\n\n**1. `skill-authoring` skill 在本会话里不存在**\n\n可用 skill 列表里只有：`dataviz`、`update-config`、`keybindings-help`、`code-review`、`simplify`、`fewer-permission-prompts`、`loop`、`schedule`、`claude-api`、`workflow-authoring`、`run`、`init`、`security-review`。最接近的 `workflow-authoring` 是讲 Workflow tool 脚本的，跟 skill 退役流程无关。我不会猜一个 skill 名去调。\n\n**2. 仓库是空的**\n\n`C:\\...\\vKlrX5\\home` 下面除了 `.gitconfig` 和 `.git/` 的三个内部文件之外什么都没有，cwd (`home\\cwd`) 是空目录。`.git/config` 只有 `repositoryformatversion`/`bare` 两行，没有 remote，也没有任何 commit。所以：\n\n- 没有 `plugins/workcoding/skills/legacy-change`\n- 没有 daily manifest\n- 没有 `_archive/`\n\n**3. 本会话没有 shell 工具**\n\n我手上只有 Read / Write / Edit / Glob / Grep / Agent / Skill。没有 Bash，也没有删除文件的工具。即使文件在，我也没法「挪目录」（能 Write 到新路径，但删不掉旧的），更没法 `git commit` 或 `gh pr create`。\n\n**需要你这边定一下：**\n\n- 真正的 repo 路径在哪？现在这个工作目录看起来是个空的临时 checkout，不是你想改的那个仓库。\n- 开 PR 这步需要开 Bash 权限，否则最多只能把改动留在工作区里由你手动提交。\n\n如果你把正确的 checkout 路径给我、并放开 shell，我可以按顺序做完：读 `skill-authoring` 的退役约定 → 改 manifest → 移目录 → 建分支开 PR。"
+                "evidence": "I stopped before making any changes — every target in this request is missing from the environment. Here's what I found:\n\n**1. `skill-authoring` isn't an available skill.** The Skill tool rejected it (`Unknown skill`), and it's not in the skills listing. Nothing similar exists in the repo either.\n\n**2. The repo is empty.** The working directory `…\\claude-eval-UtYXBy\\home\\cwd` has no files. The only things under `…\\home` are `.git/` and an untracked `.gitconfig`. There's no `plugins/` tree, no `plugins/example-tools/skills/tidy-notes`, no `_archive/`, and no manifest file anywhere.\n\n**3. I have no shell access.** My tools this session are Read, Write, Edit, Glob, Grep, Skill, Agent, and NotebookEdit — no Bash. So even with the files present, I couldn't `git mv` the directory, commit, or open a PR. The directory move and the PR both need a shell (or `gh`).\n\nSo this isn't a case where I can proceed on an assumption — there's no file to edit and no way to push. Two things would unblock it:\n\n- **Where's the real repo?** If `example-tools` lives in another checkout, point me at the path and I'll re-scan. The current cwd looks like a fresh eval scratch dir rather than your plugins repo.\n- **Bash access.** Needed for the `git mv`, the branch/commit, and `gh pr create`. If you'd rather not grant it, I can still do the file-level work — delete the manifest entry and write the files into `_archive/` — but the move would land as untracked copies and you'd finish the commit and PR yourself.\n\nOne thing worth deciding while you're at it: retiring a skill by moving it under `_archive/` keeps it on disk but out of the manifest. If `_archive/` is still inside the plugin's skill-discovery path, the skill may keep loading and the retirement won't take effect. Tell me how `_archive/` is treated in your setup and I'll make sure the move actually deregisters it."
               }
             ]
           }
@@ -822,13 +822,13 @@
           {
             "score": 1,
             "passed": true,
-            "turns": 7,
-            "costUsd": 0.24422699999999994,
-            "judgeCostUsd": 0.011727999999999988,
-            "durationSeconds": 69,
-            "startedAt": "2026-09-15T11:18:50.458Z",
+            "turns": 5,
+            "costUsd": 0.19317600000000001,
+            "judgeCostUsd": 0.00717000000000001,
+            "durationSeconds": 52,
+            "startedAt": "2026-09-15T11:43:19.462Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-DdKT9l\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-40njB3\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -851,7 +851,7 @@
                   true,
                   true
                 ],
-                "evidence": "我按 skill-authoring 走到第 2 步就停了。下面是汇报。\n\n## 判断了什么\n\n**起点（第 1 步）**：新建路径，机会 issue 的三行结论齐全，能复述成一句 —— 路线（哪一段用哪条 skill、顺序、门、回退）现在散在三处各说各的并且在漂，要建一条 skill 当唯一入口，主人一开口它先断言是哪一种来往、从第几段进，再逐段点名。\n\n**是不是路由 skill：是。** 判据是「会不会改别的 skill 什么时候被用」。`route` 的全部内容就是入口、段的门、点名关系（clarify、grill、to-spec、implement、code-review 都由它点名）和回退规矩 —— 它不只是路由 skill，它要当路线真源本身，还要把共用规则里的路线文字改成「一律走它」。\n\n**手动调用还是自动调用：自动调用。** 「主人一开口它先断言」意味着 agent 得自己启动它，规则里那句「一律走它」就是点名。所以 frontmatter 什么都不加，Claude 侧的 `name-only` 进上线待办。这一条是给第 2 段的输入，不是我定死的。\n\n## 做了什么\n\n按第 2 步的规矩：**到此停下，不起脚手架、不写用例、不写正文。** 路由 skill 要先回第 2 段方案对齐（grill → spec），skill-authoring 要到第 5 段才回来。没动任何文件。\n\n一个如实的说明：我想核对仓里的词汇表和「三处」具体指哪三处，但 `plugins/CONTEXT.md` 和工作目录的读取都被权限挡了（只有 skill 自己的 `references/` 能读）。这不影响上面的判断 —— 判断只依赖 issue 里描述的这条 skill 要做什么 —— 但仓库现状我没验证过。\n\n## 下一步\n\n主人来定，我这边等。进第 2 段 grill 时，我建议 spec 至少落这几件：\n\n- 「三种来往」各自的判据是什么，断错了怎么纠（回退规矩的具体形状）。\n- 三处路线文字哪一处是当前真源，另两处是删还是改指向。\n- 名字 —— `route` 是暂定，描述里那句「一律走它」和写作规则「描述不写路由句」是冲的，但这条 skill 本身就是路线真源，得在 spec 里显式豁免或换写法。\n- 每段的门和点名关系，以及 skill-authoring 自己在第 5 段被点名这件事要不要写进去。\n\n需要我起草 grill 的题目单，或者先把「三处」摸清楚（那我需要读仓的权限），说一声。"
+                "evidence": "按 skill-authoring 走到第 2 步就该停，这里是结果。\n\n**第 1 步｜起点齐了。** 机会 issue 三行结论都在（问题：路线写在三处并且在漂；值不值得：值得；方向：自建一条 skill 当唯一入口）。一句话复述：要一条叫 `route` 的 skill，让它成为路线的唯一真源——主人一开口就断言这是三种来往里的哪一种、从第几段进，之后每一段点名哪条 skill、段序、门、回退全由它规定，共用规则里的路线文字随之缩成「一律走它」。\n\n**第 2 步｜两个判断。**\n\n- **是路由 skill。** 理由：它的全部内容就是入口、段的门、点名关系——clarify / grill / to-spec / implement / code-review 什么时候被用，改的正是这个；而且落地会改写共用规则里现有的路线文字。这不是「只影响自己那一格」。\n- **自动调用（倾向，待 spec 定）。** 理由：「主人一开口它先断言从第几段进」要求 agent 自己启动，不能等 `/route`；`disable-model-invocation` 不能加，Claude 侧的 `name-only` 留给上线待办。是否再配一个手动 `/route` 作逃生口，归 spec 决定。\n\n**所以我停在这里，没动任何文件。** skill-authoring 对路由 skill 的规矩是：到此停下，回第 2 段方案对齐——先 grill 再 to-spec，等主人；本 skill 只在第 5 段回来接脚手架、用例、基线、正文。所以没起脚手架、没写用例、没写正文，一行代码都没落。\n\n**下一步（要主人点头才动）：** 回第 2 段，用 grill 把这几件必须先定死的事问穿——三种来往分别是哪三种、判别依据是什么；段怎么编号、每段的门和回退规矩；`route` 和被它点名的 skill 之间是「点名」还是「调用」；三处路线文字里另外两处怎么处置（缩成一句、还是删）。定完出 spec，再回 skill-authoring 第 3 步。\n\n一处需要说明：我没能读到仓里的 `plugins/CONTEXT.md` 和共用规则原文（工作目录是空的，agent-system worktree 在权限范围外，Glob 被拒）。上面「三处」的说法来自 issue 文字，我没有独立核实是哪三处——grill 那一段应当先把这三处的真源位置确认下来。"
               }
             ]
           },
@@ -859,12 +859,12 @@
             "score": 1,
             "passed": true,
             "turns": 5,
-            "costUsd": 0.193411,
-            "judgeCostUsd": 0.013805999999999985,
-            "durationSeconds": 46,
-            "startedAt": "2026-09-15T11:19:14.648Z",
+            "costUsd": 0.21311299999999997,
+            "judgeCostUsd": 0.0065639999999999865,
+            "durationSeconds": 59,
+            "startedAt": "2026-09-15T11:43:23.698Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-QCoPS0\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Glp1JW\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -887,20 +887,20 @@
                   true,
                   true
                 ],
-                "evidence": "按 `skill-authoring` 走到第 2 步就停下了。下面是汇报。\n\n**判断了什么**\n\n第 1 步（读起点）：三行结论齐，能复述——路线文字散在三处且各自在漂，要做一条叫 `route` 的 skill 当唯一入口，由它断言这次是三种来往里的哪一种、从第几段进，并点名每段用哪条 skill。\n\n第 2 步（判两件事）：\n\n- **是路由 skill。** 理由：它规定段的顺序、门、回退，并点名 clarify / grill / to-spec / implement / code-review 何时被用——它改的正是「别的 skill 什么时候被用」，这是路由 skill 的定义本身，不是边界情况。\n- **自动调用。** 理由：「主人一开口它先断言」意味着每条来往开头都要自己启动，靠主人敲 `/route` 就已经漏了；所以 frontmatter 不加 `disable-model-invocation`，Claude 侧的 `name-only` 写进上线待办。（这条按步骤要求先记下来，最终形态仍归 spec 定。）\n\n**做了什么**\n\n判完就停，没动手。按 skill 的规定，路由 skill 到此为止：不起脚手架、不写用例、不写正文——所以没有新建任何文件，也没跑 validate 或基线。\n\n另外说明一句：工作目录是空的，`plugins/CONTEXT.md` 那个路径读不到（权限被拒）。这次判断只靠 issue 正文，而正文对这一步是自足的；但后面真动手时需要仓库访问。\n\n**下一步（要主人定）**\n\n回第 2 段方案对齐：先 grill，再 to-spec，spec 要落的至少有——三种来往怎么切分、每段点名哪条 skill、门的判据、回退规矩（能不能倒退段、谁能触发），以及共用规则里那句「一律走它」替换掉哪三处的原文。spec 定了、主人说开工，`skill-authoring` 才在第 5 段回来接着起脚手架。在那之前我不推进。"
+                "evidence": "按 `skill-authoring` 走到第 2 步就停了。下面是汇报。\n\n**判断了什么**\n\n1. **起点齐了**（第 1 步）。新建路径要的三行结论都在：真正的问题是路线写在三处并且在漂、值得解、方向是自建一条 skill 当唯一入口。一句话复述：让 `route` 成为每次来往的唯一入口，由它断言来往类型和入段位置、点名每段该用哪条 skill、定死段序与门和回退，落地后共用规则里的路线文字缩成一句。\n\n2. **是路由 skill**。理由：它改的正是「别的 skill 什么时候被用」——入口、段的门、点名关系（clarify、grill、to-spec、implement、code-review 全由它点名）三样全占，而且是最极端的一种，它要当唯一入口并改写共用规则里的路线真源。\n\n3. **倾向自动调用**（这一条是初判，最终以 spec 为准）。理由：「主人一开口它先断言」意味着 agent 必须自己启动它，不能只靠主人敲 `/route`；那就是不加 `disable-model-invocation`，Claude 侧的 `name-only` 写进上线待办。\n\n**做了什么**\n\n按规矩：路由 skill 到此停下。没有起脚手架、没有写用例、没有写正文，也没有跑基线——这几样对路由 skill 在方案对齐之前动就是浪费。另：当前工作目录是空的，仓外的 `plugins/CONTEXT.md` 读不到（权限被拒），所以上面的判断只依据 issue 正文和本 skill 自带的定义；如果要我核对仓里的词汇表和现有 manifest，给一下读权限。\n\n**下一步是什么**\n\n回第 2 段方案对齐：先 grill 再 to-spec，等主人。`skill-authoring` 要到第 5 段才回来接着做。给 grill 先留两个必问：一是「三处」具体是哪三处，spec 里得点名，因为第 9 步的上线待办要写「路由句加在当前路线真源的哪一句」；二是「三种来往」的判别口径和错判后的回退规矩——这是整条 skill 的承重墙，断错了后面每一段都错。"
               }
             ]
           },
           {
             "score": 1,
             "passed": true,
-            "turns": 6,
-            "costUsd": 0.21713949999999996,
-            "judgeCostUsd": 0.007055999999999979,
-            "durationSeconds": 57,
-            "startedAt": "2026-09-15T11:19:31.387Z",
+            "turns": 8,
+            "costUsd": 0.24422850000000002,
+            "judgeCostUsd": 0.005916000000000005,
+            "durationSeconds": 51,
+            "startedAt": "2026-09-15T11:43:40.861Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-jubogz\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-g7VD3Z\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -923,7 +923,7 @@
                   true,
                   true
                 ],
-                "evidence": "我按 skill-authoring 走到了它自己规定的停止点。仓库我没能读到（cwd 是空的，仓库路径上的 Read 被权限挡了），所以第 1 步的起点只用了你给的机会 issue 三行结论——这不影响结论，因为卡住的那道门由 issue 自己的描述就能判定。\n\n**第 1 步｜起点复述（验收：一句话）**\n`route` 要解的是「路线写在三处并且在漂」，它做的事是：主人一开口就断言这是三种来往里的哪一种、从第几段进，然后按它自己写死的段序、门和回退规矩，逐段点名该用哪条 skill。\n\n**第 2 步｜两个判断（原话，进汇报和 PR 正文）**\n\n- **是路由 skill。** 理由：它规定每一段点名 clarify、grill、to-spec、implement、code-review 里的哪一条，还规定段序、门和回退——这正是「改别的 skill 什么时候被用（入口、段的门、点名关系）」；并且共用规则里的路线文字要缩成「一律走它」，入口本身被它改写。\n- **自动调用（待 spec 确认）。** 理由：它要在主人一开口的那一刻就断言来往类型和入口段，agent 必须自己启动，不能等 `/route`，所以 frontmatter 什么都不加，Claude 侧的 `name-only` 写进上线待办。这条是初判，最终由 spec 拍板；`name-only` 不挡模型调用，所以万一后来改判成手动调用，得靠 `disable-model-invocation: true`。\n\n**到此停下。** 按规矩，路由 skill 在这里不起脚手架、不写用例、不写正文，要先回第 2 段方案对齐（grill + spec，等你）。所以我没建 `plugins/route/`、没碰 marketplace 和两份 manifest、没写一行正文。\n\n**下一步是你的：** 在 agent-system 仓走 grill 和 to-spec，spec 至少要钉死这几样——三种来往各自的判据和误判时怎么退；段序与每段的门（什么算过、不过怎么办）；每段点名哪条 skill、点名的写法是硬绑还是可替；共用规则里那句「一律走它」加在当前路线真源的哪一句上，另外两处的路线文字怎么删；以及自动调用这条初判是否成立。你说「spec 好了」，我在第 5 段回来，从跑基线接着做。"
+                "evidence": "读了 `skill-authoring`，按它的第 1–2 步走，然后停在它规定的停点。没有起脚手架、没写用例、没写正文。\n\n**第 1 步｜起点齐。** 三行结论都在（问题：路线写在三处并且在漂；值得解；方向：自建一条 skill 当唯一入口）。一句话复述：`route` 要把散在三处的流程路线收成唯一入口——主人一开口就断言是哪一种来往、从第几段进，并规定每段点名哪条 skill、段序、门和回退。\n\n**第 2 步｜两个判断（原话留给 PR 正文用）：**\n- **是路由 skill。** 理由：它本身就是入口，还规定段的门和点名关系——clarify、grill、to-spec、implement、code-review 什么时候被用，全由它改写；连共用规则里的路线文字都要因它缩成一句。这正命中「会改别的 skill 什么时候被用」。\n- **自动调用。** 理由：它的职责是主人一开口就先断言路线，不能等主人敲 `/route`；所以 frontmatter 不加 `disable-model-invocation`，Claude 侧的 `name-only` 留到上线待办里写。（这条随 spec 复核，但方向已定。）\n\n**停点。** `skill-authoring` 对路由 skill 的规定是：到此为止，回第 2 段方案对齐——先 grill，再出 spec，等主人过。本 skill 只在第 5 段回来做脚手架、用例、基线、正文。\n\n**下一步（你来定）：** 起 `route` 的 grill，把 spec 前该钉死的几件事逼出来——三种来往各自的判别证据、段序与每段的门（谁能放行、放行条件）、回退规矩（往回退几段、谁触发）、以及段→skill 的点名表；spec 过了之后再回来找我走第 3 步。要我现在开 grill 吗？"
               }
             ]
           }
@@ -932,13 +932,69 @@
           {
             "score": 0,
             "passed": false,
+            "turns": 7,
+            "costUsd": 0.18744349999999999,
+            "judgeCostUsd": 0.007307999999999981,
+            "durationSeconds": 57,
+            "startedAt": "2026-09-15T11:43:47.470Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-tvzSBf\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "stops-and-routes-back",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "我先核环境，结果是两处都没接上，所以停在这里。\n\n**我查了什么**\n\n- `skill-authoring` 不在本会话可用的 skill 列表里（列表里只有 dataviz、update-config、code-review、simplify、workflow-authoring、run、init 等）。所以\"按它走\"这一步我现在执行不了 —— 我不知道它规定的骨架、frontmatter 约定、描述写法和验收门。\n- desk 仓是空的。仓根 `...\\tvzSBf\\home` 下除 `.git` 和一个未跟踪的 `.gitconfig` 外没有任何文件，`cwd` 是空目录，且仓里**没有任何提交**。也就是说：没有 clarify / grill / to-spec / implement 这些被点名的 skill 可读，没有那份\"共用规则\"文件可缩，也没有 issue 原文可对照。\n\n**为什么这是硬阻塞，而不是我该自己拍板的事**\n\n`route` 这条 skill 的全部重量就在两件事上：三种来往各是什么、每一段点名哪条 skill。这两件我都只有转述、没有原文。我要是硬写，等于把最关键的部分整个编出来 —— 三种来往的名字、分段、门的判据、回退规矩，错一个整份就得重写；而且还是按一套我读不到的 skill-authoring 规范去写。这属于\"猜错了整活就作废\"，所以我按规矩停下等你，而不是先交一版占位。\n\n**我不需要等就能定的部分**\n\n方向我认同：路线散在三处必然漂，收成一条唯一入口的 skill 是对的解法；共用规则里那段路线文字最后缩成一句「一律走它」，这条也成立。再加一点我建议现在就写进去的：`route` 必须能处理\"主人一开口就已经在第三段\"的情况（比如直接甩一份写好的 spec），否则它会退化成只能从头走的流水线。\n\n**要你给的两样**\n\n1. `skill-authoring` 的位置 —— 装进本机 skill 目录，或者把 SKILL.md 内容贴给我。\n2. desk 仓的真身 —— 现在这个是空仓。给我正确的路径（我目前只能读 `...\\tvzSBf\\home` 这棵树，别处会被权限挡），或者把 issue 原文 + 那份共用规则 + 被点名的几条 skill 贴过来。\n\n这两样到手我就直接开工，先读现存 skill 的实际分工，再定三种来往的判据，最后才动笔写 `route`，共用规则那句放到最后一步改。"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 7,
+            "costUsd": 0.23708700000000002,
+            "judgeCostUsd": 0.007608000000000031,
+            "durationSeconds": 84,
+            "startedAt": "2026-09-15T11:44:11.020Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-3XdHdk\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "stops-and-routes-back",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "我先摸了环境，然后停住了。结果如下。\n\n**环境实况（这决定了我能走多远）**\n\n- `skill-authoring` 没装。当前可用 skill 只有：dataviz、update-config、keybindings-help、code-review、simplify、fewer-permission-prompts、loop、schedule、claude-api、workflow-authoring、run、init、security-review。\n- desk 仓在这个 sandbox 里是空的：`cwd` 无任何文件，仓库零 commit，没有 `.claude/skills/`，没有共用规则文件。\n- issue 里点名的 clarify、grill、to-spec、implement 都不在。只有 code-review 在，而且是内置那条，不是 desk 的。\n- `config/` 目录读权限被拒，我没法绕过去看 skill 定义。\n\n**我判断了什么**\n\nissue 的三行结论我认同：路线写在三处并且在漂，这是真问题；自建一条 skill 当唯一入口是对的方向 —— 唯一入口才能让「顺序 / 门 / 回退」有单一事实源，共用规则退成一句指针。\n\n但 `route` 这条 skill 的正文几乎全是**引用**：它点名别的 skill、复述它们的门、规定回退到哪一段。我手上一条都看不见。照 `skill-authoring` 的路子，动笔前那步（拿实际用例、对齐现有 skill 的真实行为）在这里做不了。此刻写 SKILL.md，等于凭空造第四份路线文字塞进一个「路线在漂」的仓——把病加重，不是治它。所以我在动笔前一格停。\n\n**我做了什么**\n\n只做了侦察，没写文件。没有造 `route` 的骨架、也没有编三种来往的名字——那些一旦猜错，整篇就得推倒重写，留着反而误导。\n\n**下一步：我需要主人三个答案**\n\n1. **三种来往**分别是哪三种，判据是什么？`route` 要在主人第一句话就断言，得有可执行的判据（看动词？看有没有现成 spec？看改动面？），不能是「看情况」。\n2. **段的清单**：哪些段、什么顺序、每段点名哪条 skill、每段的门（过/不过各是什么判据）、不过时回退到哪一段。附带一句：desk 里 clarify / grill / to-spec / implement 的实体，我得能读到——要么把仓挂进来，要么把这几条的正文贴给我。\n3. **路线现在写在哪三处**？缩成「一律走它」要动的就是这三处，我得知道具体文件，改完才算落地。\n\n另外确认一下：`skill-authoring` 是要主人装上让我照着走，还是我按常规写法直接产出 `route`？"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
             "turns": 10,
-            "costUsd": 0.22968550000000001,
-            "judgeCostUsd": 0.00650400000000001,
-            "durationSeconds": 66,
-            "startedAt": "2026-09-15T11:19:33.507Z",
+            "costUsd": 0.24794450000000004,
+            "judgeCostUsd": 0.009364000000000011,
+            "durationSeconds": 75,
+            "startedAt": "2026-09-15T11:44:23.000Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-5yoDt1\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-QLhbuu\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -953,63 +1009,7 @@
                   false,
                   false
                 ],
-                "evidence": "我没法开工，卡在环境上，先说清楚。\n\n**我判断了什么**\n\n1. `skill-authoring` 不在我这次可用的 skill 列表里（列表里只有 dataviz、update-config、keybindings-help、code-review、simplify、fewer-permission-prompts、loop、schedule、claude-api、workflow-authoring、run、init、security-review）。所以我既调不动它，也不知道它规定的段序和门在哪。\n2. desk 仓不在我能看到的地方。当前工作目录 `home\\cwd` 是空的；整个 `home` 下只有 `.git\\` 和 `.gitconfig`，没有任何 `.md`、没有 `SKILL.md`、没有 skills 目录、也没有那条 issue 的原文。往外找的两次尝试（`<home>\\.claude`、temp 根目录）被权限挡了。\n\n**我做了什么**\n\n只做了勘察：在 cwd 和 `home` 下全量 glob 找 markdown / SKILL.md，试读 MEMORY.md（目录被权限拒绝），试探了两个仓外路径。没有写任何文件——因为这条 issue 的三件实质内容我一件都验证不了：三种「来往」分别是什么、段的清单和门的判据、以及那三处漂着的路线文字各自在哪个文件。凭猜写出来的 `route` 会点名一堆我没核对过的 skill，还会去改一个我找不到的共用规则文件，错了就整个作废，所以我不往下赌。\n\n**下一步（要主人给的）**\n\n- desk 仓的实际路径，或把它挂到我能读的目录下；同时把 `skill-authoring` 装进这次会话的 skill 列表。\n- 那三处路线文字的具体位置（共用规则文件 + 另外两处），我要先看漂成什么样，才能定 `route` 里的段序。\n- issue 原文，尤其是「三种来往」的命名和「从第几段进」的判据——三行结论我收到了，但落地要的是这层。\n\n这三样给齐，我就按 skill-authoring 的段序往下走，先出 `route` 的段序/门/回退草案给你过，再动共用规则那一句。"
-              }
-            ]
-          },
-          {
-            "score": 0,
-            "passed": false,
-            "turns": 9,
-            "costUsd": 0.228311,
-            "judgeCostUsd": 0.0072299999999999864,
-            "durationSeconds": 77,
-            "startedAt": "2026-09-15T11:19:59.486Z",
-            "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-NHFpMH\\out\\trace.jsonl",
-            "skippedPaidGraders": false,
-            "graders": [
-              {
-                "name": "stops-and-routes-back",
-                "passed": false,
-                "weight": 2,
-                "explanation": "judge votes: FAIL FAIL FAIL",
-                "withOnly": false,
-                "scored": true,
-                "judgeVotes": [
-                  false,
-                  false,
-                  false
-                ],
-                "evidence": "我先去找东西，然后就卡住了 —— 报告如下。\n\n## 判断了什么\n\n**环境这边**：动不了。\n\n- `skill-authoring` 这条 skill 在本会话里不存在（`Skill` 调用直接报 `Unknown skill`）。可用列表里只有 dataviz / update-config / code-review / simplify / run / init 这些内置项，没有 clarify、grill、to-spec、implement，也没有 route。\n- desk 仓不在工作目录。cwd（`...\\home\\cwd`）是空的；往上一级整个 git 仓也只有一个未跟踪的 `.gitconfig`，零提交、零文件。\n- 再往外的路径（temp 根、config 目录）读取被权限拒绝，所以我没法自己去别处把仓找出来。\n\n也就是说：写作规范我没有、要点名的那几条 skill 我没见过、要缩写的那份「共用规则」我也定位不到。这三样缺一样都还能猜，三样全缺就只能是返工。\n\n**issue 本身这边**：三行结论我同意，但有一处值得在动手前说清楚。\n\n「落地后共用规则里的路线文字缩成一句『一律走它』」—— 这句不是收尾的清理，它是承重的。`route` 要当「主人一开口它先断言」的唯一入口，就必须每轮开场都触发；而 skill 的常规触发是靠 description 匹配或显式 `/route`，两者都不保证「每一次开口」。所以那句留在共用规则里的话（或者一个 hook）恰恰是这条 skill 能成立的前提，不能缩到没有。建议把它当成 `route` 的一部分来设计，而不是残留物。\n\n另外一个开口：issue 里说「三种来往」但没点名是哪三种，这个我猜不出来，它决定了整条 skill 的骨架。\n\n## 做了什么\n\n只做了勘查，没有写任何文件。在拿到写作规范之前建 `route/SKILL.md` 等于凭空发明一套格式，回头整条重写。\n\n## 下一步 —— 需要主人给三样\n\n1. **desk 仓在哪**（绝对路径），或者把它挂进工作目录；\n2. **`skill-authoring` 怎么用** —— 是仓里的一份文件（给路径即可，我自己读），还是需要装成可调用的 skill；\n3. **「三种来往」分别是什么**，以及各自分几段。\n\n第 1、2 样到手我就能接着往下走；第 3 样如果仓里已经有写法，我读到了就不必再问。"
-              }
-            ]
-          },
-          {
-            "score": 0,
-            "passed": false,
-            "turns": 12,
-            "costUsd": 0.28004300000000004,
-            "judgeCostUsd": 0.006336000000000008,
-            "durationSeconds": 96,
-            "startedAt": "2026-09-15T11:20:00.936Z",
-            "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-yuVHee\\out\\trace.jsonl",
-            "skippedPaidGraders": false,
-            "graders": [
-              {
-                "name": "stops-and-routes-back",
-                "passed": false,
-                "weight": 2,
-                "explanation": "judge votes: FAIL FAIL FAIL",
-                "withOnly": false,
-                "scored": true,
-                "judgeVotes": [
-                  false,
-                  false,
-                  false
-                ],
-                "evidence": "我停在最前面了，先说为什么。\n\n**判断**：这条 issue 的两个前提在当前环境里都不存在。\n\n- `skill-authoring` 没装 —— 不在可用 skill 列表里，磁盘上搜不到，直接 `Skill` 调用返回 `Unknown skill`。\n- 「desk 仓」不在手边。工作目录 `home\\cwd` 是空的；上层 `home` 只有一个零提交的空 `.git`。没有 clarify / grill / to-spec / implement / code-review 这几条被点名的 skill，也没有那份要缩成一句话的「共用规则」文件。沙箱又挡住了 cwd 以外的读取，所以我没法自己去别处找。\n\n**做了什么**：只做了核查（目录遍历、试调 skill、读 `.git/config` 和 `commondir`），**没有落任何文件**。这是有意的：`route` 的内核就是「三种来往」的判别器加段序图，而 issue 把「三种来往」当作主人已知的东西提了一下，没有写出是哪三种。我要是自己编三类出来，等于拿臆造覆盖掉主人已经做完的决定——写出来大概率全错，比问一句更糟。\n\n**顺带一个设计上的疑问**（只从 issue 文本就能看出来，不算猜）：「一开口就断言是哪一种」和「clarify 也是其中一段」有点张力——首句信息不足时判别器需要一个明确的默认档位，这大概正是「回退规矩」要管的事，但它和 clarify 段的分工得说清楚，否则两者会互相抢。\n\n**下一步**，给我以下任一组就能接着做：\n\n1. desk 仓的实际路径（或放开读取权限），外加 `skill-authoring` 在哪；或者\n2. 直接告诉我四件事：三种来往分别是什么、各自从第几段进；完整段序连门和回退规矩；哪份文件是「共用规则」；以及被点名那几条 skill 的真实名字与写法约定（目录结构 / frontmatter 惯例）。\n\n拿到其中一组我就往下走。"
+                "evidence": "我先看了环境，结论是：现在动手会是凭空编。\n\n**判断**\n\n1. `skill-authoring` 不在这个会话的 skill 列表里（列表里只有 dataviz / update-config / code-review / simplify / workflow-authoring 等，没有它），所以「按 skill-authoring 走」这条我没法真的走——不知道你家的段序、门、产物格式长什么样。\n2. desk 仓不在工作目录里。`cwd` 是空的，`home` 下只有一个没有任何提交的空 git 仓（`.git/config` 里只有三行 core 段）。clarify、grill、to-spec、implement、code-review 这几条被 `route` 点名的 skill、以及要被缩成一句的那份「共用规则」，我都读不到。没有它们，`route` 写不出来——它整条 skill 的内容就是在点名别的 skill。\n3. 就算仓在，按任何像样的流程，第一道门也是 clarify，而这条 issue 有个洞得你来填：**「三种来往」是哪三种、判据是什么，issue 里没说**。这是 `route` 最核心的那句断言，我不该替你定。\n\n**做了什么**\n\n只做了只读排查，没有写任何文件。\n\n**一个设计上的提醒（不影响你怎么答，先放这）**\n\n`route` 的风险全压在「主人一开口就断言」这一下——断错型、断错入段，后面整条流水线都跑偏。所以**回退规矩不是补充条款，是这条 skill 的承重墙**：是允许中途推翻重断（退回第一段），还是只允许往前补段？这条得写在最前面，不能塞在末尾。\n\n**下一步 / 需要你给的**\n\n- desk 仓的路径（或把它 clone 到工作目录），以及 `skill-authoring` 怎么让我读到（它是项目 skill 的话，仓一到位就有了）。\n- 三种来往：各自的名字 + 一句判据。\n- 段的清单与顺序、每段点名哪条 skill、段间的门是「主人点头」还是自动通过。\n- 回退规矩（见上）。\n- 「共用规则」里那段路线文字现在在哪个文件、原文，好知道缩成哪一句。\n\n仓和 `skill-authoring` 一到位，加上这几条答案，我就能按你家流程从 clarify 那段正式起步。"
               }
             ]
           }
@@ -1079,71 +1079,13 @@
           {
             "score": 1,
             "passed": true,
-            "turns": 6,
-            "costUsd": 0.3811265000000001,
-            "judgeCostUsd": 0.03218800000000005,
-            "durationSeconds": 116,
-            "startedAt": "2026-09-15T11:20:28.246Z",
+            "turns": 7,
+            "costUsd": 0.4394775,
+            "judgeCostUsd": 0.032621999999999984,
+            "durationSeconds": 139,
+            "startedAt": "2026-09-15T11:44:31.630Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-qngDLc\\out\\trace.jsonl",
-            "skippedPaidGraders": false,
-            "graders": [
-              {
-                "name": "classification",
-                "passed": true,
-                "weight": 2,
-                "explanation": "judge votes: PASS PASS FAIL",
-                "withOnly": false,
-                "scored": true,
-                "judgeVotes": [
-                  true,
-                  true,
-                  false
-                ],
-                "evidence": "按 skill 走完第 1、2 步，两件事都判了。本会话没有 Bash，按第 5 步的规定本来也跑不了基线，所以停在动笔之前是对的。\n\n## 第 1 步：起点够不够\n\n够。三行结论齐，一句话复述：**第 7 段「收尾」有规则没载体，agent 每次现想、四栏四节常漏；建一条薄 skill 把停靠记录、PR、挂起物登记这三件事固定下来。**\n\n## 第 2 步：两件事（这两句原话进汇报和 PR 正文）\n\n**不是路由 skill，走短路线。** 理由：第 7 段这一格现在是空的，wrap-up 填的是空位，不改任何别的 skill 什么时候被用——不动入口、不动段的门、不抢别人的点名。流程 skill 里要加的那句点名，是每条新 skill 都要走的上线待办项（第 9 步），不是路由改动。\n\n→ 短路线的意思：不回第 2 段方案对齐、不另写 spec、不拆票。SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审。\n\n**翻车线（碰到就停）**：动手前查第 7 段真源现在那几句，以及「开 PR」的写法是不是已经落在流程 skill 或别的 skill 里。如果是——要从别人手里挪走一块，或者要改第 7 段的门——那就变成路由 skill，到此停下回第 2 段，本 skill 第 5 段再回来。\n\n**自动调用。** 理由：机会 issue 明说「由流程 skill 在第 7 段点名，agent 自己跑」，主人不需要敲 `/wrap-up`。→ frontmatter 什么都不加，Claude 侧的 `name-only` 写进上线待办。\n\n## frontmatter 怎么写\n\n`plugins/wrap-up/skills/wrap-up/SKILL.md`：\n\n```yaml\n---\nname: wrap-up\ndescription: 一条改动做完、要收尾时用：写停靠记录（做成了／停在／下一步／等你）、开 PR（做了什么／为什么／怎么验证的／怎么回退）、把挂起物登记进 issue。Close out a finished change with a dock note, a four-section PR body, and open items parked into issues.\n---\n```\n\n对过规范清单：name 是 kebab-case，要和目录名、两份 manifest 的 `name` 三处一致（`skills.test.ts` 和 `deploy.ts` 都断言）；description 中文正文加英文尾，没有 `必须先`／`一律`／`优先于`／`代替`／`任何…之前` 这类会被 `deploy.ts check --scope=skill-descriptions` 拦的路由句——路由归第 7 段真源。\n\n不写的键：`disable-model-invocation`（自动调用）、`allowed-tools`（要用 Bash 开 PR、建 issue，写了只会挡自己）、其余规范外的键一律不加。\n\n名字我建议就定 `wrap-up`，别再留「暂定」：目录名／name／marketplace／两份 manifest 五处联动，越往后改越贵，而「收尾」这一格的语义它够用。\n\n## 动笔写正文之前的三件事，按这个顺序\n\n**① 起脚手架（第 3 步）。** `plugins/wrap-up/.claude-plugin/plugin.json` 版本 `0.1.0`；SKILL.md 只放上面那段 frontmatter 加一行占位正文（**这一步别写正文，基线要的就是这个空壳**）；`.claude-plugin/marketplace.json` 一条、版本与 plugin.json 一致；`profiles/daily/manifest.json` 和 `profiles/all/manifest.json` 各一条。\n验收：`claude plugin validate` 和 `node plugins/tests/skills.test.ts` 过。\n\n**② 先写用例（第 4 步）。** 三条，提示词自足、名字明显虚构、不指向真实工作区：\n\n- **正例**：一条虚构改动刚做完（diff 摘要、任务现场都贴在提示词里），要收尾。grader 判四栏四节**有实质内容**——栏名在但内容空算失败，这正是机会 issue 说的失败形态。\n- **反例（易混淆）**：共享关键词但范围外，比如「收个尾，顺手 merge 到 main 推上去」。skill 只做三件事、不做本地 merge、不 push；grader 判 agent 说清那部分归谁并停手。\n- **Bash 门控写成 dry run**：开 PR 和建 issue 要 `gh`，原生 Windows 沙箱 2026-09-14 实测起不来（desk#145）。提示词里说明 Bash 不可用，让 agent 把命令按顺序写进 `commands.sh`，用 `file_exists` 加 `regex`（`target: {source: file, path: commands.sh}`）断言。停靠记录和 PR 正文本身只要 Write，直接跑。\n\n不用多轮假历史——wrap-up 不是想清楚类。\n\n**③ 跑基线（第 5 步）。** 占位状态下 `--runs 1 --ablation none`，结果落 `evals/results/2026-09-15-red-placeholder/`，把「没有 skill 时 agent 实际漏了哪一栏、哪一节」一个用例一两句写进 `evals/README.md` 的基线观察。机会 issue 里的「经常漏一栏」目前是印象，基线把它变成证据；**正文只针对基线里真漏的写**，没漏的那些别写进去（剪枝四查第 4 条）。\n\n顺序不能换的地方：脚手架 → 用例 → 基线 → 正文。正文提前写，基线就废了，这条 skill 的存在理由也就没有证据。\n\n预判一下第 6 步的形状（到时候再定）：这是典型的**漏要素**失败，四栏四节写成必填槽加一对真实例子的骨架，例子用主人原话里的对象，不用 X／Y。\n\n## 下一步\n\n开一个带 Bash 的会话，从第 3 步起手架走到第 5 步跑完基线，停在那儿等基线观察出来，再动笔。\n\n动手前顺带确认一件事（不阻塞前两步）：第 7 段真源现在的原文，确认「开 PR」没有已经落在别处——这是上面那条翻车线，也是上线待办里「路由句加在哪一句」要填的空。"
-              },
-              {
-                "name": "evidence-first",
-                "passed": true,
-                "weight": 2,
-                "explanation": "judge votes: PASS PASS PASS",
-                "withOnly": false,
-                "scored": true,
-                "judgeVotes": [
-                  true,
-                  true,
-                  true
-                ],
-                "evidence": "按 skill 走完第 1、2 步，两件事都判了。本会话没有 Bash，按第 5 步的规定本来也跑不了基线，所以停在动笔之前是对的。\n\n## 第 1 步：起点够不够\n\n够。三行结论齐，一句话复述：**第 7 段「收尾」有规则没载体，agent 每次现想、四栏四节常漏；建一条薄 skill 把停靠记录、PR、挂起物登记这三件事固定下来。**\n\n## 第 2 步：两件事（这两句原话进汇报和 PR 正文）\n\n**不是路由 skill，走短路线。** 理由：第 7 段这一格现在是空的，wrap-up 填的是空位，不改任何别的 skill 什么时候被用——不动入口、不动段的门、不抢别人的点名。流程 skill 里要加的那句点名，是每条新 skill 都要走的上线待办项（第 9 步），不是路由改动。\n\n→ 短路线的意思：不回第 2 段方案对齐、不另写 spec、不拆票。SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审。\n\n**翻车线（碰到就停）**：动手前查第 7 段真源现在那几句，以及「开 PR」的写法是不是已经落在流程 skill 或别的 skill 里。如果是——要从别人手里挪走一块，或者要改第 7 段的门——那就变成路由 skill，到此停下回第 2 段，本 skill 第 5 段再回来。\n\n**自动调用。** 理由：机会 issue 明说「由流程 skill 在第 7 段点名，agent 自己跑」，主人不需要敲 `/wrap-up`。→ frontmatter 什么都不加，Claude 侧的 `name-only` 写进上线待办。\n\n## frontmatter 怎么写\n\n`plugins/wrap-up/skills/wrap-up/SKILL.md`：\n\n```yaml\n---\nname: wrap-up\ndescription: 一条改动做完、要收尾时用：写停靠记录（做成了／停在／下一步／等你）、开 PR（做了什么／为什么／怎么验证的／怎么回退）、把挂起物登记进 issue。Close out a finished change with a dock note, a four-section PR body, and open items parked into issues.\n---\n```\n\n对过规范清单：name 是 kebab-case，要和目录名、两份 manifest 的 `name` 三处一致（`skills.test.ts` 和 `deploy.ts` 都断言）；description 中文正文加英文尾，没有 `必须先`／`一律`／`优先于`／`代替`／`任何…之前` 这类会被 `deploy.ts check --scope=skill-descriptions` 拦的路由句——路由归第 7 段真源。\n\n不写的键：`disable-model-invocation`（自动调用）、`allowed-tools`（要用 Bash 开 PR、建 issue，写了只会挡自己）、其余规范外的键一律不加。\n\n名字我建议就定 `wrap-up`，别再留「暂定」：目录名／name／marketplace／两份 manifest 五处联动，越往后改越贵，而「收尾」这一格的语义它够用。\n\n## 动笔写正文之前的三件事，按这个顺序\n\n**① 起脚手架（第 3 步）。** `plugins/wrap-up/.claude-plugin/plugin.json` 版本 `0.1.0`；SKILL.md 只放上面那段 frontmatter 加一行占位正文（**这一步别写正文，基线要的就是这个空壳**）；`.claude-plugin/marketplace.json` 一条、版本与 plugin.json 一致；`profiles/daily/manifest.json` 和 `profiles/all/manifest.json` 各一条。\n验收：`claude plugin validate` 和 `node plugins/tests/skills.test.ts` 过。\n\n**② 先写用例（第 4 步）。** 三条，提示词自足、名字明显虚构、不指向真实工作区：\n\n- **正例**：一条虚构改动刚做完（diff 摘要、任务现场都贴在提示词里），要收尾。grader 判四栏四节**有实质内容**——栏名在但内容空算失败，这正是机会 issue 说的失败形态。\n- **反例（易混淆）**：共享关键词但范围外，比如「收个尾，顺手 merge 到 main 推上去」。skill 只做三件事、不做本地 merge、不 push；grader 判 agent 说清那部分归谁并停手。\n- **Bash 门控写成 dry run**：开 PR 和建 issue 要 `gh`，原生 Windows 沙箱 2026-09-14 实测起不来（desk#145）。提示词里说明 Bash 不可用，让 agent 把命令按顺序写进 `commands.sh`，用 `file_exists` 加 `regex`（`target: {source: file, path: commands.sh}`）断言。停靠记录和 PR 正文本身只要 Write，直接跑。\n\n不用多轮假历史——wrap-up 不是想清楚类。\n\n**③ 跑基线（第 5 步）。** 占位状态下 `--runs 1 --ablation none`，结果落 `evals/results/2026-09-15-red-placeholder/`，把「没有 skill 时 agent 实际漏了哪一栏、哪一节」一个用例一两句写进 `evals/README.md` 的基线观察。机会 issue 里的「经常漏一栏」目前是印象，基线把它变成证据；**正文只针对基线里真漏的写**，没漏的那些别写进去（剪枝四查第 4 条）。\n\n顺序不能换的地方：脚手架 → 用例 → 基线 → 正文。正文提前写，基线就废了，这条 skill 的存在理由也就没有证据。\n\n预判一下第 6 步的形状（到时候再定）：这是典型的**漏要素**失败，四栏四节写成必填槽加一对真实例子的骨架，例子用主人原话里的对象，不用 X／Y。\n\n## 下一步\n\n开一个带 Bash 的会话，从第 3 步起手架走到第 5 步跑完基线，停在那儿等基线观察出来，再动笔。\n\n动手前顺带确认一件事（不阻塞前两步）：第 7 段真源现在的原文，确认「开 PR」没有已经落在别处——这是上面那条翻车线，也是上线待办里「路由句加在哪一句」要填的空。"
-              },
-              {
-                "name": "mentions-baseline",
-                "passed": true,
-                "weight": 1,
-                "explanation": "matched 基线|baseline",
-                "withOnly": false,
-                "scored": true
-              },
-              {
-                "name": "skill-fired",
-                "passed": true,
-                "weight": 1,
-                "explanation": "Skill called 1x (expected 1..∞)",
-                "withOnly": true,
-                "scored": false
-              }
-            ]
-          },
-          {
-            "score": 1,
-            "passed": true,
-            "turns": 6,
-            "costUsd": 0.47060650000000004,
-            "judgeCostUsd": 0.05878800000000001,
-            "durationSeconds": 149,
-            "startedAt": "2026-09-15T11:20:39.696Z",
-            "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-MR5qja\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-h2bmvN\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -1158,7 +1100,7 @@
                   true,
                   true
                 ],
-                "evidence": "按 skill-authoring 走完第 1、2 步的判断，第 3–5 步的顺序说清楚。这个会话没有 Bash，validate/测试/eval 都跑不了，所以按约定停在动笔前。\n\n## 第 1 步：起点够不够\n\n三行结论齐全，能复述：**第 7 段「收尾」有规则没载体，agent 每次现想、四栏四节漏项；建一条薄 skill `wrap-up`，只做停靠记录 + 开 PR + 挂起物登记，不 merge 不 push。**\n\n但有两样不能猜，写正文前必须有答案（见最后「下一步」）：停靠记录写到哪个文件/位置，挂起物登记进哪个仓的 issue。这两个是产出物落点，正文要写死。\n\n## 第 2 步：两个判断（原话进汇报和 PR 正文）\n\n**不是路由 skill —— 走短路线。** 理由：它只填第 7 段那一格自己的活，不改任何别的 skill 什么时候被用。被流程 skill 点名，是它自己怎么被启动，那条路由句按第 9 步进上线待办，不是这条 skill 的职责。\n\n这个判断有一个前提，第 3 步之前要核一眼：路线真源第 7 段现在**确实是空的**。如果收尾的四栏四节眼下写在流程 skill 正文里、这次是搬出来，那就动到了段的门和点名关系 → 变成路由 skill，到此停下回第 2 段方案对齐。主人说「这一格空了」，我按空格走，核对是机械的一眼。\n\n**自动调用。** 理由：规则点名后 agent 自己跑，主人不需要敲。frontmatter 什么都不加，Claude 侧 `name-only` 写进上线待办——`name-only` 挡不住模型调用，这里正好不需要挡。\n\n短路线的含义：SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审，不另写 spec、不拆票。第 3 → 9 步一条线走完。\n\n## frontmatter 怎么写\n\n只两个键：\n\n```yaml\n---\nname: wrap-up\ndescription: >-\n  一条改动做完、要收尾时用：写停靠记录（做成了、停在、下一步、等你），\n  开 PR（做了什么、为什么、怎么验证的、怎么回退），把挂起的事登记成 issue。\n  不做本地 merge，不 push。Wrap up a finished change: docking note, PR, and\n  leftovers filed as issues; no local merge, no push.\n---\n```\n\n要点，逐条对 `agent-skills-spec.md`：\n- `name` 必须等于目录名 `wrap-up`，kebab-case，测试和 `deploy.ts` 两处断言。\n- 描述说「做什么 + 什么时候用」，中文正文加英文尾便于三个客户端搜索；上限 1000 UTF-8 字节，上面这版约 450，宽裕。\n- **描述里不写命令式路由句。** 这条 skill 特别容易踩——「改动完成后必须先写停靠记录」这种句子会被 `deploy.ts check --scope=skill-descriptions` 按 `必须先`／`任何…之前`／`instead of` 拦下。路由只在路线真源里写。上面用「要收尾时用」这种陈述句，安全。\n- 不加 `disable-model-invocation`（自动调用），也不加 `license`/`allowed-tools`/`metadata`/`compatibility`。\n- `>-` 折叠是允许的，测试和目录页会拼成一行。\n- `plugin.json` 版本 `0.1.0`，`.claude-plugin/marketplace.json` 同版本；`profiles/daily` 和 `profiles/all` 各一条，`name` 三处一致。\n\n名字上提一句：`wrap-up` 是通用词，容易被无关场景误触。第 4 步的反例用例就是守这个。要改名趁 0.1.0 最便宜（目录名、frontmatter、两份 manifest、marketplace 同步改）；先按暂名走，等对照组数据说话。\n\n## 动笔写正文前的三件事，按这个顺序\n\n**① 起脚手架（第 3 步）。** `plugins/wrap-up/.claude-plugin/plugin.json` + `skills/wrap-up/SKILL.md`（只有上面那段 frontmatter 加一行占位）+ marketplace 条目 + 两份 manifest 条目。验收：`claude plugin validate plugins/wrap-up` 和 `node plugins/tests/skills.test.ts` 通过。先做这步是因为它让装配在正文存在之前就可验证，也让第 5 步的基线跑得起来。\n\n**② 先写用例（第 4 步）。** 2–3 条，真实口吻，提示词自足、名字明显虚构、不指向真实工作区：\n- 正例：一条虚构改动已经做完，让 agent 收尾。grader 拆开，每条只判一件事——停靠记录四栏齐（llm）、PR 正文四节齐（llm）、没有 merge/push（regex 反向断言）。\n- 反例（易混淆）：共享「收尾/PR」关键词但该停在出口外的请求，比如「收尾一下，顺便合进 main 推上去」。判 agent 做完自己三件事后明确说不做 merge/push，而不是照办。\n- 第三条可选：改动**没做完**的现场（还有失败的测试），判它如实写进「停在」栏而不是粉饰成「做成了」。这一条直接对着主人说的漏项痛点。\n\n这里有个必须现在定的技术决定：这条 skill 天然要 `git`、`gh pr create`，属于**授 Bash 的用例**。原生 Windows 沙箱起不来（desk#145），所以用例写成 **dry run**——提示词里说明 Bash 不可用，让 agent 把要执行的命令按顺序写进 `commands.sh`，用 `file_exists` 加 `regex`（`target: {source: file, path: commands.sh}`）断言命令与参数，顺带把「`commands.sh` 里不出现 `git merge`／`git push`」做成反向断言。停靠记录和 PR 正文本身用 Write 落文件，llm grader 读文件判四栏四节。沙箱可用后再改真跑。\n\n用例在正文之前，是为了不让用例照着正文写——否则测的是复述，不是效果。\n\n**③ 跑基线（第 5 步）。** SKILL.md 还是占位时跑：\n\n```\nclaude plugin eval plugins/wrap-up --runs 1 --ablation none --no-publish --trust-plugin \\\n  --output-dir plugins/wrap-up/evals/results/2026-09-15-red-placeholder --json <同目录>/run.json\n```\n\n把 agent 没有 skill 时实际怎么收尾，一个用例一两句写进 `evals/README.md`「基线观察」。主人的判断是「四栏和四节经常漏一栏」——基线要把这句实证出来：到底漏哪一栏、是漏还是编。**正文只针对基线显示的缺口写**，不针对想象中的缺口。\n\n写正文时还有一条已经能定的剪枝：PR 的四节（做了什么、为什么、怎么验证的、怎么回退）就是本仓 PR 模板的四节，`definition-of-done.md:15` 已经有。正文指向模板，不自己再抄一份定义——抄了就是会过期的缓存。停靠记录的四栏没有既有真源，那一份要写在正文里。\n\n## 下一步\n\n我需要主人给两样，然后开一个有 Bash 的新会话从第 3 步走到第 9 步：\n\n1. 停靠记录落在哪（文件路径还是 issue 评论？）\n2. 挂起物登记进哪个仓的 issue，带什么标签\n3. 顺带确认一句：路线真源第 7 段现在是空的，收尾的四栏四节没有别处已经写着——我会在起脚手架前自己核一眼，如果不空就停下回第 2 段。\n\n1 和 2 不挡第 3、4 步（脚手架和用例的提示词都用虚构名字），但挡第 6 步写正文。要是主人想让我先推进，我可以在新会话里把脚手架、用例、基线三步做完，停在正文前等这两个答案。"
+                "evidence": "按 skill-authoring 走。第 1 步的起点齐了——三行结论三样都在，能一句话复述：**第 7 段「收尾」这一格没有载体，建一条 `wrap-up`，把停靠记录四栏、PR 四节、挂起物登记这三件事固定下来，不 merge 不 push。** 第 2 步的两个判断如下，这段原话请原样进最后的汇报和 PR 正文。\n\n## 判定\n\n**不是路由 skill → 走短路线。** 它只管第 7 段自己那一格，不改任何已有 skill 什么时候被用。「在第 7 段点名 wrap-up」这句确实是路由句，但按第 9 步和完成定义，路由句本来就是上线待办在 agent-config 里加的，每条自动调用的新 skill 都有一句；要是这也算路由 skill，短路线就永远用不上了。判据应当是「改**已有**的点名关系、段的门、入口」——这里第 7 段是空格，没有谁被顶掉。\n\n翻盘条件有三条，下个会话开工第一件事就是核它们，中一条就停下回第 2 段方案对齐：\n- 第 7 段其实已经点了别人，或某条 skill 的「什么时候用」已经认领了收尾；\n- 进第 7 段的门要改（比如「只有满足 X 才收尾」）；\n- **skill-authoring 自己第 9 步就开 PR、出口就是「PR 开了」**——如果要靠删改它的出口来让路,那是动别的 skill，就是路由改动。我倾向于不删改，用 wrap-up 的「什么时候用」写一句「skill 自己已开 PR 的不重复」把边界让出去,但这条得先看到文件再定。这个会话搜索被拒了，我没能核实，别当已验证。\n\n**自动调用。** 规则点名后 agent 自己跑，主人不必敲。所以 frontmatter **不加** `disable-model-invocation`；Claude 侧的 `name-only` 写进上线待办（自动调用的 skill 靠 skillOverrides 设档，不靠 frontmatter）。自动调用不妨碍主人手敲 `/wrap-up`，比手动调用严格更宽。\n\n短路线的含义：SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审；不另写 spec、不拆票、不回第 2 段。\n\n## frontmatter 怎么写\n\n只有两个键。`allowed-tools` 不加——它要跑 git/gh，收窄没好处；别的键规范外，不写。\n\n```yaml\n---\nname: wrap-up\ndescription: 一条改动做完、要收尾时用：写停靠记录（做成了、停在、下一步、等你），开 PR（做了什么、为什么、怎么验证的、怎么回退），把挂起物登记进 issue；不做本地 merge、不 push。Close out a finished change with a four-column docking note, a four-section PR, and issues filed for whatever is left hanging.\n---\n```\n\n对照规范清单：`name` 等于目录名（`plugins/wrap-up/skills/wrap-up/`）且 kebab-case；描述是「做什么、什么时候用」，中文正文加英文尾；没有 `MUST`/`必须先`/`一律`/`代替` 这类命令式路由词，`deploy.ts check --scope=skill-descriptions` 拦不到；约 420 字节，在 1000 以内。\n\n## 动笔写正文之前的三件事，就这个顺序\n\n1. **起脚手架（第 3 步）。** `plugins/wrap-up/.claude-plugin/plugin.json` 版本 `0.1.0`；`skills/wrap-up/SKILL.md` 只放上面那段 frontmatter 加一行占位；`.claude-plugin/marketplace.json`（版本与 plugin.json 同）、`profiles/daily/manifest.json`、`profiles/all/manifest.json` 各一条。卡口：`claude plugin validate plugins/wrap-up` 和 `node plugins/tests/skills.test.ts` 过。\n2. **先写用例（第 4 步）。** 三条：①正例，改动做完、diff 在，主人说「收了吧」；②易混淆反例，改动没做完或主人只说「推上去」——不该进收尾，且 merge/push 明确在范围外，这条专门守边界；③多轮，用假历史喂一段刚写完代码的现场，看四栏会不会漏。Grader 一条只判一件事：四栏齐／四节齐／没 push 没 merge／挂起物开了 issue。**注意**：这条 skill 天然要 Bash 和 `gh`，没有可用沙箱就全部写成 dry run，提示词自足、不指向真实工作区。卡口：`evals/<用例>/prompt.md`、`graders/` 在，`evals/README.md` 有构成表。\n3. **跑基线（第 5 步）。** 正文还是占位时 `claude plugin eval plugins/wrap-up --runs 1`，结果落 `evals/results/2026-09-15-baseline/`。只看对照组那一列——那就是三行结论里说的「每次靠 agent 现想、四栏和四节经常漏」，把它一个用例一两句写进「基线观察」。有 skill 组此时也该失败，不失败说明用例没区分力，回第 2 件事重做。这就是真缺口，第 6 步的正文只针对它写。\n\n顺序不能换：没有基线观察，正文就是凭感觉写的，第 7 步也没有差值可比。\n\n## 留给正文里定的开放细节\n\n短路线下这些不阻塞，在 SKILL.md 的「步骤」里定死、主人在 PR 里审即可。想提前定也行：\n\n- 停靠记录落在哪（PR 正文？issue 评论？仓内文件？）、在开 PR 前还是后写；\n- 挂起物登记进哪个仓、打什么标签（反馈用 `needs-triage`，挂起物用什么没说）；\n- 与 skill-authoring 等自带开 PR 步骤的 skill 的边界（见上面第三条翻盘条件）。\n\n## 下一步\n\n这个会话到此为止，不建文件。开一个有 Bash、工作目录在 agent-system worktree 的新会话，从第 3 步起：**先核三条翻盘条件**（尤其是 skill-authoring 出口那条），确认仍不是路由 skill，再起脚手架 → 写用例 → 跑基线，停在基线观察上向主人汇报，然后才动笔写正文。"
               },
               {
                 "name": "evidence-first",
@@ -1172,7 +1114,7 @@
                   true,
                   true
                 ],
-                "evidence": "按 skill-authoring 走完第 1、2 步的判断，第 3–5 步的顺序说清楚。这个会话没有 Bash，validate/测试/eval 都跑不了，所以按约定停在动笔前。\n\n## 第 1 步：起点够不够\n\n三行结论齐全，能复述：**第 7 段「收尾」有规则没载体，agent 每次现想、四栏四节漏项；建一条薄 skill `wrap-up`，只做停靠记录 + 开 PR + 挂起物登记，不 merge 不 push。**\n\n但有两样不能猜，写正文前必须有答案（见最后「下一步」）：停靠记录写到哪个文件/位置，挂起物登记进哪个仓的 issue。这两个是产出物落点，正文要写死。\n\n## 第 2 步：两个判断（原话进汇报和 PR 正文）\n\n**不是路由 skill —— 走短路线。** 理由：它只填第 7 段那一格自己的活，不改任何别的 skill 什么时候被用。被流程 skill 点名，是它自己怎么被启动，那条路由句按第 9 步进上线待办，不是这条 skill 的职责。\n\n这个判断有一个前提，第 3 步之前要核一眼：路线真源第 7 段现在**确实是空的**。如果收尾的四栏四节眼下写在流程 skill 正文里、这次是搬出来，那就动到了段的门和点名关系 → 变成路由 skill，到此停下回第 2 段方案对齐。主人说「这一格空了」，我按空格走，核对是机械的一眼。\n\n**自动调用。** 理由：规则点名后 agent 自己跑，主人不需要敲。frontmatter 什么都不加，Claude 侧 `name-only` 写进上线待办——`name-only` 挡不住模型调用，这里正好不需要挡。\n\n短路线的含义：SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审，不另写 spec、不拆票。第 3 → 9 步一条线走完。\n\n## frontmatter 怎么写\n\n只两个键：\n\n```yaml\n---\nname: wrap-up\ndescription: >-\n  一条改动做完、要收尾时用：写停靠记录（做成了、停在、下一步、等你），\n  开 PR（做了什么、为什么、怎么验证的、怎么回退），把挂起的事登记成 issue。\n  不做本地 merge，不 push。Wrap up a finished change: docking note, PR, and\n  leftovers filed as issues; no local merge, no push.\n---\n```\n\n要点，逐条对 `agent-skills-spec.md`：\n- `name` 必须等于目录名 `wrap-up`，kebab-case，测试和 `deploy.ts` 两处断言。\n- 描述说「做什么 + 什么时候用」，中文正文加英文尾便于三个客户端搜索；上限 1000 UTF-8 字节，上面这版约 450，宽裕。\n- **描述里不写命令式路由句。** 这条 skill 特别容易踩——「改动完成后必须先写停靠记录」这种句子会被 `deploy.ts check --scope=skill-descriptions` 按 `必须先`／`任何…之前`／`instead of` 拦下。路由只在路线真源里写。上面用「要收尾时用」这种陈述句，安全。\n- 不加 `disable-model-invocation`（自动调用），也不加 `license`/`allowed-tools`/`metadata`/`compatibility`。\n- `>-` 折叠是允许的，测试和目录页会拼成一行。\n- `plugin.json` 版本 `0.1.0`，`.claude-plugin/marketplace.json` 同版本；`profiles/daily` 和 `profiles/all` 各一条，`name` 三处一致。\n\n名字上提一句：`wrap-up` 是通用词，容易被无关场景误触。第 4 步的反例用例就是守这个。要改名趁 0.1.0 最便宜（目录名、frontmatter、两份 manifest、marketplace 同步改）；先按暂名走，等对照组数据说话。\n\n## 动笔写正文前的三件事，按这个顺序\n\n**① 起脚手架（第 3 步）。** `plugins/wrap-up/.claude-plugin/plugin.json` + `skills/wrap-up/SKILL.md`（只有上面那段 frontmatter 加一行占位）+ marketplace 条目 + 两份 manifest 条目。验收：`claude plugin validate plugins/wrap-up` 和 `node plugins/tests/skills.test.ts` 通过。先做这步是因为它让装配在正文存在之前就可验证，也让第 5 步的基线跑得起来。\n\n**② 先写用例（第 4 步）。** 2–3 条，真实口吻，提示词自足、名字明显虚构、不指向真实工作区：\n- 正例：一条虚构改动已经做完，让 agent 收尾。grader 拆开，每条只判一件事——停靠记录四栏齐（llm）、PR 正文四节齐（llm）、没有 merge/push（regex 反向断言）。\n- 反例（易混淆）：共享「收尾/PR」关键词但该停在出口外的请求，比如「收尾一下，顺便合进 main 推上去」。判 agent 做完自己三件事后明确说不做 merge/push，而不是照办。\n- 第三条可选：改动**没做完**的现场（还有失败的测试），判它如实写进「停在」栏而不是粉饰成「做成了」。这一条直接对着主人说的漏项痛点。\n\n这里有个必须现在定的技术决定：这条 skill 天然要 `git`、`gh pr create`，属于**授 Bash 的用例**。原生 Windows 沙箱起不来（desk#145），所以用例写成 **dry run**——提示词里说明 Bash 不可用，让 agent 把要执行的命令按顺序写进 `commands.sh`，用 `file_exists` 加 `regex`（`target: {source: file, path: commands.sh}`）断言命令与参数，顺带把「`commands.sh` 里不出现 `git merge`／`git push`」做成反向断言。停靠记录和 PR 正文本身用 Write 落文件，llm grader 读文件判四栏四节。沙箱可用后再改真跑。\n\n用例在正文之前，是为了不让用例照着正文写——否则测的是复述，不是效果。\n\n**③ 跑基线（第 5 步）。** SKILL.md 还是占位时跑：\n\n```\nclaude plugin eval plugins/wrap-up --runs 1 --ablation none --no-publish --trust-plugin \\\n  --output-dir plugins/wrap-up/evals/results/2026-09-15-red-placeholder --json <同目录>/run.json\n```\n\n把 agent 没有 skill 时实际怎么收尾，一个用例一两句写进 `evals/README.md`「基线观察」。主人的判断是「四栏和四节经常漏一栏」——基线要把这句实证出来：到底漏哪一栏、是漏还是编。**正文只针对基线显示的缺口写**，不针对想象中的缺口。\n\n写正文时还有一条已经能定的剪枝：PR 的四节（做了什么、为什么、怎么验证的、怎么回退）就是本仓 PR 模板的四节，`definition-of-done.md:15` 已经有。正文指向模板，不自己再抄一份定义——抄了就是会过期的缓存。停靠记录的四栏没有既有真源，那一份要写在正文里。\n\n## 下一步\n\n我需要主人给两样，然后开一个有 Bash 的新会话从第 3 步走到第 9 步：\n\n1. 停靠记录落在哪（文件路径还是 issue 评论？）\n2. 挂起物登记进哪个仓的 issue，带什么标签\n3. 顺带确认一句：路线真源第 7 段现在是空的，收尾的四栏四节没有别处已经写着——我会在起脚手架前自己核一眼，如果不空就停下回第 2 段。\n\n1 和 2 不挡第 3、4 步（脚手架和用例的提示词都用虚构名字），但挡第 6 步写正文。要是主人想让我先推进，我可以在新会话里把脚手架、用例、基线三步做完，停在正文前等这两个答案。"
+                "evidence": "按 skill-authoring 走。第 1 步的起点齐了——三行结论三样都在，能一句话复述：**第 7 段「收尾」这一格没有载体，建一条 `wrap-up`，把停靠记录四栏、PR 四节、挂起物登记这三件事固定下来，不 merge 不 push。** 第 2 步的两个判断如下，这段原话请原样进最后的汇报和 PR 正文。\n\n## 判定\n\n**不是路由 skill → 走短路线。** 它只管第 7 段自己那一格，不改任何已有 skill 什么时候被用。「在第 7 段点名 wrap-up」这句确实是路由句，但按第 9 步和完成定义，路由句本来就是上线待办在 agent-config 里加的，每条自动调用的新 skill 都有一句；要是这也算路由 skill，短路线就永远用不上了。判据应当是「改**已有**的点名关系、段的门、入口」——这里第 7 段是空格，没有谁被顶掉。\n\n翻盘条件有三条，下个会话开工第一件事就是核它们，中一条就停下回第 2 段方案对齐：\n- 第 7 段其实已经点了别人，或某条 skill 的「什么时候用」已经认领了收尾；\n- 进第 7 段的门要改（比如「只有满足 X 才收尾」）；\n- **skill-authoring 自己第 9 步就开 PR、出口就是「PR 开了」**——如果要靠删改它的出口来让路,那是动别的 skill，就是路由改动。我倾向于不删改，用 wrap-up 的「什么时候用」写一句「skill 自己已开 PR 的不重复」把边界让出去,但这条得先看到文件再定。这个会话搜索被拒了，我没能核实，别当已验证。\n\n**自动调用。** 规则点名后 agent 自己跑，主人不必敲。所以 frontmatter **不加** `disable-model-invocation`；Claude 侧的 `name-only` 写进上线待办（自动调用的 skill 靠 skillOverrides 设档，不靠 frontmatter）。自动调用不妨碍主人手敲 `/wrap-up`，比手动调用严格更宽。\n\n短路线的含义：SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审；不另写 spec、不拆票、不回第 2 段。\n\n## frontmatter 怎么写\n\n只有两个键。`allowed-tools` 不加——它要跑 git/gh，收窄没好处；别的键规范外，不写。\n\n```yaml\n---\nname: wrap-up\ndescription: 一条改动做完、要收尾时用：写停靠记录（做成了、停在、下一步、等你），开 PR（做了什么、为什么、怎么验证的、怎么回退），把挂起物登记进 issue；不做本地 merge、不 push。Close out a finished change with a four-column docking note, a four-section PR, and issues filed for whatever is left hanging.\n---\n```\n\n对照规范清单：`name` 等于目录名（`plugins/wrap-up/skills/wrap-up/`）且 kebab-case；描述是「做什么、什么时候用」，中文正文加英文尾；没有 `MUST`/`必须先`/`一律`/`代替` 这类命令式路由词，`deploy.ts check --scope=skill-descriptions` 拦不到；约 420 字节，在 1000 以内。\n\n## 动笔写正文之前的三件事，就这个顺序\n\n1. **起脚手架（第 3 步）。** `plugins/wrap-up/.claude-plugin/plugin.json` 版本 `0.1.0`；`skills/wrap-up/SKILL.md` 只放上面那段 frontmatter 加一行占位；`.claude-plugin/marketplace.json`（版本与 plugin.json 同）、`profiles/daily/manifest.json`、`profiles/all/manifest.json` 各一条。卡口：`claude plugin validate plugins/wrap-up` 和 `node plugins/tests/skills.test.ts` 过。\n2. **先写用例（第 4 步）。** 三条：①正例，改动做完、diff 在，主人说「收了吧」；②易混淆反例，改动没做完或主人只说「推上去」——不该进收尾，且 merge/push 明确在范围外，这条专门守边界；③多轮，用假历史喂一段刚写完代码的现场，看四栏会不会漏。Grader 一条只判一件事：四栏齐／四节齐／没 push 没 merge／挂起物开了 issue。**注意**：这条 skill 天然要 Bash 和 `gh`，没有可用沙箱就全部写成 dry run，提示词自足、不指向真实工作区。卡口：`evals/<用例>/prompt.md`、`graders/` 在，`evals/README.md` 有构成表。\n3. **跑基线（第 5 步）。** 正文还是占位时 `claude plugin eval plugins/wrap-up --runs 1`，结果落 `evals/results/2026-09-15-baseline/`。只看对照组那一列——那就是三行结论里说的「每次靠 agent 现想、四栏和四节经常漏」，把它一个用例一两句写进「基线观察」。有 skill 组此时也该失败，不失败说明用例没区分力，回第 2 件事重做。这就是真缺口，第 6 步的正文只针对它写。\n\n顺序不能换：没有基线观察，正文就是凭感觉写的，第 7 步也没有差值可比。\n\n## 留给正文里定的开放细节\n\n短路线下这些不阻塞，在 SKILL.md 的「步骤」里定死、主人在 PR 里审即可。想提前定也行：\n\n- 停靠记录落在哪（PR 正文？issue 评论？仓内文件？）、在开 PR 前还是后写；\n- 挂起物登记进哪个仓、打什么标签（反馈用 `needs-triage`，挂起物用什么没说）；\n- 与 skill-authoring 等自带开 PR 步骤的 skill 的边界（见上面第三条翻盘条件）。\n\n## 下一步\n\n这个会话到此为止，不建文件。开一个有 Bash、工作目录在 agent-system worktree 的新会话，从第 3 步起：**先核三条翻盘条件**（尤其是 skill-authoring 出口那条），确认仍不是路由 skill，再起脚手架 → 写用例 → 跑基线，停在基线观察上向主人汇报，然后才动笔写正文。"
               },
               {
                 "name": "mentions-baseline",
@@ -1196,12 +1138,12 @@
             "score": 1,
             "passed": true,
             "turns": 5,
-            "costUsd": 0.3834325,
-            "judgeCostUsd": 0.06280800000000003,
-            "durationSeconds": 116,
-            "startedAt": "2026-09-15T11:21:16.055Z",
+            "costUsd": 0.304023,
+            "judgeCostUsd": 0.03094199999999997,
+            "durationSeconds": 101,
+            "startedAt": "2026-09-15T11:44:44.430Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-P3PvFi\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-SWtZhW\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -1216,7 +1158,7 @@
                   true,
                   true
                 ],
-                "evidence": "按 `skill-authoring` 走了一遍前六步的判断。这个会话不建文件，下面是判完的结果。\n\n## 1｜起点核对\n\n三行结论齐了，能复述成一句：**第 7 段「收尾」这格没有载体，要建一条 `wrap-up`，把停靠记录四栏、PR 四节、挂起物登记三件事固定下来；不 merge、不 push。** 第 1 步过。\n\n有一件事进脚手架前要先确认：**这格是不是真的空的**。如果现在已有别的 skill 吃掉了收尾的一部分（比如某条已经在管开 PR 或写停靠记录），那 `wrap-up` 就不是填空而是改点名关系，性质当场变成路由 skill，要停下回第 2 段。查法就一条：读当前路线真源第 7 段那几句，看有没有已经点到的名字。\n\n## 2｜两个判断\n\n**不是路由 skill → 走短路线。** 理由：它只占自己那一格，不改任何别的 skill 什么时候被用；第 9 步往真源里加的那句点名是填一个空槽，由上线待办驱动，不是重排点名关系——否则每条新 skill 都成路由 skill，短路线就没有存在的余地了。短路线的含义：SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审,不另写 spec、不拆票,第 3 步直接起脚手架。\n\n**自动调用。** 理由：流程 skill 在第 7 段点名后 agent 自己跑,主人不需要敲 `/wrap-up`。所以 frontmatter **不加** `disable-model-invocation`;Claude 侧的可见档 `name-only` 不在 frontmatter 里,写进上线待办。(`name-only` 本来也挡不住模型调用,只是让描述不去抢路由——路由由真源那句话负责。)\n\n这两条的原话要原样进最后的汇报和 PR 正文。\n\n## 3｜frontmatter 怎么写\n\n```yaml\n---\nname: wrap-up\ndescription: 一条改动做完、要收尾时用：写停靠记录（做成了、停在、下一步、等你），开 PR（做了什么、为什么、怎么验证的、怎么回退），把挂起物登记进 issue。不做本地 merge，不 push。Close out a finished change — write the docking note, open the PR with its four sections, and file leftovers as issues. No local merge, no push.\n---\n```\n\n核对点，按 `agent-skills-spec.md` 机械过一遍：\n\n- `name` = `wrap-up`,kebab-case,**必须同时等于** `skills/wrap-up/` 目录名（`plugins/tests/skills.test.ts` 和 agent-config 的 `deploy.ts` 两处都断言)。\n- 描述里把四栏、四节的具体词写出来,因为这是 agent 判「这条 skill 管什么」的唯一线索;中文正文加英文尾,三个客户端的搜索都能命中。控制在 1000 UTF-8 字节内。\n- **没有命令式路由句**。`deploy.ts check --scope=skill-descriptions` 拦的词（`MUST`／`ALWAYS`／`instead of`／`before any`／`必须先`／`一律`／`优先于`／`代替`／`任何…之前`）一个都没用;「不做本地 merge,不 push」是范围声明不是路由句,安全。\n- 除这两个键之外什么都不写。版本在 `plugin.json` 起 `0.1.0`,`.claude-plugin/marketplace.json` 必须同号。\n\n## 4｜动笔写正文之前的三件事,顺序不能换\n\n**① 起脚手架（第 3 步）。** `plugins/wrap-up/.claude-plugin/plugin.json`、`skills/wrap-up/SKILL.md`（只有上面那段 frontmatter 加一行占位正文）、`.claude-plugin/marketplace.json` 一条、`profiles/daily/manifest.json` 和 `profiles/all/manifest.json` 各一条（`daily` 是主人定的装配目标）。验收:`claude plugin validate` 和 `node plugins/tests/skills.test.ts` 都过。\n\n**② 先写用例（第 4 步）。** SKILL.md 还是占位时就写,三条：\n\n- 正例：一条做完的改动,提示词里自带假 issue 正文和假 diff 摘要,判四栏齐、四节齐。\n- 正例变体：中途留了一个没解决的问题,判它被**登记成 issue** 而不是顺手修掉。\n- 反例：「这条做完了,帮我合进 main 推上去」——共享关键词但范围外,判不执行 merge／push。\n\n两条纪律在这条 skill 上特别容易踩:提示词必须自足(假 issue、假 diff 贴在提示词里,用明显虚构的名字),不能指向真实工作区、不能写本机路径。另外——**收尾天然要 `gh pr create`、`git` 这些 Bash 动作,而原生 Windows 的沙箱 2026-09-14 实测起不来（desk#145)**,所以这三条先写成 dry run：提示词里声明 Bash 不可用,让 agent 把要执行的命令按顺序写进 `commands.sh`,用 `file_exists` 加 `regex`（`target: {source: file, path: commands.sh}`）断命令和参数;停靠记录那部分用 `Write` 落文件再判内容。沙箱可用后再改回真跑。验收:`evals/<用例>/prompt.md` 与 `graders/` 在,`evals/README.md` 有用例构成表。\n\n**③ 跑基线（第 5 步)。** 正文还是占位时跑:\n\n```\nclaude plugin eval plugins/wrap-up --runs 1 --ablation none --no-publish --trust-plugin \\\n  --output-dir plugins/wrap-up/evals/results/2026-09-15-red-placeholder --json <同目录>/run.json\n```\n\n把「没有 skill 时 agent 实际怎么收尾」一个用例一两句写进 `evals/README.md`「基线观察」。这一步是整条路线上最容易被跳过、跳过后损失最大的一步：三行结论里说「四栏和四节经常漏一栏」,基线要回答的是**具体漏哪一栏**——正文只针对这个真缺口写,不是把四栏四节抄一遍。验收:每个用例都有一条观察。\n\n顺序理由:脚手架在前是因为 eval 要有插件可装;用例在正文前是因为正文晚于用例写才不会被自己的正文反向定义验收标准;基线在正文前是因为没有基线就不知道缺口在哪。\n\n## 5｜下一步\n\n这个会话没有 Bash,第 3 步的 `validate`／测试和第 5 步的基线都跑不了,所以按 skill 的规定**停在这里等**。\n\n开一个有 Bash 的新会话,从第 3 步接着走:起脚手架 → 写三条 dry-run 用例 → 跑基线并记观察 → 再动笔写正文(五节骨架、剪枝四查、500 行内)→ 第 7 步跑有 skill 组对对照组直到差值为正 → `scrub-eval-results.ts` 抹路径 → 第 8 步对 DoD → 第 9 步开 PR 加建上线待办。\n\n进新会话前只要确认一件事,就是第 1 节那条:第 7 段那格现在确实空着。"
+                "evidence": "按 skill-authoring 走完第 1–2 步，第 3 步及以后本会话不动手（你说不建文件）。下面是判完的结果。\n\n## 第 1 步：起点\n\n机会 issue 的三行结论齐（真正的问题／值不值得／往哪个方向），不用补。一句话复述：**收尾这一格现在只有口头规则没有载体，要建一条 `wrap-up`，把停靠记录四栏、PR 四节、挂起物登记这三件事固化成步骤，agent 在第 7 段自己跑。**\n\n## 第 2 步：两个判断（这两句原话进汇报和 PR 正文）\n\n**不是路由 skill → 走短路线。**\n理由：它只填第 7 段这一格空位，不改任何既有 skill 的入口、段的门或点名关系；流程 skill 里那句「第 7 段点名 wrap-up」是路线真源的一句话，按出口规则进上线待办，不属于这条 skill 自己改路由。\n短路线的含义：SKILL.md 的「什么时候用」「步骤」两节就是 spec，你在 PR 里审；不回第 2 段方案对齐、不另写 spec、不拆票。\n边界提醒：如果后面范围漂成「由 wrap-up 决定第 7 段还要不要叫别的 skill」，判断就翻成路由 skill，得停下回第 2 段。按现在这个范围（三件事、不 merge、不 push）不会。\n\n**自动调用。**\n理由：流程 skill 点名后 agent 自己启动，不要求你敲 `/wrap-up`。所以 frontmatter 什么都不加，Claude 侧的 `name-only` 写进上线待办（路由靠路线真源那一句，不靠描述抢）。\n\n## frontmatter 怎么写\n\n只有两个键，别的一个不加：\n\n```yaml\n---\nname: wrap-up\ndescription: >-\n  收尾一条改动时用：写停靠记录（做成了、停在、下一步、等你），按四节开 PR（做了什么、为什么、\n  怎么验证的、怎么回退），把挂起物登记成 issue；不做本地 merge，不做 push。\n  Wrap up a change: a four-column dock note, a four-section PR, and parked items filed as issues;\n  no local merge, no push.\n---\n```\n\n要点：\n\n- `name` 必须等于目录名 `wrap-up`（测试和 `deploy.ts` 都断言）。\n- 描述是给人看的「做什么、什么时候用」，不写命令式路由句 —— 上面这条避开了 `deploy.ts check --scope=skill-descriptions` 的拦截词（`必须先`／`一律`／`优先于`／`代替`／`任何…之前`／`MUST`／`instead of` 等）。中文正文加英文尾，三个客户端搜得到。\n- 不加 `disable-model-invocation`（那是手动调用用的）。\n- 不加 `allowed-tools`：这条 skill 要用 Bash/`gh` 开 PR 建 issue，收窄反而会卡住自己。\n- 用 `>-` 折行没问题，测试和目录页会拼成一行。\n\n## 动笔写正文之前要做的三件事，按这个顺序\n\n1. **起脚手架（第 3 步）。** `plugins/wrap-up/.claude-plugin/plugin.json`（`0.1.0`）、`skills/wrap-up/SKILL.md` 只放上面这段 frontmatter 加一行占位、`.claude-plugin/marketplace.json` 一条（版本与 plugin.json 一致）、`profiles/daily/manifest.json` 和 `profiles/all/manifest.json` 各一条。验收：`claude plugin validate` 与 `node plugins/tests/skills.test.ts` 过。\n2. **先写用例（第 4 步）。** 我建议三条：\n   - 正例：一条改动刚做完，「收尾一下」。三条 grader，各判一件事 —— 四栏齐、PR 四节齐、挂起物进了 issue。\n   - 易混淆反例：「收尾，顺手合进 main 推上去」。grader 只判一件事：没有执行 merge／push。这条直接压你定的边界。\n   - 多轮（假历史）：前几轮里落下两个「先放着」的挂起物，末轮说收尾。grader 判这两个挂起物被登记，而不是消失在「下一步」里。\n\n   fixture 用假仓、mock `gh`，不指向真实工作区、不真开 PR；授 Bash 的用例在没沙箱时写 dry run。grader 判「四栏／四节的内容出现在产出里」，先不绑死停靠记录的载体 —— 载体是正文里定的事。\n3. **跑基线（第 5 步）。** SKILL.md 还是占位时跑 `claude plugin eval plugins/wrap-up --runs 1`，结果落 `evals/results/2026-09-15-baseline/`。看的是**对照组**那一列：没有 skill 时 agent 到底漏哪一栏、哪一节，一个用例一两句写进 `evals/README.md`「基线观察」。有 skill 组此时应当同样失败，否则用例没区分力。\n\n正文只针对基线暴露出来的缺口写 —— 顺序反过来（先写正文再补用例）就是在猜缺口，这是这条流程唯一不能省的约束。\n\n## 一个范围问题（不阻塞，先按假设走）\n\n「挂起物登记进 issue」没说登记到哪个仓。我按**改动所在的使用方仓**来写（跟上线待办落在使用方仓一致）。如果你想让挂起物统一收进 desk，跟我说一声，这只影响正文一句话和一条 grader。\n\n## 下一步\n\n开新会话，从第 3 步起脚手架开始，一路做到第 5 步跑完基线、把观察写进 `evals/README.md`，停在那里给你看基线，再动笔写正文。出口不变：PR 开了 + 上线待办建了（路由句加在流程 skill 第 7 段的哪一句、Claude 侧 `name-only`、合并后 `deploy.ts sync` 与描述检查）。"
               },
               {
                 "name": "evidence-first",
@@ -1230,7 +1172,65 @@
                   true,
                   true
                 ],
-                "evidence": "按 `skill-authoring` 走了一遍前六步的判断。这个会话不建文件，下面是判完的结果。\n\n## 1｜起点核对\n\n三行结论齐了，能复述成一句：**第 7 段「收尾」这格没有载体，要建一条 `wrap-up`，把停靠记录四栏、PR 四节、挂起物登记三件事固定下来；不 merge、不 push。** 第 1 步过。\n\n有一件事进脚手架前要先确认：**这格是不是真的空的**。如果现在已有别的 skill 吃掉了收尾的一部分（比如某条已经在管开 PR 或写停靠记录），那 `wrap-up` 就不是填空而是改点名关系，性质当场变成路由 skill，要停下回第 2 段。查法就一条：读当前路线真源第 7 段那几句，看有没有已经点到的名字。\n\n## 2｜两个判断\n\n**不是路由 skill → 走短路线。** 理由：它只占自己那一格，不改任何别的 skill 什么时候被用；第 9 步往真源里加的那句点名是填一个空槽，由上线待办驱动，不是重排点名关系——否则每条新 skill 都成路由 skill，短路线就没有存在的余地了。短路线的含义：SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审,不另写 spec、不拆票,第 3 步直接起脚手架。\n\n**自动调用。** 理由：流程 skill 在第 7 段点名后 agent 自己跑,主人不需要敲 `/wrap-up`。所以 frontmatter **不加** `disable-model-invocation`;Claude 侧的可见档 `name-only` 不在 frontmatter 里,写进上线待办。(`name-only` 本来也挡不住模型调用,只是让描述不去抢路由——路由由真源那句话负责。)\n\n这两条的原话要原样进最后的汇报和 PR 正文。\n\n## 3｜frontmatter 怎么写\n\n```yaml\n---\nname: wrap-up\ndescription: 一条改动做完、要收尾时用：写停靠记录（做成了、停在、下一步、等你），开 PR（做了什么、为什么、怎么验证的、怎么回退），把挂起物登记进 issue。不做本地 merge，不 push。Close out a finished change — write the docking note, open the PR with its four sections, and file leftovers as issues. No local merge, no push.\n---\n```\n\n核对点，按 `agent-skills-spec.md` 机械过一遍：\n\n- `name` = `wrap-up`,kebab-case,**必须同时等于** `skills/wrap-up/` 目录名（`plugins/tests/skills.test.ts` 和 agent-config 的 `deploy.ts` 两处都断言)。\n- 描述里把四栏、四节的具体词写出来,因为这是 agent 判「这条 skill 管什么」的唯一线索;中文正文加英文尾,三个客户端的搜索都能命中。控制在 1000 UTF-8 字节内。\n- **没有命令式路由句**。`deploy.ts check --scope=skill-descriptions` 拦的词（`MUST`／`ALWAYS`／`instead of`／`before any`／`必须先`／`一律`／`优先于`／`代替`／`任何…之前`）一个都没用;「不做本地 merge,不 push」是范围声明不是路由句,安全。\n- 除这两个键之外什么都不写。版本在 `plugin.json` 起 `0.1.0`,`.claude-plugin/marketplace.json` 必须同号。\n\n## 4｜动笔写正文之前的三件事,顺序不能换\n\n**① 起脚手架（第 3 步）。** `plugins/wrap-up/.claude-plugin/plugin.json`、`skills/wrap-up/SKILL.md`（只有上面那段 frontmatter 加一行占位正文）、`.claude-plugin/marketplace.json` 一条、`profiles/daily/manifest.json` 和 `profiles/all/manifest.json` 各一条（`daily` 是主人定的装配目标）。验收:`claude plugin validate` 和 `node plugins/tests/skills.test.ts` 都过。\n\n**② 先写用例（第 4 步）。** SKILL.md 还是占位时就写,三条：\n\n- 正例：一条做完的改动,提示词里自带假 issue 正文和假 diff 摘要,判四栏齐、四节齐。\n- 正例变体：中途留了一个没解决的问题,判它被**登记成 issue** 而不是顺手修掉。\n- 反例：「这条做完了,帮我合进 main 推上去」——共享关键词但范围外,判不执行 merge／push。\n\n两条纪律在这条 skill 上特别容易踩:提示词必须自足(假 issue、假 diff 贴在提示词里,用明显虚构的名字),不能指向真实工作区、不能写本机路径。另外——**收尾天然要 `gh pr create`、`git` 这些 Bash 动作,而原生 Windows 的沙箱 2026-09-14 实测起不来（desk#145)**,所以这三条先写成 dry run：提示词里声明 Bash 不可用,让 agent 把要执行的命令按顺序写进 `commands.sh`,用 `file_exists` 加 `regex`（`target: {source: file, path: commands.sh}`）断命令和参数;停靠记录那部分用 `Write` 落文件再判内容。沙箱可用后再改回真跑。验收:`evals/<用例>/prompt.md` 与 `graders/` 在,`evals/README.md` 有用例构成表。\n\n**③ 跑基线（第 5 步)。** 正文还是占位时跑:\n\n```\nclaude plugin eval plugins/wrap-up --runs 1 --ablation none --no-publish --trust-plugin \\\n  --output-dir plugins/wrap-up/evals/results/2026-09-15-red-placeholder --json <同目录>/run.json\n```\n\n把「没有 skill 时 agent 实际怎么收尾」一个用例一两句写进 `evals/README.md`「基线观察」。这一步是整条路线上最容易被跳过、跳过后损失最大的一步：三行结论里说「四栏和四节经常漏一栏」,基线要回答的是**具体漏哪一栏**——正文只针对这个真缺口写,不是把四栏四节抄一遍。验收:每个用例都有一条观察。\n\n顺序理由:脚手架在前是因为 eval 要有插件可装;用例在正文前是因为正文晚于用例写才不会被自己的正文反向定义验收标准;基线在正文前是因为没有基线就不知道缺口在哪。\n\n## 5｜下一步\n\n这个会话没有 Bash,第 3 步的 `validate`／测试和第 5 步的基线都跑不了,所以按 skill 的规定**停在这里等**。\n\n开一个有 Bash 的新会话,从第 3 步接着走:起脚手架 → 写三条 dry-run 用例 → 跑基线并记观察 → 再动笔写正文(五节骨架、剪枝四查、500 行内)→ 第 7 步跑有 skill 组对对照组直到差值为正 → `scrub-eval-results.ts` 抹路径 → 第 8 步对 DoD → 第 9 步开 PR 加建上线待办。\n\n进新会话前只要确认一件事,就是第 1 节那条:第 7 段那格现在确实空着。"
+                "evidence": "按 skill-authoring 走完第 1–2 步，第 3 步及以后本会话不动手（你说不建文件）。下面是判完的结果。\n\n## 第 1 步：起点\n\n机会 issue 的三行结论齐（真正的问题／值不值得／往哪个方向），不用补。一句话复述：**收尾这一格现在只有口头规则没有载体，要建一条 `wrap-up`，把停靠记录四栏、PR 四节、挂起物登记这三件事固化成步骤，agent 在第 7 段自己跑。**\n\n## 第 2 步：两个判断（这两句原话进汇报和 PR 正文）\n\n**不是路由 skill → 走短路线。**\n理由：它只填第 7 段这一格空位，不改任何既有 skill 的入口、段的门或点名关系；流程 skill 里那句「第 7 段点名 wrap-up」是路线真源的一句话，按出口规则进上线待办，不属于这条 skill 自己改路由。\n短路线的含义：SKILL.md 的「什么时候用」「步骤」两节就是 spec，你在 PR 里审；不回第 2 段方案对齐、不另写 spec、不拆票。\n边界提醒：如果后面范围漂成「由 wrap-up 决定第 7 段还要不要叫别的 skill」，判断就翻成路由 skill，得停下回第 2 段。按现在这个范围（三件事、不 merge、不 push）不会。\n\n**自动调用。**\n理由：流程 skill 点名后 agent 自己启动，不要求你敲 `/wrap-up`。所以 frontmatter 什么都不加，Claude 侧的 `name-only` 写进上线待办（路由靠路线真源那一句，不靠描述抢）。\n\n## frontmatter 怎么写\n\n只有两个键，别的一个不加：\n\n```yaml\n---\nname: wrap-up\ndescription: >-\n  收尾一条改动时用：写停靠记录（做成了、停在、下一步、等你），按四节开 PR（做了什么、为什么、\n  怎么验证的、怎么回退），把挂起物登记成 issue；不做本地 merge，不做 push。\n  Wrap up a change: a four-column dock note, a four-section PR, and parked items filed as issues;\n  no local merge, no push.\n---\n```\n\n要点：\n\n- `name` 必须等于目录名 `wrap-up`（测试和 `deploy.ts` 都断言）。\n- 描述是给人看的「做什么、什么时候用」，不写命令式路由句 —— 上面这条避开了 `deploy.ts check --scope=skill-descriptions` 的拦截词（`必须先`／`一律`／`优先于`／`代替`／`任何…之前`／`MUST`／`instead of` 等）。中文正文加英文尾，三个客户端搜得到。\n- 不加 `disable-model-invocation`（那是手动调用用的）。\n- 不加 `allowed-tools`：这条 skill 要用 Bash/`gh` 开 PR 建 issue，收窄反而会卡住自己。\n- 用 `>-` 折行没问题，测试和目录页会拼成一行。\n\n## 动笔写正文之前要做的三件事，按这个顺序\n\n1. **起脚手架（第 3 步）。** `plugins/wrap-up/.claude-plugin/plugin.json`（`0.1.0`）、`skills/wrap-up/SKILL.md` 只放上面这段 frontmatter 加一行占位、`.claude-plugin/marketplace.json` 一条（版本与 plugin.json 一致）、`profiles/daily/manifest.json` 和 `profiles/all/manifest.json` 各一条。验收：`claude plugin validate` 与 `node plugins/tests/skills.test.ts` 过。\n2. **先写用例（第 4 步）。** 我建议三条：\n   - 正例：一条改动刚做完，「收尾一下」。三条 grader，各判一件事 —— 四栏齐、PR 四节齐、挂起物进了 issue。\n   - 易混淆反例：「收尾，顺手合进 main 推上去」。grader 只判一件事：没有执行 merge／push。这条直接压你定的边界。\n   - 多轮（假历史）：前几轮里落下两个「先放着」的挂起物，末轮说收尾。grader 判这两个挂起物被登记，而不是消失在「下一步」里。\n\n   fixture 用假仓、mock `gh`，不指向真实工作区、不真开 PR；授 Bash 的用例在没沙箱时写 dry run。grader 判「四栏／四节的内容出现在产出里」，先不绑死停靠记录的载体 —— 载体是正文里定的事。\n3. **跑基线（第 5 步）。** SKILL.md 还是占位时跑 `claude plugin eval plugins/wrap-up --runs 1`，结果落 `evals/results/2026-09-15-baseline/`。看的是**对照组**那一列：没有 skill 时 agent 到底漏哪一栏、哪一节，一个用例一两句写进 `evals/README.md`「基线观察」。有 skill 组此时应当同样失败，否则用例没区分力。\n\n正文只针对基线暴露出来的缺口写 —— 顺序反过来（先写正文再补用例）就是在猜缺口，这是这条流程唯一不能省的约束。\n\n## 一个范围问题（不阻塞，先按假设走）\n\n「挂起物登记进 issue」没说登记到哪个仓。我按**改动所在的使用方仓**来写（跟上线待办落在使用方仓一致）。如果你想让挂起物统一收进 desk，跟我说一声，这只影响正文一句话和一条 grader。\n\n## 下一步\n\n开新会话，从第 3 步起脚手架开始，一路做到第 5 步跑完基线、把观察写进 `evals/README.md`，停在那里给你看基线，再动笔写正文。出口不变：PR 开了 + 上线待办建了（路由句加在流程 skill 第 7 段的哪一句、Claude 侧 `name-only`、合并后 `deploy.ts sync` 与描述检查）。"
+              },
+              {
+                "name": "mentions-baseline",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched 基线|baseline",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 9,
+            "costUsd": 0.406808,
+            "judgeCostUsd": 0.031998000000000026,
+            "durationSeconds": 108,
+            "startedAt": "2026-09-15T11:45:34.568Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-CDAYa3\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "classification",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 skill-authoring 走，读起点（第 1 步）和判两件事（第 2 步）能在这个会话里做完，脚手架之后卡在没有 Bash。下面是判定。\n\n## 第 1 步 复述起点\n\n一句话：第 7 段「收尾」现在有规则没载体，建一条 `wrap-up`，让 agent 在一条改动干完时按固定形状产出三样——停靠记录（做成了／停在／下一步／等你）、PR 正文（做了什么／为什么／怎么验证的／怎么回退）、挂起物登记成 issue；不 merge、不 push。三行结论齐，不用回去补。\n\n## 第 2 步 两个判定（原话进汇报和 PR 正文）\n\n**不是路由 skill → 走短路线。** 它只填第 7 段这一空格，不改任何别的 skill 什么时候被用：第 7 段现在是空的（Superpowers 在 Windows 全关），不存在从谁手里接活或改段的门。流程 skill 在第 7 段加一句点名，是每条新 skill 出口那步都要做的上线待办，不是这条 skill 自己在改路由关系。所以不回第 2 段方案对齐，SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审，不另写 spec、不拆票。\n\n**自动调用 → frontmatter 什么都不加。** 规则点名后 agent 自己跑，主人不需要敲 `/wrap-up`，所以不写 `disable-model-invocation`；Claude 侧的可见档 `name-only` 写进上线待办 issue，不在这条 skill 里做。\n\n## frontmatter 怎么写\n\n```yaml\n---\nname: wrap-up\ndescription: 一条改动的活干完、要收尾时用：写停靠记录（做成了、停在、下一步、等你），开 PR（做了什么、为什么、怎么验证的、怎么回退），把挂起的事登记成 issue；不做本地 merge，不 push。Wrap up a finished change with a docking note, a PR, and issues for the leftovers.\n---\n```\n\n要点：`name` 必须等于目录名 `wrap-up`（`plugins/tests/skills.test.ts` 和 `deploy.ts` 两边都断言）；描述是给人看的一句话「做什么、什么时候用」，中文加英文尾；不堆触发词、不写路由句——上面那句里没有 `deploy.ts check --scope=skill-descriptions` 拦的词（`必须先`／`一律`／`优先于`／`代替`／`MUST`／`before any` 等），末尾的「不做本地 merge，不 push」是范围声明不是路由。除 `name`、`description` 外不加别的键。`plugin.json` 版本 `0.1.0`，`.claude-plugin/marketplace.json` 版本同步。\n\n## 动笔写正文之前要做的四件事，按这个顺序\n\n1. **起脚手架（第 3 步）。** `plugins/wrap-up/.claude-plugin/plugin.json`（`0.1.0`）、`skills/wrap-up/SKILL.md` 只放上面那段 frontmatter 加一行占位、`marketplace.json` 一条、`profiles/daily/manifest.json` 与 `profiles/all/manifest.json` 各一条。顺手查名字和描述有没有和既有 skill 撞（`wrap-up` 这个词和「开 PR」「收尾」类描述容易抢路由）。验收：`claude plugin validate` 和 `node plugins/tests/skills.test.ts` 过。\n2. **先写用例（第 4 步）。** 2–3 条：正例是一条活已干完、带一个没做完的挂起物，看四栏四节齐不齐、挂起物有没有落成 issue；反例挑一个共享关键词但该归别人的——比如「帮我把这个分支合进 main」，正确行为是停在范围外，或者 skill-authoring 自己那个「PR 加上线待办」的出口，别被抢走。三件事都要 `git`／`gh`，而原生 Windows 沙箱起不来（desk#145），所以授 Bash 的部分写成 dry run：提示词里说明 Bash 不可用、让 agent 把命令按顺序写进 `commands.sh`，用 `file_exists` 加 `regex`（`target: {source: file, path: commands.sh}`）断言命令和参数；四栏四节用 Write 出的文件加 `llm` grader，每条只判一栏一件事。\n3. **跑基线（第 5 步）。** SKILL.md 还是占位时 `--runs 1`，结果落 `evals/results/2026-09-15-baseline/`，只看对照组那一列——那就是「每次靠 agent 现想、四栏四节漏栏」到底漏成什么样。哪几栏在对照组里稳定缺失，正文就只针对那几栏写。有 skill 组此时应当同样失败，否则用例没区分力。\n4. **然后才写正文（第 6 步）。** 这条 skill 的失败类型是「漏要素」，所以四栏和四节写成必填槽：给一个骨架加一对真实口吻的输入输出例子（用主人任务里的真对象，不用 X／Y），别堆 MUST／NEVER。五节骨架照常，出口只有一个：停靠记录写了、PR 开了、挂起物登记了，merge 和 push 归主人。\n\n这个会话没有 Bash，第 3 步之后就跑不动了（`claude plugin validate`、测试、`eval` 全要命令行），加上你说不建文件，所以到这里为止是对的停法。\n\n## 写正文前需要你定两件事\n\n这两个值进 fixture 和 grader，靠猜会把用例写歪：\n\n1. **停靠记录落在哪？** desk 仓对应 issue 的评论，还是仓里的一个文件（路径是什么）？\n2. **挂起物登记进哪个仓、打什么标签？** 跟反馈 issue 一样是 agent-system 加 `needs-triage`，还是回 desk 仓？\n\n## 下一步\n\n开一个带 Bash 的会话，接着从第 3 步起脚手架、第 4 步写用例、第 5 步跑基线；你先把上面两件事定了，或者说「按你判断写」，我照默认（停靠记录进 desk 仓 issue 评论、挂起物回 desk 仓）往下走。"
+              },
+              {
+                "name": "evidence-first",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 skill-authoring 走，读起点（第 1 步）和判两件事（第 2 步）能在这个会话里做完，脚手架之后卡在没有 Bash。下面是判定。\n\n## 第 1 步 复述起点\n\n一句话：第 7 段「收尾」现在有规则没载体，建一条 `wrap-up`，让 agent 在一条改动干完时按固定形状产出三样——停靠记录（做成了／停在／下一步／等你）、PR 正文（做了什么／为什么／怎么验证的／怎么回退）、挂起物登记成 issue；不 merge、不 push。三行结论齐，不用回去补。\n\n## 第 2 步 两个判定（原话进汇报和 PR 正文）\n\n**不是路由 skill → 走短路线。** 它只填第 7 段这一空格，不改任何别的 skill 什么时候被用：第 7 段现在是空的（Superpowers 在 Windows 全关），不存在从谁手里接活或改段的门。流程 skill 在第 7 段加一句点名，是每条新 skill 出口那步都要做的上线待办，不是这条 skill 自己在改路由关系。所以不回第 2 段方案对齐，SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审，不另写 spec、不拆票。\n\n**自动调用 → frontmatter 什么都不加。** 规则点名后 agent 自己跑，主人不需要敲 `/wrap-up`，所以不写 `disable-model-invocation`；Claude 侧的可见档 `name-only` 写进上线待办 issue，不在这条 skill 里做。\n\n## frontmatter 怎么写\n\n```yaml\n---\nname: wrap-up\ndescription: 一条改动的活干完、要收尾时用：写停靠记录（做成了、停在、下一步、等你），开 PR（做了什么、为什么、怎么验证的、怎么回退），把挂起的事登记成 issue；不做本地 merge，不 push。Wrap up a finished change with a docking note, a PR, and issues for the leftovers.\n---\n```\n\n要点：`name` 必须等于目录名 `wrap-up`（`plugins/tests/skills.test.ts` 和 `deploy.ts` 两边都断言）；描述是给人看的一句话「做什么、什么时候用」，中文加英文尾；不堆触发词、不写路由句——上面那句里没有 `deploy.ts check --scope=skill-descriptions` 拦的词（`必须先`／`一律`／`优先于`／`代替`／`MUST`／`before any` 等），末尾的「不做本地 merge，不 push」是范围声明不是路由。除 `name`、`description` 外不加别的键。`plugin.json` 版本 `0.1.0`，`.claude-plugin/marketplace.json` 版本同步。\n\n## 动笔写正文之前要做的四件事，按这个顺序\n\n1. **起脚手架（第 3 步）。** `plugins/wrap-up/.claude-plugin/plugin.json`（`0.1.0`）、`skills/wrap-up/SKILL.md` 只放上面那段 frontmatter 加一行占位、`marketplace.json` 一条、`profiles/daily/manifest.json` 与 `profiles/all/manifest.json` 各一条。顺手查名字和描述有没有和既有 skill 撞（`wrap-up` 这个词和「开 PR」「收尾」类描述容易抢路由）。验收：`claude plugin validate` 和 `node plugins/tests/skills.test.ts` 过。\n2. **先写用例（第 4 步）。** 2–3 条：正例是一条活已干完、带一个没做完的挂起物，看四栏四节齐不齐、挂起物有没有落成 issue；反例挑一个共享关键词但该归别人的——比如「帮我把这个分支合进 main」，正确行为是停在范围外，或者 skill-authoring 自己那个「PR 加上线待办」的出口，别被抢走。三件事都要 `git`／`gh`，而原生 Windows 沙箱起不来（desk#145），所以授 Bash 的部分写成 dry run：提示词里说明 Bash 不可用、让 agent 把命令按顺序写进 `commands.sh`，用 `file_exists` 加 `regex`（`target: {source: file, path: commands.sh}`）断言命令和参数；四栏四节用 Write 出的文件加 `llm` grader，每条只判一栏一件事。\n3. **跑基线（第 5 步）。** SKILL.md 还是占位时 `--runs 1`，结果落 `evals/results/2026-09-15-baseline/`，只看对照组那一列——那就是「每次靠 agent 现想、四栏四节漏栏」到底漏成什么样。哪几栏在对照组里稳定缺失，正文就只针对那几栏写。有 skill 组此时应当同样失败，否则用例没区分力。\n4. **然后才写正文（第 6 步）。** 这条 skill 的失败类型是「漏要素」，所以四栏和四节写成必填槽：给一个骨架加一对真实口吻的输入输出例子（用主人任务里的真对象，不用 X／Y），别堆 MUST／NEVER。五节骨架照常，出口只有一个：停靠记录写了、PR 开了、挂起物登记了，merge 和 push 归主人。\n\n这个会话没有 Bash，第 3 步之后就跑不动了（`claude plugin validate`、测试、`eval` 全要命令行），加上你说不建文件，所以到这里为止是对的停法。\n\n## 写正文前需要你定两件事\n\n这两个值进 fixture 和 grader，靠猜会把用例写歪：\n\n1. **停靠记录落在哪？** desk 仓对应 issue 的评论，还是仓里的一个文件（路径是什么）？\n2. **挂起物登记进哪个仓、打什么标签？** 跟反馈 issue 一样是 agent-system 加 `needs-triage`，还是回 desk 仓？\n\n## 下一步\n\n开一个带 Bash 的会话，接着从第 3 步起脚手架、第 4 步写用例、第 5 步跑基线；你先把上面两件事定了，或者说「按你判断写」，我照默认（停靠记录进 desk 仓 issue 评论、挂起物回 desk 仓）往下走。"
               },
               {
                 "name": "mentions-baseline",
@@ -1255,113 +1255,13 @@
           {
             "score": 0,
             "passed": false,
-            "turns": 5,
-            "costUsd": 0.2824575000000001,
-            "judgeCostUsd": 0.034182000000000046,
-            "durationSeconds": 121,
-            "startedAt": "2026-09-15T11:21:37.034Z",
-            "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-dzjXs3\\out\\trace.jsonl",
-            "skippedPaidGraders": false,
-            "graders": [
-              {
-                "name": "classification",
-                "passed": false,
-                "weight": 2,
-                "explanation": "judge votes: FAIL FAIL FAIL",
-                "withOnly": false,
-                "scored": true,
-                "judgeVotes": [
-                  false,
-                  false,
-                  false
-                ],
-                "evidence": "先说一件影响这条路线的事：**`skill-authoring` 这个会话里加载不了** —— 它不在可调用的 skill 列表里，desk 仓在当前工作目录下也是空的（只有一个裸 `.git`），磁盘上搜不到任何 `SKILL.md`。所以下面是按通用的 skill 写法判的，frontmatter 字段名、skill 放哪个目录、manifest 怎么登记这三件事以你们 `skill-authoring` 的规定为准，冲突时听它的。\n\n---\n\n## 一、该判的\n\n**建，合成一条，不拆。** 三件事表面上是三个动作，底下共用同一批事实：这条改动做成了什么、停在哪、有哪些挂起物。拆成三条 skill 会让 agent 把同一批事实收集三遍，而且拆完还是解决不了原问题 —— 漏栏不是因为 agent 不知道要写四栏，是因为没有可抄的载体。\n\n**这是 checklist 型 skill，不是 technique 型。** 结论直接决定正文长什么样：主体应该是两份能整段抄走的模板（四栏、四节）+ 一条边界规则 + 一个交付前的点名自检，**不要讲\"好的停靠记录应该怎样\"**。凡是要 agent 现读现悟的句子，都是这次要消灭的那个东西的复发。\n\n**边界写死四条**（写进正文，不要只留在 issue 里）：不 merge、不 push、不判断改动做完没有（那是第 6 段的事）、不替用户决定挂起物做不做（只登记）。\n\n**一个现在就拦路的矛盾**：「开 PR」和「不 push」不能同时成立 —— 远端没有这个分支，PR 开不出来。见下面第 3 步。\n\n## 二、路线长度：短路线\n\n一个 `SKILL.md`，**不建** `references/`、不建 `scripts/`、不建 `templates/`。两份模板加起来撑不起分文件，分了反而多一跳读取，而收尾这一格恰恰要求 agent 一眼读完就能动手。目标体量 100 行以内。\n\n什么时候再拆：PR 正文长出仓库特有的东西（CI 标签、reviewer 规则、release note 片段）时，把它拆成 `references/pr-body.md`。在那之前拆都是早拆。\n\n## 三、frontmatter\n\n只写两个字段（除非你们的 manifest 强制要别的，比如 `allowed-tools`）：\n\n```yaml\n---\nname: wrap-up\ndescription: 改动收尾：写四栏停靠记录（做成了/停在/下一步/等你）、开 PR（做了什么/为什么/怎么验证的/怎么回退）、把挂起物登记进 issue。改动路线走到第 7 段「收尾」时用，用户说「收尾」「停靠」「开 PR」「登记挂起物」时也用。不 merge、不 push。\n---\n```\n\n三个写法上的点：\n\n- description 里必须出现 **「第 7 段」和「收尾」这两个词的原文**。流程 skill 在那一格点名 wrap-up，agent 是拿那一格的字面去匹配的，对不上就白点。\n- 四栏四节的栏名直接列进 description，不要概括成\"结构化记录\"。description 是唯一保证被读到的一行，栏名摆在这里等于多一层防漏。\n- 「不 merge、不 push」放 description 末尾。这是负向边界，放正文里 agent 可能已经跑偏了才读到。\n- 语言：按 daily manifest 里其他 skill 的 description 语言来，混着写最差。\n\n## 四、动笔前，按这个顺序\n\n**0. 先把 `skill-authoring` 读一遍。** 它定字段名、目录、登记方式，这三样猜错了返工的是整个文件。\n\n**1. 读流程 skill 第 7 段那一格现在的原话。** 这是 wrap-up 的接口。段 7 现在对 agent 承诺了什么，wrap-up 就得兑现什么 —— 多做一分、少做一分，都得同时改那一格。先读它，才知道正文写到哪儿为止。\n\n**2. 捞 3–5 份真实的收尾样本**（最近几条改动的停靠记录 + PR 正文，散在 issue 评论里也算）。两个用途：一是确认\"经常漏\"到底漏的是哪一栏 —— 如果九成漏的是「等你」，正文就该给「等你」单独写规则，而不是四栏平摊笔墨；二是模板直接从真实样本里抠，别现编一套没人写过的格式。**这一步最容易跳过，跳过之后最容易写出好看但没人照做的 skill。** 顺带这一步会告诉你停靠记录实际落在哪（仓库文件？issue 评论？PR 正文里？）。\n\n**3. 敲定 PR 那步的前提，三选一写死**：(a) 第 6 段已经 push 过，wrap-up 只跑 `gh pr create`；(b) 允许 `gh pr create` 自带的那一次推分支，\"不 push\"指的是不推后续 commit；(c) 远端没分支就停下来报给用户。**这条是拦路项** —— 别的都能按假设往下写，这条含糊，skill 的第二件事就是空的，agent 每次自己猜一遍。\n\n**4. 定三件产物的落点和去重规则。** 挂起物是新开 issue 还是评论到现有 issue、标题格式是什么、同一个挂起物第二次收尾时怎么办（不能每次刷一条新的）。这一步决定第三件事是两行还是二十行。\n\n**5. 先写坏样本，再写正文。** 手工造一份漏「等你」、漏「怎么回退」的稿子，把它当验收对象，自检规则从它倒推。验收标准先于正文，这条 skill 才不会写成一篇散文。\n\n**6. 动笔。写完先别登记 manifest。** 拿第 2 步里的一条真实改动空跑一遍重放，比对产出的停靠记录和 PR 正文跟真实那份差多少，改完再进 daily manifest，最后回头把流程 skill 第 7 段改成点名 wrap-up。**接线放最后** —— 先验证再接，manifest 里塞一条没跑过的 skill，下次收尾就是拿真改动当试验品。\n\n顺序的骨架：1–2 定接口和事实 → 3–4 敲两个必须写死的决策 → 5 立验收 → 6 写完再接线。\n\n## 下一步\n\n给我三样东西，我出 `SKILL.md` 初稿：\n\n1. `skill-authoring` 恢复到会话里（或把它的正文贴过来）；\n2. 流程 skill 第 7 段那一格的原话；\n3. 第 3 步那个 push 问题选 a / b / c。\n\n第 2 步的样本你手头有就一并给，没有我按模板先写、标成待校准。"
-              },
-              {
-                "name": "evidence-first",
-                "passed": false,
-                "weight": 2,
-                "explanation": "judge votes: FAIL FAIL FAIL",
-                "withOnly": false,
-                "scored": true,
-                "judgeVotes": [
-                  false,
-                  false,
-                  false
-                ],
-                "evidence": "先说一件影响这条路线的事：**`skill-authoring` 这个会话里加载不了** —— 它不在可调用的 skill 列表里，desk 仓在当前工作目录下也是空的（只有一个裸 `.git`），磁盘上搜不到任何 `SKILL.md`。所以下面是按通用的 skill 写法判的，frontmatter 字段名、skill 放哪个目录、manifest 怎么登记这三件事以你们 `skill-authoring` 的规定为准，冲突时听它的。\n\n---\n\n## 一、该判的\n\n**建，合成一条，不拆。** 三件事表面上是三个动作，底下共用同一批事实：这条改动做成了什么、停在哪、有哪些挂起物。拆成三条 skill 会让 agent 把同一批事实收集三遍，而且拆完还是解决不了原问题 —— 漏栏不是因为 agent 不知道要写四栏，是因为没有可抄的载体。\n\n**这是 checklist 型 skill，不是 technique 型。** 结论直接决定正文长什么样：主体应该是两份能整段抄走的模板（四栏、四节）+ 一条边界规则 + 一个交付前的点名自检，**不要讲\"好的停靠记录应该怎样\"**。凡是要 agent 现读现悟的句子，都是这次要消灭的那个东西的复发。\n\n**边界写死四条**（写进正文，不要只留在 issue 里）：不 merge、不 push、不判断改动做完没有（那是第 6 段的事）、不替用户决定挂起物做不做（只登记）。\n\n**一个现在就拦路的矛盾**：「开 PR」和「不 push」不能同时成立 —— 远端没有这个分支，PR 开不出来。见下面第 3 步。\n\n## 二、路线长度：短路线\n\n一个 `SKILL.md`，**不建** `references/`、不建 `scripts/`、不建 `templates/`。两份模板加起来撑不起分文件，分了反而多一跳读取，而收尾这一格恰恰要求 agent 一眼读完就能动手。目标体量 100 行以内。\n\n什么时候再拆：PR 正文长出仓库特有的东西（CI 标签、reviewer 规则、release note 片段）时，把它拆成 `references/pr-body.md`。在那之前拆都是早拆。\n\n## 三、frontmatter\n\n只写两个字段（除非你们的 manifest 强制要别的，比如 `allowed-tools`）：\n\n```yaml\n---\nname: wrap-up\ndescription: 改动收尾：写四栏停靠记录（做成了/停在/下一步/等你）、开 PR（做了什么/为什么/怎么验证的/怎么回退）、把挂起物登记进 issue。改动路线走到第 7 段「收尾」时用，用户说「收尾」「停靠」「开 PR」「登记挂起物」时也用。不 merge、不 push。\n---\n```\n\n三个写法上的点：\n\n- description 里必须出现 **「第 7 段」和「收尾」这两个词的原文**。流程 skill 在那一格点名 wrap-up，agent 是拿那一格的字面去匹配的，对不上就白点。\n- 四栏四节的栏名直接列进 description，不要概括成\"结构化记录\"。description 是唯一保证被读到的一行，栏名摆在这里等于多一层防漏。\n- 「不 merge、不 push」放 description 末尾。这是负向边界，放正文里 agent 可能已经跑偏了才读到。\n- 语言：按 daily manifest 里其他 skill 的 description 语言来，混着写最差。\n\n## 四、动笔前，按这个顺序\n\n**0. 先把 `skill-authoring` 读一遍。** 它定字段名、目录、登记方式，这三样猜错了返工的是整个文件。\n\n**1. 读流程 skill 第 7 段那一格现在的原话。** 这是 wrap-up 的接口。段 7 现在对 agent 承诺了什么，wrap-up 就得兑现什么 —— 多做一分、少做一分，都得同时改那一格。先读它，才知道正文写到哪儿为止。\n\n**2. 捞 3–5 份真实的收尾样本**（最近几条改动的停靠记录 + PR 正文，散在 issue 评论里也算）。两个用途：一是确认\"经常漏\"到底漏的是哪一栏 —— 如果九成漏的是「等你」，正文就该给「等你」单独写规则，而不是四栏平摊笔墨；二是模板直接从真实样本里抠，别现编一套没人写过的格式。**这一步最容易跳过，跳过之后最容易写出好看但没人照做的 skill。** 顺带这一步会告诉你停靠记录实际落在哪（仓库文件？issue 评论？PR 正文里？）。\n\n**3. 敲定 PR 那步的前提，三选一写死**：(a) 第 6 段已经 push 过，wrap-up 只跑 `gh pr create`；(b) 允许 `gh pr create` 自带的那一次推分支，\"不 push\"指的是不推后续 commit；(c) 远端没分支就停下来报给用户。**这条是拦路项** —— 别的都能按假设往下写，这条含糊，skill 的第二件事就是空的，agent 每次自己猜一遍。\n\n**4. 定三件产物的落点和去重规则。** 挂起物是新开 issue 还是评论到现有 issue、标题格式是什么、同一个挂起物第二次收尾时怎么办（不能每次刷一条新的）。这一步决定第三件事是两行还是二十行。\n\n**5. 先写坏样本，再写正文。** 手工造一份漏「等你」、漏「怎么回退」的稿子，把它当验收对象，自检规则从它倒推。验收标准先于正文，这条 skill 才不会写成一篇散文。\n\n**6. 动笔。写完先别登记 manifest。** 拿第 2 步里的一条真实改动空跑一遍重放，比对产出的停靠记录和 PR 正文跟真实那份差多少，改完再进 daily manifest，最后回头把流程 skill 第 7 段改成点名 wrap-up。**接线放最后** —— 先验证再接，manifest 里塞一条没跑过的 skill，下次收尾就是拿真改动当试验品。\n\n顺序的骨架：1–2 定接口和事实 → 3–4 敲两个必须写死的决策 → 5 立验收 → 6 写完再接线。\n\n## 下一步\n\n给我三样东西，我出 `SKILL.md` 初稿：\n\n1. `skill-authoring` 恢复到会话里（或把它的正文贴过来）；\n2. 流程 skill 第 7 段那一格的原话；\n3. 第 3 步那个 push 问题选 a / b / c。\n\n第 2 步的样本你手头有就一并给，没有我按模板先写、标成待校准。"
-              },
-              {
-                "name": "mentions-baseline",
-                "passed": false,
-                "weight": 1,
-                "explanation": "pattern not found in last_message",
-                "withOnly": false,
-                "scored": true
-              }
-            ]
-          },
-          {
-            "score": 0,
-            "passed": false,
-            "turns": 7,
-            "costUsd": 0.2915795,
-            "judgeCostUsd": 0.03359399999999996,
-            "durationSeconds": 118,
-            "startedAt": "2026-09-15T11:22:24.213Z",
-            "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-CyrL6J\\out\\trace.jsonl",
-            "skippedPaidGraders": false,
-            "graders": [
-              {
-                "name": "classification",
-                "passed": false,
-                "weight": 2,
-                "explanation": "judge votes: FAIL FAIL FAIL",
-                "withOnly": false,
-                "scored": true,
-                "judgeVotes": [
-                  false,
-                  false,
-                  false
-                ],
-                "evidence": "先说一件必须说的：**`skill-authoring` 在这个环境里不存在**。我查了 skill 列表和磁盘（`**/skill-authoring/**` 无命中），Skill 调用直接报 `Unknown skill`。同时当前 cwd 是空的——desk 仓的内容不在这里，所以我没法比对它现有的 skill 写法、daily manifest 格式、流程 skill 第 7 段的原文。\n\n下面这些是按通用 skill-authoring 规范 + 你给的三行结论做的判断，涉及 desk 仓具体事实的地方我标了「需查」。不建文件。\n\n---\n\n## 一、先把一个规格矛盾摆出来\n\n**「开 PR」和「不 push」互斥。** `gh pr create` 要求分支在 remote 上存在；不 push 就没有东西可以开 PR。两种读法会写出完全不同的 skill：\n\n- 读法 A：「不 push」= 不 push 到 main、不 force-push，feature 分支的首次 push 是开 PR 的前置动作，归 skill 内。\n- 读法 B：「不 push」字面意思，那 skill 的第二件事就不是「开 PR」而是「备好 PR 正文，交给人去开」。\n\n**我按 A 往下写**，因为「开 PR」是你明确列的三件事之一。这是给主人的第一个决策点，动笔前要定死。\n\n## 二、判断\n\n**值得建，方向对。** 补一条你没写的理由：把模板从流程 skill 里挪出来，真正的收益不是复用（它几乎只被第 7 段点名），而是**四栏四节的逐字模板不用常驻流程 skill 的正文**——流程 skill 每次都全量进上下文，wrap-up 按需加载。这是它该独立成 skill 而不是当第 7 段一个小节的决定性理由。\n\n**路线长度：最短的那档。** 单文件 `wrap-up/SKILL.md`，不开 `references/`、不开 `templates/`、不带脚本。理由是反直觉的：四栏 + 四节的模板**必须逐字写在 SKILL.md 正文里**，不能拆进 `templates/`——拆出去要多一次 Read，而 agent 常常跳过 Read 直接凭印象复述，那正是「经常漏一栏」的成因。天花板约 150 行；超了通常是模板里混进了散文说明，砍说明、留骨架。\n\n## 三、frontmatter\n\n```yaml\n---\nname: wrap-up\ndescription: 收尾一条改动——写停靠记录（做成了/停在/下一步/等你）、开 PR（做了什么/为什么/怎么验证的/怎么回退）、把挂起物登记进 issue。改动路线第 7 段点名时使用，或用户说「收个尾 / 停靠 / 这条改动开 PR」时使用。不做本地 merge。\n---\n```\n\n三个要点：\n\n- `name` 必须和目录名一致、kebab-case。`wrap-up` 太通用，会和泛化说法抢触发——但 daily manifest 如果条目不多，通用不成问题，**保留**；等 manifest 长到会误触发再改名 `dock`。\n- `description` 是启动时唯一进上下文的部分，所以**两个触发面都要写进去**：被第 7 段点名（主路径）、被人直接喊（兜底）。\n- 不加 `allowed-tools`。「不 merge / 不 push 到 main」都走 Bash，工具白名单拦不住，**只能靠正文里的硬约束条目**，而且要写在正文最前面、用绝对措辞。description 里那句是帮调用方选对 skill 的，不是执行约束，别指望它拦人。\n\n## 四、动笔写正文之前的七件事，按这个顺序\n\n1. **定名 + 查冲突**（需查）：daily manifest 里有没有同名或语义重叠的条目，会不会被别的 skill 遮蔽。\n2. **捞真实样本**（需查，最容易被跳过的一步）：找 3–5 条过去实际写过的停靠记录和 PR 正文。模板要从**跑通过的东西**里誊出来，不是现编。同时捞**失败样本**——那些漏栏的——漏的是哪一栏，那一栏就需要最重的提示。\n3. **定住第 7 段的调用接口**（需查）：流程 skill 点名时传什么进来（issue 号？分支名？停靠记录路径？），wrap-up 保证交回什么。这个契约决定了正文要不要写「自行发现上下文」的逻辑，必须先于正文定。\n4. **定三件事的落点**（需查）：停靠记录物理写在哪、命名规则是什么；挂起物登记进哪个 issue（原始 issue 还是常驻收纳 issue）；PR 的 base 是哪条分支。这些是仓库事实，只能查，不能假设。\n5. **定「防漏栏」的机制**：这是唯一真正的设计决策。三选：(a) 散文交代「四栏写满」；(b) 可直接复制的逐字骨架，四个栏头预先写好；(c) 结尾自检清单。**选 (b)+(c)，不要 (a)**——(a) 正是现状，已经证明会漏。\n6. **先写 description，再写正文**：description 逼你把边界定死。如果写 description 时忍不住加「另外还会……」，说明范围划错了，回去改范围而不是加句子。\n7. **定验收方式**：拿一条最近的真实改动端到端跑一遍，把产出和第 2 步捞的好样本对齐着看。验收标准在动笔前定，不然写完只会自我确认。\n\n正文的章节顺序建议：硬约束 → 三件事的执行序 → 停靠记录逐字模板 → PR 正文逐字模板 → issue 登记写法 → 收尾自检。\n\n**执行序有个必须写进正文的理由**：停靠记录 → PR → issue 登记。登记必须最后，因为挂起物那条要带 PR 链接；PR 在停靠记录之后，因为 PR 正文的「做了什么」可以直接引用停靠记录的「做成了」栏，减少二次编造。\n\n## 五、下一步\n\n给我两样东西，我就能进第 2、3、4 步然后出初稿：\n\n1. 第 1 节那个 push 问题的裁定（A 还是 B）。\n2. desk 仓的路径——当前 cwd 是空的，我看不到 manifest、流程 skill 第 7 段、以及过去的停靠记录/PR 样本。\n\n另外，`skill-authoring` 这条 skill 如果确实存在于你那边，也一并指给我路径；我现在是按通用规范推的，它若有自己的约定（比如 frontmatter 额外字段、manifest 注册格式），以它为准。"
-              },
-              {
-                "name": "evidence-first",
-                "passed": false,
-                "weight": 2,
-                "explanation": "judge votes: FAIL FAIL FAIL",
-                "withOnly": false,
-                "scored": true,
-                "judgeVotes": [
-                  false,
-                  false,
-                  false
-                ],
-                "evidence": "先说一件必须说的：**`skill-authoring` 在这个环境里不存在**。我查了 skill 列表和磁盘（`**/skill-authoring/**` 无命中），Skill 调用直接报 `Unknown skill`。同时当前 cwd 是空的——desk 仓的内容不在这里，所以我没法比对它现有的 skill 写法、daily manifest 格式、流程 skill 第 7 段的原文。\n\n下面这些是按通用 skill-authoring 规范 + 你给的三行结论做的判断，涉及 desk 仓具体事实的地方我标了「需查」。不建文件。\n\n---\n\n## 一、先把一个规格矛盾摆出来\n\n**「开 PR」和「不 push」互斥。** `gh pr create` 要求分支在 remote 上存在；不 push 就没有东西可以开 PR。两种读法会写出完全不同的 skill：\n\n- 读法 A：「不 push」= 不 push 到 main、不 force-push，feature 分支的首次 push 是开 PR 的前置动作，归 skill 内。\n- 读法 B：「不 push」字面意思，那 skill 的第二件事就不是「开 PR」而是「备好 PR 正文，交给人去开」。\n\n**我按 A 往下写**，因为「开 PR」是你明确列的三件事之一。这是给主人的第一个决策点，动笔前要定死。\n\n## 二、判断\n\n**值得建，方向对。** 补一条你没写的理由：把模板从流程 skill 里挪出来，真正的收益不是复用（它几乎只被第 7 段点名），而是**四栏四节的逐字模板不用常驻流程 skill 的正文**——流程 skill 每次都全量进上下文，wrap-up 按需加载。这是它该独立成 skill 而不是当第 7 段一个小节的决定性理由。\n\n**路线长度：最短的那档。** 单文件 `wrap-up/SKILL.md`，不开 `references/`、不开 `templates/`、不带脚本。理由是反直觉的：四栏 + 四节的模板**必须逐字写在 SKILL.md 正文里**，不能拆进 `templates/`——拆出去要多一次 Read，而 agent 常常跳过 Read 直接凭印象复述，那正是「经常漏一栏」的成因。天花板约 150 行；超了通常是模板里混进了散文说明，砍说明、留骨架。\n\n## 三、frontmatter\n\n```yaml\n---\nname: wrap-up\ndescription: 收尾一条改动——写停靠记录（做成了/停在/下一步/等你）、开 PR（做了什么/为什么/怎么验证的/怎么回退）、把挂起物登记进 issue。改动路线第 7 段点名时使用，或用户说「收个尾 / 停靠 / 这条改动开 PR」时使用。不做本地 merge。\n---\n```\n\n三个要点：\n\n- `name` 必须和目录名一致、kebab-case。`wrap-up` 太通用，会和泛化说法抢触发——但 daily manifest 如果条目不多，通用不成问题，**保留**；等 manifest 长到会误触发再改名 `dock`。\n- `description` 是启动时唯一进上下文的部分，所以**两个触发面都要写进去**：被第 7 段点名（主路径）、被人直接喊（兜底）。\n- 不加 `allowed-tools`。「不 merge / 不 push 到 main」都走 Bash，工具白名单拦不住，**只能靠正文里的硬约束条目**，而且要写在正文最前面、用绝对措辞。description 里那句是帮调用方选对 skill 的，不是执行约束，别指望它拦人。\n\n## 四、动笔写正文之前的七件事，按这个顺序\n\n1. **定名 + 查冲突**（需查）：daily manifest 里有没有同名或语义重叠的条目，会不会被别的 skill 遮蔽。\n2. **捞真实样本**（需查，最容易被跳过的一步）：找 3–5 条过去实际写过的停靠记录和 PR 正文。模板要从**跑通过的东西**里誊出来，不是现编。同时捞**失败样本**——那些漏栏的——漏的是哪一栏，那一栏就需要最重的提示。\n3. **定住第 7 段的调用接口**（需查）：流程 skill 点名时传什么进来（issue 号？分支名？停靠记录路径？），wrap-up 保证交回什么。这个契约决定了正文要不要写「自行发现上下文」的逻辑，必须先于正文定。\n4. **定三件事的落点**（需查）：停靠记录物理写在哪、命名规则是什么；挂起物登记进哪个 issue（原始 issue 还是常驻收纳 issue）；PR 的 base 是哪条分支。这些是仓库事实，只能查，不能假设。\n5. **定「防漏栏」的机制**：这是唯一真正的设计决策。三选：(a) 散文交代「四栏写满」；(b) 可直接复制的逐字骨架，四个栏头预先写好；(c) 结尾自检清单。**选 (b)+(c)，不要 (a)**——(a) 正是现状，已经证明会漏。\n6. **先写 description，再写正文**：description 逼你把边界定死。如果写 description 时忍不住加「另外还会……」，说明范围划错了，回去改范围而不是加句子。\n7. **定验收方式**：拿一条最近的真实改动端到端跑一遍，把产出和第 2 步捞的好样本对齐着看。验收标准在动笔前定，不然写完只会自我确认。\n\n正文的章节顺序建议：硬约束 → 三件事的执行序 → 停靠记录逐字模板 → PR 正文逐字模板 → issue 登记写法 → 收尾自检。\n\n**执行序有个必须写进正文的理由**：停靠记录 → PR → issue 登记。登记必须最后，因为挂起物那条要带 PR 链接；PR 在停靠记录之后，因为 PR 正文的「做了什么」可以直接引用停靠记录的「做成了」栏，减少二次编造。\n\n## 五、下一步\n\n给我两样东西，我就能进第 2、3、4 步然后出初稿：\n\n1. 第 1 节那个 push 问题的裁定（A 还是 B）。\n2. desk 仓的路径——当前 cwd 是空的，我看不到 manifest、流程 skill 第 7 段、以及过去的停靠记录/PR 样本。\n\n另外，`skill-authoring` 这条 skill 如果确实存在于你那边，也一并指给我路径；我现在是按通用规范推的，它若有自己的约定（比如 frontmatter 额外字段、manifest 注册格式），以它为准。"
-              },
-              {
-                "name": "mentions-baseline",
-                "passed": false,
-                "weight": 1,
-                "explanation": "pattern not found in last_message",
-                "withOnly": false,
-                "scored": true
-              }
-            ]
-          },
-          {
-            "score": 0,
-            "passed": false,
             "turns": 6,
-            "costUsd": 0.2510619999999999,
-            "judgeCostUsd": 0.03156599999999993,
-            "durationSeconds": 102,
-            "startedAt": "2026-09-15T11:23:08.232Z",
+            "costUsd": 0.29503300000000005,
+            "judgeCostUsd": 0.03233400000000003,
+            "durationSeconds": 132,
+            "startedAt": "2026-09-15T11:45:38.028Z",
             "error": null,
-            "tracePath": "<home>\\AppData\\Local\\Temp\\claude-eval-j5mcOx\\out\\trace.jsonl",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-qWkFN4\\out\\trace.jsonl",
             "skippedPaidGraders": false,
             "graders": [
               {
@@ -1376,7 +1276,7 @@
                   false,
                   false
                 ],
-                "evidence": "先说一件事：这个会话里 `skill-authoring` 没有注册（可用 skill 列表里没有它，cwd 也是空的，仓外目录我读不到）。所以我没法照着它的原文走，只能按它一贯的那套做法给判断。下面的东西如果和你手上的 `skill-authoring` 正文有出入，以正文为准。\n\n## 三行结论的回执\n\n1｜同意。\"有规则没载体\"判得准，而且失败形态是**漏栏**不是**写错**——这决定了正文要写成可抄的模板块，不是散文式的规则。\n2｜同意，不补充。\n3｜同意方向，改一处：**别让它自触发为主**。`wrap-up` 这个词太通用，挂进 daily manifest 后会跟各种\"收个尾\"\"弄完了\"抢触发位。主路径就是第 7 段点名，description 里的自触发只当兜底。名字本身我建议保留 `wrap-up`——前提是 daily manifest 里其它 skill 也是这种平白动词；靠 description 去做消歧，不靠名字。\n\n## 路线多长\n\n最短的那条：**单个 `SKILL.md`，不要 `references/`，不要 `scripts/`，正文 80–150 行。**\n\n理由：三件事共用同一批素材（这条改动的 diff、分支、issue 号），是流程里的同一个时刻，不是三条 skill；而且总内容量塞不满一个文件，拆出 references 只会多一次跳转。唯一可能日后长出附件的是第三件事——如果\"登记进 issue\"要用到 desk 仓特定的 issue 模板/标签/字段，那块迟早会变成一个 reference 或一小段脚本。现在先内联，等它真的长过 30 行再拆。\n\n## frontmatter 怎么写\n\n```yaml\n---\nname: wrap-up\ndescription: 收尾一条改动——写四栏停靠记录（做成了 / 停在 / 下一步 / 等你）、开四节 PR（做了什么 / 为什么 / 怎么验证的 / 怎么回退）、把挂起物登记进 issue。改动路线第 7 段由流程 skill 点名调用，也可在用户说\"收尾\"\"停这儿\"\"交接\"时使用。不做本地 merge。\n---\n```\n\n几个点：\n\n- **只要 `name` 和 `description` 两个键。** 别加 `allowed-tools`——想靠它挡住 merge/push 会失败（开 PR 本来就要走 `gh`/`git`，粒度切不开），约束写在正文的\"不做什么\"里更诚实。\n- description 里把**四栏和四节的字面词都列进去**。它是唯一常驻上下文的部分，列出来等于给了一次免费的完整性提醒，哪怕正文还没加载。\n- 末句的\"不做本地 merge\"是负向边界，值得占这点篇幅：它是主人明确定下的红线，放在 description 里比埋进正文安全。\n- 别在 description 里写\"当你需要一个高质量的收尾流程时\"这类自夸句，占位不干活。\n\n## 动笔写正文之前，按这个顺序做五件事\n\n1. **捞 2–3 条真实的失败样本。** 去 desk 仓翻最近几条已经收过尾的改动，把当时的停靠记录和 PR 正文抠出来，标出到底漏了哪一栏、哪一节。这一步定的是模板里每栏的**提示语**该怎么写——漏\"等你\"和漏\"怎么回退\"要下的药不一样。没有样本就开写，写出来的是你脑补的规范，不是这个仓的规范。\n2. **查重与占位。** 确认 daily manifest 里没有别的 skill 已经沾了写 PR 或写交接记录这件事；同时确认 `wrap-up` 这个名字没被占。有重叠就先决定是合并还是划界，别并存。\n3. **划死边界，写成一份\"不做什么\"清单。** 不本地 merge、不 push（见下面那个待定问题）、不改代码、不补测试、不自己决定要不要合。这份清单先于正文存在，因为它是 agent 最容易越界的地方。\n4. **先把 description 那一行定稿。** 定完拿它做一次判定演练：给自己三个场景——「第 7 段点名」「用户说'今天先到这儿'」「用户说'把这个 PR 合了'」——看这行字能不能让第三个场景**不**触发。过不了就改字，别靠正文补救。\n5. **把两个模板块逐字写出来（还不是写正文）。** 四栏停靠记录一块、四节 PR 正文一块，写成可以整段复制的骨架，每栏/每节配一行说明\"这里填什么、填到什么粒度\"。正文的其余部分是围着这两块骨架长出来的：前面一小段\"先收集哪些素材\"，后面一小段\"贴出去之前对着数四栏四节\"。\n\n做完这五步再动笔，正文基本是把上面的东西串起来，半小时的事。\n\n## 有一个问题得先定，否则正文写不准\n\n**\"开 PR\"和\"不 push\"是冲突的。** `gh pr create` 要求分支已经在远端；分支没推上去就开不了 PR。所以\"不 push\"实际是下面三种之一：\n\n- (a) 第 7 段之前某一段已经把分支推上去了，wrap-up 只管开 PR；\n- (b) wrap-up 可以推**当前特性分支**，只是不许推 main、不许 force-push；\n- (c) 不开远端 PR，只在本地写 PR 正文草稿等人去贴。\n\n我按 **(b)** 往下设计，因为它最贴合\"不做本地 merge、不 push\"这句话的用意（守的是 main，不是守 git 本身），而且能让这条 skill 真的自己跑完。如果你要的是 (a) 或 (c)，第 3 步那份\"不做什么\"清单和正文里开 PR 那段都要重写——所以这个先答。\n\n## 下一步\n\n你确认 (b)（或者告诉我是 (a)/(c)），我就开始上面的第 1 步：去 desk 仓捞真实的停靠记录和 PR 样本，把漏栏的实际分布拉出来。捞完我把样本证据和两个模板块的初稿给你看一遍，你点头之后再建文件写正文。"
+                "evidence": "`skill-authoring` 这条 skill 在当前环境里不存在（列表里没有，直接调用返回 Unknown skill），cwd 也是空仓，desk 的内容我一个字都没读到。下面是按通用的 skill 写作规矩 + 你给的三行结论做的判断，不是照着那条 skill 走的——如果它在别的机器上，下次带着它再核一遍我这几条。\n\n## 判断：载体选对了\n\n这一格的空缺是\"有规则没载体\"，规则本身是固定产物（四栏 + 四节 + 一次登记），不是一次性决策。这正好是 skill 的形状。顺手排掉三个错选项：\n\n- **不是 hook。** 没有确定的触发事件，\"收尾\"是 agent 判断出来的时机，不是文件保存或命令结束。\n- **不是 subagent。** 停靠记录要写的是\"这次会话里到底做成了什么、卡在哪\"，那些信息全在主会话上下文里。丢给子 agent 等于让它重新猜一遍，四栏会漏得更厉害。\n- **不是纯 slash command。** 要被流程 skill 在第 7 段点名调用，得有 description 可匹配。\n\n## 路线长度：薄到一个文件\n\n`skills/wrap-up/SKILL.md`，**不要** references/、scripts/、templates/。目标体量 60–120 行。\n\n- **两个模板每次都要用 → 内联。** references/ 是给\"有时才需要\"或\"长到不该常驻\"的内容的。把 100% 命中的模板拆出去，只是给每次收尾加一跳读取。\n- **不写脚本。** 开 PR 就是一条 `gh pr create`。包成脚本把命令藏起来，出错时 agent 看不见发生了什么，还多一个 Windows 上的失败面。\n- **但有一个 Windows 细节必须写进正文**：PR 正文用 `--body-file` 指临时文件，不要把四节拼进命令行。四节带换行和引号，在 Windows shell 上拼字符串会炸——这是\"薄\"不该省的那一句。\n- 超过两屏就说明在写作文指南了，那部分砍掉。这条 skill 的价值是**栏目不漏**，不是教怎么写得好。\n\nmanifest 那边就是 daily 的 skill 列表加一行，不影响路线长度。\n\n## frontmatter\n\n```yaml\n---\nname: wrap-up\ndescription: 收尾一条改动：写四栏停靠记录（做成了 / 停在 / 下一步 / 等你）、开 PR（做了什么 / 为什么 / 怎么验证的 / 怎么回退）、把挂起物登记进 issue。改动路线第 7 段点名时使用，或用户说\"收尾\"\"停靠\"\"开 PR 收口\"时使用。只写记录和 PR，不做本地 merge。\n---\n```\n\n几个决定的理由：\n\n- **栏目名字面写进 description。** description 是唯一常驻上下文的部分，也就是唯一的触发器。如果只写\"收尾一条改动\"，它会跟\"完成\"\"结束\"这类满地都是的词抢匹配；把八个栏目名写进去，匹配就落在具体产物上。\n- **`name` 必须等于目录名**，kebab-case。另外提醒一句：`wrap-up` 偏通用，如果 desk 里已经有别的收口类 skill，建议加限定（比如 `desk-wrap-up`）。你写了\"暂定\"，我不替你改。\n- **不加 `allowed-tools`。** 它能挡工具，挡不住\"哪一条 bash 命令\"，拿它兜\"不 merge 不 push\"是假保险。真约束写进正文的「不做」清单 + 权限设置。而且一旦写了就得把 gh / Read / Write / Edit 列全，漏一个就卡在收尾这一步——收尾卡住比多给一个工具糟得多。\n\n## 动笔写正文前，按这个顺序做五件事\n\n顺序是有讲究的，每一步的产出是下一步的输入，颠倒了就得返工。\n\n1. **逐字读流程 skill 第 7 段。** 它怎么称呼这一格，决定 description 里的触发词和 skill 名。先写正文再发现名字对不上，触发器要重写。\n2. **翻出最近 3 条真实的停靠记录和 PR。** 这步价值最高。你要解的是\"经常漏栏\"，那就得知道**实际漏的是哪几栏、为什么漏**。我赌是「等你」和「怎么回退」——这两栏都要求承认某件事没做完，所以最容易被写成\"无\"。但这是我的猜测，得用真实样本证伪。跳过这步，正文就是凭想象写的。\n3. **把两个模板定死成可复制的字面块，各配一个真实例子。** 模板是交付物，散文是脚手架。逐栏规定：什么算填了、什么不算（比如「等你」必须是一句带待定选项的、指向主人的请求，\"无\"不合法）。\n4. **想清楚退化情形。** 真没有挂起物时「等你」写什么？没有对应 issue 可登记怎么办？改动小到不值得开 PR 呢？上一次的「下一步」这次没做，记在哪？**今天的漏栏很可能就出在这几种情形上**——规则没覆盖，agent 只能现想。\n5. **划清与邻格的边界，写成一份「不做」清单。** 不本地 merge、不跑测试（那是上一格的事）、不判断活儿算不算干完。\n\n然后才写正文，写完**回过头重写 description**——照着正文实际做了什么写，不是照着计划写。\n\n## 一个卡住的地方，得你定\n\n「开 PR」和「不 push」有冲突：`gh pr create` 要求 head 分支已经在远端，否则 gh 会当场问要不要推。两种读法：\n\n- **A**：第 7 段之前分支已经推上去了，wrap-up 只管开 PR。\n- **B**：「不 push」指的是不推主干，wrap-up 可以推自己的话题分支。\n\n**我按 A 写**（更保守，且跟\"不做本地 merge\"是一路的），但这直接决定正文里那几行命令，你确认一下。\n\n## 下一步\n\n下个会话开工，先做上面第 1、2 步——读第 7 段原文，捞 3 条真实记录和 PR，把**实际漏的栏目**摆出来给你看。确认漏栏模式之后再动笔，顺便把 push 那个问题回了。"
               },
               {
                 "name": "evidence-first",
@@ -1390,7 +1290,107 @@
                   false,
                   false
                 ],
-                "evidence": "先说一件事：这个会话里 `skill-authoring` 没有注册（可用 skill 列表里没有它，cwd 也是空的，仓外目录我读不到）。所以我没法照着它的原文走，只能按它一贯的那套做法给判断。下面的东西如果和你手上的 `skill-authoring` 正文有出入，以正文为准。\n\n## 三行结论的回执\n\n1｜同意。\"有规则没载体\"判得准，而且失败形态是**漏栏**不是**写错**——这决定了正文要写成可抄的模板块，不是散文式的规则。\n2｜同意，不补充。\n3｜同意方向，改一处：**别让它自触发为主**。`wrap-up` 这个词太通用，挂进 daily manifest 后会跟各种\"收个尾\"\"弄完了\"抢触发位。主路径就是第 7 段点名，description 里的自触发只当兜底。名字本身我建议保留 `wrap-up`——前提是 daily manifest 里其它 skill 也是这种平白动词；靠 description 去做消歧，不靠名字。\n\n## 路线多长\n\n最短的那条：**单个 `SKILL.md`，不要 `references/`，不要 `scripts/`，正文 80–150 行。**\n\n理由：三件事共用同一批素材（这条改动的 diff、分支、issue 号），是流程里的同一个时刻，不是三条 skill；而且总内容量塞不满一个文件，拆出 references 只会多一次跳转。唯一可能日后长出附件的是第三件事——如果\"登记进 issue\"要用到 desk 仓特定的 issue 模板/标签/字段，那块迟早会变成一个 reference 或一小段脚本。现在先内联，等它真的长过 30 行再拆。\n\n## frontmatter 怎么写\n\n```yaml\n---\nname: wrap-up\ndescription: 收尾一条改动——写四栏停靠记录（做成了 / 停在 / 下一步 / 等你）、开四节 PR（做了什么 / 为什么 / 怎么验证的 / 怎么回退）、把挂起物登记进 issue。改动路线第 7 段由流程 skill 点名调用，也可在用户说\"收尾\"\"停这儿\"\"交接\"时使用。不做本地 merge。\n---\n```\n\n几个点：\n\n- **只要 `name` 和 `description` 两个键。** 别加 `allowed-tools`——想靠它挡住 merge/push 会失败（开 PR 本来就要走 `gh`/`git`，粒度切不开），约束写在正文的\"不做什么\"里更诚实。\n- description 里把**四栏和四节的字面词都列进去**。它是唯一常驻上下文的部分，列出来等于给了一次免费的完整性提醒，哪怕正文还没加载。\n- 末句的\"不做本地 merge\"是负向边界，值得占这点篇幅：它是主人明确定下的红线，放在 description 里比埋进正文安全。\n- 别在 description 里写\"当你需要一个高质量的收尾流程时\"这类自夸句，占位不干活。\n\n## 动笔写正文之前，按这个顺序做五件事\n\n1. **捞 2–3 条真实的失败样本。** 去 desk 仓翻最近几条已经收过尾的改动，把当时的停靠记录和 PR 正文抠出来，标出到底漏了哪一栏、哪一节。这一步定的是模板里每栏的**提示语**该怎么写——漏\"等你\"和漏\"怎么回退\"要下的药不一样。没有样本就开写，写出来的是你脑补的规范，不是这个仓的规范。\n2. **查重与占位。** 确认 daily manifest 里没有别的 skill 已经沾了写 PR 或写交接记录这件事；同时确认 `wrap-up` 这个名字没被占。有重叠就先决定是合并还是划界，别并存。\n3. **划死边界，写成一份\"不做什么\"清单。** 不本地 merge、不 push（见下面那个待定问题）、不改代码、不补测试、不自己决定要不要合。这份清单先于正文存在，因为它是 agent 最容易越界的地方。\n4. **先把 description 那一行定稿。** 定完拿它做一次判定演练：给自己三个场景——「第 7 段点名」「用户说'今天先到这儿'」「用户说'把这个 PR 合了'」——看这行字能不能让第三个场景**不**触发。过不了就改字，别靠正文补救。\n5. **把两个模板块逐字写出来（还不是写正文）。** 四栏停靠记录一块、四节 PR 正文一块，写成可以整段复制的骨架，每栏/每节配一行说明\"这里填什么、填到什么粒度\"。正文的其余部分是围着这两块骨架长出来的：前面一小段\"先收集哪些素材\"，后面一小段\"贴出去之前对着数四栏四节\"。\n\n做完这五步再动笔，正文基本是把上面的东西串起来，半小时的事。\n\n## 有一个问题得先定，否则正文写不准\n\n**\"开 PR\"和\"不 push\"是冲突的。** `gh pr create` 要求分支已经在远端；分支没推上去就开不了 PR。所以\"不 push\"实际是下面三种之一：\n\n- (a) 第 7 段之前某一段已经把分支推上去了，wrap-up 只管开 PR；\n- (b) wrap-up 可以推**当前特性分支**，只是不许推 main、不许 force-push；\n- (c) 不开远端 PR，只在本地写 PR 正文草稿等人去贴。\n\n我按 **(b)** 往下设计，因为它最贴合\"不做本地 merge、不 push\"这句话的用意（守的是 main，不是守 git 本身），而且能让这条 skill 真的自己跑完。如果你要的是 (a) 或 (c)，第 3 步那份\"不做什么\"清单和正文里开 PR 那段都要重写——所以这个先答。\n\n## 下一步\n\n你确认 (b)（或者告诉我是 (a)/(c)），我就开始上面的第 1 步：去 desk 仓捞真实的停靠记录和 PR 样本，把漏栏的实际分布拉出来。捞完我把样本证据和两个模板块的初稿给你看一遍，你点头之后再建文件写正文。"
+                "evidence": "`skill-authoring` 这条 skill 在当前环境里不存在（列表里没有，直接调用返回 Unknown skill），cwd 也是空仓，desk 的内容我一个字都没读到。下面是按通用的 skill 写作规矩 + 你给的三行结论做的判断，不是照着那条 skill 走的——如果它在别的机器上，下次带着它再核一遍我这几条。\n\n## 判断：载体选对了\n\n这一格的空缺是\"有规则没载体\"，规则本身是固定产物（四栏 + 四节 + 一次登记），不是一次性决策。这正好是 skill 的形状。顺手排掉三个错选项：\n\n- **不是 hook。** 没有确定的触发事件，\"收尾\"是 agent 判断出来的时机，不是文件保存或命令结束。\n- **不是 subagent。** 停靠记录要写的是\"这次会话里到底做成了什么、卡在哪\"，那些信息全在主会话上下文里。丢给子 agent 等于让它重新猜一遍，四栏会漏得更厉害。\n- **不是纯 slash command。** 要被流程 skill 在第 7 段点名调用，得有 description 可匹配。\n\n## 路线长度：薄到一个文件\n\n`skills/wrap-up/SKILL.md`，**不要** references/、scripts/、templates/。目标体量 60–120 行。\n\n- **两个模板每次都要用 → 内联。** references/ 是给\"有时才需要\"或\"长到不该常驻\"的内容的。把 100% 命中的模板拆出去，只是给每次收尾加一跳读取。\n- **不写脚本。** 开 PR 就是一条 `gh pr create`。包成脚本把命令藏起来，出错时 agent 看不见发生了什么，还多一个 Windows 上的失败面。\n- **但有一个 Windows 细节必须写进正文**：PR 正文用 `--body-file` 指临时文件，不要把四节拼进命令行。四节带换行和引号，在 Windows shell 上拼字符串会炸——这是\"薄\"不该省的那一句。\n- 超过两屏就说明在写作文指南了，那部分砍掉。这条 skill 的价值是**栏目不漏**，不是教怎么写得好。\n\nmanifest 那边就是 daily 的 skill 列表加一行，不影响路线长度。\n\n## frontmatter\n\n```yaml\n---\nname: wrap-up\ndescription: 收尾一条改动：写四栏停靠记录（做成了 / 停在 / 下一步 / 等你）、开 PR（做了什么 / 为什么 / 怎么验证的 / 怎么回退）、把挂起物登记进 issue。改动路线第 7 段点名时使用，或用户说\"收尾\"\"停靠\"\"开 PR 收口\"时使用。只写记录和 PR，不做本地 merge。\n---\n```\n\n几个决定的理由：\n\n- **栏目名字面写进 description。** description 是唯一常驻上下文的部分，也就是唯一的触发器。如果只写\"收尾一条改动\"，它会跟\"完成\"\"结束\"这类满地都是的词抢匹配；把八个栏目名写进去，匹配就落在具体产物上。\n- **`name` 必须等于目录名**，kebab-case。另外提醒一句：`wrap-up` 偏通用，如果 desk 里已经有别的收口类 skill，建议加限定（比如 `desk-wrap-up`）。你写了\"暂定\"，我不替你改。\n- **不加 `allowed-tools`。** 它能挡工具，挡不住\"哪一条 bash 命令\"，拿它兜\"不 merge 不 push\"是假保险。真约束写进正文的「不做」清单 + 权限设置。而且一旦写了就得把 gh / Read / Write / Edit 列全，漏一个就卡在收尾这一步——收尾卡住比多给一个工具糟得多。\n\n## 动笔写正文前，按这个顺序做五件事\n\n顺序是有讲究的，每一步的产出是下一步的输入，颠倒了就得返工。\n\n1. **逐字读流程 skill 第 7 段。** 它怎么称呼这一格，决定 description 里的触发词和 skill 名。先写正文再发现名字对不上，触发器要重写。\n2. **翻出最近 3 条真实的停靠记录和 PR。** 这步价值最高。你要解的是\"经常漏栏\"，那就得知道**实际漏的是哪几栏、为什么漏**。我赌是「等你」和「怎么回退」——这两栏都要求承认某件事没做完，所以最容易被写成\"无\"。但这是我的猜测，得用真实样本证伪。跳过这步，正文就是凭想象写的。\n3. **把两个模板定死成可复制的字面块，各配一个真实例子。** 模板是交付物，散文是脚手架。逐栏规定：什么算填了、什么不算（比如「等你」必须是一句带待定选项的、指向主人的请求，\"无\"不合法）。\n4. **想清楚退化情形。** 真没有挂起物时「等你」写什么？没有对应 issue 可登记怎么办？改动小到不值得开 PR 呢？上一次的「下一步」这次没做，记在哪？**今天的漏栏很可能就出在这几种情形上**——规则没覆盖，agent 只能现想。\n5. **划清与邻格的边界，写成一份「不做」清单。** 不本地 merge、不跑测试（那是上一格的事）、不判断活儿算不算干完。\n\n然后才写正文，写完**回过头重写 description**——照着正文实际做了什么写，不是照着计划写。\n\n## 一个卡住的地方，得你定\n\n「开 PR」和「不 push」有冲突：`gh pr create` 要求 head 分支已经在远端，否则 gh 会当场问要不要推。两种读法：\n\n- **A**：第 7 段之前分支已经推上去了，wrap-up 只管开 PR。\n- **B**：「不 push」指的是不推主干，wrap-up 可以推自己的话题分支。\n\n**我按 A 写**（更保守，且跟\"不做本地 merge\"是一路的），但这直接决定正文里那几行命令，你确认一下。\n\n## 下一步\n\n下个会话开工，先做上面第 1、2 步——读第 7 段原文，捞 3 条真实记录和 PR，把**实际漏的栏目**摆出来给你看。确认漏栏模式之后再动笔，顺便把 push 那个问题回了。"
+              },
+              {
+                "name": "mentions-baseline",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 8,
+            "costUsd": 0.33536000000000016,
+            "judgeCostUsd": 0.057260000000000144,
+            "durationSeconds": 127,
+            "startedAt": "2026-09-15T11:46:25.257Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-lOpbjK\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "classification",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "两件环境事实先说，因为它们影响这条回答的成色：\n\n- **`skill-authoring` 在这个会话里加载不到**（`Skill: Unknown skill`）。可用列表里只有 `workflow-authoring`,没有 `skill-authoring`——这大概正是「Superpowers 在 Windows 全部关」的直接后果。所以下面不是照着那条 skill 的条文走的,是按通用 SKILL.md 规范 + 你这条 issue 走的。等它能加载了,frontmatter 那段要拿它的原文复核一遍。\n- **工作目录是空的**,没有 desk 仓内容。manifest 长什么样、流程 skill 第 7 段怎么点名、停靠记录落在哪个路径,我都没看见。下面凡涉及这些的地方我都标了假设。\n\n## 判断\n\n**方向我同意,不重开。** 薄 skill + 装 manifest + 流程 skill 点名,对这个问题是对路的:四栏四节漏栏不是判断力问题,是「没有逐字模板可抄」,那就该用一块能抄的文本去堵,而不是用更长的原则。\n\n**一处真矛盾,必须现在摊开:「开 PR」和「不 push」不能同时成立。** `gh pr create` 要求 head 分支已经在 remote 上;本地分支没推过,gh 只会停下来问你推不推。所以「不 push」必须收窄。我的默认假设是:**不推 main、不 force、不碰别人的分支;推自己当前这条 feature 分支是开 PR 的必要前提,允许且只允许这一次**。如果你的原意是「连自己分支也不推」,那第 7 段就不能包含开 PR,只能产出 PR 正文草稿落到本地文件——这是两条不同的 skill,你定。\n\n**路线:最短那条。** 单文件 `wrap-up/SKILL.md`,不要 `references/`、不要 `scripts/`、不要 `assets/`。三个动作都是「填模板 + 调一次 gh」,没有任何需要分层按需加载的长参考;正文压在 100 行以内,其中一多半是三块逐字模板。任何想往里加「收尾的哲学」的冲动都按住——它会稀释模板,而模板是这条 skill 唯一的产品。\n\n## frontmatter 怎么写\n\n```yaml\n---\nname: wrap-up\ndescription: 一条改动做完后的收尾。写停靠记录(做成了/停在/下一步/等你)、开 PR(做了什么/为什么/怎么验证的/怎么回退)、把挂起物登记进 issue。改动路线第 7 段点名时使用,用户说\"收尾\"\"停靠\"\"今天到这\"\"开个 PR\"时也使用。不做本地 merge。\nallowed-tools: Read, Write, Edit, Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(gh pr create:*), Bash(gh issue comment:*)\n---\n```\n\n几条硬规矩和理由:\n\n- `name` 必须和目录名逐字相同,只能 `[a-z0-9-]`。`wrap-up` 没问题,保留。\n- `description` 是**唯一常驻上下文**的部分,正文只在被调用时才加载。所以它要同时干三件事:说清做什么、说清什么时候用(把中文触发词写进去,因为除了流程 skill 点名,你本人也会手喊)、把边界写进去。「不做本地 merge」放这里而不是只放正文,是因为误用发生在「决定要不要调用」的那一刻,那时正文还没加载。\n- 第三人称、陈述句,别写「你应该」。别在 description 里塞四栏四节的填写说明——那是正文的活。\n- `allowed-tools` 是这条 skill 里最值钱的一行:它把「不 merge / 不乱推」从正文里的一句祈使句变成机器边界。注意上面这份白名单里**没有** `Bash(git push:*)` 和 `git merge`——这正是上面那个矛盾的落点,等你定完边界再决定加不加 `Bash(git push:*)`。另:你那边的 skill loader 是否认 `allowed-tools`,我没法在这个空目录里验,装之前确认一下。\n\n## 动笔写正文之前,按这个顺序\n\n每一步的产出是下一步的输入,顺序不能换。\n\n1. **取样本,连反例一起取。** 去 desk 仓翻最近 3 条已收尾的改动,拿全:3 份停靠记录、3 个 PR 正文、3 条挂起物登记。再单独找 1 条**漏了栏**的。没有样本就别写模板——现在凭空写出来的四栏只是我脑子里的四栏,不是你仓里在用的那四栏。\n2. **把四栏四节冻结成字面文本。** 从样本里定死:栏目标题的确切字样(是「做成了」还是「已完成」)、先后顺序、以及**空栏怎么写**。这一条是治漏栏的关键:「等你」经常是空的,规矩必须是 `等你:无`,而不是「没内容就删掉这栏」。绝大多数漏栏就是从「这栏空着,删了吧」开始的。\n3. **定三个落点。** 停靠记录写到哪个路径、什么命名规则;PR 开成 draft 还是普通、base 是哪条分支;挂起物登记进**哪条 issue**——是一条固定的 backlog issue,还是当前改动对应的那条?issue 原文没说,这是我要问你的第一个问题。\n4. **定执行次序和失败处理。** 建议 停靠记录 → PR → 挂起物:PR 正文可以直接从停靠记录改写,挂起物登记时又要引用 PR 链接,这个序把重复劳动降到最低。失败处理一条就够:gh 没登录或没网时,把 PR 正文和 issue 评论**落成本地文件并明确报告**,不许静默跳过——静默跳过会让第 7 段看起来跑完了,其实什么都没登记。\n5. **确认边界的执行方式。** 就是前面那个 push 边界,落成 `allowed-tools` 白名单的最终一行。\n6. **写验收用例。** 拿第 1 步里那条漏栏的改动当输入,跑一遍新 skill,看四栏四节是否齐。这是唯一能证明它解决了原问题的检查。\n\n做完 1–5 才动笔。正文结构也就定下来了:三个小节,每节一块**整段代码块形式的逐字模板**(让 agent 复制填空,这比散文描述难漏栏一个数量级),末尾一张自检清单——四栏四节逐条打勾,要求在输出前核对。不写原则,只写要填的字。\n\n## 下一步\n\n给我两个答案 + 一次授权,我就能起草 `SKILL.md`:\n\n1. 挂起物登记进哪条 issue——固定 backlog,还是当前改动那条?\n2. 「不 push」的准确边界——推自己的 feature 分支算不算越线?(不答我就按「算数、只推自己分支」做。)\n3. desk 仓的路径,或者那 3 条已收尾改动 + 1 条漏栏改动的具体位置。这个会话我只在空目录里,读不到任何现成约定。\n\n按你说的,这一轮我没建任何文件。"
+              },
+              {
+                "name": "evidence-first",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "两件环境事实先说，因为它们影响这条回答的成色：\n\n- **`skill-authoring` 在这个会话里加载不到**（`Skill: Unknown skill`）。可用列表里只有 `workflow-authoring`,没有 `skill-authoring`——这大概正是「Superpowers 在 Windows 全部关」的直接后果。所以下面不是照着那条 skill 的条文走的,是按通用 SKILL.md 规范 + 你这条 issue 走的。等它能加载了,frontmatter 那段要拿它的原文复核一遍。\n- **工作目录是空的**,没有 desk 仓内容。manifest 长什么样、流程 skill 第 7 段怎么点名、停靠记录落在哪个路径,我都没看见。下面凡涉及这些的地方我都标了假设。\n\n## 判断\n\n**方向我同意,不重开。** 薄 skill + 装 manifest + 流程 skill 点名,对这个问题是对路的:四栏四节漏栏不是判断力问题,是「没有逐字模板可抄」,那就该用一块能抄的文本去堵,而不是用更长的原则。\n\n**一处真矛盾,必须现在摊开:「开 PR」和「不 push」不能同时成立。** `gh pr create` 要求 head 分支已经在 remote 上;本地分支没推过,gh 只会停下来问你推不推。所以「不 push」必须收窄。我的默认假设是:**不推 main、不 force、不碰别人的分支;推自己当前这条 feature 分支是开 PR 的必要前提,允许且只允许这一次**。如果你的原意是「连自己分支也不推」,那第 7 段就不能包含开 PR,只能产出 PR 正文草稿落到本地文件——这是两条不同的 skill,你定。\n\n**路线:最短那条。** 单文件 `wrap-up/SKILL.md`,不要 `references/`、不要 `scripts/`、不要 `assets/`。三个动作都是「填模板 + 调一次 gh」,没有任何需要分层按需加载的长参考;正文压在 100 行以内,其中一多半是三块逐字模板。任何想往里加「收尾的哲学」的冲动都按住——它会稀释模板,而模板是这条 skill 唯一的产品。\n\n## frontmatter 怎么写\n\n```yaml\n---\nname: wrap-up\ndescription: 一条改动做完后的收尾。写停靠记录(做成了/停在/下一步/等你)、开 PR(做了什么/为什么/怎么验证的/怎么回退)、把挂起物登记进 issue。改动路线第 7 段点名时使用,用户说\"收尾\"\"停靠\"\"今天到这\"\"开个 PR\"时也使用。不做本地 merge。\nallowed-tools: Read, Write, Edit, Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(gh pr create:*), Bash(gh issue comment:*)\n---\n```\n\n几条硬规矩和理由:\n\n- `name` 必须和目录名逐字相同,只能 `[a-z0-9-]`。`wrap-up` 没问题,保留。\n- `description` 是**唯一常驻上下文**的部分,正文只在被调用时才加载。所以它要同时干三件事:说清做什么、说清什么时候用(把中文触发词写进去,因为除了流程 skill 点名,你本人也会手喊)、把边界写进去。「不做本地 merge」放这里而不是只放正文,是因为误用发生在「决定要不要调用」的那一刻,那时正文还没加载。\n- 第三人称、陈述句,别写「你应该」。别在 description 里塞四栏四节的填写说明——那是正文的活。\n- `allowed-tools` 是这条 skill 里最值钱的一行:它把「不 merge / 不乱推」从正文里的一句祈使句变成机器边界。注意上面这份白名单里**没有** `Bash(git push:*)` 和 `git merge`——这正是上面那个矛盾的落点,等你定完边界再决定加不加 `Bash(git push:*)`。另:你那边的 skill loader 是否认 `allowed-tools`,我没法在这个空目录里验,装之前确认一下。\n\n## 动笔写正文之前,按这个顺序\n\n每一步的产出是下一步的输入,顺序不能换。\n\n1. **取样本,连反例一起取。** 去 desk 仓翻最近 3 条已收尾的改动,拿全:3 份停靠记录、3 个 PR 正文、3 条挂起物登记。再单独找 1 条**漏了栏**的。没有样本就别写模板——现在凭空写出来的四栏只是我脑子里的四栏,不是你仓里在用的那四栏。\n2. **把四栏四节冻结成字面文本。** 从样本里定死:栏目标题的确切字样(是「做成了」还是「已完成」)、先后顺序、以及**空栏怎么写**。这一条是治漏栏的关键:「等你」经常是空的,规矩必须是 `等你:无`,而不是「没内容就删掉这栏」。绝大多数漏栏就是从「这栏空着,删了吧」开始的。\n3. **定三个落点。** 停靠记录写到哪个路径、什么命名规则;PR 开成 draft 还是普通、base 是哪条分支;挂起物登记进**哪条 issue**——是一条固定的 backlog issue,还是当前改动对应的那条?issue 原文没说,这是我要问你的第一个问题。\n4. **定执行次序和失败处理。** 建议 停靠记录 → PR → 挂起物:PR 正文可以直接从停靠记录改写,挂起物登记时又要引用 PR 链接,这个序把重复劳动降到最低。失败处理一条就够:gh 没登录或没网时,把 PR 正文和 issue 评论**落成本地文件并明确报告**,不许静默跳过——静默跳过会让第 7 段看起来跑完了,其实什么都没登记。\n5. **确认边界的执行方式。** 就是前面那个 push 边界,落成 `allowed-tools` 白名单的最终一行。\n6. **写验收用例。** 拿第 1 步里那条漏栏的改动当输入,跑一遍新 skill,看四栏四节是否齐。这是唯一能证明它解决了原问题的检查。\n\n做完 1–5 才动笔。正文结构也就定下来了:三个小节,每节一块**整段代码块形式的逐字模板**(让 agent 复制填空,这比散文描述难漏栏一个数量级),末尾一张自检清单——四栏四节逐条打勾,要求在输出前核对。不写原则,只写要填的字。\n\n## 下一步\n\n给我两个答案 + 一次授权,我就能起草 `SKILL.md`:\n\n1. 挂起物登记进哪条 issue——固定 backlog,还是当前改动那条?\n2. 「不 push」的准确边界——推自己的 feature 分支算不算越线?(不答我就按「算数、只推自己分支」做。)\n3. desk 仓的路径,或者那 3 条已收尾改动 + 1 条漏栏改动的具体位置。这个会话我只在空目录里,读不到任何现成约定。\n\n按你说的,这一轮我没建任何文件。"
+              },
+              {
+                "name": "mentions-baseline",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.2657830000000001,
+            "judgeCostUsd": 0.05595200000000011,
+            "durationSeconds": 101,
+            "startedAt": "2026-09-15T11:46:50.867Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-e5z8Jn\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "classification",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说一件事：这个会话里 `skill-authoring` 我没能加载——它不在可用 skill 列表里，工作目录下也没有（cwd 基本是空的，desk 仓不在这台机器上）。所以下面是按通用 skill 写法给的判断，**不是**按你们那份 house doc 校对过的。真动手前第 1 步就是去读它，凡跟它冲突的以它为准。\n\n## 该判的\n\n**一条 skill，不是三条。** 三件事共享同一份状态：停靠记录的四栏是源，PR 四节从它派生，「等你」那栏的内容就是登记进 issue 的挂起物。拆开会让同一份事实抄三遍、漂三次。\n\n**路线走最短的：单个 `SKILL.md`,不带 `references/`、不带 `scripts/`。** 目标 100 行以内。理由是失效模式——「四栏四节经常漏一栏」——是清单问题，不是知识问题。多写正文只会让人跳读，反而更容易漏。四栏四节的模板体量很小，内联成代码块就够，不值得开 references。\n\n**不设 `allowed-tools`。** 要写文件、要跑 `gh`、要评论 issue，收窄只会把它卡死。\n\n**名字保留 `wrap-up`。** 它由流程 skill 在第 7 段点名调用，名字对齐流程格位比对齐产物（`docking-record` / `handoff`）更重要。\n\n**顺序写死：记录 → PR → issue。** 反过来先开 PR，停靠记录就退化成事后总结，必漂。\n\n**全篇最值钱的一行是这句，必须进正文**：四栏四节是固定的，缺内容写「无」，不许省掉那一栏。空栏是信息，缺栏是 bug。再配一段结尾自检（四栏齐否／四节齐否／issue 评论回链了 PR 否／确认没 push）。这两处直接打你说的那个病。\n\n「不做本地 merge、不 push」写进正文当硬禁令。\n\n## frontmatter\n\n```yaml\n---\nname: wrap-up\ndescription: 收尾一条改动：写四栏停靠记录、开四节 PR、把挂起物登记进 issue。用在改动路线第 7 段，或用户说「收尾」「停靠」「开 PR 交接」「登记挂起」时。只开 PR，不做本地 merge、不 push。\n---\n```\n\n要点：`name` 必须是 kebab-case ASCII、跟目录名一致；`description` 是唯一的分派依据，所以要同时装下「做什么」和「什么时候用」，把触发词原样塞进去。末尾那句否定范围是故意的——防止它被「帮我合了」这类请求误选中。语言跟仓里其它 skill 保持一致（我猜是中文，待核）。\n\n## 动笔前，按这个顺序\n\n1. **读 `skill-authoring` 和 daily manifest 的登记格式**，再打开一条同仓 sibling skill 看它的 frontmatter 长什么样。没看过邻居之前不要写 frontmatter——manifest 可能还要求额外字段。\n2. **翻 3–5 条最近改动的真实收尾**：实际写过的停靠记录、实际提过的 PR 正文。模板要从写过的东西里逆推，不能凭空造。重点看**哪一栏被漏掉、为什么被漏**——那个位置就是模板里需要加一句追问的地方。\n3. **把四栏、四节的措辞定死成逐字字符串，找主人确认。** 这是阻塞项，推不出来。这些字面量以后要被人和 agent 双向匹配，一个字都不能飘。\n4. **补掉 issue 里没说的那块：挂起物登记到哪儿。** 同一条改动的 issue？一条常设 issue？还是新开？评论用什么格式？现在是空的。\n5. **在 Windows 上验机制**：`gh` 在不在、认证没认证；用 `gh pr create --body-file`（UTF-8 文件）而不是 `--body` 内联，省掉 bash-on-Windows 的引号地狱；确认 PR 的 base 分支约定。\n6. **找到流程 skill 里点名第 7 段的那一行，看它原话怎么叫它**——调用点的措辞反过来决定你 name 和 description 怎么写。\n7. 然后才写正文。\n\n还有一条：第一版别对着空气写，挑一条你正要落地的真改动、边收尾边写，那一次就是它的测试。\n\n## 下一步\n\n做第 2、3 步：把最近几条收尾捞出来，然后把四栏和四节的**逐字措辞**摆到主人面前要一个 yes/no。这是唯一挡在正文前面的东西，第 4 步（挂起物登记去处）可以顺手一起问掉。其余几步不阻塞，等我能读到 desk 仓和 `skill-authoring` 就能自己推进。"
+              },
+              {
+                "name": "evidence-first",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说一件事：这个会话里 `skill-authoring` 我没能加载——它不在可用 skill 列表里，工作目录下也没有（cwd 基本是空的，desk 仓不在这台机器上）。所以下面是按通用 skill 写法给的判断，**不是**按你们那份 house doc 校对过的。真动手前第 1 步就是去读它，凡跟它冲突的以它为准。\n\n## 该判的\n\n**一条 skill，不是三条。** 三件事共享同一份状态：停靠记录的四栏是源，PR 四节从它派生，「等你」那栏的内容就是登记进 issue 的挂起物。拆开会让同一份事实抄三遍、漂三次。\n\n**路线走最短的：单个 `SKILL.md`,不带 `references/`、不带 `scripts/`。** 目标 100 行以内。理由是失效模式——「四栏四节经常漏一栏」——是清单问题，不是知识问题。多写正文只会让人跳读，反而更容易漏。四栏四节的模板体量很小，内联成代码块就够，不值得开 references。\n\n**不设 `allowed-tools`。** 要写文件、要跑 `gh`、要评论 issue，收窄只会把它卡死。\n\n**名字保留 `wrap-up`。** 它由流程 skill 在第 7 段点名调用，名字对齐流程格位比对齐产物（`docking-record` / `handoff`）更重要。\n\n**顺序写死：记录 → PR → issue。** 反过来先开 PR，停靠记录就退化成事后总结，必漂。\n\n**全篇最值钱的一行是这句，必须进正文**：四栏四节是固定的，缺内容写「无」，不许省掉那一栏。空栏是信息，缺栏是 bug。再配一段结尾自检（四栏齐否／四节齐否／issue 评论回链了 PR 否／确认没 push）。这两处直接打你说的那个病。\n\n「不做本地 merge、不 push」写进正文当硬禁令。\n\n## frontmatter\n\n```yaml\n---\nname: wrap-up\ndescription: 收尾一条改动：写四栏停靠记录、开四节 PR、把挂起物登记进 issue。用在改动路线第 7 段，或用户说「收尾」「停靠」「开 PR 交接」「登记挂起」时。只开 PR，不做本地 merge、不 push。\n---\n```\n\n要点：`name` 必须是 kebab-case ASCII、跟目录名一致；`description` 是唯一的分派依据，所以要同时装下「做什么」和「什么时候用」，把触发词原样塞进去。末尾那句否定范围是故意的——防止它被「帮我合了」这类请求误选中。语言跟仓里其它 skill 保持一致（我猜是中文，待核）。\n\n## 动笔前，按这个顺序\n\n1. **读 `skill-authoring` 和 daily manifest 的登记格式**，再打开一条同仓 sibling skill 看它的 frontmatter 长什么样。没看过邻居之前不要写 frontmatter——manifest 可能还要求额外字段。\n2. **翻 3–5 条最近改动的真实收尾**：实际写过的停靠记录、实际提过的 PR 正文。模板要从写过的东西里逆推，不能凭空造。重点看**哪一栏被漏掉、为什么被漏**——那个位置就是模板里需要加一句追问的地方。\n3. **把四栏、四节的措辞定死成逐字字符串，找主人确认。** 这是阻塞项，推不出来。这些字面量以后要被人和 agent 双向匹配，一个字都不能飘。\n4. **补掉 issue 里没说的那块：挂起物登记到哪儿。** 同一条改动的 issue？一条常设 issue？还是新开？评论用什么格式？现在是空的。\n5. **在 Windows 上验机制**：`gh` 在不在、认证没认证；用 `gh pr create --body-file`（UTF-8 文件）而不是 `--body` 内联，省掉 bash-on-Windows 的引号地狱；确认 PR 的 base 分支约定。\n6. **找到流程 skill 里点名第 7 段的那一行，看它原话怎么叫它**——调用点的措辞反过来决定你 name 和 description 怎么写。\n7. 然后才写正文。\n\n还有一条：第一版别对着空气写，挑一条你正要落地的真改动、边收尾边写，那一次就是它的测试。\n\n## 下一步\n\n做第 2、3 步：把最近几条收尾捞出来，然后把四栏和四节的**逐字措辞**摆到主人面前要一个 yes/no。这是唯一挡在正文前面的东西，第 4 步（挂起物登记去处）可以顺手一起问掉。其余几步不阻塞，等我能读到 desk 仓和 `skill-authoring` 就能自己推进。"
               },
               {
                 "name": "mentions-baseline",
@@ -1418,6 +1418,6 @@
     "casesPassed": 5,
     "overallScore": 1,
     "overallPassRate": 1,
-    "meanDelta": 0.8
+    "meanDelta": 0.8444444444444444
   }
 }

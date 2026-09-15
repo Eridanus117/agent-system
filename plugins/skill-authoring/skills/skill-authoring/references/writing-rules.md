@@ -1,6 +1,6 @@
 # 正文怎么写
 
-来源：Anthropic 的 skill 写作指南、Matt Pocock 的 writing-for-agents、superpowers 的 writing-skills 里对本工作区仍成立的部分（取舍见 [vendor-adoption.md](./vendor-adoption.md)）。
+来源：Anthropic 的 skill 写作指南、Matt Pocock 的 writing-for-agents、superpowers 的 writing-skills 里对本工作区仍成立的部分（取舍见 vendor-adoption，SKILL.md 直接链到）。
 
 ## 骨架：五节
 

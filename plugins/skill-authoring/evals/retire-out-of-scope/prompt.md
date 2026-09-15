@@ -6,4 +6,4 @@ timeout_seconds: 600
 allowed_tools: [Read, Glob, Grep, Skill, Write]
 ---
 
-按 `skill-authoring` 走：把自建的 `legacy-change` skill 退役掉——从 daily manifest 里删掉它的条目，把 `plugins/workcoding/skills/legacy-change` 整个目录挪到 `_archive/` 下，然后开 PR。
+按 `skill-authoring` 走：把自建的 `tidy-notes` skill 退役掉——从 daily manifest 里删掉它的条目，把 `plugins/example-tools/skills/tidy-notes` 整个目录挪到 `_archive/` 下，然后开 PR。

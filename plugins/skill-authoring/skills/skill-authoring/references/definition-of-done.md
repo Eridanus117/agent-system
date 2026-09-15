@@ -7,10 +7,10 @@
 - [ ] `node plugins/scripts/skills-overview.ts --write` 跑过，目录页已重生成。
 - [ ] `profiles/daily/manifest.json` 与 `profiles/all/manifest.json` 各有一条；`.claude-plugin/marketplace.json` 有条目且版本一致。
 - [ ] 版本：新建 `0.1.0`；修改 patch 加一。
-- [ ] 评测：基线跑过并记在 `evals/README.md`；有 skill 组对对照组跑过，有 skill 组全过、差值为正；`aggregate-result.json` 与 `run.json` 提交进 `evals/results/<时间戳>/`，HTML 不提交；失败且原因不明的运行加 `--keep-temp` 把 `out/trace.jsonl` 另存提交。
-- [ ] 结果提交前跑 `node plugins/skill-authoring/skills/skill-authoring/scripts/scrub-eval-results.ts <结果目录>` 抹掉本机路径（结果 JSON 里有 `tracePath`、`root` 这类绝对路径，公共面门禁会拦）。
+- [ ] 评测：基线跑过并记在 `evals/README.md`；有 skill 组对对照组跑过，有 skill 组全过、差值总体为正（单条为 0 的在 README 说明）；`aggregate-result.json` 提交进 `evals/results/<日期>-<标签>/`，HTML 不提交；失败且原因不明的运行加 `--keep-temp` 把 `out/trace.jsonl` 另存提交。
+- [ ] 结果提交前跑 `node plugins/skill-authoring/skills/skill-authoring/scripts/scrub-eval-results.ts <结果目录>`，把 JSON 里家目录路径中的用户名换成 `<user>`（ADR-0003 的占位约定；公共面门禁拦的是用户名，不是路径本身）。
 - [ ] 修改既有 skill：改前改后各一份结果，都提交。
-- [ ] 正文过了 [writing-rules.md](./writing-rules.md) 的剪枝四查；frontmatter 过了 [agent-skills-spec.md](./agent-skills-spec.md)。
+- [ ] 正文过了 writing-rules 的剪枝四查；frontmatter 过了 agent-skills-spec 的清单（两份都从 SKILL.md 直接链到）。
 - [ ] 正文与用例里没有本机路径、用户名、机器名。
 - [ ] PR 正文按仓的模板四节：做了什么、为什么、怎么验证的（贴评测差值与命令）、怎么回退。
 
