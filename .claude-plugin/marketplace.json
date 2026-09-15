@@ -50,6 +50,11 @@
       "name": "note",
       "version": "0.1.0",
       "source": "./plugins/note"
+    },
+    {
+      "name": "skill-authoring",
+      "version": "0.1.0",
+      "source": "./plugins/skill-authoring"
     }
   ]
 }

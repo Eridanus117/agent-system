@@ -71,6 +71,10 @@
     {
       "name": "workcoding",
       "target": "plugins/workcoding/skills/workcoding"
+    },
+    {
+      "name": "skill-authoring",
+      "target": "plugins/skill-authoring/skills/skill-authoring"
     }
   ]
 }

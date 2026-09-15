@@ -267,6 +267,10 @@
     {
       "name": "find-skills",
       "target": "vendor/vercel-skills/skills/find-skills"
+    },
+    {
+      "name": "skill-authoring",
+      "target": "plugins/skill-authoring/skills/skill-authoring"
     }
   ]
 }
