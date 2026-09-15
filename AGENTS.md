@@ -57,6 +57,10 @@ Issue 与 spec 记在本仓的 GitHub Issues，用 `gh` CLI 操作。见 [`docs/
 沿用五个规范角色名 `needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` / `wontfix`。
 与既有的中文「类型/领域」标签正交：那套答「这是什么」，这五个答「现在轮到谁」，同一个 issue 可以同时挂两套。见 [`docs/agents/triage-labels.md`](./docs/agents/triage-labels.md)。
 
+### Skill authoring
+
+写一条自建 skill 或改既有自建 skill，用 `skill-authoring`（`plugins/skill-authoring`）：判是不是路由 skill、手动还是自动调用，先写评测用例跑基线再动笔，出口是 PR 加上线待办。退役不在它的范围。
+
 ### Domain docs
 
 多 context：仓根 `CONTEXT-MAP.md` 指向每个包各自的 `CONTEXT.md`；跨包决定沿用既有的 `docs/adr/`（MADR，2026-09-04 裁定）。

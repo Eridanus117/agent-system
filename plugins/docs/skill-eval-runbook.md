@@ -1,5 +1,7 @@
 # Skill 行为评测跑法
 
+> 2026-09-14 起，新写的自建 skill 用 `claude plugin eval` 跑评测（用例形、沙箱、对照组都由它提供），跑法见 `plugins/skill-authoring`。本文描述的 `omp -p` 跑法与 `evals.json` 形态只对既有 skill 继续适用，下次改到那条 skill 时再迁。
+
 适用于所有带 `evals/evals.json` 的 Skill。`tools/skill_eval/skill-eval.ts` 是**判分器**（`validateDocument` / `validateRunDocument` / `summarizeMode`），**它不执行 agent**——真跑得自己调 agent 走一遍，再把结果喂回打分。
 
 ## 跑法（2026-09-02 改：隔离 HOME + 全量日志）

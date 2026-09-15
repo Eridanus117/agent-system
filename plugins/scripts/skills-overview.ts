@@ -1,7 +1,8 @@
 // skill 仓储的目录页生成器（2026-09-02 旧治理退库后的精简版）。
 // 运行：node plugins/scripts/skills-overview.ts --write
 // 全部内容从 plugins/<plugin>/skills/<skill>/SKILL.md 与 plugin.json 推出：
-// 名称、所属 plugin 与版本、description、L2 体积（SKILL.md 字节数）、有无 evals。
+// 名称、所属 plugin 与版本、description、L2 体积（SKILL.md 字节数）、有无 evals
+// （skill 旁的 evals/evals.json，或插件级 evals/ 下的 claude plugin eval 用例，二者任一算有）。
 // 没有任何手写字段，所以它不可能与来源漂移；tests/skills.test.ts 逐字节比对它。
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -11,6 +12,16 @@ const pluginsRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path: string): string => readFileSync(path, 'utf8').replace(/^﻿/u, '').replace(/\r\n/gu, '\n');
 const dirs = (path: string): string[] =>
   readdirSync(path).filter((entry) => statSync(join(path, entry)).isDirectory());
+
+/**
+ * 插件级 evals/ 里是否有 claude plugin eval 用例（evals/<case>/prompt.md 或 case.yaml）。
+ * 插件级用例属于整个插件，所以该插件下每条 skill 的 evals 列都记「有」。
+ */
+function hasPluginEvals(pluginDir: string): boolean {
+  const root = join(pluginDir, 'evals');
+  if (!existsSync(root)) return false;
+  return dirs(root).some((entry) => existsSync(join(root, entry, 'prompt.md')) || existsSync(join(root, entry, 'case.yaml')));
+}
 
 type Row = { skill: string; plugin: string; version: string; description: string; l2Bytes: number; evals: boolean };
 
@@ -49,7 +60,7 @@ function collect(): Row[] {
         version,
         description,
         l2Bytes: Buffer.byteLength(body, 'utf8'),
-        evals: existsSync(join(skillsRoot, skill, 'evals', 'evals.json')),
+        evals: existsSync(join(skillsRoot, skill, 'evals', 'evals.json')) || hasPluginEvals(join(pluginsRoot, plugin)),
       });
     }
   }
@@ -63,7 +74,7 @@ export function renderSkillsOverview(): string {
     '',
     '# Skill 目录页',
     '',
-    '一个 skill 一个目录：`plugins/<plugin>/skills/<skill>/SKILL.md`，旁边可放 `evals/evals.json`。装配用 `sk`（源码 `packages/sk`；profile 的 manifest.json 是声明，junction 是投影）。',
+    '一个 skill 一个目录：`plugins/<plugin>/skills/<skill>/SKILL.md`，旁边可放 `evals/evals.json`；插件级 `evals/` 下的 `claude plugin eval` 用例也算有 evals。装配用 `sk`（源码 `packages/sk`；profile 的 manifest.json 是声明，junction 是投影）。',
     '',
     `共 ${rows.length} 个 Skill，${new Set(rows.map((r) => r.plugin)).size} 个 Plugin。`,
     '',

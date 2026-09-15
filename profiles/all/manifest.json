@@ -61,6 +61,10 @@
       "target": "plugins/skill-appraisal/skills/skill-appraisal"
     },
     {
+      "name": "skill-authoring",
+      "target": "plugins/skill-authoring/skills/skill-authoring"
+    },
+    {
       "name": "skill-maintenance",
       "target": "plugins/skill-maintenance/skills/skill-maintenance"
     },

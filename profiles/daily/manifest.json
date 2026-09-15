@@ -45,6 +45,10 @@
       "target": "plugins/workcoding/skills/workcoding"
     },
     {
+      "name": "skill-authoring",
+      "target": "plugins/skill-authoring/skills/skill-authoring"
+    },
+    {
       "name": "ask-matt",
       "target": "vendor/mattpocock/skills/ask-matt"
     },

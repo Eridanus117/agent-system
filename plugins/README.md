@@ -33,7 +33,7 @@
 以下发布记录保留迁移前编号以便仓库维护者溯源；其中私有链接对公共协作者不可用，只是可选历史来源。当前行为、贡献要求和验收必须在本仓公开内容中自足表达。
 `adaptive-problem-solving` `0.2.14` 随 2026-09-01 负责人裁定的 bmad 整组退库清理引用：description 与方法登记面 INDEX 的「与装配内其他 Skill 的分界」表不再列 bmad-* 执行流程承载者（仅保留 `grilling`），失效条款同步；行为合同与方法卡内容不变。
 
-仓库目前包含九个可安装 Plugin：`self-improvement` `0.1.7`、`skill-maintenance` `0.1.1`、`knowledge-maintenance` `0.1.3`、`orchestrated-collaboration` `0.2.7`、`adaptive-problem-solving` `0.2.14`、`skill-appraisal` `0.2.0`、`clarify` `0.1.0`、`note` `0.1.0`、`workcoding` `0.1.0`（含 8 个规程 Skill）。Matt 的 25 个 promoted Skill 与 Superpowers 的 14 个 Skill 由 daily profile 从 `vendor/` 固定来源装配，不属于本仓 Plugin 目录。以 `docs/skills-overview.md`（自动生成）为准。
+仓库目前包含十个可安装 Plugin：`self-improvement` `0.1.7`、`skill-maintenance` `0.1.1`、`knowledge-maintenance` `0.1.3`、`orchestrated-collaboration` `0.2.7`、`adaptive-problem-solving` `0.2.14`、`skill-appraisal` `0.2.0`、`clarify` `0.1.0`、`note` `0.1.0`、`workcoding` `0.1.0`（含 8 个规程 Skill）、`skill-authoring` `0.1.0`。Matt 的 25 个 promoted Skill 与 Superpowers 的 14 个 Skill 由 daily profile 从 `vendor/` 固定来源装配，不属于本仓 Plugin 目录。以 `docs/skills-overview.md`（自动生成）为准。
 
 **2026-09-02 负责人裁定退库两组**：`github-collaboration`（六个 Skill）与 `resource-observability`。理由见下方「已退库」。此前写进符合性门禁的「GitHub 协作 Plugin 必须作为可发布资产保留」一条同时作废，已从 `plugins/tests/workflow-routing.test.ts` 移除。
 

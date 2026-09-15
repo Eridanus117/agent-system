@@ -18,7 +18,7 @@
 
 目标权威结构固定为：
 
-1. `openspec/specs/`：已生效的产品需求与 capability 规范（纯 Markdown 记录，见下方退役说明）；
+1. `openspec/specs/`：已生效的产品需求与 capability 规范（纯 Markdown 记录，见下方退役说明；其中 `agent-skill-design` 已于 2026-09-14 经负责人裁定删除，由 `plugins/skill-authoring` 与 ADR-0004 取代，归档副本仍在 `openspec/changes/archive/`）；
 2. 仓内版本化文档、入口和合同：架构、操作边界、失败语义与维护规则；
 3. `openspec/changes/`：已归档的交付证据（纯 Markdown 记录，不再有 Change 生命周期）；
 4. ~~`_bmad-output/`：迁移输入和历史证据，完成覆盖核验后退役~~ —— **2026-09-02 已整体删除**，覆盖核验永不发生（理由见上方推翻说明）。权威结构现为上述三层。
