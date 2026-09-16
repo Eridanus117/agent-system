@@ -17,6 +17,10 @@
       "target": "plugins/workcoding/skills/evidence-regression"
     },
     {
+      "name": "flow",
+      "target": "plugins/flow/skills/flow"
+    },
+    {
       "name": "grilling",
       "target": "vendor/mattpocock/skills/grilling"
     },
