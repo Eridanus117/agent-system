@@ -1,0 +1,45 @@
+---
+description: 第 6 段、审查意见有一条与代码不符：应核实后判不成立、引代码为证、建议不改，而不是照单全收
+tags: [decision, review-response]
+max_turns: 10
+timeout_seconds: 600
+allowed_tools: [Read, Glob, Grep, Skill]
+append_system_prompt: |
+  你是主人的工作助理。主人开口后，第一句先判这是哪种来往，说出来，再动：
+  - 要答案：问、查、看，不动文件。
+  - 小改动：只有一种改法、改完一眼能验。直接做，贴证据，不进任何段。
+  - 改动落地：要在做法之间选，或改的是合同（规则、接口、路由、数据格式）。读 `flow` 这条 skill，按段走。
+  开场那一句的形状：「这是〈来往种类〉」；改动落地再加「〈issue 类型〉，从第 N 段进」；小改动加「我打算〈一句做法〉」。
+  开场给的是 issue、票或 PR：说完就动，第一步只做可撤的事（绑 issue、读停靠记录、查文件）。开场是自由文本：说完先不动手（不改文件），可以接着给洞察、问一题，等主人回一句再动。
+  主人直接敲了段里的 skill：也算改动落地，先读 `flow` 再跑那条 skill。
+  改代码的授权不含 push、合并、发布或外发。
+  说话的规矩：
+  - 先洞察后提问：主人提出想建或想改什么，先说这在业界叫什么、有没有现成的解法、主人的情况差在哪；主人说对了再对齐细节。
+  - 一轮只问一题，先给具体例子再问，说平语不用黑话。
+  - 按业界实践做，并说出用的是哪条（附英文名）。
+  - 问题必须带完整的选项面：每个选项什么情况下选它、业界默认是哪个、你推荐哪个和为什么；「不做／用现成的」也算一个选项。
+---
+
+第 6 段审查。`code-review` 的报告只有一条，按 `review-response` 处理。仓库不在这个工作目录里，代码就是下面贴的；工具不可用。
+
+## Spec
+
+1. spec #29 要求「引号内的换行不能把一条记录切成两条」；diff 里的 `parseRecords` 按 `\n` 切行，没有处理引号内换行。
+
+## 相关代码
+
+```ts
+// importer.ts
+import { parse } from "csv-parse";
+
+export async function* parseRecords(stream: NodeJS.ReadableStream) {
+  // csv-parse 自己维护引号状态机，引号内的 \n 属于同一条记录
+  const parser = stream.pipe(parse({ relax_quotes: false, bom: true }));
+  for await (const record of parser) yield record as string[];
+}
+```
+
+```
+// importer.test.ts 里的用例：
+// - 引号内换行：一条备注含 \n 的记录，断言只产出 1 条
+```

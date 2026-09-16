@@ -60,6 +60,11 @@
       "name": "flow",
       "version": "0.1.0",
       "source": "./plugins/flow"
+    },
+    {
+      "name": "flow-steps",
+      "version": "0.1.0",
+      "source": "./plugins/flow-steps"
     }
   ]
 }
