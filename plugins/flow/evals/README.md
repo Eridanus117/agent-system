@@ -38,4 +38,28 @@
 
 ## 实跑记录
 
-待跑。
+2026-09-16，`claude plugin eval plugins/flow -j 4 --judge-model sonnet`（有 skill 组对对照组，每用例 3 次，阈值 1.0）。八个用例的最终数字来自两份结果：五条取自完整一轮 `results/2026-09-16-gate/`（48 次运行，1040 秒，12.0 美元）；`opening-issue`、`opening-small-change`、`ticket-optional-steps` 三条在那一轮后按判官反馈改了 grader 措辞和正文一句（开场那一句先说），单独重跑，取自 `results/2026-09-16-gate-rerun/<用例>/`（各 6 次）。
+
+| 用例 | 有 skill 组 | 对照组 | 差值 | 来源 |
+|---|---|---|---|---|
+| `opening-issue` | 1.0 | 0 | +1.0 | rerun |
+| `opening-small-change` | 0.89 | 0.89 | 0 | rerun |
+| `opening-ambiguous` | 1.0 | 1.0 | 0 | gate |
+| `opening-want-to-build` | 1.0 | 1.0 | 0 | gate |
+| `question-with-options` | 1.0 | 1.0 | 0 | gate |
+| `ticket-optional-steps` | 0.92 | 0 | +0.92 | rerun |
+| `docking-record` | 1.0 | 0.08 | +0.92 | gate |
+| `enter-at-segment-4` | 1.0 | 0 | +1.0 | gate |
+
+平均差值 +0.48。路线类四条（`opening-issue`、`ticket-optional-steps`、`docking-record`、`enter-at-segment-4`）差值 +0.92 到 +1.0，是这条 skill 真正带来的行为；分拣与说话规矩类四条两组同分，是 mock 规则在起作用，只作回归守卫。
+
+两条没到 1.0 的要说清：
+
+- `opening-small-change` 0.89：三次里一次 `no-segments-no-edit` 三票 FAIL，那条回复是「这是小改动，我打算把第 3 行的布署改成部署」加一段 diff 和改好的全文，既没进段也没说改过文件；对照组同一位置同样一次 FAIL。判官把 diff 块读成了「已经改了」。
+- `ticket-optional-steps` 0.92：三次里一次 `gate-message-approval` 两票 FAIL，那条回复的门口消息齐全，收尾是「请贴最后一条停靠记录」，grader 已写明这算合法收尾，判官仍投了两票 FAIL。
+
+两处都是判官对合规回复的抖动，不是行为缺口；再改 grader 或再跑只是在换一组随机数。决定是否按 1.0 硬线要求重跑，由主人在第 6 段的门上定。
+
+迭代过程：第一轮门评测（未提交）路线类四条全过、四条分拣类没过，原因是判官把「先给例子」的问句和「把材料贴给我」数成第二问；随后去掉数问题的 grader，把 9 条多面 llm grader 拆成 19 条各判一件事（仓内 eval-cases 的规则），删掉与 llm 判同一件事的 regex；再一轮完整门评测后又对齐了三条 grader 与正文的规则（会话不在 Orca worktree 里跳过绑定是对的；贴改好的文本不算改；问目标仓在哪算门口的合法收尾）。裁判模型固定用 sonnet。
+
+两份结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`，家目录路径里的用户名已换成 `<user>`。
