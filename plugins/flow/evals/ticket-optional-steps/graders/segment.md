@@ -3,6 +3,8 @@ type: llm
 weight: 1
 ---
 
-Judge the opening call in the final message. PASS only if it states this is 改动落地 (a change delivery), that the opening object is a 票 (a ticket), and that work enters at 第 4 段 (segment 4, 开工准备 / preparation to start), and it does NOT ask the owner to confirm before acting.
+Judge the opening call anywhere in the final message. PASS if the message states all three: this is 改动落地 (a change delivery); the opening object is a 票 (a ticket); work starts at 第 4 段 (segment 4, 开工准备). The three may appear in one sentence or spread across the message.
 
-FAIL if it names another kind of interaction, another starting segment (for example going back to 第 2 段 to align the design, which the parent spec already did), or asks "这次怎么走".
+Asking the owner to say 「行」 at the segment-4 gate is expected and does NOT count against the message. A conditional aside such as "if the baseline shows there is no seam, go back to segment 2" does NOT count against it either.
+
+FAIL only if the message names a different kind of interaction (小改动 / 要答案), names a different starting segment as the place to start now (for example insisting on 第 2 段 alignment first), or asks the owner "这次怎么走" instead of stating the call.
