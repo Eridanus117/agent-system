@@ -21,7 +21,17 @@
 
 ## 基线观察（对照组，不装 skill）
 
-待跑。
+取自 `results/2026-09-16-baseline/`（SKILL.md 占位，每用例 1 次，两组，被测模型 sonnet）。没有这四条 skill 时 agent 实际是这样做的：
+
+- `worktree-baseline-open`、`worktree-baseline-existing`：对照组找不到 `flow` 与 skill 就停下，问主人「这一步该做什么」，不开工作树、不跑基线、不给门口那条消息；已有工作树那条同样不判断。
+- `verify-evidence-rewrite`：对照组会把「应该没问题」改成「未验证」，但测试那条只写「12 pass / 0 fail」，没有命令与退出码的固定三样。
+- `verify-evidence-no-run`：两组都拒绝写「通过」并标未验证——sonnet 本来就会，只作回归守卫。
+- `review-response-report`：对照组直接动手给出重写后的代码，还顺带把第二条「一并解决」，没有逐条核实清单，也没有等主人定。
+- `review-response-wrong-finding`：两组都判出误报并引代码为证——只作回归守卫。
+- `wrap-up-pr-body`：对照组写的 PR 正文是自己的节（背景、改动、测试证据、审查意见处理），停靠记录也是自创字段，不是四节与四栏。
+- `wrap-up-no-push`：对照组不 push（工具不可用），但不知道收尾要产出什么，反问主人。
+
+真缺口：工作树的开法与门口消息、证据的三样、审查的「逐条核实后整份报主人」、收尾的四节与四栏和那一句问法。正文只针对这四处写。
 
 ## 实跑记录
 
