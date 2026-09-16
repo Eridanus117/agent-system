@@ -10,7 +10,7 @@
 |---|---|---|---|---|---|
 | `adaptive-problem-solving` | adaptive-problem-solving | 0.2.14 | 9389 | 无 | 用于问题含糊、关键路径选择、波次／里程碑反思、高成本或难回退动作、范围／成本变化、停滞、恢复／交接／验收／长期收口，或检查方向、方法、ROI、模型、上下文、工具、环境与 Agent 组合。恢复原问题和主瓶颈，比较普通路径与方法后组合、换路或… |
 | `clarify` | clarify | 0.1.0 | 4241 | 有 | 主人冒出「想建 X／要不要搞一个／这个流程好烦」一类念头时，把「解」翻回「问题」，判断该不该做；只产出三行结论。不建则建一条 issue 写理由后以 wontfix 关闭，建则挂机会 issue。Turn an itch phrased a… |
-| `flow` | flow | 0.1.0 | 411 | 有 | 判为改动落地、或主人开场直接敲了段里的 skill 时读：改动落地的路线——九段的门与产物、每段点名的步、可选步、会话绑定、停靠记录。The route for a change delivery: nine segments with t… |
+| `flow` | flow | 0.1.0 | 10828 | 有 | 判为改动落地、或主人开场直接敲了段里的 skill 时读：改动落地的路线——九段的门与产物、每段点名的步、可选步、会话绑定、停靠记录。The route for a change delivery: nine segments with t… |
 | `knowledge-maintenance` | knowledge-maintenance | 0.1.3 | 6488 | 无 | 用于多来源调研、可重复实验、会影响权威／Agent 配置／重要决定的研究，或用户要求复用、复核、更新当前知识时：先找已认可知识和失效条件，只补变化、冲突与缺口，再经价值门和可信门更新。不用于低成本一次性事实、原始材料／研发过程留存、私域结构… |
 | `note` | note | 0.1.0 | 2696 | 无 | 把成熟结论沉淀进本地 Markdown 知识库，或找回以前记过的结论。当用户说「沉淀到知识库」「记到 KB」「/note」「以前记过」「找回笔记」时使用。 |
 | `orchestrated-collaboration` | orchestrated-collaboration | 0.2.7 | 21795 | 无 | 当用户明确要求多 Agent／多 Session／跨 Provider 协作、任务已授权委派，或活动 Session 发生共享写入碰撞时，建立目标来源、排他所有权、可追踪交付、独立验收与综合；按共享资源和 Issue 子树确定唯一协调者，只… |
