@@ -55,6 +55,11 @@
       "name": "skill-authoring",
       "version": "0.1.0",
       "source": "./plugins/skill-authoring"
+    },
+    {
+      "name": "flow",
+      "version": "0.1.0",
+      "source": "./plugins/flow"
     }
   ]
 }

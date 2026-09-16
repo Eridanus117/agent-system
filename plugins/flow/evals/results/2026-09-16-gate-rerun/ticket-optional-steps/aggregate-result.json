@@ -1,0 +1,456 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.273",
+  "startedAt": "2026-09-16T21:28:50.198Z",
+  "durationSeconds": 156,
+  "costUsd": 1.4462574999999998,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\desk142-flow-skill\\plugins\\flow",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "ticket-optional-steps",
+    "threshold": 1,
+    "concurrency": 4,
+    "plugins": [
+      {
+        "name": "flow",
+        "version": "0.1.0",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\desk142-flow-skill\\plugins\\flow"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "ticket-optional-steps",
+      "dir": "evals\\ticket-optional-steps",
+      "source": "prose",
+      "promptMarkdown": "票 #31\n\n（下面是 `gh issue view 31` 的输出。仓库文件不在这个工作目录里，`importer.ts` 读不到，按票里的现状判断；`gh`、`orca`、测试命令也不可用：该做的按顺序说出来，说到停下为止。）\n\n标题：票：ledger-sync 的导入器改成流式读取\n标签：ready-for-agent\n父 issue：#29（spec：ledger-sync 大文件导入）\n\n## 要做的\n\n`importer.ts` 现在把整个 CSV 读进内存再解析，200 MB 的账单文件会 OOM。改成按行流式读取，行为不变。\n\n## 现状\n\n`importer.ts` 写于 2024 年，没有任何测试；解析逻辑里有六处对脏数据的特殊处理，没人记得为什么。\n\n## 验收\n\n同一份账单文件，改前改后导入结果逐字节一致；200 MB 文件不 OOM。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 12,
+      "graders": [
+        {
+          "name": "gate-message-approval",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Judge only the shape of the segment-4 gate message. PASS if the optional steps appear in the same message as the rest of the segment-4 preparation (a worktree with a branch, the baseline) and the message closes by telling the owner what is needed to proceed. Any of these closings counts: say 「行」; move the session to the target repository or tell the agent where that repository is (this session has no repository files); make `gh` / `orca` / the test command available or paste their output. The point is that the plan is settled in one round rather than through a chain of questions.\n\nFAIL if the message asks a separate yes/no question such as \"is this old code?\" before listing the steps, or if it starts implementing the streaming change instead of stopping at the gate.",
+          "config": {
+            "criteria": "Judge only the shape of the segment-4 gate message. PASS if the optional steps appear in the same message as the rest of the segment-4 preparation (a worktree with a branch, the baseline) and the message closes by telling the owner what is needed to proceed. Any of these closings counts: say 「行」; move the session to the target repository or tell the agent where that repository is (this session has no repository files); make `gh` / `orca` / the test command available or paste their output. The point is that the plan is settled in one round rather than through a chain of questions.\n\nFAIL if the message asks a separate yes/no question such as \"is this old code?\" before listing the steps, or if it starts implementing the streaming change instead of stopping at the gate.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "optional-steps-listed",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge only the list of optional steps (可选步). PASS if the message proposes optional steps to open for this ticket and the list includes BOTH: (a) recording the old behaviour before changing it — characterization tests / 特征化测试 / 先录旧行为 / `legacy-change`; and (b) proving the result did not change by comparing outputs byte for byte against a golden master — 母版 / 逐字节 / `evidence-regression`; and each of the two comes with a reason tied to the ticket (no tests exist; six undocumented special cases; the acceptance criterion is byte-identical output).\n\nFAIL if no optional steps are listed, if (a) or (b) is missing, or if the steps come without reasons.",
+          "config": {
+            "criteria": "Judge only the list of optional steps (可选步). PASS if the message proposes optional steps to open for this ticket and the list includes BOTH: (a) recording the old behaviour before changing it — characterization tests / 特征化测试 / 先录旧行为 / `legacy-change`; and (b) proving the result did not change by comparing outputs byte for byte against a golden master — 母版 / 逐字节 / `evidence-regression`; and each of the two comes with a reason tied to the ticket (no tests exist; six undocumented special cases; the acceptance criterion is byte-identical output).\n\nFAIL if no optional steps are listed, if (a) or (b) is missing, or if the steps come without reasons.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "segment",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Judge the opening call anywhere in the final message. PASS if the message states all three: this is 改动落地 (a change delivery); the opening object is a 票 (a ticket); work starts at 第 4 段 (segment 4, 开工准备). The three may appear in one sentence or spread across the message.\n\nAsking the owner to say 「行」 at the segment-4 gate is expected and does NOT count against the message. A conditional aside such as \"if the baseline shows there is no seam, go back to segment 2\" does NOT count against it either.\n\nFAIL only if the message names a different kind of interaction (小改动 / 要答案), names a different starting segment as the place to start now (for example insisting on 第 2 段 alignment first), or asks the owner \"这次怎么走\" instead of stating the call.",
+          "config": {
+            "criteria": "Judge the opening call anywhere in the final message. PASS if the message states all three: this is 改动落地 (a change delivery); the opening object is a 票 (a ticket); work starts at 第 4 段 (segment 4, 开工准备). The three may appear in one sentence or spread across the message.\n\nAsking the owner to say 「行」 at the segment-4 gate is expected and does NOT count against the message. A conditional aside such as \"if the baseline shows there is no seam, go back to segment 2\" does NOT count against it either.\n\nFAIL only if the message names a different kind of interaction (小改动 / 要答案), names a different starting segment as the place to start now (for example insisting on 第 2 段 alignment first), or asks the owner \"这次怎么走\" instead of stating the call.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "flow",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.2509045,
+            "judgeCostUsd": 0.057669999999999985,
+            "durationSeconds": 64,
+            "startedAt": "2026-09-16T21:28:50.226Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-WfIO4W\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "gate-message-approval",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "这是改动落地，票，从第 4 段进。\n\n**开场后的可撤动作（工具不可用，按顺序说出来，不编结果）**\n\n1. 绑定：要跑 `orca worktree show --worktree issue:31` 看 #31 有没有活着的 worktree（只按编号查，查到再核对是不是 ledger-sync 同一个仓）；没有就 `orca worktree set --worktree active --issue 31`。`orca` 不可用 → **绑定未做**，请主人代跑或授权我在能跑时补上。\n2. 最后一条停靠记录：要跑 `gh issue view 31 --comments` 找 `### 停靠` 开头的评论；ledger-sync 若是公开仓，记录在 desk 的父 issue #29 下，跑 `gh issue view 29 --comments`。`gh` 不可用 → **没读到，\"下一步\"未知**；下面按票面现状定段，主人若知道上一次停在哪，告诉我一句我就改。\n3. 起始段：票 → 第 4 段。第 1–3 段跳过，理由：#29 是 spec issue，#31 是它拆出的票，需求与方案已收口。\n4. 在哪做：第 4–8 段要在 ledger-sync 的 worktree 里做。当前会话不在目标仓（`importer.ts` 读不到），所以到第 5 段之前必须换仓——换仓前先写停靠、解绑。\n\n---\n\n这是第 4 段开工准备。门上判：要不要建 worktree、开哪些可选步。\n\n- worktree：`orca worktree create` 开 `desk31-streaming-importer`，分支从 main 出，绑 issue 31\n- 基线：跑一遍现有测试。票里写明 `importer.ts` 没有任何测试，所以基线大概率就是「没有测试」——以 worktree 里实跑的输出为准，输出贴进对话\n- 这次开的可选步（两条）：\n  - `legacy-change`：六处脏数据特殊处理先各写一条特征化测试把旧行为录下来，流式改写以萌芽方式进去。理由：旧代码 2024 年写的、零测试、六处逻辑没人记得为什么——没有录下来就没有\"行为不变\"可言\n  - `evidence-regression`：改前用现 `main` 跑一份母版导入结果，改后逐字节比；再准备一个 200 MB 的账单文件跑一次看内存。理由：验收标准就是逐字节一致加不 OOM\n  - 不开 `architecture-design`／`system-analysis`：做法只有一条（按行流式读），没有两条路要比\n- 一条风险提前说：六处特殊处理里，如果有任何一处依赖\"整份内容已在内存\"（比如回头看前面的行、或先扫全文再定分隔符／编码），按行流式就不是等价改写，那一处得单独开条子。这个要打开 `importer.ts` 才能定，第 5 段动手前第一件事就是核它。\n\n说「行」就建 worktree、录旧行为，然后进第 5 段。\n\n---\n\n停靠记录（`gh` 不可用，请主人贴到 #31 下；ledger-sync 若是公开仓，贴到 desk 的父 issue #29）：\n\n```\n### 停靠 · 2026-09-16 14:32\n做成了：判为改动落地，票 #31 → 从第 4 段进；列出 worktree、基线、可选步（legacy-change、evidence-regression）。\n停在：第 4 段门口。绑定未做（orca 不可用）、上一条停靠记录未读（gh 不可用）、仓不在手边（importer.ts 读不到）。\n下一步：主人说行 → 换到 ledger-sync 开 worktree desk31-streaming-importer 并绑 issue 31，跑基线测试，按 legacy-change 录六处脏数据处理的特征化测试。\n等你：说「行」就进第 5 段。\n```"
+              },
+              {
+                "name": "optional-steps-listed",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "这是改动落地，票，从第 4 段进。\n\n**开场后的可撤动作（工具不可用，按顺序说出来，不编结果）**\n\n1. 绑定：要跑 `orca worktree show --worktree issue:31` 看 #31 有没有活着的 worktree（只按编号查，查到再核对是不是 ledger-sync 同一个仓）；没有就 `orca worktree set --worktree active --issue 31`。`orca` 不可用 → **绑定未做**，请主人代跑或授权我在能跑时补上。\n2. 最后一条停靠记录：要跑 `gh issue view 31 --comments` 找 `### 停靠` 开头的评论；ledger-sync 若是公开仓，记录在 desk 的父 issue #29 下，跑 `gh issue view 29 --comments`。`gh` 不可用 → **没读到，\"下一步\"未知**；下面按票面现状定段，主人若知道上一次停在哪，告诉我一句我就改。\n3. 起始段：票 → 第 4 段。第 1–3 段跳过，理由：#29 是 spec issue，#31 是它拆出的票，需求与方案已收口。\n4. 在哪做：第 4–8 段要在 ledger-sync 的 worktree 里做。当前会话不在目标仓（`importer.ts` 读不到），所以到第 5 段之前必须换仓——换仓前先写停靠、解绑。\n\n---\n\n这是第 4 段开工准备。门上判：要不要建 worktree、开哪些可选步。\n\n- worktree：`orca worktree create` 开 `desk31-streaming-importer`，分支从 main 出，绑 issue 31\n- 基线：跑一遍现有测试。票里写明 `importer.ts` 没有任何测试，所以基线大概率就是「没有测试」——以 worktree 里实跑的输出为准，输出贴进对话\n- 这次开的可选步（两条）：\n  - `legacy-change`：六处脏数据特殊处理先各写一条特征化测试把旧行为录下来，流式改写以萌芽方式进去。理由：旧代码 2024 年写的、零测试、六处逻辑没人记得为什么——没有录下来就没有\"行为不变\"可言\n  - `evidence-regression`：改前用现 `main` 跑一份母版导入结果，改后逐字节比；再准备一个 200 MB 的账单文件跑一次看内存。理由：验收标准就是逐字节一致加不 OOM\n  - 不开 `architecture-design`／`system-analysis`：做法只有一条（按行流式读），没有两条路要比\n- 一条风险提前说：六处特殊处理里，如果有任何一处依赖\"整份内容已在内存\"（比如回头看前面的行、或先扫全文再定分隔符／编码），按行流式就不是等价改写，那一处得单独开条子。这个要打开 `importer.ts` 才能定，第 5 段动手前第一件事就是核它。\n\n说「行」就建 worktree、录旧行为，然后进第 5 段。\n\n---\n\n停靠记录（`gh` 不可用，请主人贴到 #31 下；ledger-sync 若是公开仓，贴到 desk 的父 issue #29）：\n\n```\n### 停靠 · 2026-09-16 14:32\n做成了：判为改动落地，票 #31 → 从第 4 段进；列出 worktree、基线、可选步（legacy-change、evidence-regression）。\n停在：第 4 段门口。绑定未做（orca 不可用）、上一条停靠记录未读（gh 不可用）、仓不在手边（importer.ts 读不到）。\n下一步：主人说行 → 换到 ledger-sync 开 worktree desk31-streaming-importer 并绑 issue 31，跑基线测试，按 legacy-change 录六处脏数据处理的特征化测试。\n等你：说「行」就进第 5 段。\n```"
+              },
+              {
+                "name": "segment",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "这是改动落地，票，从第 4 段进。\n\n**开场后的可撤动作（工具不可用，按顺序说出来，不编结果）**\n\n1. 绑定：要跑 `orca worktree show --worktree issue:31` 看 #31 有没有活着的 worktree（只按编号查，查到再核对是不是 ledger-sync 同一个仓）；没有就 `orca worktree set --worktree active --issue 31`。`orca` 不可用 → **绑定未做**，请主人代跑或授权我在能跑时补上。\n2. 最后一条停靠记录：要跑 `gh issue view 31 --comments` 找 `### 停靠` 开头的评论；ledger-sync 若是公开仓，记录在 desk 的父 issue #29 下，跑 `gh issue view 29 --comments`。`gh` 不可用 → **没读到，\"下一步\"未知**；下面按票面现状定段，主人若知道上一次停在哪，告诉我一句我就改。\n3. 起始段：票 → 第 4 段。第 1–3 段跳过，理由：#29 是 spec issue，#31 是它拆出的票，需求与方案已收口。\n4. 在哪做：第 4–8 段要在 ledger-sync 的 worktree 里做。当前会话不在目标仓（`importer.ts` 读不到），所以到第 5 段之前必须换仓——换仓前先写停靠、解绑。\n\n---\n\n这是第 4 段开工准备。门上判：要不要建 worktree、开哪些可选步。\n\n- worktree：`orca worktree create` 开 `desk31-streaming-importer`，分支从 main 出，绑 issue 31\n- 基线：跑一遍现有测试。票里写明 `importer.ts` 没有任何测试，所以基线大概率就是「没有测试」——以 worktree 里实跑的输出为准，输出贴进对话\n- 这次开的可选步（两条）：\n  - `legacy-change`：六处脏数据特殊处理先各写一条特征化测试把旧行为录下来，流式改写以萌芽方式进去。理由：旧代码 2024 年写的、零测试、六处逻辑没人记得为什么——没有录下来就没有\"行为不变\"可言\n  - `evidence-regression`：改前用现 `main` 跑一份母版导入结果，改后逐字节比；再准备一个 200 MB 的账单文件跑一次看内存。理由：验收标准就是逐字节一致加不 OOM\n  - 不开 `architecture-design`／`system-analysis`：做法只有一条（按行流式读），没有两条路要比\n- 一条风险提前说：六处特殊处理里，如果有任何一处依赖\"整份内容已在内存\"（比如回头看前面的行、或先扫全文再定分隔符／编码），按行流式就不是等价改写，那一处得单独开条子。这个要打开 `importer.ts` 才能定，第 5 段动手前第一件事就是核它。\n\n说「行」就建 worktree、录旧行为，然后进第 5 段。\n\n---\n\n停靠记录（`gh` 不可用，请主人贴到 #31 下；ledger-sync 若是公开仓，贴到 desk 的父 issue #29）：\n\n```\n### 停靠 · 2026-09-16 14:32\n做成了：判为改动落地，票 #31 → 从第 4 段进；列出 worktree、基线、可选步（legacy-change、evidence-regression）。\n停在：第 4 段门口。绑定未做（orca 不可用）、上一条停靠记录未读（gh 不可用）、仓不在手边（importer.ts 读不到）。\n下一步：主人说行 → 换到 ledger-sync 开 worktree desk31-streaming-importer 并绑 issue 31，跑基线测试，按 legacy-change 录六处脏数据处理的特征化测试。\n等你：说「行」就进第 5 段。\n```"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 0.75,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.22471000000000002,
+            "judgeCostUsd": 0.039472,
+            "durationSeconds": 59,
+            "startedAt": "2026-09-16T21:28:50.226Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-WZblz9\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "gate-message-approval",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  true
+                ],
+                "evidence": "这是改动落地，票（#31，父 spec #29），从第 4 段进。\n\n**开场的可撤动作 —— 工具不可用，只说不编：**\n\n1. 绑定（跑不了，`orca` 不可用）。该跑的两条，按顺序：\n   - `orca worktree show --worktree issue:31` —— 查 #31 有没有活着的 worktree，查到再核对是不是同一个仓；有就不再开。\n   - 没有才跑 `orca worktree set --worktree active --issue 31`。\n   - 另外：这个会话的工作目录不是 ledger-sync 仓，第 4 到 8 段要在目标仓的 worktree 里做，所以真动手前得先换仓。\n2. 最后一条停靠记录（读不到，`gh` 不可用）。该跑 `gh issue view 31 --comments`，找标题前缀 `### 停靠` 的最后一条，从它的「下一步」接着做。**读不到，所以我不知道这票是不是已经建过 worktree、录过旧行为**——这是下面唯一要主人做的事。\n3. 起始段：票 → 第 4 段。第 1 到 3 段跳过，理由：spec #29 已收口，票已拆好。\n\n---\n\n这是第 4 段开工准备。门上判：要不要建 worktree、开哪些可选步。\n\n- worktree：`desk31-streaming-importer`，分支从 main 出，在 ledger-sync 仓里建\n- 基线：现有测试一个都没有，基线就是「没有测试」；所以基线换成一份母版——改前用一份真账单跑一次导入，把结果按字节存下来\n- 这次开的可选步：\n  - `legacy-change`：`importer.ts` 写于 2024 年、零测试、六处脏数据处理没人记得为什么。先给这六处各写一条特征化测试把现行为钉住（包括看起来像 bug 的那几处），再动结构\n  - `evidence-regression`：验收要求「改前改后逐字节一致」，正好是母版比对，200 MB 那份另跑一次盯内存\n  - 不开 `architecture-design`：流式怎么读的取舍属于 spec #29 的范围，这票是行为不变的实现\n  - 不开 `integration`：改动落在一个文件的解析路径内，边界只有调用方的返回结构，特征化测试就盖住了\n\n请贴 `gh issue view 31 --comments` 里最后一条停靠记录（没有就说「没有」）——里面若写了已建 worktree 或已录旧行为，上面这份准备要改。"
+              },
+              {
+                "name": "optional-steps-listed",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "这是改动落地，票（#31，父 spec #29），从第 4 段进。\n\n**开场的可撤动作 —— 工具不可用，只说不编：**\n\n1. 绑定（跑不了，`orca` 不可用）。该跑的两条，按顺序：\n   - `orca worktree show --worktree issue:31` —— 查 #31 有没有活着的 worktree，查到再核对是不是同一个仓；有就不再开。\n   - 没有才跑 `orca worktree set --worktree active --issue 31`。\n   - 另外：这个会话的工作目录不是 ledger-sync 仓，第 4 到 8 段要在目标仓的 worktree 里做，所以真动手前得先换仓。\n2. 最后一条停靠记录（读不到，`gh` 不可用）。该跑 `gh issue view 31 --comments`，找标题前缀 `### 停靠` 的最后一条，从它的「下一步」接着做。**读不到，所以我不知道这票是不是已经建过 worktree、录过旧行为**——这是下面唯一要主人做的事。\n3. 起始段：票 → 第 4 段。第 1 到 3 段跳过，理由：spec #29 已收口，票已拆好。\n\n---\n\n这是第 4 段开工准备。门上判：要不要建 worktree、开哪些可选步。\n\n- worktree：`desk31-streaming-importer`，分支从 main 出，在 ledger-sync 仓里建\n- 基线：现有测试一个都没有，基线就是「没有测试」；所以基线换成一份母版——改前用一份真账单跑一次导入，把结果按字节存下来\n- 这次开的可选步：\n  - `legacy-change`：`importer.ts` 写于 2024 年、零测试、六处脏数据处理没人记得为什么。先给这六处各写一条特征化测试把现行为钉住（包括看起来像 bug 的那几处），再动结构\n  - `evidence-regression`：验收要求「改前改后逐字节一致」，正好是母版比对，200 MB 那份另跑一次盯内存\n  - 不开 `architecture-design`：流式怎么读的取舍属于 spec #29 的范围，这票是行为不变的实现\n  - 不开 `integration`：改动落在一个文件的解析路径内，边界只有调用方的返回结构，特征化测试就盖住了\n\n请贴 `gh issue view 31 --comments` 里最后一条停靠记录（没有就说「没有」）——里面若写了已建 worktree 或已录旧行为，上面这份准备要改。"
+              },
+              {
+                "name": "segment",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "这是改动落地，票（#31，父 spec #29），从第 4 段进。\n\n**开场的可撤动作 —— 工具不可用，只说不编：**\n\n1. 绑定（跑不了，`orca` 不可用）。该跑的两条，按顺序：\n   - `orca worktree show --worktree issue:31` —— 查 #31 有没有活着的 worktree，查到再核对是不是同一个仓；有就不再开。\n   - 没有才跑 `orca worktree set --worktree active --issue 31`。\n   - 另外：这个会话的工作目录不是 ledger-sync 仓，第 4 到 8 段要在目标仓的 worktree 里做，所以真动手前得先换仓。\n2. 最后一条停靠记录（读不到，`gh` 不可用）。该跑 `gh issue view 31 --comments`，找标题前缀 `### 停靠` 的最后一条，从它的「下一步」接着做。**读不到，所以我不知道这票是不是已经建过 worktree、录过旧行为**——这是下面唯一要主人做的事。\n3. 起始段：票 → 第 4 段。第 1 到 3 段跳过，理由：spec #29 已收口，票已拆好。\n\n---\n\n这是第 4 段开工准备。门上判：要不要建 worktree、开哪些可选步。\n\n- worktree：`desk31-streaming-importer`，分支从 main 出，在 ledger-sync 仓里建\n- 基线：现有测试一个都没有，基线就是「没有测试」；所以基线换成一份母版——改前用一份真账单跑一次导入，把结果按字节存下来\n- 这次开的可选步：\n  - `legacy-change`：`importer.ts` 写于 2024 年、零测试、六处脏数据处理没人记得为什么。先给这六处各写一条特征化测试把现行为钉住（包括看起来像 bug 的那几处），再动结构\n  - `evidence-regression`：验收要求「改前改后逐字节一致」，正好是母版比对，200 MB 那份另跑一次盯内存\n  - 不开 `architecture-design`：流式怎么读的取舍属于 spec #29 的范围，这票是行为不变的实现\n  - 不开 `integration`：改动落在一个文件的解析路径内，边界只有调用方的返回结构，特征化测试就盖住了\n\n请贴 `gh issue view 31 --comments` 里最后一条停靠记录（没有就说「没有」）——里面若写了已建 worktree 或已录旧行为，上面这份准备要改。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.25864099999999995,
+            "judgeCostUsd": 0.056257999999999975,
+            "durationSeconds": 70,
+            "startedAt": "2026-09-16T21:28:50.226Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-RewB5I\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "gate-message-approval",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "这是改动落地，票（#31，父 spec #29），从第 4 段进。\n\n**按顺序该做的，做到工具不可用为止：**\n\n1. 绑定 — `orca worktree show --worktree issue:31`，查到活着的 worktree 就提醒你、不再开；没有就 `orca worktree set --worktree active --issue 31`。**`orca` 不可用，停在这里，绑定结果拿不到。**\n2. 最后一条停靠记录 — `gh issue view 31 --comments` 找 `### 停靠`；#31 是子票、公开仓的事按规矩要看父 issue #29 下的记录。**`gh` 不可用，停在这里，「下一步」拿不到。** 下面按票面现状往下判，等你把停靠记录贴给我再核对是否有已做过的决定要复用。\n3. 起始段 — 票 → 第 4 段。第 1–3 段由父 spec #29 走完，不逼回。\n\n---\n\n这是第 4 段开工准备。门上判：要不要建 worktree、开哪些可选步。\n\n- worktree：`desk31-streaming-importer`，分支从 main 出\n- 基线：跑一遍现有测试 —— `importer.ts` 一个测试都没有，基线就是「没有测试」，所以基线不能当安全网，得先造一张\n- 可选步 `legacy-change`（特征化测试加萌芽）：六处脏数据处理没人记得为什么，先把每一处各录一条测试把旧行为钉住，再动流式改造。业界叫 characterization test（Michael Feathers，*Working Effectively with Legacy Code*）—— 不问「应该怎样」，只录「现在是怎样」，错误行为也照录\n- 可选步 `evidence-regression`（母版逐字节比）：验收要求「改前改后逐字节一致」，这就是 golden master test —— 先用改前的代码跑一份账单，落成母版，改后比字节。这两条配一起是这类改造的业界默认打法\n- 不开 `architecture-design`：流式按行读只有一条明显的路（Node `readline` 逐行喂现有解析器），不值得摆两个候选攻防；若动手时发现 CSV 里有跨行引号字段（quoted newline），逐行切分就不成立，那时回第 2 段\n- 母版样本：我打算用票里说的「同一份账单文件」——你手上那份真实账单最好；拿不到我就造一份把六处脏数据分支全覆盖的样本，并在 PR 正文里写明母版是造的、覆盖了哪几处\n\n说「行」就建 worktree、录旧行为，然后进第 5 段。\n\n---\n\n`gh` 不可用，这条停靠记录请你贴到 #31 下（时间我取不到，请填）：\n\n```\n### 停靠 · 2026-09-16 HH:MM\n做成了：判为改动落地，票 → 第 4 段；工具链（gh/orca/测试）不可用，绑定与停靠记录读取都没做成。\n停在：第 4 段门口，等主人说行。\n下一步：主人说行；agent 建 worktree desk31-streaming-importer、录六处脏数据的特征化测试、落改前母版。\n等你：说「行」进第 5 段（顺带确认母版用哪份账单文件）。\n```"
+              },
+              {
+                "name": "optional-steps-listed",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "这是改动落地，票（#31，父 spec #29），从第 4 段进。\n\n**按顺序该做的，做到工具不可用为止：**\n\n1. 绑定 — `orca worktree show --worktree issue:31`，查到活着的 worktree 就提醒你、不再开；没有就 `orca worktree set --worktree active --issue 31`。**`orca` 不可用，停在这里，绑定结果拿不到。**\n2. 最后一条停靠记录 — `gh issue view 31 --comments` 找 `### 停靠`；#31 是子票、公开仓的事按规矩要看父 issue #29 下的记录。**`gh` 不可用，停在这里，「下一步」拿不到。** 下面按票面现状往下判，等你把停靠记录贴给我再核对是否有已做过的决定要复用。\n3. 起始段 — 票 → 第 4 段。第 1–3 段由父 spec #29 走完，不逼回。\n\n---\n\n这是第 4 段开工准备。门上判：要不要建 worktree、开哪些可选步。\n\n- worktree：`desk31-streaming-importer`，分支从 main 出\n- 基线：跑一遍现有测试 —— `importer.ts` 一个测试都没有，基线就是「没有测试」，所以基线不能当安全网，得先造一张\n- 可选步 `legacy-change`（特征化测试加萌芽）：六处脏数据处理没人记得为什么，先把每一处各录一条测试把旧行为钉住，再动流式改造。业界叫 characterization test（Michael Feathers，*Working Effectively with Legacy Code*）—— 不问「应该怎样」，只录「现在是怎样」，错误行为也照录\n- 可选步 `evidence-regression`（母版逐字节比）：验收要求「改前改后逐字节一致」，这就是 golden master test —— 先用改前的代码跑一份账单，落成母版，改后比字节。这两条配一起是这类改造的业界默认打法\n- 不开 `architecture-design`：流式按行读只有一条明显的路（Node `readline` 逐行喂现有解析器），不值得摆两个候选攻防；若动手时发现 CSV 里有跨行引号字段（quoted newline），逐行切分就不成立，那时回第 2 段\n- 母版样本：我打算用票里说的「同一份账单文件」——你手上那份真实账单最好；拿不到我就造一份把六处脏数据分支全覆盖的样本，并在 PR 正文里写明母版是造的、覆盖了哪几处\n\n说「行」就建 worktree、录旧行为，然后进第 5 段。\n\n---\n\n`gh` 不可用，这条停靠记录请你贴到 #31 下（时间我取不到，请填）：\n\n```\n### 停靠 · 2026-09-16 HH:MM\n做成了：判为改动落地，票 → 第 4 段；工具链（gh/orca/测试）不可用，绑定与停靠记录读取都没做成。\n停在：第 4 段门口，等主人说行。\n下一步：主人说行；agent 建 worktree desk31-streaming-importer、录六处脏数据的特征化测试、落改前母版。\n等你：说「行」进第 5 段（顺带确认母版用哪份账单文件）。\n```"
+              },
+              {
+                "name": "segment",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "这是改动落地，票（#31，父 spec #29），从第 4 段进。\n\n**按顺序该做的，做到工具不可用为止：**\n\n1. 绑定 — `orca worktree show --worktree issue:31`，查到活着的 worktree 就提醒你、不再开；没有就 `orca worktree set --worktree active --issue 31`。**`orca` 不可用，停在这里，绑定结果拿不到。**\n2. 最后一条停靠记录 — `gh issue view 31 --comments` 找 `### 停靠`；#31 是子票、公开仓的事按规矩要看父 issue #29 下的记录。**`gh` 不可用，停在这里，「下一步」拿不到。** 下面按票面现状往下判，等你把停靠记录贴给我再核对是否有已做过的决定要复用。\n3. 起始段 — 票 → 第 4 段。第 1–3 段由父 spec #29 走完，不逼回。\n\n---\n\n这是第 4 段开工准备。门上判：要不要建 worktree、开哪些可选步。\n\n- worktree：`desk31-streaming-importer`，分支从 main 出\n- 基线：跑一遍现有测试 —— `importer.ts` 一个测试都没有，基线就是「没有测试」，所以基线不能当安全网，得先造一张\n- 可选步 `legacy-change`（特征化测试加萌芽）：六处脏数据处理没人记得为什么，先把每一处各录一条测试把旧行为钉住，再动流式改造。业界叫 characterization test（Michael Feathers，*Working Effectively with Legacy Code*）—— 不问「应该怎样」，只录「现在是怎样」，错误行为也照录\n- 可选步 `evidence-regression`（母版逐字节比）：验收要求「改前改后逐字节一致」，这就是 golden master test —— 先用改前的代码跑一份账单，落成母版，改后比字节。这两条配一起是这类改造的业界默认打法\n- 不开 `architecture-design`：流式按行读只有一条明显的路（Node `readline` 逐行喂现有解析器），不值得摆两个候选攻防；若动手时发现 CSV 里有跨行引号字段（quoted newline），逐行切分就不成立，那时回第 2 段\n- 母版样本：我打算用票里说的「同一份账单文件」——你手上那份真实账单最好；拿不到我就造一份把六处脏数据分支全覆盖的样本，并在 PR 正文里写明母版是造的、覆盖了哪几处\n\n说「行」就建 worktree、录旧行为，然后进第 5 段。\n\n---\n\n`gh` 不可用，这条停靠记录请你贴到 #31 下（时间我取不到，请填）：\n\n```\n### 停靠 · 2026-09-16 HH:MM\n做成了：判为改动落地，票 → 第 4 段；工具链（gh/orca/测试）不可用，绑定与停靠记录读取都没做成。\n停在：第 4 段门口，等主人说行。\n下一步：主人说行；agent 建 worktree desk31-streaming-importer、录六处脏数据的特征化测试、落改前母版。\n等你：说「行」进第 5 段（顺带确认母版用哪份账单文件）。\n```"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.21261799999999997,
+            "judgeCostUsd": 0.044392,
+            "durationSeconds": 80,
+            "startedAt": "2026-09-16T21:28:50.226Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Cfu0J9\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "gate-message-approval",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`flow` 这条 skill 在这台机器上不存在（skill 列表里没有，工作目录和 `**/skills/**` 也搜不到）。所以我报不出\"从第 N 段进\"——段的定义在那份文件里。这是第一个停下的地方。\n\n在等你给 `flow` 的同时，先说洞察和该做的顺序。\n\n## 这类活业界叫什么\n\n票里写的\"改前改后逐字节一致\"，正是 **golden master test**（又叫 characterization test，Michael Feathers《Working Effectively with Legacy Code》里的做法）的定义：遗留代码没测试、没人记得为什么这么写，就不要先读懂它，而是先拿真实输入把**现状行为**录下来当成规格，再动结构。那六处脏数据特殊处理，就是典型的\"读代码推不出来、只能靠真实样本钉住\"的部分。\n\n你的情况和标准套路差在一处，而且这处是真风险：**全量解析改按行切，RFC 4180 的引号内换行会碎**。如果现在的实现是整串解析，它很可能天然支持字段里带换行（备注栏里的地址、多行摘要，银行账单里不少见）；换成 `readline` 按 `\\n` 切之后，这类记录会被劈成两行。附带的还有 BOM、CRLF、末行无换行符。\"行为不变\"最容易在这里破。真流式要么用 `csv-parse` 的 stream 模式（它自己处理引号状态机），要么自己写带引号状态的分块解析器——不能用 readline 裸切。\n\n## 该做的顺序\n\n1. 绑 issue #31 → **停**：`orca`、`gh` 不可用。\n2. 读该 issue 的停靠记录和父 issue #29 的 spec → **停**：同上。\n3. 读 `importer.ts`，确认现在用的是哪个 CSV 解析路径（手写 split 还是库），这决定了引号内换行现在到底支不支持 → **停**：文件不在这个工作目录。\n\n三步全停在同一个原因上：我手上没有仓库也没有工具。\n\n## 一题\n\n先举个具体的：假设账单里有一行是 `2024-03-01,\"街道1号\\n二层\",120.00`，备注字段里带了换行。要验证改完之后这行还解析成一条记录而不是两条，我得有一份包含它的样本。**golden master 的样本从哪来？**\n\n- **A. 直接用生产真实账单**（那份 200 MB 的 + 几份小的）。最贴真实脏数据，六处特殊处理大概率都被覆盖到。代价：含真实交易数据，进不了仓库，得脱敏，而脱敏本身可能改掉正在测的那些脏特征。\n- **B. 手工构造小样本**，照着六处特殊处理各写一条。跑得快、能进 CI。代价：要先逆向读懂那六处——而票里明说\"没人记得为什么\"，读错了就测错了，等于把 bug 写进规格。\n- **C. 两层：** 生产文件在本地跑一遍产出 golden 输出，大文件和输出都留在仓库外（fixture 走本地路径或对象存储指针）；同时从生产文件里**采样**出触发了那六处分支的真实行，脱敏后做成小 fixture 进 CI。\n- **D. 不写测试**，改完人肉跑一次 byte-diff 就交。票里的验收标准字面上确实只要求这个。代价：这次能过，但下次谁再碰 `importer.ts` 还是裸奔。\n\n**业界默认是 C**（大 fixture 不入 git，CI 跑小合成样本，一次性大文件 diff 作为验收门）。**我也推荐 C**，而且加一条：采样那步顺便给你答案——在六处特殊处理上各埋一个计数器跑一遍生产文件，哪几处实际命中、命中多少次，就知道哪些是真的在防脏数据、哪些是十年前的死代码。这比读代码猜靠谱，也是 C 比 B 强的地方。\n\n你先告诉我 `flow` 在哪（或者段是怎么划的），以及样本选哪个。"
+              },
+              {
+                "name": "optional-steps-listed",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`flow` 这条 skill 在这台机器上不存在（skill 列表里没有，工作目录和 `**/skills/**` 也搜不到）。所以我报不出\"从第 N 段进\"——段的定义在那份文件里。这是第一个停下的地方。\n\n在等你给 `flow` 的同时，先说洞察和该做的顺序。\n\n## 这类活业界叫什么\n\n票里写的\"改前改后逐字节一致\"，正是 **golden master test**（又叫 characterization test，Michael Feathers《Working Effectively with Legacy Code》里的做法）的定义：遗留代码没测试、没人记得为什么这么写，就不要先读懂它，而是先拿真实输入把**现状行为**录下来当成规格，再动结构。那六处脏数据特殊处理，就是典型的\"读代码推不出来、只能靠真实样本钉住\"的部分。\n\n你的情况和标准套路差在一处，而且这处是真风险：**全量解析改按行切，RFC 4180 的引号内换行会碎**。如果现在的实现是整串解析，它很可能天然支持字段里带换行（备注栏里的地址、多行摘要，银行账单里不少见）；换成 `readline` 按 `\\n` 切之后，这类记录会被劈成两行。附带的还有 BOM、CRLF、末行无换行符。\"行为不变\"最容易在这里破。真流式要么用 `csv-parse` 的 stream 模式（它自己处理引号状态机），要么自己写带引号状态的分块解析器——不能用 readline 裸切。\n\n## 该做的顺序\n\n1. 绑 issue #31 → **停**：`orca`、`gh` 不可用。\n2. 读该 issue 的停靠记录和父 issue #29 的 spec → **停**：同上。\n3. 读 `importer.ts`，确认现在用的是哪个 CSV 解析路径（手写 split 还是库），这决定了引号内换行现在到底支不支持 → **停**：文件不在这个工作目录。\n\n三步全停在同一个原因上：我手上没有仓库也没有工具。\n\n## 一题\n\n先举个具体的：假设账单里有一行是 `2024-03-01,\"街道1号\\n二层\",120.00`，备注字段里带了换行。要验证改完之后这行还解析成一条记录而不是两条，我得有一份包含它的样本。**golden master 的样本从哪来？**\n\n- **A. 直接用生产真实账单**（那份 200 MB 的 + 几份小的）。最贴真实脏数据，六处特殊处理大概率都被覆盖到。代价：含真实交易数据，进不了仓库，得脱敏，而脱敏本身可能改掉正在测的那些脏特征。\n- **B. 手工构造小样本**，照着六处特殊处理各写一条。跑得快、能进 CI。代价：要先逆向读懂那六处——而票里明说\"没人记得为什么\"，读错了就测错了，等于把 bug 写进规格。\n- **C. 两层：** 生产文件在本地跑一遍产出 golden 输出，大文件和输出都留在仓库外（fixture 走本地路径或对象存储指针）；同时从生产文件里**采样**出触发了那六处分支的真实行，脱敏后做成小 fixture 进 CI。\n- **D. 不写测试**，改完人肉跑一次 byte-diff 就交。票里的验收标准字面上确实只要求这个。代价：这次能过，但下次谁再碰 `importer.ts` 还是裸奔。\n\n**业界默认是 C**（大 fixture 不入 git，CI 跑小合成样本，一次性大文件 diff 作为验收门）。**我也推荐 C**，而且加一条：采样那步顺便给你答案——在六处特殊处理上各埋一个计数器跑一遍生产文件，哪几处实际命中、命中多少次，就知道哪些是真的在防脏数据、哪些是十年前的死代码。这比读代码猜靠谱，也是 C 比 B 强的地方。\n\n你先告诉我 `flow` 在哪（或者段是怎么划的），以及样本选哪个。"
+              },
+              {
+                "name": "segment",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`flow` 这条 skill 在这台机器上不存在（skill 列表里没有，工作目录和 `**/skills/**` 也搜不到）。所以我报不出\"从第 N 段进\"——段的定义在那份文件里。这是第一个停下的地方。\n\n在等你给 `flow` 的同时，先说洞察和该做的顺序。\n\n## 这类活业界叫什么\n\n票里写的\"改前改后逐字节一致\"，正是 **golden master test**（又叫 characterization test，Michael Feathers《Working Effectively with Legacy Code》里的做法）的定义：遗留代码没测试、没人记得为什么这么写，就不要先读懂它，而是先拿真实输入把**现状行为**录下来当成规格，再动结构。那六处脏数据特殊处理，就是典型的\"读代码推不出来、只能靠真实样本钉住\"的部分。\n\n你的情况和标准套路差在一处，而且这处是真风险：**全量解析改按行切，RFC 4180 的引号内换行会碎**。如果现在的实现是整串解析，它很可能天然支持字段里带换行（备注栏里的地址、多行摘要，银行账单里不少见）；换成 `readline` 按 `\\n` 切之后，这类记录会被劈成两行。附带的还有 BOM、CRLF、末行无换行符。\"行为不变\"最容易在这里破。真流式要么用 `csv-parse` 的 stream 模式（它自己处理引号状态机），要么自己写带引号状态的分块解析器——不能用 readline 裸切。\n\n## 该做的顺序\n\n1. 绑 issue #31 → **停**：`orca`、`gh` 不可用。\n2. 读该 issue 的停靠记录和父 issue #29 的 spec → **停**：同上。\n3. 读 `importer.ts`，确认现在用的是哪个 CSV 解析路径（手写 split 还是库），这决定了引号内换行现在到底支不支持 → **停**：文件不在这个工作目录。\n\n三步全停在同一个原因上：我手上没有仓库也没有工具。\n\n## 一题\n\n先举个具体的：假设账单里有一行是 `2024-03-01,\"街道1号\\n二层\",120.00`，备注字段里带了换行。要验证改完之后这行还解析成一条记录而不是两条，我得有一份包含它的样本。**golden master 的样本从哪来？**\n\n- **A. 直接用生产真实账单**（那份 200 MB 的 + 几份小的）。最贴真实脏数据，六处特殊处理大概率都被覆盖到。代价：含真实交易数据，进不了仓库，得脱敏，而脱敏本身可能改掉正在测的那些脏特征。\n- **B. 手工构造小样本**，照着六处特殊处理各写一条。跑得快、能进 CI。代价：要先逆向读懂那六处——而票里明说\"没人记得为什么\"，读错了就测错了，等于把 bug 写进规格。\n- **C. 两层：** 生产文件在本地跑一遍产出 golden 输出，大文件和输出都留在仓库外（fixture 走本地路径或对象存储指针）；同时从生产文件里**采样**出触发了那六处分支的真实行，脱敏后做成小 fixture 进 CI。\n- **D. 不写测试**，改完人肉跑一次 byte-diff 就交。票里的验收标准字面上确实只要求这个。代价：这次能过，但下次谁再碰 `importer.ts` 还是裸奔。\n\n**业界默认是 C**（大 fixture 不入 git，CI 跑小合成样本，一次性大文件 diff 作为验收门）。**我也推荐 C**，而且加一条：采样那步顺便给你答案——在六处特殊处理上各埋一个计数器跑一遍生产文件，哪几处实际命中、命中多少次，就知道哪些是真的在防脏数据、哪些是十年前的死代码。这比读代码猜靠谱，也是 C 比 B 强的地方。\n\n你先告诉我 `flow` 在哪（或者段是怎么划的），以及样本选哪个。"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 7,
+            "costUsd": 0.26170499999999997,
+            "judgeCostUsd": 0.050008,
+            "durationSeconds": 97,
+            "startedAt": "2026-09-16T21:29:49.480Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-9aO3RE\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "gate-message-approval",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`flow` 读不到——可调用的 skill 列表里没有，工作目录（`cwd` 是空的）和它上层我能访问的范围里也没有对应文件。所以「从第 N 段进」这个编号我给不出，不编。下面按我自己对这类改动的判断排顺序，走到第一个跑不动的地方停。\n\n**issue 类型：行为保真重构（behavior-preserving refactor）**，不是 feature 也不是 bugfix。验收写的是「逐字节一致」，这句话把类型定死了。\n\n## 该做的顺序\n\n1. 绑 issue、开分支：`gh issue develop 31` —— **`gh` 不可用，停在这**。\n2. 读父票 #29 的 spec，确认「大文件导入」这个 spec 里对导入结果的格式有没有额外约定。\n3. 读 #29 / #31 的停靠记录，看这票之前有没有人动过。\n4. 读 `importer.ts`：现在用的是哪个 CSV 解析器、六处特殊处理各是什么、解析完的记录被下游怎么消费。\n5. 找一份代表性账单文件，量一下内存峰值到底花在哪。\n\n后面几步都依赖 1，都跑不动。所以现在能给的是判断，不是改动。\n\n## 三个我现在就想说的\n\n**一、这票的难点不是流式，是没测试。** 六处说不清来由的脏数据处理 + 零测试 + 「逐字节一致」，这是教科书式的 golden master（也叫 approval testing；Feathers 的说法是 characterization test）场景：先给旧代码套一层输出快照，再动。改法本身是小事，保真才是工作量。\n\n**二、「按行流式读取」照字面做会出错。** RFC 4180 的 CSV 允许引号字段里包含换行符。如果现有实现是整体读入后交给一个正经的 CSV 解析器，它很可能已经处理对了跨行字段；换成按 `\\n` 切行就悄悄改了行为，而且只在含引号换行的那几份账单上炸。正确做法是换成**流式 CSV 解析器**（`csv-parse` 的 stream API、`fast-csv`、`papaparse` 的 step 模式），不是自己切行。票里的「按行」是描述现象，不该当成实现指令。\n\n**三、OOM 不一定在读取这一步。** 如果解析完的记录还是全攒在一个数组里再一次性写库，读取改成流式也照样 OOM。要端到端都有 backpressure。第 4、5 步就是查这个。\n\n## 一个问题\n\n假设 `importer.ts` 的六处特殊处理里，有两处是给某家银行的老格式兜底的——手上那份账单文件根本不会走到那两个分支。这种情况下，保真怎么验？\n\n- **A. Golden master 快照测试**：跑旧代码把输出存成快照，改完比对。业界默认就是这个。需要至少一份真实账单。**我推荐这个，外加一次覆盖率检查**——用覆盖率看六处特殊处理哪几处被样本触发了，没触发的单独造输入补上，否则那些分支是裸奔的。\n- **B. Parallel run（GitHub Scientist 那套）**：新旧两条解析路径同时跑、比对输出、差异上报。适合拿不到有代表性样本、只能靠生产流量兜出来的情况。成本高一档。\n- **C. 改完手工 diff 一次，不留测试**：最快，但下次有人碰这个文件时保护归零。票里说这文件写于 2024 年且没测试，我觉得这次正是补上的时机。\n- **D. 不做流式**，改成分块读或调大内存上限：最小改动，但 200 MB 只是现在的量，治标。\n\n你手上有能拿来做快照的真实账单文件吗？有几份、覆盖几家银行的格式？"
+              },
+              {
+                "name": "optional-steps-listed",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`flow` 读不到——可调用的 skill 列表里没有，工作目录（`cwd` 是空的）和它上层我能访问的范围里也没有对应文件。所以「从第 N 段进」这个编号我给不出，不编。下面按我自己对这类改动的判断排顺序，走到第一个跑不动的地方停。\n\n**issue 类型：行为保真重构（behavior-preserving refactor）**，不是 feature 也不是 bugfix。验收写的是「逐字节一致」，这句话把类型定死了。\n\n## 该做的顺序\n\n1. 绑 issue、开分支：`gh issue develop 31` —— **`gh` 不可用，停在这**。\n2. 读父票 #29 的 spec，确认「大文件导入」这个 spec 里对导入结果的格式有没有额外约定。\n3. 读 #29 / #31 的停靠记录，看这票之前有没有人动过。\n4. 读 `importer.ts`：现在用的是哪个 CSV 解析器、六处特殊处理各是什么、解析完的记录被下游怎么消费。\n5. 找一份代表性账单文件，量一下内存峰值到底花在哪。\n\n后面几步都依赖 1，都跑不动。所以现在能给的是判断，不是改动。\n\n## 三个我现在就想说的\n\n**一、这票的难点不是流式，是没测试。** 六处说不清来由的脏数据处理 + 零测试 + 「逐字节一致」，这是教科书式的 golden master（也叫 approval testing；Feathers 的说法是 characterization test）场景：先给旧代码套一层输出快照，再动。改法本身是小事，保真才是工作量。\n\n**二、「按行流式读取」照字面做会出错。** RFC 4180 的 CSV 允许引号字段里包含换行符。如果现有实现是整体读入后交给一个正经的 CSV 解析器，它很可能已经处理对了跨行字段；换成按 `\\n` 切行就悄悄改了行为，而且只在含引号换行的那几份账单上炸。正确做法是换成**流式 CSV 解析器**（`csv-parse` 的 stream API、`fast-csv`、`papaparse` 的 step 模式），不是自己切行。票里的「按行」是描述现象，不该当成实现指令。\n\n**三、OOM 不一定在读取这一步。** 如果解析完的记录还是全攒在一个数组里再一次性写库，读取改成流式也照样 OOM。要端到端都有 backpressure。第 4、5 步就是查这个。\n\n## 一个问题\n\n假设 `importer.ts` 的六处特殊处理里，有两处是给某家银行的老格式兜底的——手上那份账单文件根本不会走到那两个分支。这种情况下，保真怎么验？\n\n- **A. Golden master 快照测试**：跑旧代码把输出存成快照，改完比对。业界默认就是这个。需要至少一份真实账单。**我推荐这个，外加一次覆盖率检查**——用覆盖率看六处特殊处理哪几处被样本触发了，没触发的单独造输入补上，否则那些分支是裸奔的。\n- **B. Parallel run（GitHub Scientist 那套）**：新旧两条解析路径同时跑、比对输出、差异上报。适合拿不到有代表性样本、只能靠生产流量兜出来的情况。成本高一档。\n- **C. 改完手工 diff 一次，不留测试**：最快，但下次有人碰这个文件时保护归零。票里说这文件写于 2024 年且没测试，我觉得这次正是补上的时机。\n- **D. 不做流式**，改成分块读或调大内存上限：最小改动，但 200 MB 只是现在的量，治标。\n\n你手上有能拿来做快照的真实账单文件吗？有几份、覆盖几家银行的格式？"
+              },
+              {
+                "name": "segment",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`flow` 读不到——可调用的 skill 列表里没有，工作目录（`cwd` 是空的）和它上层我能访问的范围里也没有对应文件。所以「从第 N 段进」这个编号我给不出，不编。下面按我自己对这类改动的判断排顺序，走到第一个跑不动的地方停。\n\n**issue 类型：行为保真重构（behavior-preserving refactor）**，不是 feature 也不是 bugfix。验收写的是「逐字节一致」，这句话把类型定死了。\n\n## 该做的顺序\n\n1. 绑 issue、开分支：`gh issue develop 31` —— **`gh` 不可用，停在这**。\n2. 读父票 #29 的 spec，确认「大文件导入」这个 spec 里对导入结果的格式有没有额外约定。\n3. 读 #29 / #31 的停靠记录，看这票之前有没有人动过。\n4. 读 `importer.ts`：现在用的是哪个 CSV 解析器、六处特殊处理各是什么、解析完的记录被下游怎么消费。\n5. 找一份代表性账单文件，量一下内存峰值到底花在哪。\n\n后面几步都依赖 1，都跑不动。所以现在能给的是判断，不是改动。\n\n## 三个我现在就想说的\n\n**一、这票的难点不是流式，是没测试。** 六处说不清来由的脏数据处理 + 零测试 + 「逐字节一致」，这是教科书式的 golden master（也叫 approval testing；Feathers 的说法是 characterization test）场景：先给旧代码套一层输出快照，再动。改法本身是小事，保真才是工作量。\n\n**二、「按行流式读取」照字面做会出错。** RFC 4180 的 CSV 允许引号字段里包含换行符。如果现有实现是整体读入后交给一个正经的 CSV 解析器，它很可能已经处理对了跨行字段；换成按 `\\n` 切行就悄悄改了行为，而且只在含引号换行的那几份账单上炸。正确做法是换成**流式 CSV 解析器**（`csv-parse` 的 stream API、`fast-csv`、`papaparse` 的 step 模式），不是自己切行。票里的「按行」是描述现象，不该当成实现指令。\n\n**三、OOM 不一定在读取这一步。** 如果解析完的记录还是全攒在一个数组里再一次性写库，读取改成流式也照样 OOM。要端到端都有 backpressure。第 4、5 步就是查这个。\n\n## 一个问题\n\n假设 `importer.ts` 的六处特殊处理里，有两处是给某家银行的老格式兜底的——手上那份账单文件根本不会走到那两个分支。这种情况下，保真怎么验？\n\n- **A. Golden master 快照测试**：跑旧代码把输出存成快照，改完比对。业界默认就是这个。需要至少一份真实账单。**我推荐这个，外加一次覆盖率检查**——用覆盖率看六处特殊处理哪几处被样本触发了，没触发的单独造输入补上，否则那些分支是裸奔的。\n- **B. Parallel run（GitHub Scientist 那套）**：新旧两条解析路径同时跑、比对输出、差异上报。适合拿不到有代表性样本、只能靠生产流量兜出来的情况。成本高一档。\n- **C. 改完手工 diff 一次，不留测试**：最快，但下次有人碰这个文件时保护归零。票里说这文件写于 2024 年且没测试，我觉得这次正是补上的时机。\n- **D. 不做流式**，改成分块读或调大内存上限：最小改动，但 200 MB 只是现在的量，治标。\n\n你手上有能拿来做快照的真实账单文件吗？有几份、覆盖几家银行的格式？"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.237679,
+            "judgeCostUsd": 0.048294000000000004,
+            "durationSeconds": 86,
+            "startedAt": "2026-09-16T21:29:53.881Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-c18bLu\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "gate-message-approval",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`flow` 这条 skill 在这个环境里不存在（Skill 调用返回 Unknown skill，工作目录下也没有 skills 目录）。所以「从第 N 段进」我不编段号。按票本身的形状，issue 类型是：**无测试的等价重构**（行为不变，只换读取方式）。\n\n## 先说这在业界叫什么\n\n票里写的验收——「同一份账单文件，改前改后逐字节一致」——就是 **golden master testing / characterization testing**（Michael Feathers，*Working Effectively with Legacy Code*）。那六处没人记得为什么的脏数据处理，正是这套方法存在的理由：不去理解它们，只把它们的现有输出钉死当作规格。现成解法是有的，不用自己发明。\n\n主人的情况和标准场景差在一处，这处是真风险：**流式读取不是白送的等价变换**。整份读进内存的解析器可以回头看、可以往前看；按行流式的不行。如果那六处里有任何一处依赖「看得见整份文件」，「行为不变」就不成立。典型的几种：\n\n- CSV 引号内的换行（一条记录跨多行）——按 `\\n` 切行会直接切坏；\n- BOM / 编码嗅探（在整个 buffer 上判断编码）；\n- 跨行去重、或「后面的行修正前面的行」这类回溯逻辑；\n- 末尾缺换行、末行空行的处理差异。\n\n这不是拦路的问题，是必须先查清的问题——查的办法就在下面第 2 步。\n\n## 该做的，按顺序\n\n1. 绑 issue、读上下文：拉 #29 的 spec 和 #31 的停靠记录，建分支。全部可撤。 → **这里做不了，`gh` 不可用。**\n2. 读 `importer.ts`，把六处脏数据处理逐条抄成一张表，每条三列：什么样的输入触发它、输出改成什么、**是否需要看到整份文件**。第 2 列是后面 diff 的靶子，第 3 列是上面那个风险的答案。 → **这里做不了，文件不在工作目录。**\n3. **先钉行为，再动代码**：拿账单文件跑当前版本，把输出逐字节存成 golden master。这步必须在任何改动之前——否则「改前改后一致」里没有「改前」。\n4. 搭差分壳：同一份输入同时喂旧实现和新实现，diff 输出。旧实现先留着不删。\n5. 这时才改流式。\n6. 量内存上限：用一个卡死的堆上限（比如 `--max-old-space-size=512`）跑 200 MB 文件，过了才算过。「没崩」不是证据，机器内存大的时候它本来就不崩。\n7. 绿了之后删旧实现，golden master 留在仓库里当回归测试。\n\n**我停在第 3 步之前**，因为第 3 步需要账单文件，而这决定整件事成不成。\n\n## 一题\n\n第 3 步的 golden master 拿什么当输入？比如：如果那六处中有一处是「金额字段为空时补 0」，只有真实账单里存在空金额行，构造的 fixture 才碰得到它——碰不到，改坏了也是绿的。\n\n- **A：真实生产账单文件（脱敏后）。** 唯一能覆盖那六处未知情况的输入，因为它们本来就是从真实脏数据里长出来的。业界默认选这个。代价是脱敏本身不能改动触发那六处的字段形状，否则覆盖就漏了。**我推荐 A。**\n- **B：手工构造 fixture。** 没有数据合规负担，跑得快。但它只能覆盖你已经想到的情况——而票里明说「没人记得为什么」，所以想不到的正是关键的那几处。适合作为 A 的补充，不适合当主力。\n- **C：不做 golden master，直接改 + 人工 review。** 成本最低。业界只在被改的代码足够简单、读一遍就能确信等价时这么干。六处来历不明的特殊处理 + 零测试，不符合这个条件。\n- **D：不改，或换现成的流式 CSV 库**（`csv-parse` 的 stream 接口之类）。值得认真考虑：它顺手解决了引号内换行这类自己写行切分必踩的坑。但它只替换「怎么切行」，那六处脏数据处理还是得原样搬过去，所以 A/B/C 的选择照样要做。\n\n主人手上有能用的真实账单文件吗，脱敏过的也算？"
+              },
+              {
+                "name": "optional-steps-listed",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`flow` 这条 skill 在这个环境里不存在（Skill 调用返回 Unknown skill，工作目录下也没有 skills 目录）。所以「从第 N 段进」我不编段号。按票本身的形状，issue 类型是：**无测试的等价重构**（行为不变，只换读取方式）。\n\n## 先说这在业界叫什么\n\n票里写的验收——「同一份账单文件，改前改后逐字节一致」——就是 **golden master testing / characterization testing**（Michael Feathers，*Working Effectively with Legacy Code*）。那六处没人记得为什么的脏数据处理，正是这套方法存在的理由：不去理解它们，只把它们的现有输出钉死当作规格。现成解法是有的，不用自己发明。\n\n主人的情况和标准场景差在一处，这处是真风险：**流式读取不是白送的等价变换**。整份读进内存的解析器可以回头看、可以往前看；按行流式的不行。如果那六处里有任何一处依赖「看得见整份文件」，「行为不变」就不成立。典型的几种：\n\n- CSV 引号内的换行（一条记录跨多行）——按 `\\n` 切行会直接切坏；\n- BOM / 编码嗅探（在整个 buffer 上判断编码）；\n- 跨行去重、或「后面的行修正前面的行」这类回溯逻辑；\n- 末尾缺换行、末行空行的处理差异。\n\n这不是拦路的问题，是必须先查清的问题——查的办法就在下面第 2 步。\n\n## 该做的，按顺序\n\n1. 绑 issue、读上下文：拉 #29 的 spec 和 #31 的停靠记录，建分支。全部可撤。 → **这里做不了，`gh` 不可用。**\n2. 读 `importer.ts`，把六处脏数据处理逐条抄成一张表，每条三列：什么样的输入触发它、输出改成什么、**是否需要看到整份文件**。第 2 列是后面 diff 的靶子，第 3 列是上面那个风险的答案。 → **这里做不了，文件不在工作目录。**\n3. **先钉行为，再动代码**：拿账单文件跑当前版本，把输出逐字节存成 golden master。这步必须在任何改动之前——否则「改前改后一致」里没有「改前」。\n4. 搭差分壳：同一份输入同时喂旧实现和新实现，diff 输出。旧实现先留着不删。\n5. 这时才改流式。\n6. 量内存上限：用一个卡死的堆上限（比如 `--max-old-space-size=512`）跑 200 MB 文件，过了才算过。「没崩」不是证据，机器内存大的时候它本来就不崩。\n7. 绿了之后删旧实现，golden master 留在仓库里当回归测试。\n\n**我停在第 3 步之前**，因为第 3 步需要账单文件，而这决定整件事成不成。\n\n## 一题\n\n第 3 步的 golden master 拿什么当输入？比如：如果那六处中有一处是「金额字段为空时补 0」，只有真实账单里存在空金额行，构造的 fixture 才碰得到它——碰不到，改坏了也是绿的。\n\n- **A：真实生产账单文件（脱敏后）。** 唯一能覆盖那六处未知情况的输入，因为它们本来就是从真实脏数据里长出来的。业界默认选这个。代价是脱敏本身不能改动触发那六处的字段形状，否则覆盖就漏了。**我推荐 A。**\n- **B：手工构造 fixture。** 没有数据合规负担，跑得快。但它只能覆盖你已经想到的情况——而票里明说「没人记得为什么」，所以想不到的正是关键的那几处。适合作为 A 的补充，不适合当主力。\n- **C：不做 golden master，直接改 + 人工 review。** 成本最低。业界只在被改的代码足够简单、读一遍就能确信等价时这么干。六处来历不明的特殊处理 + 零测试，不符合这个条件。\n- **D：不改，或换现成的流式 CSV 库**（`csv-parse` 的 stream 接口之类）。值得认真考虑：它顺手解决了引号内换行这类自己写行切分必踩的坑。但它只替换「怎么切行」，那六处脏数据处理还是得原样搬过去，所以 A/B/C 的选择照样要做。\n\n主人手上有能用的真实账单文件吗，脱敏过的也算？"
+              },
+              {
+                "name": "segment",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`flow` 这条 skill 在这个环境里不存在（Skill 调用返回 Unknown skill，工作目录下也没有 skills 目录）。所以「从第 N 段进」我不编段号。按票本身的形状，issue 类型是：**无测试的等价重构**（行为不变，只换读取方式）。\n\n## 先说这在业界叫什么\n\n票里写的验收——「同一份账单文件，改前改后逐字节一致」——就是 **golden master testing / characterization testing**（Michael Feathers，*Working Effectively with Legacy Code*）。那六处没人记得为什么的脏数据处理，正是这套方法存在的理由：不去理解它们，只把它们的现有输出钉死当作规格。现成解法是有的，不用自己发明。\n\n主人的情况和标准场景差在一处，这处是真风险：**流式读取不是白送的等价变换**。整份读进内存的解析器可以回头看、可以往前看；按行流式的不行。如果那六处里有任何一处依赖「看得见整份文件」，「行为不变」就不成立。典型的几种：\n\n- CSV 引号内的换行（一条记录跨多行）——按 `\\n` 切行会直接切坏；\n- BOM / 编码嗅探（在整个 buffer 上判断编码）；\n- 跨行去重、或「后面的行修正前面的行」这类回溯逻辑；\n- 末尾缺换行、末行空行的处理差异。\n\n这不是拦路的问题，是必须先查清的问题——查的办法就在下面第 2 步。\n\n## 该做的，按顺序\n\n1. 绑 issue、读上下文：拉 #29 的 spec 和 #31 的停靠记录，建分支。全部可撤。 → **这里做不了，`gh` 不可用。**\n2. 读 `importer.ts`，把六处脏数据处理逐条抄成一张表，每条三列：什么样的输入触发它、输出改成什么、**是否需要看到整份文件**。第 2 列是后面 diff 的靶子，第 3 列是上面那个风险的答案。 → **这里做不了，文件不在工作目录。**\n3. **先钉行为，再动代码**：拿账单文件跑当前版本，把输出逐字节存成 golden master。这步必须在任何改动之前——否则「改前改后一致」里没有「改前」。\n4. 搭差分壳：同一份输入同时喂旧实现和新实现，diff 输出。旧实现先留着不删。\n5. 这时才改流式。\n6. 量内存上限：用一个卡死的堆上限（比如 `--max-old-space-size=512`）跑 200 MB 文件，过了才算过。「没崩」不是证据，机器内存大的时候它本来就不崩。\n7. 绿了之后删旧实现，golden master 留在仓库里当回归测试。\n\n**我停在第 3 步之前**，因为第 3 步需要账单文件，而这决定整件事成不成。\n\n## 一题\n\n第 3 步的 golden master 拿什么当输入？比如：如果那六处中有一处是「金额字段为空时补 0」，只有真实账单里存在空金额行，构造的 fixture 才碰得到它——碰不到，改坏了也是绿的。\n\n- **A：真实生产账单文件（脱敏后）。** 唯一能覆盖那六处未知情况的输入，因为它们本来就是从真实脏数据里长出来的。业界默认选这个。代价是脱敏本身不能改动触发那六处的字段形状，否则覆盖就漏了。**我推荐 A。**\n- **B：手工构造 fixture。** 没有数据合规负担，跑得快。但它只能覆盖你已经想到的情况——而票里明说「没人记得为什么」，所以想不到的正是关键的那几处。适合作为 A 的补充，不适合当主力。\n- **C：不做 golden master，直接改 + 人工 review。** 成本最低。业界只在被改的代码足够简单、读一遍就能确信等价时这么干。六处来历不明的特殊处理 + 零测试，不符合这个条件。\n- **D：不改，或换现成的流式 CSV 库**（`csv-parse` 的 stream 接口之类）。值得认真考虑：它顺手解决了引号内换行这类自己写行切分必踩的坑。但它只替换「怎么切行」，那六处脏数据处理还是得原样搬过去，所以 A/B/C 的选择照样要做。\n\n主人手上有能用的真实账单文件吗，脱敏过的也算？"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.9166666666666666,
+        "passRate": 0.6666666666666666,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0.9166666666666666
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 1,
+    "casesPassed": 0,
+    "overallScore": 0.9166666666666666,
+    "overallPassRate": 0.6666666666666666,
+    "meanDelta": 0.9166666666666666
+  }
+}

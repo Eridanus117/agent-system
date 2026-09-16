@@ -1,0 +1,11 @@
+{
+  "name": "flow",
+  "version": "0.1.0",
+  "description": "改动落地的路线：九段的门与产物、每段点名的步、可选步、会话绑定、停靠记录；判为改动落地时读。",
+  "author": {
+    "name": "Eridanus117"
+  },
+  "repository": "https://github.com/Eridanus117/agent-system",
+  "license": "MIT",
+  "skills": "./skills/"
+}

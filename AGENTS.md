@@ -61,6 +61,10 @@ Issue 与 spec 记在本仓的 GitHub Issues，用 `gh` CLI 操作。见 [`docs/
 
 写一条自建 skill 或改既有自建 skill，用 `skill-authoring`（`plugins/skill-authoring`）：判是不是路由 skill、手动还是自动调用，先写评测用例跑基线再动笔，出口是 PR 加上线待办。退役不在它的范围。
 
+### Flow
+
+改动落地的路线在 `flow`（`plugins/flow`）：九段的门与产物、每段点名的步、可选步、会话绑定、停靠记录。哪种来往、开场那一句由使用方仓的常驻规则定，判为改动落地才读它（取舍见 [ADR-0005](./docs/adr/0005-来往判法常驻提示词路线放在流程skill.md)）。
+
 ### Domain docs
 
 多 context：仓根 `CONTEXT-MAP.md` 指向每个包各自的 `CONTEXT.md`；跨包决定沿用既有的 `docs/adr/`（MADR，2026-09-04 裁定）。

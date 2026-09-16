@@ -49,6 +49,10 @@
       "target": "plugins/skill-authoring/skills/skill-authoring"
     },
     {
+      "name": "flow",
+      "target": "plugins/flow/skills/flow"
+    },
+    {
       "name": "ask-matt",
       "target": "vendor/mattpocock/skills/ask-matt"
     },

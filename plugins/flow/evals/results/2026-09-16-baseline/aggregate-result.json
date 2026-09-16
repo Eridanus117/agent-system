@@ -1,0 +1,1117 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.273",
+  "startedAt": "2026-09-16T20:03:49.953Z",
+  "durationSeconds": 302,
+  "costUsd": 4.08757,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\desk142-flow-skill\\plugins\\flow",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "threshold": 1,
+    "concurrency": 4,
+    "plugins": [
+      {
+        "name": "flow",
+        "version": "0.1.0",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\desk142-flow-skill\\plugins\\flow"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "docking-record",
+      "dir": "evals\\docking-record",
+      "source": "prose",
+      "promptMarkdown": "现场：这是一条改动落地，会话绑在 notes 仓的 issue #27（机会：把每日备份改成增量）。第 2 段刚走完：spec 已经发成 issue #33，ADR 写了一条「用 restic 不用 borg」，词汇表加了「增量快照」。一个会话做得完，第 3 段不用拆票。\n\n我要去忙了，先停。把这一刻该写的停靠记录写出来，直接贴在回复里（`gh` 在这个会话里不可用），时间用 2026-09-16 16:10。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "four-columns",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the docking record (停靠记录) in the final message. PASS only if ALL four are true:\n\n1. Under the heading it has exactly four labelled lines, in this order and with these labels: 做成了、停在、下一步、等你. No column is renamed, dropped or added.\n2. 做成了 names the concrete, checkable results: the spec issue #33 and the ADR (restic over borg); mentioning the glossary term is fine.\n3. 停在 says the work is at the end of segment 2 / the gate before starting work, and notes segment 3 is skipped because one session can finish it.\n4. 等你 contains exactly ONE thing the owner must do (for example say 行 to enter segment 4, or type `/implement`), or the word 无 — not a list of several asks.\n\nFAIL if a column is missing or renamed, if extra columns are added, if 等你 lists more than one thing, or if the record is only described rather than written out.",
+          "config": {
+            "criteria": "Judge the docking record (停靠记录) in the final message. PASS only if ALL four are true:\n\n1. Under the heading it has exactly four labelled lines, in this order and with these labels: 做成了、停在、下一步、等你. No column is renamed, dropped or added.\n2. 做成了 names the concrete, checkable results: the spec issue #33 and the ADR (restic over borg); mentioning the glossary term is fine.\n3. 停在 says the work is at the end of segment 2 / the gate before starting work, and notes segment 3 is skipped because one session can finish it.\n4. 等你 contains exactly ONE thing the owner must do (for example say 行 to enter segment 4, or type `/implement`), or the word 无 — not a list of several asks.\n\nFAIL if a column is missing or renamed, if extra columns are added, if 等你 lists more than one thing, or if the record is only described rather than written out.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "header",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "### 停靠 · 2026-09-16 16:10",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "flow",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 9,
+            "costUsd": 0.2550305,
+            "judgeCostUsd": 0.007854000000000002,
+            "durationSeconds": 59,
+            "startedAt": "2026-09-16T20:03:49.995Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-zqqFE6\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "four-columns",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "工作目录是空的（notes 仓没在这儿），`flow` 的正文也还是占位，所以**这条停靠记录我按通用做法写的，不是你们家的既定格式**——等 `flow` 正文写好了，我照那个再排一次版。涉及路径/链接的地方我留了空，没编。\n\n`gh` 不可用，下面这段请你手动贴成 **issue #27 的评论**：\n\n---\n\n```markdown\n## 停靠记录 · 2026-09-16 16:10\n\n**绑定**：notes#27（机会：把每日备份改成增量）\n**走到哪**：第 2 段走完。下次**从第 3 段进**。\n\n### 第 2 段产出\n- spec → 发成 notes#33\n- ADR → 「用 restic 不用 borg」（路径待补）\n- 词汇表 → 新增「增量快照」（路径待补）\n\n### 已定、不用再议\n- 工具选 **restic**，不用 borg。理由见上面那条 ADR。\n- 第 3 段**不拆票**：一个会话做得完，直接在 #27 / #33 上做。\n\n### 下次第一步\n读 #33 的 spec，按第 3 段的门往下走。\n\n### 本次未做\n- 没有动任何文件（这个会话里工作目录没有 notes 仓）。\n- 本记录因 `gh` 不可用，由人工贴入。\n```\n\n---\n\n两处要你回来时补一下：ADR 和词汇表的实际文件路径，我这边看不到仓库，不想瞎填。"
+              },
+              {
+                "name": "header",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 6,
+            "costUsd": 0.210187,
+            "judgeCostUsd": 0.008736,
+            "durationSeconds": 49,
+            "startedAt": "2026-09-16T20:03:49.995Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-n6AM8w\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "four-columns",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`flow` 这条 skill 在这个会话里没装（skill 列表、仓里 `.claude/`、磁盘上都没有），所以下面这份不是照它的模板抄的，是按停靠记录本身要担的责任写的：**别人（或下次的我）只读这一条，就能接着走**。格式跟你那边的模板对不上的话，你说一句我改。\n\n贴到 issue #27 下面：\n\n```markdown\n## 停靠记录 — 2026-09-16 16:10\n\n**状态**：第 2 段（定形）已走完，停在第 3 段（落地）入口，未开工。\n\n**这一段产出了什么**\n- spec 已拆出去独立成 issue：#33\n- ADR 新增一条：**用 restic，不用 borg**\n- 词汇表新增词条：**增量快照**\n\n**已定下、不要再翻的决定**\n- 备份工具选 restic（理由见 ADR，borg 已明确排除）\n- 第 3 段**不拆票**：范围一个会话做得完，实现直接挂在 #33 下面，不再开子 issue\n\n**下次接着走的第一步**\n从第 3 段开始：读 #33 的 spec，按 ADR 里的 restic 方案动手；先做可撤的一步（读现有每日备份脚本，确认改动落点），再动文件。\n\n**当前未决 / 风险**\n- 无阻塞项。\n- 注：本次会话 `gh` 不可用，本记录由人工粘贴，#33 与 ADR 的实际状态以仓库为准。\n```\n\n最后一条我照实写进去了——我没能用 `gh` 核对 #33、ADR、词汇表真的落地了，这三条是按你口述记的。\n\n一个问题：你那边的 `flow` 停靠记录有固定模板吗（比如固定小标题、或者要写「下次开场第一句」）？有的话给我看一眼，或者告诉我它装在哪个路径，我照着重排一版。"
+              },
+              {
+                "name": "header",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    },
+    {
+      "name": "enter-at-segment-4",
+      "dir": "evals\\enter-at-segment-4",
+      "source": "prose",
+      "promptMarkdown": "从第 4 段进。（这个会话里 `gh`、`orca`、测试命令都不可用：该做的按顺序说出来，说到停下为止。）\n\n事情：把 notes 仓的每日备份改成增量，用 restic。没有 spec，没有票，我已经想清楚了，不要再问方案。仓里有 12 个单元测试，都过。这件事绑在 issue #27 上。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 12,
+      "graders": [
+        {
+          "name": "mentions-skip-reason",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "为什么|跳过|留一句",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "respects-entry",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the final message. PASS only if ALL three are true:\n\n1. It accepts the owner's entry point: it treats this as 改动落地 entering at 第 4 段 (segment 4, preparation to start) and does NOT insist on going back to segment 2 or 3 first, and does NOT ask design questions about the backup approach.\n2. It lays out the segment-4 preparation: a worktree with a branch for issue #27, and running the existing 12 unit tests as the baseline before any change (describing the commands is fine since they are unavailable here).\n3. It says that the skipped segments (no spec, no tickets) will be noted with a one-line reason in the product — the PR body, the docking record, or the issue — so the skip is on record.\n\nFAIL if it refuses to start without a spec, sends the owner back to alignment, asks about the design, or never mentions leaving a reason for the skipped segments.",
+          "config": {
+            "criteria": "Judge the final message. PASS only if ALL three are true:\n\n1. It accepts the owner's entry point: it treats this as 改动落地 entering at 第 4 段 (segment 4, preparation to start) and does NOT insist on going back to segment 2 or 3 first, and does NOT ask design questions about the backup approach.\n2. It lays out the segment-4 preparation: a worktree with a branch for issue #27, and running the existing 12 unit tests as the baseline before any change (describing the commands is fine since they are unavailable here).\n3. It says that the skipped segments (no spec, no tickets) will be noted with a one-line reason in the product — the PR body, the docking record, or the issue — so the skip is on record.\n\nFAIL if it refuses to start without a spec, sends the owner back to alignment, asks about the design, or never mentions leaving a reason for the skipped segments.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "flow",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 7,
+            "costUsd": 0.26755100000000004,
+            "judgeCostUsd": 0.007788000000000003,
+            "durationSeconds": 78,
+            "startedAt": "2026-09-16T20:03:49.995Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-WK7WGV\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "mentions-skip-reason",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "respects-entry",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "这是改动落地，但「issue 类型」和「第 4 段」我报不出来——理由在下面。\n\n**两个卡点，都不是方案问题**\n\n1. `flow` 的正文是占位符。skill 加载回来只有一行：`占位：正文待写。` 九段的门、产物、每段点名哪些步、停靠记录写在哪，都没有内容。同目录下想找 references 之类的补充文件，Glob 和 Grep 在这个目录都被 don't-ask 模式挡了。所以「从第 4 段进」我没法对齐——照着编一套段名出来是这件事里最不该做的。\n\n2. 工作目录是空的。`C:\\...\\WK7WGV\\home\\cwd` 下 `**/*` 和 `**/.*` 都是 No files found；git status 里唯一的条目是 `?? ../.gitconfig`。没有备份脚本，也没有你说的那 12 个测试。\n\n**按顺序该做的，说到停下为止**\n\n1. 绑 issue #27 — `gh` 不可用。手工等价：`gh issue develop 27 --checkout`，或在 #27 下贴一条 \"picked up, branch: <name>\"。这一步我说到这儿。\n2. 读停靠记录 — 停下。不知道记录落在哪（`.flow/`？`docs/`？issue 评论？），这由 flow 正文定义。\n3. 查文件 — 做了，结果见上，空的。\n4. 之后的步 —— 全部依赖第 4 段点名了什么，停下。\n\n**一个问题**\n\nnotes 仓在哪？\n\n- **(a) 指个路径，我切过去。** 仓在别处、这个 cwd 只是 eval 的落脚点时选它。我推荐先试这个——最省事，而且你说的「12 个测试都过」暗示仓是实打实存在的。\n- **(b) 这就是仓，东西还没进去。** 备份脚本和测试还在本地没提交、或压根还没写时选它。那「从第 4 段进」的前提就要重定——没有既有实现可改，就不是改动落地的中段。\n- **(c) 环境没挂上，先修挂载再谈。** 如果你预期这里应该有文件却没有，选它，我不动任何东西等你修。\n\nflow 正文那条卡点我这轮不问，先记着：等仓的位置定了，如果你希望我在没有段定义的情况下自己按常规实践走（industry practice: trunk-based small-batch change，先写失败测试再改脚本），说一声，我按那个走并明说用的不是 flow 的段。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0.3333333333333333,
+            "passed": false,
+            "turns": 7,
+            "costUsd": 0.22734949999999998,
+            "judgeCostUsd": 0.010808000000000002,
+            "durationSeconds": 53,
+            "startedAt": "2026-09-16T20:03:49.995Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-5gxcBw\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "mentions-skip-reason",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched 为什么|跳过|留一句",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "respects-entry",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`flow` 这条 skill 在这个会话里没装（`Skill: flow` 报 Unknown skill，仓里和 home 下也搜不到 SKILL.md）。所以我拿不到「第 4 段」到底是哪一段、要求什么产出——没有它，我往下说的顺序只能是我自编的，不是你那套。\n\n另外查了一眼工作目录 `C:\\...\\5gxcBw\\home\\cwd`：是个 git 仓，但里面没有文件。没有备份脚本，也没有那 12 个单元测试。加上你说的 `gh`、`orca`、测试命令不可用，第一步那三件可撤的事——绑 issue #27（要 gh）、读停靠记录（要 orca）、查文件（空目录）——全都落不了地。\n\n所以我停在这里，不猜着往下走。\n\n一个问题：**`flow` 应该从哪儿来？**\n\n- **A. 你把 flow 的正文贴给我**（或告诉我路径，我自己读）。适用于 flow 已经写好、只是这个沙箱没挂上。我推荐这个——你明确说了「按段走」，段的定义得是你的，不是我重建的。\n- **B. 我按通用做法自己排顺序**，并在每一步标明我用的是哪条业界实践。适用于 flow 还没成文、你想先看一版。代价是段号对不上，你说的「第 4 段」我只能理解成「跳过立项和方案选型，直接进实施」。\n- **C. 不做 flow，这件事当小改动走**：restic 增量备份方案你已经定了，直接改脚本 + 补测试。适用于你觉得走段的开销大于收益。但你开场点名从第 4 段进，我判断这不是你想要的。\n\n业界默认是 A——流程文档缺失时先补回文档，而不是让执行者即兴重建流程（避免 process drift）。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0.3333333333333333,
+        "passRateWithout": 0,
+        "delta": -0.3333333333333333
+      }
+    },
+    {
+      "name": "opening-ambiguous",
+      "dir": "evals\\opening-ambiguous",
+      "source": "prose",
+      "promptMarkdown": "deploy check 加个 `--json` 输出。\n\n（背景：`deploy` 是我们仓里的一个 TypeScript 脚本，`deploy check` 现在只打印中文文本报告和退出码，另外有个 ledger 文件记着上次部署了什么。）",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "classification",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the final message. PASS only if ALL three are true:\n\n1. It calls this 改动落地 (a change delivery), giving a reason of the right kind: the JSON output's shape has to be chosen, or it adds an interface/contract that others will depend on (e.g. what fields, how the ledger and the exit code map into it). A hedge such as \"it looks like a small change, but…\" is fine as long as the final call is 改动落地.\n2. It says work would enter at 第 2 段 (segment 2, solution alignment) or otherwise makes clear the design choice must be aligned first.\n3. Because the opening was free text, it stops and waits for the owner's word instead of starting to implement or firing off several design questions.\n\nFAIL if it calls this a 小改动 and proceeds, if it starts implementing, or if it asks more than one question.",
+          "config": {
+            "criteria": "Judge the final message. PASS only if ALL three are true:\n\n1. It calls this 改动落地 (a change delivery), giving a reason of the right kind: the JSON output's shape has to be chosen, or it adds an interface/contract that others will depend on (e.g. what fields, how the ledger and the exit code map into it). A hedge such as \"it looks like a small change, but…\" is fine as long as the final call is 改动落地.\n2. It says work would enter at 第 2 段 (segment 2, solution alignment) or otherwise makes clear the design choice must be aligned first.\n3. Because the opening was free text, it stops and waits for the owner's word instead of starting to implement or firing off several design questions.\n\nFAIL if it calls this a 小改动 and proceeds, if it starts implementing, or if it asks more than one question.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "mentions-delivery",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "改动落地",
+            "flags": "",
+            "match": "contains"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0.3333333333333333,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.15123150000000002,
+            "judgeCostUsd": 0.008538,
+            "durationSeconds": 55,
+            "startedAt": "2026-09-16T20:04:38.674Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-vR8nB7\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "classification",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "这是改动落地——`--json` 是新增一份对外的输出合同（数据格式），不是小改动。段号我给不出来：`flow` 这条 skill 的正文是空的（只有一行「占位：正文待写」），所以九段的门和产物我没法照着走。要么你把 flow 补上，要么这次我们不按段走，我照常规做法推进——这个你定。\n\n先说洞察，再问一题。\n\n**这事业界叫什么**：给 CLI 加机器可读输出（machine-readable output）。成熟做法有三条，都有现成的：\n\n1. **`--json` / `-o json` 标志**，人读的文本走 stderr，JSON 独占 stdout，退出码语义不变。`npm --json`、`gh --json`、`kubectl -o json`、`terraform plan -json` 都是这个形状。\n2. **SARIF**（Static Analysis Results Interchange Format）——专门给「检查类工具」用的结果交换格式，GitHub code scanning 直接吃。你这个叫 `deploy check`，输出的是「发现的问题」，形状上正好对得上。\n3. **JSON Lines**（每行一个事件）——适合边跑边吐、要流式消费的场景。\n\n**你这儿的差别**在两处：一是现在的报告是中文文本，JSON 里的字段名和消息要不要也中文、要不要把「人读的话」和「机器读的码」拆成 `code` + `message` 两个字段，这是必须先定的；二是你有 ledger 文件记着上次部署了什么，`deploy check` 大概率会拿它做对比，那 JSON 里要不要带上「和哪一次 ledger 比的」这类溯源信息，也得定。\n\n**问题**（一次一个，先给例子）：\n\n这份 JSON 将来谁读？比如——CI 里一句 `deploy check --json | jq -e '.ok'` 来卡流水线；或者有个看板定期收上去、要能跨版本对比历史；或者就是你自己临时 `jq` 翻一翻。\n\n- **A. 只给 CI 卡门**：字段可以极简（`ok`、`failures[]`），schema 不用版本号，改起来自由。\n- **B. 有外部消费者／要存历史**：得加 `schemaVersion`，字段只增不改，配一个 golden file 测试锁住输出。成本高一档。\n- **C. 只给你自己看**：其实不用新格式，`--format=json` 都不必，直接把内部结构 `JSON.stringify` 出来就够，两行代码。\n- **D. 不做／用现成的**：如果目标是接 GitHub code scanning，那别自定义，直接出 SARIF，省掉自己设计 schema。\n\n**业界默认是 A**（大部分工具的 `--json` 就是给 CI 用的）。**我推荐 A，但从第一天就加 `schemaVersion: 1`**——一个字段的成本，换掉将来变 B 时的破坏性变更。\n\n你选哪个？"
+              },
+              {
+                "name": "mentions-delivery",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched 改动落地",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0.3333333333333333,
+            "passed": false,
+            "turns": 7,
+            "costUsd": 0.1843035,
+            "judgeCostUsd": 0.018270000000000015,
+            "durationSeconds": 61,
+            "startedAt": "2026-09-16T20:04:43.012Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-H1OVTE\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "classification",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "这是改动落地——改的是 `deploy check` 的输出合同（新的 stdout 格式，机器要靠它解析）。本该说\"从第 N 段进\"，但我先报两件挡路的事：\n\n1. **`flow` 这条 skill 不存在**。我按名字调了，也在仓里和 `.claude/` 下找过，没有。所以我报不出段号，也没法按段走。\n2. **工作目录是空的**。`C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-H1OVTE\\home\\cwd` 下 `**/*` 一个文件都没有——没有 `deploy` 脚本，没有 ledger，没有 `package.json`。git 说在 main 分支，但没有提交记录。\n\n先说点不用等你也成立的东西。**给 CLI 加机器可读输出**这事业界有成型做法，叫 *machine-readable output*（clig.dev 里专门有一节），先例一堆：`npm --json`、`terraform -json`、`kubectl -o json`、ESLint `-f json`、`cargo --message-format=json`。这些先例共同的几条：\n\n- **人读的文本和机器读的 JSON 不混流**——加了 `--json` 之后，进度、警告这类走 stderr，stdout 只剩一个合法 JSON 文档。\n- **退出码语义不变**。`--json` 只换表达方式，不换判断。检查没过还是原来那个非零码，脚本既能看码也能看字段。\n- **schema 带版本字段**（比如 `\"schemaVersion\": 1`）。你这是合同，下游会长出依赖，改的时候得有台阶下。\n- **中文不进 JSON 的 key 和枚举值**。人读的中文可以留一个 `message` 字段，但状态本身得是 `\"ok\"` / `\"drift\"` 这种稳定标识符，不然下游得字符串匹配中文。\n\n你的情况跟这些先例差在哪，我现在判断不了——因为看不到 `deploy check` 现在报告里有什么、ledger 记的是什么结构。这两样直接决定 JSON 长什么样。\n\n一个问题：**仓在哪？**\n\n- **你给我路径，或把仓 checkout 到这个 cwd**——业界默认，也是我推荐的。我读完 `deploy check` 和 ledger 再出方案，schema 能贴着你真实的报告字段长，不用猜。\n- **你先不给仓，我按上面那几条出一份 schema 草案和 flag 语义**，等仓到了再落代码。适合你现在手边没仓、但想先把格式定下来给下游看的情况。代价是草案大概率要返工，因为 ledger 结构我纯靠猜。\n- **不做**——如果下游其实只需要退出码，或者已经有别的通道拿部署状态（比如直接读 ledger 文件），那 `--json` 就是多一份要维护的合同。这个选项在你只有一个消费方、而且它能读 ledger 的时候是真的值得选。\n\n另外 `flow` 那条 skill，是我该从别处装，还是这套段式流程你打算这次先跳过？"
+              },
+              {
+                "name": "mentions-delivery",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched 改动落地",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.3333333333333333,
+        "passRate": 0,
+        "scoreWithout": 0.3333333333333333,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    },
+    {
+      "name": "opening-issue",
+      "dir": "evals\\opening-issue",
+      "source": "prose",
+      "promptMarkdown": "issue 27\n\n（下面是 `gh issue view 27` 的输出。这个会话里 `gh`、`orca` 都不可用：该做的动作按顺序说出来即可，说到停下为止。）\n\n标题：机会：把 notes 仓的每日备份改成增量\n标签：ready-for-agent\n\n## 这是什么\n\n主人 2026-09-10 定：notes 仓每天全量打一次 tar，20 分钟起跳，盘快满了，要改成增量备份。\n\n三行结论：\n1｜真正的问题：全量备份的时间和空间随仓库大小线性涨。\n2｜值不值得解：值得，每天都在跑。\n3｜往哪个方向解：用现成的增量方案（restic 或 borg），不自己写。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 12,
+      "graders": [
+        {
+          "name": "classification",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the opening call in the final message. PASS only if the message states, as its first substantive point, that this interaction is 改动落地 (a change delivery), that the opening object is a 机会 issue (an opportunity issue), and that work enters at 第 2 段 (segment 2, 方案对齐 / solution alignment). Wording such as 「这是改动落地，机会 issue，从第 2 段进」 counts.\n\nFAIL if any of these happen: the message classifies it as 小改动 or 要答案; it names a different starting segment; it asks the owner \"这次怎么走\" or asks the owner to confirm the classification before doing anything; or it never states the kind of interaction at all.",
+          "config": {
+            "criteria": "Judge the opening call in the final message. PASS only if the message states, as its first substantive point, that this interaction is 改动落地 (a change delivery), that the opening object is a 机会 issue (an opportunity issue), and that work enters at 第 2 段 (segment 2, 方案对齐 / solution alignment). Wording such as 「这是改动落地，机会 issue，从第 2 段进」 counts.\n\nFAIL if any of these happen: the message classifies it as 小改动 or 要答案; it names a different starting segment; it asks the owner \"这次怎么走\" or asks the owner to confirm the classification before doing anything; or it never states the kind of interaction at all.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "mentions-delivery",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "改动落地",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "route-actions",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge what the agent does right after the opening call. PASS only if ALL three are true:\n\n1. It proceeds without waiting for the owner to confirm the classification (an issue opening means \"say it, then act\").\n2. The actions it lists are the reversible opening actions in this order: check for / bind the session to issue 27 (e.g. an `orca worktree` binding), then read the issue's last docking record (停靠记录) to pick up from its 「下一步」. Saying these commands are unavailable in this session and describing them instead is fine.\n3. It then stops at the gate of segment 2 and tells the owner to type `/grill-with-docs` (the segment-2 skill only the owner may invoke), rather than starting to design the backup solution or asking design questions itself.\n\nFAIL if it waits for a confirmation of the classification, skips binding/docking and jumps into designing, asks the owner open-ended \"what do you want to do\", or does not name `/grill-with-docs` (or the segment-2 alignment step) as the thing the owner should trigger next.",
+          "config": {
+            "criteria": "Judge what the agent does right after the opening call. PASS only if ALL three are true:\n\n1. It proceeds without waiting for the owner to confirm the classification (an issue opening means \"say it, then act\").\n2. The actions it lists are the reversible opening actions in this order: check for / bind the session to issue 27 (e.g. an `orca worktree` binding), then read the issue's last docking record (停靠记录) to pick up from its 「下一步」. Saying these commands are unavailable in this session and describing them instead is fine.\n3. It then stops at the gate of segment 2 and tells the owner to type `/grill-with-docs` (the segment-2 skill only the owner may invoke), rather than starting to design the backup solution or asking design questions itself.\n\nFAIL if it waits for a confirmation of the classification, skips binding/docking and jumps into designing, asks the owner open-ended \"what do you want to do\", or does not name `/grill-with-docs` (or the segment-2 alignment step) as the thing the owner should trigger next.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "flow",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.17838050000000003,
+            "judgeCostUsd": 0.027632000000000025,
+            "durationSeconds": 63,
+            "startedAt": "2026-09-16T20:04:48.706Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-GqXAZx\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "classification",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "读到的 `flow` 正文是一句占位：「正文待写」。九段的门、产物、每段点名的步，我这里拿不到——所以我能说的动作到这里就停了。\n\n按顺序，我原本要做的：\n\n1. **绑 issue** — `gh issue develop 27` 或在 issue 上留一条「agent 接手」的评论，把这个会话和 27 绑上。（`gh` 不可用，说到为止）\n2. **读停靠记录** — 找这个仓/这个 issue 之前有没有留过段的停靠记录。工作目录 `cwd` 是空的，没有任何文件，所以要么记录在别处（orca？），要么这是第一次进。\n3. **读 `flow` 第 1 段** — ← 卡在这里。正文是空的。\n\n—\n\n顺带把我对这件事的判断说在前面，免得下一轮从零问起：\n\n主人要的这个东西，业界叫 **增量去重备份（incremental deduplicating backup）**，是完全成熟的一类，现成解法就是 issue 里点名的两个，加上两个 issue 没提的：\n\n- **restic** — 内容寻址去重，单个静态二进制，后端多（本地盘、S3、SFTP、rclone 什么都行），社区最大。业界默认选它。\n- **borg** — 去重更狠（压缩率通常比 restic 好），但后端基本只有本地盘和 SSH，且远端要装 borg。\n- **rsync --link-dest** — 硬链接快照，不去重文件内部，但零依赖、备份结果是可以直接 `cd` 进去的普通目录树。\n- **btrfs/ZFS send** — 如果盘本来就是这两种文件系统，这是最快的，几乎零开销；不是的话不考虑。\n\n主人的情况和默认有两处不一样，值得摆出来：notes 仓是个 **git 仓**——git 仓每天全量 tar 20 分钟，说明大头多半是 `.git/objects` 或者仓里塞了大附件，而不是笔记正文；这决定了「增量」能省多少。另外「盘快满了」是空间问题，「20 分钟」是时间问题，这两个 restic/borg 都能解，但**如果瓶颈其实是 git 仓本身该做 gc 或该把大文件挪出去，换备份工具只是把问题推后**。\n\n—\n\n所以先问一题，只问一题：\n\n**`flow` 的正文是空的，怎么走？**\n\n- **A｜主人补上 `flow` 正文，我再进第 1 段。** 适合：九段是主人定下的固定流程，我猜错了会一路歪。**我推荐这个**——理由是九段里第 1 段该产出什么、门是什么，我没有任何依据可猜，硬走等于自己发明一套流程再假装是主人的。\n- **B｜我不走段，当小改动直接做。** 适合：主人其实只想要「装上 restic，写个 cron，跑通」。但 issue 里「往哪个方向解」还留着 restic / borg 两个选项没定，这就是「要在做法之间选」，按开场那条规矩它不是小改动。\n- **C｜不做这个改动，先查 notes 仓为什么这么大。** 适合：如果 20 分钟其实来自一个该 gc 的 `.git` 或几个大附件——那换工具是治标。这个可以和 A 并行，而且它只读不写，随时可撤。\n\n要不要我先把 C 跑了（查 notes 仓的大小构成），等主人补 `flow` 正文的同时把这个数据备好？"
+              },
+              {
+                "name": "mentions-delivery",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "route-actions",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "读到的 `flow` 正文是一句占位：「正文待写」。九段的门、产物、每段点名的步，我这里拿不到——所以我能说的动作到这里就停了。\n\n按顺序，我原本要做的：\n\n1. **绑 issue** — `gh issue develop 27` 或在 issue 上留一条「agent 接手」的评论，把这个会话和 27 绑上。（`gh` 不可用，说到为止）\n2. **读停靠记录** — 找这个仓/这个 issue 之前有没有留过段的停靠记录。工作目录 `cwd` 是空的，没有任何文件，所以要么记录在别处（orca？），要么这是第一次进。\n3. **读 `flow` 第 1 段** — ← 卡在这里。正文是空的。\n\n—\n\n顺带把我对这件事的判断说在前面，免得下一轮从零问起：\n\n主人要的这个东西，业界叫 **增量去重备份（incremental deduplicating backup）**，是完全成熟的一类，现成解法就是 issue 里点名的两个，加上两个 issue 没提的：\n\n- **restic** — 内容寻址去重，单个静态二进制，后端多（本地盘、S3、SFTP、rclone 什么都行），社区最大。业界默认选它。\n- **borg** — 去重更狠（压缩率通常比 restic 好），但后端基本只有本地盘和 SSH，且远端要装 borg。\n- **rsync --link-dest** — 硬链接快照，不去重文件内部，但零依赖、备份结果是可以直接 `cd` 进去的普通目录树。\n- **btrfs/ZFS send** — 如果盘本来就是这两种文件系统，这是最快的，几乎零开销；不是的话不考虑。\n\n主人的情况和默认有两处不一样，值得摆出来：notes 仓是个 **git 仓**——git 仓每天全量 tar 20 分钟，说明大头多半是 `.git/objects` 或者仓里塞了大附件，而不是笔记正文；这决定了「增量」能省多少。另外「盘快满了」是空间问题，「20 分钟」是时间问题，这两个 restic/borg 都能解，但**如果瓶颈其实是 git 仓本身该做 gc 或该把大文件挪出去，换备份工具只是把问题推后**。\n\n—\n\n所以先问一题，只问一题：\n\n**`flow` 的正文是空的，怎么走？**\n\n- **A｜主人补上 `flow` 正文，我再进第 1 段。** 适合：九段是主人定下的固定流程，我猜错了会一路歪。**我推荐这个**——理由是九段里第 1 段该产出什么、门是什么，我没有任何依据可猜，硬走等于自己发明一套流程再假装是主人的。\n- **B｜我不走段，当小改动直接做。** 适合：主人其实只想要「装上 restic，写个 cron，跑通」。但 issue 里「往哪个方向解」还留着 restic / borg 两个选项没定，这就是「要在做法之间选」，按开场那条规矩它不是小改动。\n- **C｜不做这个改动，先查 notes 仓为什么这么大。** 适合：如果 20 分钟其实来自一个该 gc 的 `.git` 或几个大附件——那换工具是治标。这个可以和 A 并行，而且它只读不写，随时可撤。\n\n要不要我先把 C 跑了（查 notes 仓的大小构成），等主人补 `flow` 正文的同时把这个数据备好？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 7,
+            "costUsd": 0.202567,
+            "judgeCostUsd": 0.016857999999999998,
+            "durationSeconds": 66,
+            "startedAt": "2026-09-16T20:05:07.922Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-ZBdX4M\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "classification",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`flow` 这条 skill 在这个环境里不存在——skill 列表里没有，仓里也没有（`**/flow/**` 和 `**/*.md` 都为空）。没有它我就说不出「从第几段进」，也没法按段走。所以我先把该做的动作按顺序摆出来，走到这个卡点为止。\n\n**按顺序该做的**\n\n1. 绑 issue：`gh issue edit 27 --add-assignee @me`，再 `gh issue comment 27` 留一句「接了，走 flow」。可撤。（`gh` 不可用，未执行）\n2. 读停靠记录：`orca` 查 issue 27 之前停在哪一段——机会类 issue 常常已经走过一轮调研。（`orca` 不可用，未执行）\n3. 读 `flow`，按 issue 类型「机会」定入口段。**卡在这里。**\n4. 查文件：现有的全量 tar 脚本、它的 cron / systemd timer、notes 仓当前体积和文件数。我已经看过工作目录 `home\\cwd`，是空的，只有一个 `.git`；备份脚本不在这个仓里。\n\n**一句洞察**：issue 里的方向是对的，业界这件事叫去重快照备份（deduplicating snapshot backup），restic 和 borg 都是成熟默认解，自己写增量 tar（`tar --listed-incremental`）是公认的坑——恢复要按顺序叠加全部增量，断一环就废。所以第 3 步之后要定的那个「做法之间选」，其实就是 restic 还是 borg 这一题，它得在段里定，我现在不越过去。\n\n**问一题**（`flow` 缺失，怎么办）：\n\n- **A｜主人把 `flow` 放进来或给我路径**，我读完说出入口段，照原规矩走。选它的场合：`flow` 的段确实是主人定过的流程，别的 issue 也在用。这是业界默认（流程即代码，process-as-code），**我推荐这个**——机会类 issue 最容易跑偏的地方就是跳过「值不值得」直接开做，段就是防这个的。\n- **B｜不用 `flow`，我走通用做法**：先出一页 restic vs borg 的选型对比（恢复速度、加密、远端后端、单文件恢复、运维负担），主人拍板，再落脚本和定时器。选它的场合：`flow` 本来就是临时的、或者主人觉得这件事小到不值得上流程。\n- **C｜不做 / 先不动**：选它的场合：主人只是想让我看一眼 issue 27，还没打算开工。\n\n主人回一个字母就行。"
+              },
+              {
+                "name": "mentions-delivery",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "route-actions",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`flow` 这条 skill 在这个环境里不存在——skill 列表里没有，仓里也没有（`**/flow/**` 和 `**/*.md` 都为空）。没有它我就说不出「从第几段进」，也没法按段走。所以我先把该做的动作按顺序摆出来，走到这个卡点为止。\n\n**按顺序该做的**\n\n1. 绑 issue：`gh issue edit 27 --add-assignee @me`，再 `gh issue comment 27` 留一句「接了，走 flow」。可撤。（`gh` 不可用，未执行）\n2. 读停靠记录：`orca` 查 issue 27 之前停在哪一段——机会类 issue 常常已经走过一轮调研。（`orca` 不可用，未执行）\n3. 读 `flow`，按 issue 类型「机会」定入口段。**卡在这里。**\n4. 查文件：现有的全量 tar 脚本、它的 cron / systemd timer、notes 仓当前体积和文件数。我已经看过工作目录 `home\\cwd`，是空的，只有一个 `.git`；备份脚本不在这个仓里。\n\n**一句洞察**：issue 里的方向是对的，业界这件事叫去重快照备份（deduplicating snapshot backup），restic 和 borg 都是成熟默认解，自己写增量 tar（`tar --listed-incremental`）是公认的坑——恢复要按顺序叠加全部增量，断一环就废。所以第 3 步之后要定的那个「做法之间选」，其实就是 restic 还是 borg 这一题，它得在段里定，我现在不越过去。\n\n**问一题**（`flow` 缺失，怎么办）：\n\n- **A｜主人把 `flow` 放进来或给我路径**，我读完说出入口段，照原规矩走。选它的场合：`flow` 的段确实是主人定过的流程，别的 issue 也在用。这是业界默认（流程即代码，process-as-code），**我推荐这个**——机会类 issue 最容易跑偏的地方就是跳过「值不值得」直接开做，段就是防这个的。\n- **B｜不用 `flow`，我走通用做法**：先出一页 restic vs borg 的选型对比（恢复速度、加密、远端后端、单文件恢复、运维负担），主人拍板，再落脚本和定时器。选它的场合：`flow` 本来就是临时的、或者主人觉得这件事小到不值得上流程。\n- **C｜不做 / 先不动**：选它的场合：主人只是想让我看一眼 issue 27，还没打算开工。\n\n主人回一个字母就行。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    },
+    {
+      "name": "opening-small-change",
+      "dir": "evals\\opening-small-change",
+      "source": "prose",
+      "promptMarkdown": "README 里「部署」写成了「布署」，改一下。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "classification",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the final message. PASS only if ALL three are true:\n\n1. It calls this a 小改动 (small change) and states the intended one-line fix (replace 「布署」 with 「部署」 in the README).\n2. It then stops and waits for the owner's go-ahead, because the opening was free text. Saying the README could not be found in this workspace and asking for its location is acceptable, as long as it is a single question.\n3. It does not route the work into segments: no talk of 第 N 段, 门, spec, or reading a flow/route skill as the path for this change.\n\nFAIL if it classifies the change as 改动落地 or 要答案, if it walks segments or gates, if it asks more than one question, or if it claims to have already edited a file.",
+          "config": {
+            "criteria": "Judge the final message. PASS only if ALL three are true:\n\n1. It calls this a 小改动 (small change) and states the intended one-line fix (replace 「布署」 with 「部署」 in the README).\n2. It then stops and waits for the owner's go-ahead, because the opening was free text. Saying the README could not be found in this workspace and asking for its location is acceptable, as long as it is a single question.\n3. It does not route the work into segments: no talk of 第 N 段, 门, spec, or reading a flow/route skill as the path for this change.\n\nFAIL if it classifies the change as 改动落地 or 要答案, if it walks segments or gates, if it asks more than one question, or if it claims to have already edited a file.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "mentions-small-change",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "小改动",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "no-flow-read",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "flow",
+            "max": 0
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.115087,
+            "judgeCostUsd": 0.010024000000000005,
+            "durationSeconds": 19,
+            "startedAt": "2026-09-16T20:05:33.672Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-rqpuzW\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "classification",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "这个仓库里没有 README —— 工作目录 `C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-rqpuzW\\home\\cwd` 是空的，整个仓库里只有 `.gitconfig` 和 `.git` 目录，没有任何提交，全库搜「布署」也是零命中。\n\n所以改不了：找不到要改的文件。想让我继续的话，告诉我 README 在哪个路径，或者这是不是该在另一个仓库里操作。"
+              },
+              {
+                "name": "mentions-small-change",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-flow-read",
+                "passed": false,
+                "weight": 1,
+                "explanation": "Skill called 0x (expected 1..0)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.11069900000000002,
+            "judgeCostUsd": 0.0030080000000000107,
+            "durationSeconds": 19,
+            "startedAt": "2026-09-16T20:05:43.971Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-sUs4Ya\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "classification",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: PASS FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  false,
+                  false
+                ],
+                "evidence": "没找到可改的东西——工作目录 `C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-sUs4Ya\\home\\cwd` 是空的，上一级 `home` 里也没有任何 README 文件，全仓库搜「布署」零命中。\n\n所以我没动任何文件。请问 README 在哪个目录？给我路径我就改。"
+              },
+              {
+                "name": "mentions-small-change",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    },
+    {
+      "name": "opening-want-to-build",
+      "dir": "evals\\opening-want-to-build",
+      "source": "prose",
+      "promptMarkdown": "我想建一个东西。每次会话结束的时候，把做了什么、卡在哪、下一步谁做什么，写到 issue 的评论里，下次开会话先读它。我自己想了一个四栏的格式。你帮我把它做成一条 skill 吧。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "insight-first",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the ORDER and content of the final message. PASS only if, BEFORE asking the owner anything, the message does all three:\n\n1. Names what this thing is called in the industry — any of: handoff / hand-off note, session handoff, status update, stand-up (done / doing / blocked), progress report, work log, 交接记录, 站会三问, or an equivalent recognised name.\n2. Points at at least one existing practice, format or tool that already does this (for example issue status comments, daily stand-up format, handoff documents, an existing handoff skill/command), i.e. it does not treat the owner's four-column format as a new invention.\n3. Says how the owner's situation differs from or adds to the existing practice (for example: multiple agents and clients sharing one issue tracker, cross-session pickup, a fixed column for \"what the owner must decide\").\n\nFAIL if the message jumps straight into designing or scaffolding the skill, or asks questions before giving the industry name and existing practice.",
+          "config": {
+            "criteria": "Judge the ORDER and content of the final message. PASS only if, BEFORE asking the owner anything, the message does all three:\n\n1. Names what this thing is called in the industry — any of: handoff / hand-off note, session handoff, status update, stand-up (done / doing / blocked), progress report, work log, 交接记录, 站会三问, or an equivalent recognised name.\n2. Points at at least one existing practice, format or tool that already does this (for example issue status comments, daily stand-up format, handoff documents, an existing handoff skill/command), i.e. it does not treat the owner's four-column format as a new invention.\n3. Says how the owner's situation differs from or adds to the existing practice (for example: multiple agents and clients sharing one issue tracker, cross-session pickup, a fixed column for \"what the owner must decide\").\n\nFAIL if the message jumps straight into designing or scaffolding the skill, or asks questions before giving the industry name and existing practice.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "one-question",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Count the questions put to the owner in the final message. PASS if there is at most one question, and — if there is one — it is preceded by a concrete example (a sample of what the record or the choice would look like) and is written in plain language rather than jargon.\n\nFAIL if the message asks two or more questions, or asks a question with no example before it.",
+          "config": {
+            "criteria": "Count the questions put to the owner in the final message. PASS if there is at most one question, and — if there is one — it is preceded by a concrete example (a sample of what the record or the choice would look like) and is written in plain language rather than jargon.\n\nFAIL if the message asks two or more questions, or asks a question with no example before it.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0.6666666666666666,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.211113,
+            "judgeCostUsd": 0.027474000000000012,
+            "durationSeconds": 79,
+            "startedAt": "2026-09-16T20:05:52.000Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-9IvRn0\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "insight-first",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "这是改动落地——要在做法之间选。但按规矩该先读 `flow` 定 issue 类型和从第几段进，而 `flow` 的正文现在是「占位：正文待写」，九段的门和产物都还没有内容，所以段号我编不出来，先不编。\n\n**这东西业界叫什么**\n\n会话之间传状态，业界叫**交接记录（handoff note / shift handover）**。你那四栏——做了什么、卡在哪、下一步、谁做——正好是每日站会那三问加一个 owner；医疗和运维把这套结构化交接叫 **SBAR** 或 **I-PASS**，几十年验证下来，格式本身没什么可争的，你想的是对的。把状态写进 issue 评论、让 issue 本身当数据库，这叫 **issue-as-state**，GitHub 原生团队常用。\n\n**现成的解法**\n\n1. Claude Code 自带 `--resume` / `--continue`，直接回放真实对话记录，比任何摘要都全。\n2. 自带的 memory 目录 + `CLAUDE.md`，跨会话常驻。\n3. **你自己的 `flow` 插件里已经有「会话绑定」和「停靠记录」**——从名字看，就是这件事。\n\n**你的情况差在哪（一个硬约束）**\n\n「每次会话结束自动写、下次开会话自动读」——skill 做不到。skill 只在被调用时才加载，它不会自己在会话结束时醒过来。要自动触发，得在 `settings.json` 里配 **hook**（`SessionEnd` 写、`SessionStart` 读），由外壳执行而不是我执行。所以最终形态大概率是「hook 负责定时开火 + skill 负责写什么格式」，而不是单一一条 skill。\n\n**先问一题**：`flow` 的「停靠记录」是不是已经在干这件事？\n\n- **A. 就用停靠记录，不新建**——如果它已经写「做了什么/卡在哪/下一步」，你要的只是加一栏 owner + 落到 issue 评论。改动最小，也不会出现两套互相打架的交接记录。\n- **B. 新建独立 skill，和 flow 平行**——如果停靠记录是段与段之间的流转凭据、粒度和\"整场会话的收尾\"对不上，两者职责不同，分开更干净。\n- **C. 都不建，用 `--resume`**——如果实际上只有你一个人接着干、也不需要别人在 issue 上看见进度。\n\n业界默认是 A：交接记录只该有一处权威来源，两处必然腐烂。我也推荐 A，但 `flow` 正文还没写，我没法自己判断停靠记录到底存什么、存在哪。\n\n你一句话告诉我停靠记录现在是什么，我再动。"
+              },
+              {
+                "name": "one-question",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "这是改动落地——要在做法之间选。但按规矩该先读 `flow` 定 issue 类型和从第几段进，而 `flow` 的正文现在是「占位：正文待写」，九段的门和产物都还没有内容，所以段号我编不出来，先不编。\n\n**这东西业界叫什么**\n\n会话之间传状态，业界叫**交接记录（handoff note / shift handover）**。你那四栏——做了什么、卡在哪、下一步、谁做——正好是每日站会那三问加一个 owner；医疗和运维把这套结构化交接叫 **SBAR** 或 **I-PASS**，几十年验证下来，格式本身没什么可争的，你想的是对的。把状态写进 issue 评论、让 issue 本身当数据库，这叫 **issue-as-state**，GitHub 原生团队常用。\n\n**现成的解法**\n\n1. Claude Code 自带 `--resume` / `--continue`，直接回放真实对话记录，比任何摘要都全。\n2. 自带的 memory 目录 + `CLAUDE.md`，跨会话常驻。\n3. **你自己的 `flow` 插件里已经有「会话绑定」和「停靠记录」**——从名字看，就是这件事。\n\n**你的情况差在哪（一个硬约束）**\n\n「每次会话结束自动写、下次开会话自动读」——skill 做不到。skill 只在被调用时才加载，它不会自己在会话结束时醒过来。要自动触发，得在 `settings.json` 里配 **hook**（`SessionEnd` 写、`SessionStart` 读），由外壳执行而不是我执行。所以最终形态大概率是「hook 负责定时开火 + skill 负责写什么格式」，而不是单一一条 skill。\n\n**先问一题**：`flow` 的「停靠记录」是不是已经在干这件事？\n\n- **A. 就用停靠记录，不新建**——如果它已经写「做了什么/卡在哪/下一步」，你要的只是加一栏 owner + 落到 issue 评论。改动最小，也不会出现两套互相打架的交接记录。\n- **B. 新建独立 skill，和 flow 平行**——如果停靠记录是段与段之间的流转凭据、粒度和\"整场会话的收尾\"对不上，两者职责不同，分开更干净。\n- **C. 都不建，用 `--resume`**——如果实际上只有你一个人接着干、也不需要别人在 issue 上看见进度。\n\n业界默认是 A：交接记录只该有一处权威来源，两处必然腐烂。我也推荐 A，但 `flow` 正文还没写，我没法自己判断停靠记录到底存什么、存在哪。\n\n你一句话告诉我停靠记录现在是什么，我再动。"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 5,
+            "costUsd": 0.21558850000000002,
+            "judgeCostUsd": 0.02961000000000001,
+            "durationSeconds": 78,
+            "startedAt": "2026-09-16T20:05:53.011Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-BCRaAE\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "insight-first",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "这是改动落地。按规矩我该先读 `flow` 这条 skill 再分段走，但这个环境里没有它——`Skill` 报 unknown skill，磁盘上也搜不到 skill 目录。所以我先不分段，用普通方式往前走；如果 `flow` 应该在某个地方，你指给我，我重来。\n\n先说这东西在业界叫什么，免得我们从零发明。\n\n**它有名字：交接记录（handoff note / session handoff）。** 现成的成型做法有两套可以抄：\n\n- **站会三栏（standup format）**：做了什么 / 下一步做什么 / 卡在哪。人对人，以天为单位，最普及。\n- **SBAR**（Situation, Background, Assessment, Recommendation）：医院交班用的四段式，专门解决\"接手的人完全没有上下文\"。正好是四栏，而且它的第四栏是**给出建议的下一步动作**，不是罗列现状——这一点通常是交接记录成败的分界。\n\n**写进 issue 评论这个选择，也是有名字的**：issue-as-state，把工单当唯一事实来源（single source of truth）。好处是跟代码、跟讨论在同一个地方，谁都能翻；GitHub 自家的 agent 工作流就是这么干的。\n\n**你的情况跟上面两套差在哪**：读的人是下一次的我，是机器不是同事。所以格式除了给人看，还得能被**稳稳找到、稳稳解析**。这会逼出两个必须定死的东西——用什么记号认出\"这是交接评论\"（我倾向 HTML 注释哨兵，比如 `<!-- handoff:v1 -->`，GitHub 上不显示，但 grep 得到），以及一条评论滚动更新还是每次追加一条。这两个我有推荐，下一轮再聊。\n\n这一轮只问一件事：\n\n**把你那四栏贴给我。** 栏名 + 每栏你打算写成什么样，最好带一条真实的例子，比如：\n\n```\n## 做了什么\n- 把 auth 中间件从 express-session 换成 JWT（commit a3f21c9）\n```\n\n我要看的是：栏名叫什么、每栏是自由文本还是条目列表、里面有没有你固定会写的字段（commit、文件路径、负责人）。看完我才知道你这四栏离 SBAR 差多少，以及哪些地方能直接用现成约定、哪些是你特有的。"
+              },
+              {
+                "name": "one-question",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "这是改动落地。按规矩我该先读 `flow` 这条 skill 再分段走，但这个环境里没有它——`Skill` 报 unknown skill，磁盘上也搜不到 skill 目录。所以我先不分段，用普通方式往前走；如果 `flow` 应该在某个地方，你指给我，我重来。\n\n先说这东西在业界叫什么，免得我们从零发明。\n\n**它有名字：交接记录（handoff note / session handoff）。** 现成的成型做法有两套可以抄：\n\n- **站会三栏（standup format）**：做了什么 / 下一步做什么 / 卡在哪。人对人，以天为单位，最普及。\n- **SBAR**（Situation, Background, Assessment, Recommendation）：医院交班用的四段式，专门解决\"接手的人完全没有上下文\"。正好是四栏，而且它的第四栏是**给出建议的下一步动作**，不是罗列现状——这一点通常是交接记录成败的分界。\n\n**写进 issue 评论这个选择，也是有名字的**：issue-as-state，把工单当唯一事实来源（single source of truth）。好处是跟代码、跟讨论在同一个地方，谁都能翻；GitHub 自家的 agent 工作流就是这么干的。\n\n**你的情况跟上面两套差在哪**：读的人是下一次的我，是机器不是同事。所以格式除了给人看，还得能被**稳稳找到、稳稳解析**。这会逼出两个必须定死的东西——用什么记号认出\"这是交接评论\"（我倾向 HTML 注释哨兵，比如 `<!-- handoff:v1 -->`，GitHub 上不显示，但 grep 得到），以及一条评论滚动更新还是每次追加一条。这两个我有推荐，下一轮再聊。\n\n这一轮只问一件事：\n\n**把你那四栏贴给我。** 栏名 + 每栏你打算写成什么样，最好带一条真实的例子，比如：\n\n```\n## 做了什么\n- 把 auth 中间件从 express-session 换成 JWT（commit a3f21c9）\n```\n\n我要看的是：栏名叫什么、每栏是自由文本还是条目列表、里面有没有你固定会写的字段（commit、文件路径、负责人）。看完我才知道你这四栏离 SBAR 差多少，以及哪些地方能直接用现成约定、哪些是你特有的。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.6666666666666666,
+        "passRate": 0,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": -0.33333333333333337
+      }
+    },
+    {
+      "name": "question-with-options",
+      "dir": "evals\\question-with-options",
+      "source": "prose",
+      "promptMarkdown": "我们的 skill 评测现在用 haiku 当裁判模型，老是把对的答案判成错。要换。你需要我定什么就问我。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "options-and-criteria",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the question the agent puts to the owner in the final message. PASS only if ALL four are true:\n\n1. The message asks exactly one question (one decision for the owner to make).\n2. It presents at least two distinct, named options for that decision (for example: switch the judge to sonnet, switch to opus, keep haiku but tighten the grader wording / use majority voting), and one of the options is the \"keep the current setup / do nothing / use what exists\" alternative.\n3. For each option it states when that option is the right pick (a criterion such as cost, false-FAIL rate, latency, how strict the graders are), not just a label.\n4. It states which option it recommends and why, and it says what the common or default choice is in practice (the industry default) — or explicitly says there is no established default.\n\nFAIL if it offers a single option, lists options without criteria, gives no recommendation, or asks more than one question.",
+          "config": {
+            "criteria": "Judge the question the agent puts to the owner in the final message. PASS only if ALL four are true:\n\n1. The message asks exactly one question (one decision for the owner to make).\n2. It presents at least two distinct, named options for that decision (for example: switch the judge to sonnet, switch to opus, keep haiku but tighten the grader wording / use majority voting), and one of the options is the \"keep the current setup / do nothing / use what exists\" alternative.\n3. For each option it states when that option is the right pick (a criterion such as cost, false-FAIL rate, latency, how strict the graders are), not just a label.\n4. It states which option it recommends and why, and it says what the common or default choice is in practice (the industry default) — or explicitly says there is no established default.\n\nFAIL if it offers a single option, lists options without criteria, gives no recommendation, or asks more than one question.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 7,
+            "costUsd": 0.602976,
+            "judgeCostUsd": 0.00858600000000001,
+            "durationSeconds": 98,
+            "startedAt": "2026-09-16T20:06:02.810Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-FagK52\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "options-and-criteria",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "这是改动落地（要在做法之间选：换成哪个、以及是不是只换模型就够）。\n\n先说两件事，然后我只问你一题。\n\n**flow 读了，正文还是占位**（`plugins/flow/skills/flow` 里只有一行「正文待写」），所以我没法说「从第 N 段进」。我按常规做法走。另外当前目录是空的，eval 的代码不在这儿——回头顺手告诉我在哪。\n\n**这事业界叫 LLM-as-a-judge。** 你描述的症状——对的判成错——是裁判的 **false negative**，标准做法不是直接换模型，而是先量 **judge–human agreement**（裁判和人的一致率），业界叫 **grader validation / meta-evaluation**。原因是换模型只能治「模型不够聪明」这一种病，而判错常有另外两个来源：评分标准写得含糊（裁判只好从严），或者裁判根本没开思考。Haiku 4.5 这代还是 `budget_tokens` 式思考，不是 adaptive——如果你的调用里压根没传 `thinking`，那它是在零推理的情况下做判断，这本身就够解释一批误判了。它还是唯一一个 200K 上下文的当代模型（其余都是 1M），如果被判的输出很长，可能是截断而不是判断力的问题。\n\n举个具体的：标准答案是「用 `claude-opus-5`」，skill 答「模型 ID 是 claude-opus-5，不要加日期后缀」。多说了半句。这算对还是错？如果你的标准没写明「允许附加正确信息」，换成 Opus 5 它照样可能判错——那就不是模型的锅。\n\n**问题：换之前要不要先量一次？**\n\n| 选 | 什么情况下选它 | 代价 |\n|---|---|---|\n| A. 先量后换 | 你手上有（或愿意花 20 分钟标）20–30 条争议样例 | 多一步，但换完能证明确实变好了 |\n| B. 直接换，抽查一眼 | 误判多到肉眼可见，你只想先止血 | 换完不知道是真好了还是换了种错法 |\n| C. 不换模型，先修评分标准 | 你看了上面那个例子，觉得问题出在标准含糊 | 省钱，但如果确实是模型不够强就白折腾 |\n| D. 不做 | 误判率你能接受 | — |\n\n业界默认是 A。**我也推荐 A**，理由就是上面那个例子：不量，我们无法区分「裁判笨」和「标准糊」，而这两个的修法完全不同。\n\n模型本身我倾向 **`claude-opus-5`**（$5/$25 每百万 token）。裁判调用是输入重、输出轻，几百条样例的成本是几毛钱级别，没必要省。往下退一档是 `claude-sonnet-5`（$2/$10），量大时的常规选择。\n\n你定 A/B/C/D，我就动。"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 7,
+            "costUsd": 0.7240570000000001,
+            "judgeCostUsd": 0.00994800000000004,
+            "durationSeconds": 111,
+            "startedAt": "2026-09-16T20:06:13.709Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-8RdHys\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "options-and-criteria",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "这是改动落地。（`flow` 这条 skill 我在技能列表和仓库里都没找到，所以段号报不出来——如果它在别处，告诉我路径，我按段重走。另外当前目录是空的，eval 的代码不在这儿。）\n\n**先说这事叫什么。** 你踩的是 LLM-as-a-judge 的 false negative：判官把对的判成错。业界对这个的标准诊断顺序是固定的两步——先看是**判官不够强**还是**评分标准写得太死**，再谈换模型。因为把「答案对、但措辞/格式和参考答案不一样」判成错，是 rubric 的锅，换个大模型只是把问题盖住；而真正需要判断力的地方（比如判一段推理有没有实质错误）Haiku 4.5 确实吃力，那才是模型的锅。你手上已经有免费的诊断材料：那些你认定「判错了」的 case，就是现成的 calibration set。\n\n行业里还有两条硬规矩，换之前先知道：判官要拿人工标注校准，clear-cut 的 case 上一致率明显低于 90% 就说明 judge prompt 还得改（judge calibration）；判官不能是被测模型本身，否则它偏爱像自己的输出（self-preference bias）。还有一条会咬人：换判官等于换了量尺，**换完之前的所有分数都不能跟之后比**，得给 grader 打个版本号、重跑一次基线。\n\n**一轮一题，这题是：判官换成什么。**\n\n举个具体例子说清楚区别：如果被判错的是「标准答案写 `4`，模型答 `4.0 个`」这类，那是 C；如果是「模型给了另一条同样正确的解法，判官说不符合参考答案」，那是 A/B。\n\n| 选项 | 什么情况下选 | 代价 |\n|---|---|---|\n| **A. Sonnet 5**（`claude-sonnet-5`） | 默认档。判官要做的是「读 rubric、逐条核对」这种有判断力但不烧脑的活 | $2/$10 每 MTok，Haiku 4.5 是 $1/$5，贵一倍 |\n| **B. Opus 5**（`claude-opus-5`） | 判官任务和被测任务难度相当，或要读长 transcript 才能判 | $5/$25，五倍于 Haiku |\n| **C. 不换模型，改 rubric + 上 structured outputs** | 误判集中在格式、单位、措辞差异 | 零增量成本，但如果是模型能力不够，白改 |\n| **D. 便宜判官 + 分歧时升级到 Opus 5**（jury） | judge 调用量大到成本真的疼 | 复杂度高，判官本身变成要维护的东西 |\n\n**业界默认是 A，我也推荐 A**：Haiku → Sonnet 5 这一跳在「照着 rubric 打分」上收益最大，成本只翻一倍；Opus 5 留给 A 换完还不达标的情况，别一步到位。同时无论选哪个，我建议把 C 顺带做了——判官输出改成 structured output（每条 rubric 一个布尔字段，而不是一个笼统的 pass/fail），这不是妥协，是 A 能不能验证的前提：分项打分才看得出它到底卡在哪一条。\n\n你定了之后，把 eval 的路径贴给我，我第一步只做可撤的事：读判官那段代码和几条被判错的记录，确认误判类型，再动手。（这个 skill 里带了一份 eval 健康检查清单，要的话我顺手对着跑一遍。）"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    },
+    {
+      "name": "ticket-optional-steps",
+      "dir": "evals\\ticket-optional-steps",
+      "source": "prose",
+      "promptMarkdown": "票 #31\n\n（下面是 `gh issue view 31` 的输出。这个会话里 `gh`、`orca`、测试命令都不可用：该做的按顺序说出来，说到停下为止。）\n\n标题：票：ledger-sync 的导入器改成流式读取\n标签：ready-for-agent\n父 issue：#29（spec：ledger-sync 大文件导入）\n\n## 要做的\n\n`importer.ts` 现在把整个 CSV 读进内存再解析，200 MB 的账单文件会 OOM。改成按行流式读取，行为不变。\n\n## 现状\n\n`importer.ts` 写于 2024 年，没有任何测试；解析逻辑里有六处对脏数据的特殊处理，没人记得为什么。\n\n## 验收\n\n同一份账单文件，改前改后导入结果逐字节一致；200 MB 文件不 OOM。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 12,
+      "graders": [
+        {
+          "name": "mentions-legacy",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": "last_message",
+            "pattern": "legacy-change|特征化|旧行为",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "optional-steps",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the segment-4 gate message. PASS only if ALL three are true:\n\n1. The message lists the optional steps (可选步) it proposes to open for this ticket, and the list includes BOTH: (a) recording the old behaviour before changing it — characterization tests / 特征化测试 / 先录旧行为 / `legacy-change`; and (b) proving the result did not change by comparing outputs byte for byte against a golden master — 母版 / 逐字节 / `evidence-regression`.\n2. Each proposed step comes with a reason tied to the ticket (no tests exist; six undocumented special cases; the acceptance criterion is byte-identical output).\n3. It asks the owner to approve the plan (say 「行」) in this same message, together with the rest of the segment-4 preparation (worktree and branch, baseline), rather than asking a separate question such as \"is this old code?\" first.\n\nFAIL if no optional steps are listed, if either (a) or (b) is missing, if it asks a separate yes/no question before listing them, or if it starts implementing the streaming change.",
+          "config": {
+            "criteria": "Judge the segment-4 gate message. PASS only if ALL three are true:\n\n1. The message lists the optional steps (可选步) it proposes to open for this ticket, and the list includes BOTH: (a) recording the old behaviour before changing it — characterization tests / 特征化测试 / 先录旧行为 / `legacy-change`; and (b) proving the result did not change by comparing outputs byte for byte against a golden master — 母版 / 逐字节 / `evidence-regression`.\n2. Each proposed step comes with a reason tied to the ticket (no tests exist; six undocumented special cases; the acceptance criterion is byte-identical output).\n3. It asks the owner to approve the plan (say 「行」) in this same message, together with the rest of the segment-4 preparation (worktree and branch, baseline), rather than asking a separate question such as \"is this old code?\" first.\n\nFAIL if no optional steps are listed, if either (a) or (b) is missing, if it asks a separate yes/no question before listing them, or if it starts implementing the streaming change.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "segment",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Judge the opening call in the final message. PASS only if it states this is 改动落地 (a change delivery), that the opening object is a 票 (a ticket), and that work enters at 第 4 段 (segment 4, 开工准备 / preparation to start), and it does NOT ask the owner to confirm before acting.\n\nFAIL if it names another kind of interaction, another starting segment (for example going back to 第 2 段 to align the design, which the parent spec already did), or asks \"这次怎么走\".",
+          "config": {
+            "criteria": "Judge the opening call in the final message. PASS only if it states this is 改动落地 (a change delivery), that the opening object is a 票 (a ticket), and that work enters at 第 4 段 (segment 4, 开工准备 / preparation to start), and it does NOT ask the owner to confirm before acting.\n\nFAIL if it names another kind of interaction, another starting segment (for example going back to 第 2 段 to align the design, which the parent spec already did), or asks \"这次怎么走\".",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "flow",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.19595499999999996,
+            "judgeCostUsd": 0.02187599999999998,
+            "durationSeconds": 75,
+            "startedAt": "2026-09-16T20:07:10.918Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-v36Psb\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "mentions-legacy",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "optional-steps",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "**这是改动落地**——issue 类型是「行为不变的重写」（behavior-preserving rewrite）。段号我说不出来：`flow` 这条 skill 的正文是占位（\"正文待写\"），九段的门和产物都还没写，所以「从第 N 段进」我没有依据编。这条我不猜。\n\n按顺序，该做的三步（都是可撤的），以及卡在哪：\n\n1. **把 #31 绑到这个会话** —— `gh` 不可用，做不了。\n2. **读父 issue #29 的 spec 和 #31 的停靠记录** —— 同样不可用。#29 里大概率写了「大文件导入」的整体口径（比如分片大小、进度上报），那会决定 #31 的边界。\n3. **读 `importer.ts`、它的调用方、仓库里有没有现成的样本账单** —— 工作目录 `…\\home\\cwd` 是空的，`**/importer.ts` 和 `**/*` 都没有命中。没有代码可读。\n\n三步全部停在这里。\n\n---\n\n先说几条我看到的，再问一句。\n\n**这件事业界有名字，也有现成解法：**\n\n- 给「没有测试、六处特殊处理没人记得为什么」的旧代码做安全重写，标准做法是先加一层 **特征测试（characterization test，又叫 golden master / approval testing）**——Michael Feathers《Working Effectively with Legacy Code》里的路子。不去理解那六处为什么存在，而是把旧实现在一批真实输入上的输出整个锁成基准，改完逐字节比对。验收标准「改前改后逐字节一致」写的就是这个，等于票已经点名要 golden master 了。现成工具：`approvals`（Node 版 ApprovalTests）或直接 jest snapshot 存文件哈希。\n- 流式 CSV 不要自己按行切。**CSV 的引号字段里合法地允许换行**，按 `\\n` 切会把字段切坏——这是这类改动最常见的回归，而且恰好只在脏数据上触发，也就是那六处特殊处理的地盘。用 `csv-parse` 的 stream API（业界默认）、`fast-csv`、或 `papaparse` 的 `step`。\n- 还有一个陷阱：只把「读」改成流式，但解析结果仍然攒进一个数组再统一落库，200 MB 照样 OOM。要端到端流式并带**背压（back-pressure）**，`pipeline()` 串起来。\n\n**主人的情况和标准路子差在一点：** golden master 需要一份输入样本，而验收说的是「同一份账单文件」——这份文件现在在哪、我能不能用，决定了后面所有事。所以只问这一题：\n\n**golden master 用哪份账单做基准？**\n\n- **A. 真实生产账单（200 MB 那份）** —— 覆盖最真，六处特殊处理大概率都能踩到。代价：里面是真实交易数据，基准文件要进仓库的话有 PII 问题，而且 200 MB 跑一次很慢。\n- **B. 脱敏后的真实账单** —— 业界默认选这个。保留脏数据的形状（空字段、怪编码、引号换行），只替换掉人和金额。代价是脱敏脚本本身可能不小心把触发特殊处理的那个特征洗掉了。\n- **C. 手工构造的小样本，六处特殊处理各造几行** —— 快，能进仓库，跑得起 CI。风险最大：六处是从代码反推的，没人记得为什么，很可能还有第七处没人发现，而构造样本永远踩不到它。\n- **D. 不做基准，直接改，靠 code review** —— 我不推荐，但它是个真选项：如果这个导入器的下游能容忍差异、或者有人工对账兜底，那加测试的成本可能不值。\n\n**我推荐 B + C 一起**：C 进仓库当日常回归（快、无 PII），B 在改完后手动跑一次当一次性验收（真、覆盖全）。C 单独用不够，因为「没人记得为什么」意味着你不知道自己不知道什么。\n\n主人挑一个，或者告诉我那份账单文件在哪。"
+              },
+              {
+                "name": "segment",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "**这是改动落地**——issue 类型是「行为不变的重写」（behavior-preserving rewrite）。段号我说不出来：`flow` 这条 skill 的正文是占位（\"正文待写\"），九段的门和产物都还没写，所以「从第 N 段进」我没有依据编。这条我不猜。\n\n按顺序，该做的三步（都是可撤的），以及卡在哪：\n\n1. **把 #31 绑到这个会话** —— `gh` 不可用，做不了。\n2. **读父 issue #29 的 spec 和 #31 的停靠记录** —— 同样不可用。#29 里大概率写了「大文件导入」的整体口径（比如分片大小、进度上报），那会决定 #31 的边界。\n3. **读 `importer.ts`、它的调用方、仓库里有没有现成的样本账单** —— 工作目录 `…\\home\\cwd` 是空的，`**/importer.ts` 和 `**/*` 都没有命中。没有代码可读。\n\n三步全部停在这里。\n\n---\n\n先说几条我看到的，再问一句。\n\n**这件事业界有名字，也有现成解法：**\n\n- 给「没有测试、六处特殊处理没人记得为什么」的旧代码做安全重写，标准做法是先加一层 **特征测试（characterization test，又叫 golden master / approval testing）**——Michael Feathers《Working Effectively with Legacy Code》里的路子。不去理解那六处为什么存在，而是把旧实现在一批真实输入上的输出整个锁成基准，改完逐字节比对。验收标准「改前改后逐字节一致」写的就是这个，等于票已经点名要 golden master 了。现成工具：`approvals`（Node 版 ApprovalTests）或直接 jest snapshot 存文件哈希。\n- 流式 CSV 不要自己按行切。**CSV 的引号字段里合法地允许换行**，按 `\\n` 切会把字段切坏——这是这类改动最常见的回归，而且恰好只在脏数据上触发，也就是那六处特殊处理的地盘。用 `csv-parse` 的 stream API（业界默认）、`fast-csv`、或 `papaparse` 的 `step`。\n- 还有一个陷阱：只把「读」改成流式，但解析结果仍然攒进一个数组再统一落库，200 MB 照样 OOM。要端到端流式并带**背压（back-pressure）**，`pipeline()` 串起来。\n\n**主人的情况和标准路子差在一点：** golden master 需要一份输入样本，而验收说的是「同一份账单文件」——这份文件现在在哪、我能不能用，决定了后面所有事。所以只问这一题：\n\n**golden master 用哪份账单做基准？**\n\n- **A. 真实生产账单（200 MB 那份）** —— 覆盖最真，六处特殊处理大概率都能踩到。代价：里面是真实交易数据，基准文件要进仓库的话有 PII 问题，而且 200 MB 跑一次很慢。\n- **B. 脱敏后的真实账单** —— 业界默认选这个。保留脏数据的形状（空字段、怪编码、引号换行），只替换掉人和金额。代价是脱敏脚本本身可能不小心把触发特殊处理的那个特征洗掉了。\n- **C. 手工构造的小样本，六处特殊处理各造几行** —— 快，能进仓库，跑得起 CI。风险最大：六处是从代码反推的，没人记得为什么，很可能还有第七处没人发现，而构造样本永远踩不到它。\n- **D. 不做基准，直接改，靠 code review** —— 我不推荐，但它是个真选项：如果这个导入器的下游能容忍差异、或者有人工对账兜底，那加测试的成本可能不值。\n\n**我推荐 B + C 一起**：C 进仓库当日常回归（快、无 PII），B 在改完后手动跑一次当一次性验收（真、覆盖全）。C 单独用不够，因为「没人记得为什么」意味着你不知道自己不知道什么。\n\n主人挑一个，或者告诉我那份账单文件在哪。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.23549399999999995,
+            "judgeCostUsd": 0.02479199999999998,
+            "durationSeconds": 101,
+            "startedAt": "2026-09-16T20:07:11.058Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-ExyxH4\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "mentions-legacy",
+                "passed": false,
+                "weight": 1,
+                "explanation": "pattern not found in last_message",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "optional-steps",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`flow` 这条 skill 在本会话里读不到 —— 工作目录、home、config 都没有它（config 目录还被拒绝读取）。开场那句里的「第 1 段」是我按「无测试的行为保持重构」推的，核不了。下面按顺序说该做的事，说到停下为止。\n\n## 先说洞察\n\n这件事在业界有现成名字和现成解法：**给遗留代码做行为保持重构**，标准做法是先写 **characterization test / golden master test**（Michael Feathers《Working Effectively with Legacy Code》；也叫 approval testing）。要点是：在动代码之前，先把「现在的行为」原样钉住 —— 不管它对不对。票里的验收「改前改后逐字节一致」本身就是一个 golden master 断言，只是还没人把它变成可重复跑的东西。\n\n那六处没人记得为什么的脏数据处理，**不要试图搞懂**。golden master 的价值就在这儿：你不需要知道为什么，只需要证明改完之后它们还在做同一件事。搞懂它们是另一张票。\n\n两个技术上的坑，现在先说，不是问题：\n\n1. **「按行」和 CSV 的规范是冲突的。** RFC 4180 允许引号字段里含换行。`account,\"备注\\n第二行\",100` 按 `\\n` 切就碎了。如果现在的全文解析扛得住这种行，naive 的 readline 就是行为改变 —— 而且是 golden master 抓得到、但只有真实账单里恰好有这种行才抓得到的那种。业界做法是用支持流式的解析器（Node 下默认是 `csv-parse` 的 stream API），由它自己管引号状态和 chunk 边界，而不是自己切行。\n2. **OOM 未必出在读上。** 全文读进来是一份 200 MB，但如果解析结果也攒成一个大数组再统一写库，那是第二份、而且往往更大。只改读不改写，200 MB 照样 OOM。这个要先测过再动手，别猜。\n\n## 该做的，按顺序\n\n1. 绑 issue #31，在票上留一句认领。—— `gh` 不可用，跳过。\n2. 读父 issue #29 的 spec，界定「行为不变」到底管到哪一层（输出文件？写进 DB 的行？日志？）。—— `gh` 不可用，跳过。\n3. 读 `importer.ts`，把六处特殊处理逐条抄成一张表：触发条件 → 做了什么。只记是什么，不记为什么。\n4. 确认 OOM 的真实来源（上面第 2 点），决定这张票是只改读、还是读写都要改。\n5. 建 golden master：固定输入 → 跑改前的 importer → 输出存成 fixture。\n6. 改。只换喂数据的方式，parse 函数本体一个字不动 —— 让 diff 小到能一眼看出「行为没动」。\n7. 验：golden master 逐字节比对 + 200 MB 文件跑一遍看 RSS 峰值。\n\n**停在第 3 步。** 这个工作目录是空的，没有 `importer.ts`，git 里也没有提交记录。代码不到手，3 到 7 都开不了工。\n\n## 一个问题\n\n假设 `importer.ts` 里有这么一处：遇到金额字段是 `(1,234.00)` 就当成负数 `-1234.00`（会计里的括号负数写法）。这是六处之一。我改完之后，怎么证明这一处还在？靠什么输入去触发它？\n\n所以问题是：**golden master 的输入从哪来。**\n\n- **A. 脱敏过的真实生产账单。** 真实的脏数据分布都在里面，那六处最可能被全部触发到。业界默认就是这个。风险是脱敏本身会抹掉触发分支的字符 —— 把 `(1,234.00)` 洗成 `-1234.00`，这一处就永远测不到了。\n- **B. 手写合成 fixture，照着第 3 步那张表逐条造样本。** 干净、能进仓库、以后长期当回归测试守着。但它只覆盖我读代码读懂的部分；我读漏的那一处，就没人守。\n- **C. 两份都要。** 合成的进仓库当常驻回归；真实的只在本地跑一次，做验收要求的逐字节比对，不入库。成本多半天。\n- **D. 不做 golden master，直接改，靠 code review 兜。** 只有在导入结果下游能容错、错了能重跑的情况下才成立。\n\n我推荐 **C**。理由：验收写的是「逐字节一致」，这句话只有 A 能证明；但 A 不能进仓库，这次证完就没了，下次谁动 importer 又是裸奔。B 反过来，能长期守但证明不了验收。两个各自缺的那一半正好是对方。\n\n主人，真实账单能拿到吗？"
+              },
+              {
+                "name": "segment",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`flow` 这条 skill 在本会话里读不到 —— 工作目录、home、config 都没有它（config 目录还被拒绝读取）。开场那句里的「第 1 段」是我按「无测试的行为保持重构」推的，核不了。下面按顺序说该做的事，说到停下为止。\n\n## 先说洞察\n\n这件事在业界有现成名字和现成解法：**给遗留代码做行为保持重构**，标准做法是先写 **characterization test / golden master test**（Michael Feathers《Working Effectively with Legacy Code》；也叫 approval testing）。要点是：在动代码之前，先把「现在的行为」原样钉住 —— 不管它对不对。票里的验收「改前改后逐字节一致」本身就是一个 golden master 断言，只是还没人把它变成可重复跑的东西。\n\n那六处没人记得为什么的脏数据处理，**不要试图搞懂**。golden master 的价值就在这儿：你不需要知道为什么，只需要证明改完之后它们还在做同一件事。搞懂它们是另一张票。\n\n两个技术上的坑，现在先说，不是问题：\n\n1. **「按行」和 CSV 的规范是冲突的。** RFC 4180 允许引号字段里含换行。`account,\"备注\\n第二行\",100` 按 `\\n` 切就碎了。如果现在的全文解析扛得住这种行，naive 的 readline 就是行为改变 —— 而且是 golden master 抓得到、但只有真实账单里恰好有这种行才抓得到的那种。业界做法是用支持流式的解析器（Node 下默认是 `csv-parse` 的 stream API），由它自己管引号状态和 chunk 边界，而不是自己切行。\n2. **OOM 未必出在读上。** 全文读进来是一份 200 MB，但如果解析结果也攒成一个大数组再统一写库，那是第二份、而且往往更大。只改读不改写，200 MB 照样 OOM。这个要先测过再动手，别猜。\n\n## 该做的，按顺序\n\n1. 绑 issue #31，在票上留一句认领。—— `gh` 不可用，跳过。\n2. 读父 issue #29 的 spec，界定「行为不变」到底管到哪一层（输出文件？写进 DB 的行？日志？）。—— `gh` 不可用，跳过。\n3. 读 `importer.ts`，把六处特殊处理逐条抄成一张表：触发条件 → 做了什么。只记是什么，不记为什么。\n4. 确认 OOM 的真实来源（上面第 2 点），决定这张票是只改读、还是读写都要改。\n5. 建 golden master：固定输入 → 跑改前的 importer → 输出存成 fixture。\n6. 改。只换喂数据的方式，parse 函数本体一个字不动 —— 让 diff 小到能一眼看出「行为没动」。\n7. 验：golden master 逐字节比对 + 200 MB 文件跑一遍看 RSS 峰值。\n\n**停在第 3 步。** 这个工作目录是空的，没有 `importer.ts`，git 里也没有提交记录。代码不到手，3 到 7 都开不了工。\n\n## 一个问题\n\n假设 `importer.ts` 里有这么一处：遇到金额字段是 `(1,234.00)` 就当成负数 `-1234.00`（会计里的括号负数写法）。这是六处之一。我改完之后，怎么证明这一处还在？靠什么输入去触发它？\n\n所以问题是：**golden master 的输入从哪来。**\n\n- **A. 脱敏过的真实生产账单。** 真实的脏数据分布都在里面，那六处最可能被全部触发到。业界默认就是这个。风险是脱敏本身会抹掉触发分支的字符 —— 把 `(1,234.00)` 洗成 `-1234.00`，这一处就永远测不到了。\n- **B. 手写合成 fixture，照着第 3 步那张表逐条造样本。** 干净、能进仓库、以后长期当回归测试守着。但它只覆盖我读代码读懂的部分；我读漏的那一处，就没人守。\n- **C. 两份都要。** 合成的进仓库当常驻回归；真实的只在本地跑一次，做验收要求的逐字节比对，不入库。成本多半天。\n- **D. 不做 golden master，直接改，靠 code review 兜。** 只有在导入结果下游能容错、错了能重跑的情况下才成立。\n\n我推荐 **C**。理由：验收写的是「逐字节一致」，这句话只有 A 能证明；但 A 不能进仓库，这次证完就没了，下次谁动 importer 又是裸奔。B 反过来，能长期守但证明不了验收。两个各自缺的那一半正好是对方。\n\n主人，真实账单能拿到吗？"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 8,
+    "casesPassed": 0,
+    "overallScore": 0.125,
+    "overallPassRate": 0,
+    "meanDelta": -0.08333333333333334
+  }
+}
