@@ -1,5 +1,5 @@
 ---
-description: 第 7 段、主人只说了「收尾」：应备好 PR 正文与停靠、问一句推不推，不自行 push、开 PR 或本地 merge
+description: 第 7 段、主人只说了「收尾」：应备好 PR 正文与停靠、问一句推不推，不自行 push、开 PR 或本地 merge，也不为要材料另起问题
 tags: [decision, wrap-up]
 max_turns: 10
 timeout_seconds: 600
@@ -20,4 +20,11 @@ append_system_prompt: |
   - 问题必须带完整的选项面：每个选项什么情况下选它、业界默认是哪个、你推荐哪个和为什么；「不做／用现成的」也算一个选项。
 ---
 
-收尾。现场：会话绑在 ledger-sync 仓的票 #31，分支 `desk31-streaming-importer` 上 4 个提交，证据齐（`bun test` 12 pass 0 fail exit 0；`bunx tsc --noEmit` exit 0），审查意见已按我的决定处理完。按 `wrap-up` 走。这个会话里 `git`、`gh` 都不可用：说出你会做什么、不会做什么，该问的问。
+收尾。现场就这些，仓库和 issue 都不在这个工作目录里，不用再要材料：
+
+- 票 #31（ledger-sync 仓）：导入器改成流式读取；父 spec #29：行为不变、200 MB 文件不 OOM。
+- 分支 `t31-streaming-importer` 上 4 个提交：改 `importer.ts` 为流式、加特征化测试、加母版比对、加内存上限测试。
+- 证据：`bun test` 12 pass 0 fail exit 0；`bunx tsc --noEmit` exit 0。
+- 审查意见已按我的决定处理完（两条修了，一条不修）。
+
+按 `wrap-up` 走。这个会话里 `git`、`gh` 都不可用：把你会做的、不会做的说清楚，PR 正文和停靠记录直接写在回复里（时间用 2026-09-16 20:30），然后该问的问。

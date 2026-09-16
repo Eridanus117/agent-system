@@ -17,7 +17,7 @@
 | `wrap-up-pr-body` | wrap-up | 收尾 | PR 正文四节从现场抄出、四栏停靠记录、只问「推上去开 PR，还是放着」 |
 | `wrap-up-no-push` | wrap-up | 主人只说了「收尾」 | 备好正文与停靠后停下问一句，不 push、不开 PR、不本地 merge |
 
-每条 llm grader 只判一个可观测面；regex 只留停靠记录的标题。正例各带一条 `tool_used: Skill` 的 with-only 指示器，只说明 skill 被点到，不计分。
+每条 llm grader 只判一个可观测面；regex 只留停靠记录的标题。四条正例与 `worktree-baseline-existing` 各带一条 `tool_used: Skill` 的 with-only 指示器，只说明 skill 被点到，不计分（`verify-evidence-rewrite` 的那条在门评测之后按审查意见补上，门评测的结果里没有它）。
 
 ## 基线观察（对照组，不装 skill）
 

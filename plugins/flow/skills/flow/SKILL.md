@@ -36,10 +36,10 @@ issue、票、PR 开场时不等主人：先说开场那一句（形状由常驻
 | 1 需求分析 | 三行结论判对错 | 机会 issue（desk 仓），或「不是需求」（desk 仓 issue 写理由后以 `wontfix` 关） | `clarify` |
 | 2 方案对齐 | 每轮判对错、确认测试接缝、收 ADR | 词汇表（`CONTEXT.md`）、ADR、spec issue | `/grill-with-docs`、`/to-spec`（主人敲） |
 | 3 拆票 | 粒度与阻塞边 | 带阻塞边的票 | `/to-tickets`（主人敲；一个会话做得完就跳过，留一句） |
-| 4 开工准备 | 要不要建 worktree、开哪些可选步 | worktree 加分支，基线测试过 | `worktree-baseline`（用 Orca 开工作树并绑 issue，跑仓自己的检查当基线） |
+| 4 开工准备 | 开哪些可选步、基线过没过 | worktree 加分支（改动落地一律开），基线测试过 | `worktree-baseline`（用 Orca 开工作树并绑 issue，跑仓自己的检查当基线） |
 | 5 实现 | 动手前确认接缝 | 测试与实现的 commit | `/implement`（主人敲，内含 `tdd`）；产出是一条自建 skill 时按 `skill-authoring` 走 |
 | 6 验证与审查 | Critical 修不修、审查认不认 | 命令输出、审查报告、修正 commit | `verify-evidence`（每条声称配命令、退出码、关键行）；`code-review`；`review-response`（逐条核实、整份报主人、主人定了再改） |
-| 7 收尾 | 合、开 PR、还是放着 | 本地 merge 或 PR | `wrap-up`（PR 正文四节、停靠记录、挂起物，只问一句推不推；本地 merge 不做） |
+| 7 收尾 | 开 PR 还是放着；合由主人做 | PR，或放着的分支 | `wrap-up`（PR 正文四节、停靠记录、挂起物，只问一句推不推；agent 不做本地 merge） |
 | 8 发布 | 灰度三档、回滚点 | 观测点与线上比对 | 多数改动跳过；要发布时 `release-observe` |
 | 9 落家与交接 | 无门，随时 | 工作日志、裁决、耐用结论、交接文档 | `note`（沉淀）、工作日志（没有 issue 的外部变更）、`/handoff`（主人敲）、停靠记录 |
 

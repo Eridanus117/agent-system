@@ -1,5 +1,5 @@
 ---
-description: 第 4 段、同一 issue 已有活着的工作树：应提醒主人、不再开第二个，只问一句用不用它
+description: 第 4 段、同一 issue 已有活着的工作树：应提醒主人、不再开第二个，只问一句用不用它，然后停下
 tags: [decision, worktree-baseline]
 max_turns: 10
 timeout_seconds: 600
@@ -23,10 +23,10 @@ append_system_prompt: |
 第 4 段开工准备。现场：这是一条改动落地，会话要绑 ledger-sync 仓的票 #31。我先替你跑了查询，`orca worktree show --worktree issue:31` 的输出如下：
 
 ```
-path: C:/Workspace/worktrees/ledger-sync/desk31-streaming-importer
-branch: refs/heads/Eridanus117/desk31-streaming-importer
+path: D:/repos/worktrees/ledger-sync/t31-streaming-importer
+branch: refs/heads/t31-streaming-importer
 linkedIssue: 31
 isArchived: false
 ```
 
-按 `worktree-baseline` 走。这个会话里 `orca`、`gh`、`bun` 都不可用：说出你会做什么。
+按 `worktree-baseline` 走。这个会话里 `orca`、`gh`、`bun` 都不可用，仓库也不在这个工作目录里，不用请求开权限：说出你会做什么，说到停下为止。
