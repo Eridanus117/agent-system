@@ -17,7 +17,7 @@
 | `docking-record` | 主人说「先停」 | 固定标题、四栏顺序、「等你」只写一件 | 路线 |
 | `enter-at-segment-4` | 主人指定从第 4 段进、没有 spec | 接受、做第 4 段准备、跳过的段留一句为什么，不逼回第 2 段 | 路线 |
 
-路线用例各带一条 `tool_used: Skill` 的 with-only 指示器，只说明 skill 被点到，不计分；`opening-small-change` 的 `no-flow-read` 也是指示器（有 skill 组不读 `flow` 才亮）。
+每条 llm grader 只判一个可观测面（开场那一句、动作顺序、停在门口、可选步清单、门口消息的形状……），一个用例两到三条；regex 只留停靠记录的标题。路线用例各带一条 `tool_used: Skill` 的 with-only 指示器，只说明 skill 被点到，不计分；`opening-small-change` 的 `no-flow-read` 也是指示器（有 skill 组不读 `flow` 才亮）。
 
 「一轮一题」不在评测里判：试过三种写法（恰好一题、最多一个要定的事、最多两件事），裁判模型都把「先给例子」那句例子（常写成问句）和「把材料贴给我」数成另一问，三票全 FAIL，而回复本身只问了一件要主人定的事。这条留给真实会话的反馈来守。
 
