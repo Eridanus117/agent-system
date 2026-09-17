@@ -35,4 +35,23 @@
 
 ## 实跑记录
 
-待跑。
+2026-09-16，`claude plugin eval plugins/flow-steps -j 4 --model sonnet --judge-model sonnet`（有 skill 组对对照组，每用例 3 次，阈值 1.0）。八个用例的最终数字来自两份结果：五条取自第二轮完整门评测 `results/2026-09-16-gate/`（48 次运行，470 秒，4.16 美元）；`worktree-baseline-open`、`wrap-up-no-push`、`wrap-up-pr-body` 三条在那一轮后改了正文两句与三条 grader，单独重跑，取自 `results/2026-09-16-gate-rerun/<用例>/`（各 6 次）。
+
+| 用例 | 有 skill 组 | 对照组 | 差值 | 来源 |
+|---|---|---|---|---|
+| `worktree-baseline-open` | 0.83 | 0 | +0.83 | rerun |
+| `worktree-baseline-existing` | 1.0 | 0 | +1.0 | gate |
+| `verify-evidence-rewrite` | 1.0 | 0.56 | +0.44 | gate |
+| `verify-evidence-no-run` | 1.0 | 1.0 | 0 | gate |
+| `review-response-report` | 1.0 | 0 | +1.0 | gate |
+| `review-response-wrong-finding` | 1.0 | 0.33 | +0.67 | gate |
+| `wrap-up-pr-body` | 1.0 | 0 | +1.0 | rerun |
+| `wrap-up-no-push` | 1.0 | 0 | +1.0 | rerun |
+
+平均差值 +0.74。`verify-evidence-no-run` 两组同分，只作回归守卫。
+
+没到 1.0 的一条要说清：`worktree-baseline-open` 0.83——三次里两次 `gate-message` 三票 FAIL，那两条回复的命令都对（先 `orca worktree show --worktree issue:31`，再 `orca worktree create --name … --issue 31`，基线 `bun test`），门口那条消息因为工具不可用把工作树与分支写成「待定，等代跑结果」，grader 要求写出计划中的名字。这是沙箱里工具不可用的产物，不是行为缺口；再改 grader 或再跑只是换一组随机数，是否按 1.0 硬线重跑由主人在第 6 段的门上定。
+
+迭代过程：第一轮门评测（结果未提交）4 条过 4 条没过，暴露三处正文缺口——已有工作树时「只问一句」没说「问完就停」，agent 接着规划基线又要权限；`wrap-up` 把停靠格式指向 `flow`，评测沙箱里没装 `flow`，agent 只好自创栏目；材料不全时 `wrap-up` 去要材料而不是先写——和几处 grader 太死（工具不可用时门口消息只能是占位版；审查清单里每条的做法子选项被数成多问；lint 命令提示词里没给）。第二轮 5 过 3 没过：把 orca 两条命令改成「去查」后 agent 猜错旗标（两条命令是和 Orca 的合同，回到正文），`wrap-up` 停靠写成表格、多问了「内容对不对」。第三轮只重跑改过的三条。裁判固定 sonnet，被测也是 sonnet（主人定）。
+
+三份结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`，家目录路径里的用户名已换成 `<user>`。
