@@ -57,6 +57,10 @@
       "target": "plugins/workcoding/skills/requirement-translation"
     },
     {
+      "name": "review-response",
+      "target": "plugins/flow-steps/skills/review-response"
+    },
+    {
       "name": "self-improvement",
       "target": "plugins/self-improvement/skills/self-improvement"
     },
@@ -77,8 +81,20 @@
       "target": "plugins/workcoding/skills/system-analysis"
     },
     {
+      "name": "verify-evidence",
+      "target": "plugins/flow-steps/skills/verify-evidence"
+    },
+    {
       "name": "workcoding",
       "target": "plugins/workcoding/skills/workcoding"
+    },
+    {
+      "name": "worktree-baseline",
+      "target": "plugins/flow-steps/skills/worktree-baseline"
+    },
+    {
+      "name": "wrap-up",
+      "target": "plugins/flow-steps/skills/wrap-up"
     }
   ]
 }

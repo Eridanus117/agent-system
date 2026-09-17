@@ -53,6 +53,22 @@
       "target": "plugins/flow/skills/flow"
     },
     {
+      "name": "worktree-baseline",
+      "target": "plugins/flow-steps/skills/worktree-baseline"
+    },
+    {
+      "name": "verify-evidence",
+      "target": "plugins/flow-steps/skills/verify-evidence"
+    },
+    {
+      "name": "review-response",
+      "target": "plugins/flow-steps/skills/review-response"
+    },
+    {
+      "name": "wrap-up",
+      "target": "plugins/flow-steps/skills/wrap-up"
+    },
+    {
       "name": "ask-matt",
       "target": "vendor/mattpocock/skills/ask-matt"
     },
