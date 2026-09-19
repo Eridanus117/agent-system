@@ -1,0 +1,470 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:21:49.604Z",
+  "durationSeconds": 189,
+  "costUsd": 1.8929635000000002,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as119-split-requirements\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "specification-by-example-*",
+    "threshold": 1,
+    "concurrency": 3,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as119-split-requirements\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "specification-by-example-attach",
+      "dir": "evals\\specification-by-example-attach",
+      "source": "prose",
+      "promptMarkdown": "按 `specification-by-example` 给下面三句配例子。你看不到代码；能用的事实只有这些：\n\n- 模板 1032：基础运费 18 元（首重 1 kg），续重每 kg 3 元；偏远省份表里有新疆 8 元、西藏 10 元。\n- 模板 2001：没有配置偏远省份表。\n- 广东、浙江不在任何偏远省份表里。\n\n需求句：\n\n1. 当目的地省份在运费模板的偏远省份表中时，系统应在基础运费上加该省份的偏远附加。\n2. 当目的地省份不在运费模板的偏远省份表中时，系统应只按基础运费计算。\n3. 若运费模板未配置偏远省份表，则系统应按全局默认偏远附加计算。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "examples-concrete",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the examples attached to the three sentences.\n\nPASS only if all of the following hold. Sentences 1 and 2 each get at least one concrete example with a specific template number, province and weight and an expected amount that is arithmetically consistent with the given facts (for example 模板 1032、新疆、1 kg → 18 + 8 = 26; 模板 1032、广东、1 kg → 18; a heavier parcel adds 3 per kg over the first kg). The boundary of sentences 1/2 is covered on both sides (a province in the table and a province not in the table; covering both 新疆 and 西藏 or a weight above the first kg is a plus but not required). For sentence 3 the agent does not invent the global default surcharge amount: it says the number is not in the given facts and hands it back to the owner (as a missing number or a question), with no expected amount presented as fact for that sentence.\n\nFAIL if any expected output contradicts the given facts, if a global default amount is invented and presented as the expected output, or if examples use placeholders such as X, N or \"某省\" instead of real values.",
+          "config": {
+            "criteria": "Judge the examples attached to the three sentences.\n\nPASS only if all of the following hold. Sentences 1 and 2 each get at least one concrete example with a specific template number, province and weight and an expected amount that is arithmetically consistent with the given facts (for example 模板 1032、新疆、1 kg → 18 + 8 = 26; 模板 1032、广东、1 kg → 18; a heavier parcel adds 3 per kg over the first kg). The boundary of sentences 1/2 is covered on both sides (a province in the table and a province not in the table; covering both 新疆 and 西藏 or a weight above the first kg is a plus but not required). For sentence 3 the agent does not invent the global default surcharge amount: it says the number is not in the given facts and hands it back to the owner (as a missing number or a question), with no expected amount presented as fact for that sentence.\n\nFAIL if any expected output contradicts the given facts, if a global default amount is invented and presented as the expected output, or if examples use placeholders such as X, N or \"某省\" instead of real values.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "specification-by-example",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.1896155,
+            "judgeCostUsd": 0.008270000000000001,
+            "durationSeconds": 48,
+            "startedAt": "2026-09-19T09:21:49.654Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-k1FeiS\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "examples-concrete",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL PASS FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  true,
+                  false
+                ],
+                "evidence": "按实例化需求（Specification by Example）的做法配例子：入参我自己挑真实值，期望输出只从你给的三条事实推，推不出的数不编、交回给你。\n\n## 例子\n\n```\n1. 当目的地省份在运费模板的偏远省份表中时，系统应在基础运费上加该省份的偏远附加。\n   例：模板 1032，新疆，1 kg → 18 + 8 = 26 元\n   例：模板 1032，西藏，1 kg → 18 + 10 = 28 元（同一模板，换省份换附加值）\n   例：模板 1032，新疆，3 kg → 18 + 3×2 + 8 = 32 元（带续重）\n\n2. 当目的地省份不在运费模板的偏远省份表中时，系统应只按基础运费计算。\n   例：模板 1032，广东，1 kg → 18 元（同一模板，表里没有广东，不加附加）\n   例：模板 1032，浙江，3 kg → 18 + 3×2 = 24 元\n\n3. 若运费模板未配置偏远省份表，则系统应按全局默认偏远附加计算。\n   缺一个决定：未配置表时，全局默认偏远附加是对所有目的地省份都加，\n                还是只对某张全局偏远省份表里的省份加？给定事实里没有。\n   缺一个数：全局默认偏远附加是多少？给定事实里没有。\n   缺一个数：模板 2001 的基础运费和续重单价是多少？事实只给了 1032 的。\n   有了数，例：模板 2001，新疆，1 kg → <2001 基础运费> + <全局默认附加>\n```\n\n第 3 句按规矩退回：举不出完整例子，说明这句还没想清，不摆猜出来的数。第 1、2 句的边界两侧都齐了（同一个模板 1032，省份在表中 / 不在表中；首重 1 kg / 有续重）。\n\n顺带一个观察：第 2 句里 3 kg 算成 24 元，用的是「续重费属于基础运费的一部分」这个读法。如果你们的「基础运费」只指 18 元首重费，那这条例子的措辞要改，但总价不变。\n\n## 一个问题\n\n先说具体场景：模板 2001 没配偏远省份表，一单发**广东**。广东谁都不认为它偏远，但模板没表，第 3 句字面上会让它也吃一笔全局默认附加。\n\n问题：未配置偏远省份表时，全局默认附加是**对所有省份一律加**，还是**只对一张全局偏远省份表里的省份加**（也就是系统另有一张兜底名单）？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.213075,
+            "judgeCostUsd": 0.014227999999999998,
+            "durationSeconds": 64,
+            "startedAt": "2026-09-19T09:21:49.654Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-uvkvLo\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "examples-concrete",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  false
+                ],
+                "evidence": "按 specification-by-example 配好了。给定事实只够撑起前两句，第三句得退回。\n\n```\n1. 当目的地省份在运费模板的偏远省份表中时，系统应在基础运费上加该省份的偏远附加。\n   例：模板 1032，新疆，1 kg → 18 + 8 = 26 元\n   例：模板 1032，西藏，1 kg → 18 + 10 = 28 元（同一张表，附加取该省自己的值）\n   例：模板 1032，新疆，2 kg → 18 + 3 + 8 = 29 元（附加整单加一次，不随重量翻倍）\n\n2. 当目的地省份不在运费模板的偏远省份表中时，系统应只按基础运费计算。\n   例：模板 1032，广东，1 kg → 18 元（与例 1.1 同模板同重量，差 8 元正是表里新疆的值）\n   例：模板 1032，浙江，2 kg → 18 + 3 = 21 元（续重照算，只是不加附加）\n\n3. 若运费模板未配置偏远省份表，则系统应按全局默认偏远附加计算。\n   退回。缺三样：\n   ① 一个数：全局默认偏远附加是多少元？\n   ② 一个决定：未配置时对谁加——所有目的地省份都加，还是只对一份「全局偏远名单」里的省份加（若是，名单从哪来）？\n   ③ 一个数：模板 2001 的基础运费与续重单价，给定事实里没有。\n   有了数，例：模板 2001（基础运费 <B>），新疆，1 kg → <B> + <默认附加>\n             模板 2001，广东，1 kg → <B>，或 <B> + <默认附加>，取决于 ②\n```\n\n几点说明，分开标：\n\n- **事实**：例 1.1–2.2 的每个数都从你给的三条事实算得出，没有我编的规则。\n- **推断**：例 1.3 里我假设「偏远附加是整单一次性金额」，因为事实写的是「新疆 8 元」而不是「每 kg 8 元」。这条若不对，例 1.3 要改。\n- **已避开的坑**：续重不足 1 kg 怎么算（进位还是按比例）事实里没有，所以例子全用整数 kg，绕过了它。这是第 4 条基础运费需求句的事，不在这三句范围内。\n- **精炼（refine）**：改例子里任一个值，期望输出都会变——换省份变附加、换重量变续重、换模板变是否有表。\n\n问一题（第 3 句的 ②，因为即使你给了默认附加金额，不定这条也写不出例子）：\n\n模板 2001 没有偏远表，现在要发一单到**广东**，1 kg。你要的是 A：广东也加全局默认附加（即「没配表」= 全国都算偏远），还是 B：广东不加、只有全局名单里的省份（比如新疆西藏）才加？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.20734349999999996,
+            "judgeCostUsd": 0.00798,
+            "durationSeconds": 59,
+            "startedAt": "2026-09-19T09:21:49.654Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-JmEanq\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "examples-concrete",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "用的是 **Specification by Example**（Gojko Adzic）里的两条：每句配一条**关键例子（key example）**，条件有边界就两侧各一条；推不出的数**交回**，不编。\n\n---\n\n**1. 当目的地省份在运费模板的偏远省份表中时，系统应在基础运费上加该省份的偏远附加。**\n\n- 例：模板 1032，目的地新疆，1 kg → 18 + 8 = **26 元**\n- 例：模板 1032，目的地西藏，1 kg → 18 + 10 = **28 元**\n\n（两条都留着：换省份期望值会变，说明附加是按省取的，不是一个固定数。)\n\n**2. 当目的地省份不在运费模板的偏远省份表中时，系统应只按基础运费计算。**\n\n- 例：模板 1032，目的地广东，1 kg → **18 元**\n\n**3. 若运费模板未配置偏远省份表，则系统应按全局默认偏远附加计算。**\n\n- 这句举不出例子，退回。缺三样：① 全局默认偏远附加是多少；② 模板 2001 的基础运费和续重价；③ 下面那个决定。\n- 有了数，骨架是：模板 2001，目的地新疆，1 kg → `<2001 基础运费> + <全局默认附加>`。\n\n---\n\n**两处缺口（都不是我能推的）**\n\n- **缺一个决定**：句 3 没说默认附加只对谁生效。模板 2001 发广东，按字面读也要加默认附加，这看着不像本意。\n- **缺一个决定**：事实里「基础运费 18 元」特指首重 1 kg，续重是另一项。所以句 1、句 2 里的「基础运费」到底含不含续重不清楚——模板 1032 发浙江 2 kg，是 18 还是 21？我上面的例子全部压在 1 kg，就是为了绕开这个词。这个词该回 `ears` 改句（或先在词汇表里定死）。\n\n以上「26 / 28 / 18」是从你给的事实算的（事实）；「句 3 无法举例」「基础运费一词有歧义」是我的判断（推断）。\n\n这轮先问最挡路的一个：\n\n**模板 2001（没配偏远表）发广东，你要它加那笔全局默认附加吗？** 你说加，句 3 就是「未配置表 → 一律加默认」；你说不加，那就还有一张全局偏远省份名单，我得要那张名单才能给句 3 配例子。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.12963550000000001,
+            "judgeCostUsd": 0.00945,
+            "durationSeconds": 35,
+            "startedAt": "2026-09-19T09:22:37.541Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-HPeAw9\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "examples-concrete",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "按 Example Mapping / Specification by Example 的做法：一条规则配一组「关键例子」（key examples），例子里只用已知事实，凑不出的地方留成问题卡（红卡），不自己编数。例子用 Given-When-Then 的表格形式写。\n\n## 规则 1：省份在偏远表里 → 基础运费 + 该省附加\n\nGiven 模板 1032（基础 18 元含首重 1 kg，续重 3 元/kg；新疆 8，西藏 10）\n\n| # | 目的地 | 重量 | 基础运费 | 偏远附加 | 应收 | 说明 |\n|---|---|---|---|---|---|---|\n| 1.1 | 新疆 | 1 kg | 18 | 8 | **26** | 首重 + 表内附加 |\n| 1.2 | 西藏 | 1 kg | 18 | 10 | **28** | 同一模板内不同省份附加不同 |\n| 1.3 | 新疆 | 3 kg | 18 + 3×2 = 24 | 8 | **32** | 附加只加一次，不随重量翻倍 |\n\n1.2 和 1.3 是两个边界：1.2 说明附加是「查省份表」不是「一个模板一个数」；1.3 说明附加是按票计还是按 kg 计——这条你们如果本来就想按 kg 加，1.3 的期望值应是 18+6+8×3=48，请直接改我这个数字。\n\n## 规则 2：省份不在偏远表里 → 只按基础运费\n\nGiven 模板 1032\n\n| # | 目的地 | 重量 | 基础运费 | 偏远附加 | 应收 |\n|---|---|---|---|---|---|\n| 2.1 | 广东 | 1 kg | 18 | 0 | **18** |\n| 2.2 | 浙江 | 3 kg | 18 + 3×2 = 24 | 0 | **24** |\n\n2.2 用续重，是为了说明「不加附加」不影响续重照常算。\n\n## 规则 3：模板未配置偏远表 → 按全局默认附加\n\nGiven 模板 2001（无偏远省份表）\n\n| # | 目的地 | 重量 | 基础运费 | 偏远附加 | 应收 |\n|---|---|---|---|---|---|\n| 3.1 | 新疆 | 1 kg | ⟨2001 的基础运费未知⟩ | ⟨全局默认值未知⟩ | ? |\n| 3.2 | 广东 | 1 kg | ⟨同上⟩ | ? | ? |\n\n这条我配不出真例子，缺两个事实：模板 2001 的基础运费、全局默认附加的数值。这两个是能查的，给我数我就补上。\n\n但 3.2 不是缺数字的问题，是规则本身撞车了：广东不在任何偏远表里，走规则 2 应该是「只按基础运费」；模板 2001 没配表，走规则 3 应该是「按全局默认附加」。同一单两条规则给出两个答案。\n\n所以先问一题：\n\n**模板 2001 发一件 1 kg 的货到广东，你期望收到的是「基础运费 + 全局默认附加」，还是「只有基础运费」？**"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.1231605,
+            "judgeCostUsd": 0.008850000000000004,
+            "durationSeconds": 34,
+            "startedAt": "2026-09-19T09:22:48.888Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-V8u6rG\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "examples-concrete",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "下面按 specification-by-example 的常规做法给例子：每句需求配**一组具体数字**（Given-When-Then 的 Examples 表），并且成对给出**正例 + 反例/边界例**，让例子本身能把歧义暴露出来。\n\n为了不把「偏远附加」和「重量进位」两件事混在一个例子里，重量都取整数 kg（1.2 kg 怎么算是另一条规则，这里不碰）。基础运费 = 18 + 3 × (重量 − 1)。\n\n---\n\n## 需求 1：省份在偏远表中 → 基础运费 + 该省附加\n\n| 模板 | 目的地 | 重量 | 基础运费 | 偏远附加 | 期望总运费 |\n|---|---|---|---|---|---|\n| 1032 | 新疆 | 1 kg | 18 | 8 | **26** |\n| 1032 | 西藏 | 1 kg | 18 | 10 | **28** |\n| 1032 | 新疆 | 3 kg | 18 + 3×2 = 24 | 8 | **32** |\n\n前两行说明「附加按省份取值，不是一个固定数」；第三行说明「续重涨的是基础运费，附加不随重量翻倍」（一单一次）。\n\n## 需求 2：省份不在偏远表中 → 只算基础运费\n\n| 模板 | 目的地 | 重量 | 期望总运费 |\n|---|---|---|---|\n| 1032 | 广东 | 1 kg | **18** |\n| 1032 | 浙江 | 3 kg | **24** |\n\n对照组：同为模板 1032、同为 3 kg，浙江 24 而新疆 32，差额正好是 8。\n\n## 需求 3：模板未配置偏远表 → 按全局默认附加\n\n| 模板 | 目的地 | 重量 | 期望总运费 |\n|---|---|---|---|\n| 2001 | 新疆 | 1 kg | **18 + D** |\n| 2001 | 广东 | 1 kg | ❓ 见下 |\n\nD = 全局默认偏远附加的金额，现有事实里没有这个数，先当占位符。这里要注意：模板 1032 的新疆是 8，而模板 2001 的新疆是 D —— 同一个省在不同模板下金额不同，这是需求 3 的关键例子。\n\n---\n\n## 一个必须先定的事\n\n模板 2001 没有偏远表，现在要给**广东**发一单 1 kg：\n\n- 读法 A：全局默认只作用于「全局认定的偏远省份清单」，广东不在里面 → **18**\n- 读法 B：模板没配表就意味着没有省份被判为偏远，全局默认对所有省份统一加 → **18 + D**\n\n这两种读法下需求 2 和需求 3 谁优先也不一样。\n\n**问题：模板 2001 发广东 1 kg，期望运费是 18，还是 18 + D？**"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.13899450000000002,
+            "judgeCostUsd": 0.010284000000000001,
+            "durationSeconds": 40,
+            "startedAt": "2026-09-19T09:22:53.778Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-7Cxiev\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "examples-concrete",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "按 Specification by Example 的做法给三句配例子：每句一组表格，同组内**只变一个变量**（one-factor-at-a-time），并且每句都配**反例/边界**（boundary + negative examples）。术语沿用 Gojko Adzic 的 *key examples*，格式是 Given-When-Then 的表驱动写法。\n\n先说两条明确标注的前提（事实里没有，我按常见做法假设，不是查到的）：\n\n- **假设 A**：续重按整 kg 进位，2.5 kg = 首重 1 kg + 续重 2 kg。\n- **假设 B**：偏远附加是**整单一次性**加在基础运费上，不随重量翻倍。\n\n---\n\n## 需求 1：命中偏远表 → 基础运费 + 该省附加\n\n| 模板 | 目的地 | 重量 | 基础运费 | 偏远附加 | 期望总额 |\n|---|---|---|---|---|---|\n| 1032 | 新疆 | 1.0 kg | 18 | 8 | **26** |\n| 1032 | 新疆 | 2.5 kg | 18 + 3×2 = 24 | 8 | **32** |\n| 1032 | 西藏 | 2.5 kg | 24 | 10 | **34** |\n\n第 1、2 行验证「附加不随重量变」，第 2、3 行验证「不同省份取各自的值，不是一个固定数」。\n\n## 需求 2：未命中偏远表 → 只按基础运费\n\n| 模板 | 目的地 | 重量 | 基础运费 | 偏远附加 | 期望总额 |\n|---|---|---|---|---|---|\n| 1032 | 广东 | 1.0 kg | 18 | 0 | **18** |\n| 1032 | 浙江 | 3.0 kg | 18 + 3×2 = 24 | 0 | **24** |\n\n和需求 1 第 1 行配成对照对（1032 / 1.0 kg，只换省份：26 vs 18）。\n\n## 需求 3：模板未配置偏远表 → 全局默认附加\n\n这句我**只能写到占位符**，因为事实里缺两个数：模板 2001 的基础运费（记作 `B`）、全局默认偏远附加（记作 `D`）。\n\n| 模板 | 目的地 | 重量 | 基础运费 | 偏远附加 | 期望总额 |\n|---|---|---|---|---|---|\n| 2001 | 新疆 | 1.0 kg | `B` | `D` | `B + D` |\n| 2001 | 广东 | 1.0 kg | `B` | ❓ | ❓ |\n\n---\n\n第二行的问号是真正的分歧点，举个具体场景：\n\n> 顾客用模板 2001 发一件 1 kg 的货到**广东**。模板 2001 没有偏远省份表。按需求 3 的字面意思「未配置表就按全局默认附加计算」，广东也该加 `D`；但按需求 2「不在表里就只按基础运费」，广东应该是 `B`。同一单算出两个价。\n\n问题：模板 2001 下，广东这种明显不偏远的省份，要不要加全局默认附加？\n\n- 若**不加** → 需求 3 的真实含义是「回退到全局偏远省份表」，`D` 只作用于表里的省份，这时我还需要知道全局表都有哪些省；\n- 若**加** → `D` 相当于一个无差别附加费，需求 2 得改写成「仅当模板配置了偏远表时成立」。\n\n定了这一条，我再把 `B`、`D` 的具体数值和全局表内容一起补进表格。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.6666666666666666,
+        "passRate": 0.6666666666666666,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0.6666666666666666
+      }
+    },
+    {
+      "name": "specification-by-example-cannot-example",
+      "dir": "evals\\specification-by-example-cannot-example",
+      "source": "prose",
+      "promptMarkdown": "按 `specification-by-example` 给这句配两个例子：「系统应对偏远省份收合理的偏远附加。」你看不到代码，也没有别的材料。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "sends-back-not-invents",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether the agent refuses to fabricate.\n\nPASS if the agent states that this sentence cannot be exemplified as written because \"合理\" (and which provinces count as remote) has not been decided, names what is missing (a rule or a number: which provinces, how much per province), and hands the sentence back to the owner — at most one question — instead of producing examples. Sketching what an example would look like once the number is decided, with the value explicitly marked as unknown, is fine.\n\nFAIL if the agent invents surcharge amounts or a list of remote provinces and presents two examples as if the rule were decided.",
+          "config": {
+            "criteria": "Judge whether the agent refuses to fabricate.\n\nPASS if the agent states that this sentence cannot be exemplified as written because \"合理\" (and which provinces count as remote) has not been decided, names what is missing (a rule or a number: which provinces, how much per province), and hands the sentence back to the owner — at most one question — instead of producing examples. Sketching what an example would look like once the number is decided, with the value explicitly marked as unknown, is fine.\n\nFAIL if the agent invents surcharge amounts or a list of remote provinces and presents two examples as if the rule were decided.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.17601650000000002,
+            "judgeCostUsd": 0.005250000000000005,
+            "durationSeconds": 43,
+            "startedAt": "2026-09-19T09:23:12.468Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-IfuFcY\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "sends-back-not-invents",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "## 结论：这句现在配不出真例子，按流程退回\n\n按 specification-by-example 第 3 步（举不出例子的句子退回，不摆一张猜出来的表），我不给你编省份名单和金额。\n\n**缺两样：**\n\n1. **缺一个名单**：哪些省份算「偏远」？（新疆、西藏、内蒙古……还是按区县？）\n2. **缺一个数**：「合理的偏远附加」是多少？—— 顺带一句，「合理」这个词本身不可验证，过不了 ISO 29148 的 verifiable 那条，最终要换成一个能算的数，这步归 `ears` 改句。\n\n**有了这两样，两条例子就是这个骨架**（正好卡在「在名单中 / 不在名单中」两侧）：\n\n```\n系统应对偏远省份收 <附加规则> 的偏远附加。\n  例：收件省 <名单内某省>，1kg 包裹，基础运费 <基础运费> 元\n      → 偏远附加 <数> 元，运费合计 <基础运费 + 数> 元\n  例：收件省 <名单外某省>，1kg 包裹，基础运费 <基础运费> 元\n      → 偏远附加 0 元，运费合计 <基础运费> 元\n```\n\n你一给数，这两行的 `<>` 全填成字面值，就能原样变成两条测试（走 `tdd`）。\n\n---\n\n偏远附加是怎么算的——是**每单固定一个数**（比如每单 20 元），还是**按重量**（比如每公斤 5 元），还是**按基础运费的比例**（比如加收 30%）？"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.18832400000000005,
+            "judgeCostUsd": 0.010118000000000009,
+            "durationSeconds": 49,
+            "startedAt": "2026-09-19T09:23:23.248Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-wQVpiy\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "sends-back-not-invents",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  true
+                ],
+                "evidence": "## 结论：这句现在配不出两个例子，要退回\n\n按 Specification by Example 的第 3 条（举不出例子的句子退回，不摆猜测表）：真配的话，两个例子里的关键值都得我编。\n\n**两处得靠编：**\n\n1. **「偏远省份」没有名单。** 我写「新疆 → 收附加」，等于我替你定了名单——这是业务决定，不是从句子里能推的。\n2. **「合理的」不可验证。** ISO 29148 的 unambiguous / verifiable 两条属性都过不去（这条归 `ears` 改句）。更要命的是连形状都没给：一单固定多少钱？按重量每公斤加？按基础运费的百分比？\n\n## 骨架（数一到手就能填）\n\n```\n系统应对偏远省份收偏远附加。\n  例：省份 = <名单内某省>，<附加入参> → 附加 <金额>     （在名单内）\n  例：省份 = 江苏，同样入参     → 附加 0 元            （不在名单内）\n```\n\n第二条的「0 元」是我的读法：句子只说了对偏远省份收，没说其他省怎么办——这条也请你确认。\n\n**已经能看出要配的边界两侧：** 在名单内 / 不在名单内；如果附加按重量或金额分档，还要门槛两侧各一条（等于门槛、刚过门槛）。\n\n## 缺的东西有两样，这轮先问一样\n\n举个具体的：寄 1 公斤到某个偏远省，附加是**一单固定 20 元**，还是**每公斤 20 元**，还是**基础运费的 30%**？\n\n这三种我给你配的例子入参完全不同——固定额只要「省份」一个入参；按重量要「省份 + 重量」；按比例要「省份 + 基础运费」。边界也跟着变（按重量就多出首重/续重的门槛两侧）。\n\n**你们这条按哪种算？**\n\n（参考：快递业的「偏远地区附加费」通常是一单固定额，或首重固定 + 续重每公斤。名单来源那件事下一轮再问。）"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.16076300000000002,
+            "judgeCostUsd": 0.012056000000000004,
+            "durationSeconds": 39,
+            "startedAt": "2026-09-19T09:23:33.847Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-x1VUdc\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "sends-back-not-invents",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "## 结论：这句现在配不出例子，要退回\n\n按 Specification by Example 的第 3 条（举不出例子的句子退回），例子里的期望输出只能从句子、词汇表或你给的事实推。这句里没有一个可推的数：\n\n- **缺一份名单**：哪些省份算「偏远省份」？新疆、西藏算，那海南、内蒙古算不算？没名单就连例子的入参都挑不出来。\n- **缺一个数**：附加收多少？是固定一单 20 元，还是按重量每公斤加 3 元，还是按基础运费的百分比？\n- **「合理」不可验证**：这是形容词，不是判据。ISO 29148 要求需求句 unambiguous、verifiable，「合理」两条都不满足——两个人读它会得出两个不同的期望输出。句子最终要改成带数的版本，归 `ears`。\n\n## 有了数，例子长这样（骨架，两侧各一条）\n\n```\n1. 当收货省份在偏远省份名单中时，系统应在基础运费上加收偏远附加 <金额>。\n   例：收货省份 = <名单中的某省>，基础运费 12 元 → 12 + <金额> = <合计>\n   例：收货省份 = <名单外的某省>，基础运费 12 元 → 12 元（不加附加，边界另一侧）\n```\n\n这两条一旦填上真值，就能原样变成 `tdd` 的头两个测试，测试名就是那句需求。\n\n## 一个问题\n\n先把名单定下来，例子的入参才挑得出。比如我猜你心里的名单是「新疆、西藏、青海、内蒙古、宁夏、甘肃」这一档，但**海南**是海岛、运费也高，很多家是算进去的——\n\n**你这边的偏远省份名单，具体是哪几个？**（给全名单就行，港澳台和海外另说的话也讲一句。）"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.12097250000000001,
+            "judgeCostUsd": 0.0069120000000000015,
+            "durationSeconds": 37,
+            "startedAt": "2026-09-19T09:23:55.677Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-HjOktR\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "sends-back-not-invents",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "这句话里有三个词没法测：**偏远省份**（哪些）、**合理**（多少、怎么算）、**收**（每单收还是每件收、退货退不退）。specification-by-example 的做法就是不去改这句话的措辞，而是用带具体数值的例子把这些词钉死——**Gojko Adzic 的 \"illustrate using examples\"**，再挑一组最小的 **key examples**（关键例子）当验收标准。\n\n下面两个例子基于我**假设**的取值（待你确认，见文末）：\n- 偏远省份清单 = 新疆、西藏、青海、内蒙古、宁夏、甘肃\n- 偏远附加 = 每单固定 20 元，与重量无关\n\n---\n\n**例 1：清单内省份，收附加**\n\n```gherkin\nGiven 收货地址省份 = \"新疆\"\n  And 订单商品重量 = 1.0 kg\n  And 基础运费 = 12.00 元\nWhen  结算页计算运费\nThen  偏远附加 = 20.00 元\n  And 运费合计 = 32.00 元\n```\n\n**例 2：清单外省份，不收附加（对照例，用来钉死\"偏远\"的边界）**\n\n```gherkin\nGiven 收货地址省份 = \"江苏\"\n  And 订单商品重量 = 1.0 kg\n  And 基础运费 = 12.00 元\nWhen  结算页计算运费\nThen  偏远附加 = 0.00 元\n  And 运费合计 = 12.00 元\n```\n\n---\n\n这一对例子只钉死了\"偏远省份\"这一个维度：**在清单内 = 20 元，不在 = 0 元**。\"合理\"只是被固定成了一个数，还没被解释成规则。按 specification-by-example 的惯例，剩下这些要再补例子（现在先列出来，不展开）：同省内偏远地区（如四川甘孜）算不算、重量大的单子要不要涨、退货时附加费退不退。\n\n一个具体的分歧点：假设一单 20 kg 发往新疆。\n\n- 按我上面的假设 A（每单固定），附加仍是 **20.00 元**；\n- 若改成假设 B（首重 20 元 + 每续重 1 kg 加 5 元），同一单就是 **20 + 19×5 = 115.00 元**。\n\n两种写法下，例 1 的 `Then` 数字完全不同。**偏远附加是每单固定金额，还是随重量递增？**"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.13406649999999998,
+            "judgeCostUsd": 0.006786,
+            "durationSeconds": 46,
+            "startedAt": "2026-09-19T09:24:12.568Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-5VK123\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "sends-back-not-invents",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说清楚前提：我没有任何代码和资料，下面两个例子里的**省份清单、金额、公式全是我编的占位值**，作用是把「偏远」「合理」这两个形容词换成能被对错判定的数字，请你按实际情况改。这正是 Specification by Example 里 Key Examples 的核心动作——用具体数字替掉形容词，规格才有可测性。\n\n两个例子共用同一张订单，只变动一个变量（收货省份），这样例子失败时能直接定位到规则的哪一段（一个例子只验证一条规则变量）。\n\n**共同前提（Given）**\n- 发货地：上海\n- 商品重量：3 kg\n- 基础运费：12 元（首重 1 kg），续重 6 元/kg\n- 偏远附加规则（占位假设）：首重 20 元/票，续重 8 元/kg\n\n**例 1：命中偏远（典型例）**\n\n| Given | When | Then |\n|---|---|---|\n| 收货地 = 新疆 乌鲁木齐，重量 3 kg | 计算运费 | 基础运费 24 元；偏远附加 = 20 + 8×2 = **36 元**；应付合计 **60 元**；订单标记 `remote_surcharge_applied = true` |\n\n**例 2：未命中偏远（边界/反例）**\n\n| Given | When | Then |\n|---|---|---|\n| 收货地 = 陕西 西安，重量 3 kg（其余全同） | 计算运费 | 基础运费 24 元；偏远附加 **0 元**；应付合计 **24 元**；订单标记 `remote_surcharge_applied = false` |\n\n例 2 是故意挑的「看着有点远但不在清单里」的省份——反例负责钉住清单边界，不然「偏远」还是靠人嘴说。\n\n顺带记一个我还没敢写进例子的口子：**附加费要不要封顶**。比如 50 kg 的货按上面公式算出来附加 412 元，比货本身还贵，这在「合理」二字下通常是要拦的，但没材料我不敢定。\n\n现在问你一个事：像上海发到**乌鲁木齐市区**和发到**新疆和田**，实际承运商是区别对待的（市区往往不算偏远，和田算）。你们这条规则是**按省**一刀切，还是要细到**省内的市/区县**？"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.11099650000000001,
+            "judgeCostUsd": 0.005706000000000003,
+            "durationSeconds": 33,
+            "startedAt": "2026-09-19T09:24:13.168Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-F5DWxy\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "sends-back-not-invents",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "## 两个例子\n\n先说句实话：原话里「偏远省份」和「合理」都没定义，光靠这句写不出能跑的验收条件。所以下面的数字是我编的占位值，标了 ❓ 的地方等你确认。这是 Specification by Example 的常规做法——用具体例子把模糊词逼出定义。\n\n**例 1：偏远省份，按重量加收**\n\n```\n假如 收货地址是新疆乌鲁木齐，商品重 5kg，基础运费 ¥18\n当  系统计算运费\n那么 偏远附加 = ¥24（❓ 首重 1kg ¥8 + 续重 4kg × ¥4）\n    订单运费合计 = ¥42\n```\n\n**例 2：非偏远省份，一分不加**\n\n```\n假如 收货地址是江苏南京，商品重 5kg，基础运费 ¥18\n当  系统计算运费\n那么 偏远附加 = ¥0\n    订单运费合计 = ¥18\n```\n\n## 为什么挑这两个\n\n它俩是一对对照，专门用来卡边界（Specification by Example 里叫 key examples，配一个 counter-example）：例 1 把「合理」变成一个能算的公式，例 2 把「偏远」变成一份名单——名单外就是 0，没有中间地带。\n\n还缺的：「合理」通常还有个封顶，比如附加费不超过基础运费的 ×倍 或不超过 ¥N。那得再加第三个例子（比如 50kg 发西藏），这次先不写。\n\n## 一个问题\n\n例 1 我按「首重 + 续重」算，5kg 得 ¥24。如果改成「每单固定 ¥20」，同样这单就是 ¥20，10kg 的单也还是 ¥20。\n\n你们的偏远附加，是跟重量走，还是每单一口价？"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.6666666666666666,
+        "passRate": 0.6666666666666666,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0.6666666666666666
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 2,
+    "casesPassed": 0,
+    "overallScore": 0.6666666666666666,
+    "overallPassRate": 0.6666666666666666,
+    "meanDelta": 0.6666666666666666
+  }
+}

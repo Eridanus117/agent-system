@@ -1,0 +1,268 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:17:51.442Z",
+  "durationSeconds": 140,
+  "costUsd": 1.204478,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as119-split-requirements\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "switch-interview-read-answers",
+    "threshold": 1,
+    "concurrency": 3,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as119-split-requirements\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "switch-interview-read-answers",
+      "dir": "evals\\switch-interview-read-answers",
+      "source": "prose",
+      "promptMarkdown": "按 `switch-interview` 读一下答案。需求原话是产品 A 提的「运费模板要支持按省份设偏远附加」。我之前的草案是：真正的问题是新疆西藏的实际运费高于统一附加，商家在亏钱。\n\n我问了 A 三个问题，原话带回来了：\n\n- 上次遇到这种情况你们怎么办的？——「去年双十一新疆西藏的单子大概亏了两万，运营手工给每单补了差价。」\n- 现在怎么忍过来的？——「每周导一次新疆西藏的单子到 Excel，运营算完差价走补贴流程，一次大概两小时。」\n- 不做会怎样？——「就继续手工补。不过运营下个月要减一个人，到时候这两小时不知道谁做。」\n\n你看不到我们的代码和配置。告诉我真正的问题是什么，我的草案要不要改。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "four-forces-from-answers",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge how the agent reads the three relayed answers.\n\nPASS if all of the following hold: the agent reads the answers through the four forces of a switch (push of the current situation, pull of the new solution, anxiety about switching, habit of the present — in Chinese 推力／拉力／焦虑／习惯 or an equivalent naming), tying each force to a quoted line from the answers or explicitly saying that force was not mentioned; the real problem it states is derived from the answers (money lost on 新疆／西藏 orders, weekly manual subsidy work of about two hours, the operations headcount cut next month) rather than a restatement of the requested feature; and it revises the earlier draft (\"商家在亏钱\") in a way that keeps the earlier wording visible next to the revised one instead of silently replacing it.\n\nFAIL if the agent attributes to A anything not in the three answers as if A said it, skips the reading and jumps to designing the surcharge feature, or overwrites the earlier draft without keeping it.",
+          "config": {
+            "criteria": "Judge how the agent reads the three relayed answers.\n\nPASS if all of the following hold: the agent reads the answers through the four forces of a switch (push of the current situation, pull of the new solution, anxiety about switching, habit of the present — in Chinese 推力／拉力／焦虑／习惯 or an equivalent naming), tying each force to a quoted line from the answers or explicitly saying that force was not mentioned; the real problem it states is derived from the answers (money lost on 新疆／西藏 orders, weekly manual subsidy work of about two hours, the operations headcount cut next month) rather than a restatement of the requested feature; and it revises the earlier draft (\"商家在亏钱\") in a way that keeps the earlier wording visible next to the revised one instead of silently replacing it.\n\nFAIL if the agent attributes to A anything not in the three answers as if A said it, skips the reading and jumps to designing the surcharge feature, or overwrites the earlier draft without keeping it.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "switch-interview",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.1798345,
+            "judgeCostUsd": 0.008610000000000003,
+            "durationSeconds": 45,
+            "startedAt": "2026-09-19T09:17:51.497Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-nV92LO\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "four-forces-from-answers",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 switch-interview 的第 3、4 步读（JTBD 四种力 / four forces，Moesta & Spiek）。\n\n```\n原话｜运费模板要支持按省份设偏远附加（提：产品 A）\n推力｜「去年双十一新疆西藏的单子大概亏了两万，运营手工给每单补了差价」——出过一次大的\n    ｜「每周导一次…运营算完差价走补贴流程，一次大概两小时」——常态成本是每周两小时人工\n    ｜「运营下个月要减一个人，到时候这两小时不知道谁做」——有硬截止，现状撑不到下个月\n拉力｜未提到（A 没说按省份设附加好在哪、能省掉上面哪一步）\n焦虑｜未提到\n习惯｜「就继续手工补」——现状本身是稳的，不是撑不住，是人没了\n断言｜原写：真正的问题是新疆西藏的实际运费高于统一附加，商家在亏钱。\n    ｜裁为：钱的窟窿已经被每周两小时的手工补差价堵住了，真正的问题是下个月运营减员后这两小时没人做；\n    ｜      「亏钱」是去年双十一一次性的两万，不是当前正在发生的漏损。\n```\n\n**草案要改，改的是主语和时态。**\n\n你原来写的是「商家在亏钱」——现在进行时。但 A 的原话是「亏了两万，运营手工给每单补了差价」，钱当时就补上了。当前正在发生的不是漏钱，是每周两小时的人工在堵。这个差别会直接改掉需求的形状：止损要的是准确的省份运费规则，省人力要的是把「导 Excel → 算差价 → 走补贴流程」这条链子自动化掉——后者未必需要按省份设附加。\n\n两个我没有替 A 补的空：\n\n- **拉力是空的。** A 从头到尾没说「按省份设偏远附加」能省掉哪一步。他说的解法是在运费模板上改（下单时收对钱），他说的痛是在补贴流程上（事后补差价）。这两头没接上，中间那句得他自己说。\n- **「亏两万」这笔钱最后谁承担的，原话没说。** 「运营手工给每单补了差价」——补给谁、从哪个口子出，都没有。\n\n先给个例子说明这一问为什么值钱：如果那两万是平台从补贴预算出的，这需求是平台省预算 + 省人力，验收看的是补贴流程还跑不跑；如果是商家自己吃的、运营只是帮着算，那是商家侧止损，验收看的是下单时收的运费对不对——同一句需求，两套东西。\n\n要不要我给你备这一题带回去问 A：**去年双十一那两万的差价，最后是从平台的补贴预算出的，还是商家自己承担的？**"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.18154,
+            "judgeCostUsd": 0.009144000000000003,
+            "durationSeconds": 57,
+            "startedAt": "2026-09-19T09:17:51.497Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-kAW85l\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "four-forces-from-answers",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "读完了。答案否掉了你草案的重点——不是否掉事实，是否掉「哪里疼」。\n\n```\n原话｜运费模板要支持按省份设偏远附加（提：产品 A）\n草案｜真正的问题是新疆西藏的实际运费高于统一附加，商家在亏钱（假设）\n\n推力｜「去年双十一新疆西藏的单子大概亏了两万，运营手工给每单补了差价」\n    ｜——差价确实存在，但已经被手工补贴兜住了，钱这条已经不流血\n    ｜「每周导一次…一次大概两小时」——真正持续消耗的是人，不是钱\n    ｜「运营下个月要减一个人，到时候这两小时不知道谁做」——现状撑不住的时间点：2026 年 10 月\n拉力｜未提到（A 没说按省份设附加之后，那两小时里哪一步能省掉）\n焦虑｜未提到\n习惯｜「就继续手工补」——现状能撑，靠运营每周两小时\n\n断言｜原写：新疆西藏的实际运费高于统一附加，商家在亏钱。\n    ｜裁为：差价已经靠每周两小时的手工导表 + 补贴流程消化掉了，\n    ｜      2026 年 10 月运营减员后这两小时没人接；压力在人力，不在亏损。\n    ｜      且答案里只反复出现「新疆西藏」两个省，「按省份」这个颗粒度是 A 自己加的。\n```\n\n三处要说清楚：\n\n**草案要改。** 你写的「商家在亏钱」是去年双十一那一次的事，后面被补贴流程接住了。A 自己把三个答案的落点都放在「两小时」和「下个月减人」上——现在疼的是人，不是钱。这个差别会换掉你的方案：如果是亏钱，做法是把附加值算准；如果是没人做，做法是把那两小时自动化，而算不算得准可以先放宽。\n\n**「按省份」可能比需要的大。** 三个答案里出现的都是「新疆西藏的单子」，没有第三个省。这是原话里的观察，不是我的推断。是不是只有这两个省，得你去确认。\n\n**有两处我推断不出，没替 A 补：** 「亏了两万」是谁亏的、「补了差价」是补给谁（商家？快递？），原话没说。这个影响改完之后钱从哪个口子走。\n\n下一题建议这么问——先给 A 一个具体的场景：「假设乌鲁木齐一个 3 公斤的包裹，运费模板里给新疆设了固定附加 15 块。运营这周还需不需要导表？」然后问：\n\n**那两小时里，运营是拿什么数据算出每单的差价的？**\n\n问这个是因为拉力那一栏是空的。如果差价能从「省份 + 重量」直接算出来，那设个按省份的附加值就真能替掉两小时；如果得等快递公司的实际账单才知道，那按省份设一个固定值只是把亏损挪了个位置，两小时照样得有人做——那你现在这个方案就白做了。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.176962,
+            "judgeCostUsd": 0.008756,
+            "durationSeconds": 40,
+            "startedAt": "2026-09-19T09:17:51.497Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-OE7P9n\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "four-forces-from-answers",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  true
+                ],
+                "evidence": "按技能的读答案步骤，结论如下。\n\n```\n原话｜运费模板要支持按省份设偏远附加（提：产品 A）\n草案（假设）｜真正的问题是新疆西藏的实际运费高于统一附加，商家在亏钱\n\n推力｜「去年双十一新疆西藏的单子大概亏了两万，运营手工给每单补了差价」\n    ｜——钱的窟窿出现过一次，是大促期间，而且已经被手工补掉了\n    ｜「每周导一次…运营算完差价走补贴流程，一次大概两小时」\n    ｜——常态成本是每周两小时人工，不是持续在亏钱\n    ｜「运营下个月要减一个人，到时候这两小时不知道谁做」\n    ｜——承接这两小时的人下个月没了，现状撑不住的点在这里\n拉力｜未提到（A 没说按省份设附加之后哪一步能省掉）\n焦虑｜未提到\n习惯｜「就继续手工补」——现状能撑，撑到减人那天\n\n断言｜原写：新疆西藏的实际运费高于统一附加，商家在亏钱。\n    ｜裁为：新疆西藏的运费差价每周靠运营两小时手工导出、计算、走补贴流程堵住，2026 年 10 月运营减员后这两小时没人承接；钱已经被人工吸收了，真正要顶掉的是这个人工流程\n```\n\n要点，分开标：\n\n- **事实（答案原话里的）**：亏两万是去年双十一一次性的，且已经被补贴补回；答案里只出现过新疆、西藏两个地区，没有第三个；时间压力是 2026 年 10 月减员。\n- **推断（我的，A 没说）**：如果下单时附加费就收对了，那两小时里的三步（导出、算差价、走补贴流程）会一起消失，不是省时间而是整条流程作废。这正好是「拉力」空着的位置——A 没讲，所以这条需要你去确认，不能当依据。\n- **观察**：需求说的是「按省份设」，但证据只支撑两个地区。通用的省份维度配置和两个地区的固定值，工作量差很多，而答案没有给出前者的依据。\n\n草案要改：原来把问题定位在「在亏钱」，答案显示钱这条路已经被人工堵上了，改成「人工流程即将失去承接人」，紧迫性和验收标准都不一样——前者的验收是「不再亏」，后者是「运营那两小时归零」。\n\n一个问题：假设内蒙古、甘肃酒泉、青海的单子现在也在走那个每周两小时的 Excel，那就得做通用的省份配置；如果那张 Excel 里从头到尾只有新疆和西藏两行，两个固定值就够了。你能不能回去问 A 一句：那张每周导出的 Excel 里，除了新疆西藏还有别的地区吗？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.233777,
+            "judgeCostUsd": 0.010091999999999997,
+            "durationSeconds": 88,
+            "startedAt": "2026-09-19T09:18:31.315Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-eCGKlz\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "four-forces-from-answers",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`switch-interview` 这个 skill 我这边没有——可用列表里没有，仓库里也没搜到同名文件（`.claude/skills/` 目录不存在）。我按它显然对应的那套业界方法来读：Jobs-to-be-Done 的转换访谈（Switch Interview / Four Forces of Progress，Bob Moesta、Chris Spiek）。你问的那三题正好是这套里的「推力 / 现状惯性 / 不做的代价」。\n\n## 先分清哪些是事实\n\nA 的原话能直接坐实的：\n\n- 去年双十一新疆西藏亏了约两万，运营手工逐单补差价。\n- 现在每周导一次 Excel，运营算差价走补贴流程，约两小时。\n- 不做的话继续手工补；但运营下个月减一人。\n\n我的推断（不是他说的）：\n\n- 这事已经被人肉兜住了，所以两万块本身不是推动力——它去年就发生了，今年照样在忍。**忍得下去的问题不会立项。**\n- 真正让它从「能忍」变成「忍不了」的，是下个月那个减员。这是 JTBD 里的 triggering event：它给了这件事一个日期，而不是一个金额。\n- 今天是 2026-09-19，「下个月」= 10 月，双十一在约七周后。两条线撞在一起：人少了，单量峰值来了。\n\n## 真正的问题\n\n不是「新疆西藏运费高于统一附加，商家在亏钱」，而是：\n\n> 新疆西藏的运费差额目前靠运营每周两小时的人工对账+补贴流程兜着，这个流程下个月失去承担人，而它失去承担人的时间点正好撞上双十一峰值。\n\n金额只是这个流程的产出，不是痛点本身。痛点是流程的所有权要断了。\n\n## 你的草案要改\n\n三处：\n\n1. **问题陈述换主语**：从「在亏钱」换成「靠人工兜着，兜不住了」。亏钱的版本没法解释「为什么去年亏了两万却没做」——问题陈述要能解释过去的不作为，否则它抓的不是真因。\n2. **验收标准换指标**：不是「支持按省份配置偏远附加」，是「运营不再需要每周导 Excel，那两小时归零」。前者是功能交付，后者才是这个需求被提出来的原因。功能做完了但运营还在导 Excel，就是没做成。\n3. **排期锚点写死**：锚在减员生效日之前，不是「下个季度」。这个日期是 A 自己给的，可以直接引用。\n\n另外提醒一个风险：**按省份设一个固定附加，未必能让那两小时归零。**如果差价是逐单变化的，配置一个省级固定值只能压掉大头，尾巴还得人工对——运营还是得导 Excel，只是导得少一点。那样第 2 条验收就过不了。\n\n## 所以我只问你一个问题\n\n举个具体的：同样发乌鲁木齐，一单 1kg 的茶叶和一单 8kg 的猫粮，运营去年补的差价金额是不是不一样？\n\n**新疆西藏那个差价，是每单都得算，还是能用「省份 + 重量段」几档固定值覆盖掉？**\n\n这个答案决定草案是「加一张省份配置表」还是「按实际承运报价算运费」——两件工作量差一个数量级。你如果不确定，这就是我建议你回去问 A 的第四个问题：让他捞去年双十一那批补贴记录，看金额是不是集中在几个数上。"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.21885500000000002,
+            "judgeCostUsd": 0.010284000000000001,
+            "durationSeconds": 76,
+            "startedAt": "2026-09-19T09:18:36.183Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-y7J79N\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "four-forces-from-answers",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "我这边没有 `switch-interview` 这个 skill——可用列表里没有，项目目录里也搜不到同名文件（`config` 目录我没有读权限，如果它装在那儿，你得给我开一下）。下面我按标准的 Switch Interview / Jobs to be Done 方法（Bob Moesta 的 forces of progress：push / pull / habit / anxiety）来读这三段原话。\n\n## 三段原话里的事实\n\n- 这个痛至少存在一年了（去年双十一），一直没做。\n- 已经有稳定的 workaround：每周导 Excel → 运营算差价 → 走补贴流程，2 小时/周。\n- 钱的量级：双十一前后约 2 万；而且它**没有消失**，只是从运费口子挪到了补贴口子。\n- 唯一**新**发生的事：下个月运营减一人。\n\n## 真正的问题\n\n你的草案说「实际运费高于统一附加，商家在亏钱」——这是准确的**现象**，但不是让 A 这个月来提需求的那个力。\n\n钱这条 push 很弱：2 万一年，公司忍了一整年，还建立了一套习惯（habit：Excel + 补贴流程）。按 JTBD 的判法，一个被稳定 workaround 吸收掉、且忍了一年的成本，不会自己变成需求。\n\n真正的 struggling moment 是：**兜底这件事的人下个月没了。**这套流程能跑，是因为有人每周花 2 小时把系统算错的账手工修回来；减一人之后这 2 小时没有主人。需求要解决的 job 是「让新疆西藏的差价不再需要人来算、不再走补贴流程」，而不是「少亏 2 万」。\n\n这个区分会改方案和验收：\n\n- 如果目标是「不亏钱」，按省份配个固定附加值就算交付了。\n- 如果目标是「没人再做这 2 小时」，那**固定附加值不一定够**。他们每周要导出来逐单算差价，说明实际运费在省内是按重量/体积/快递公司浮动的；一个固定值只是近似，残差只要还有，运营照样得对账、照样得走补贴流程——功能上线了，2 小时还在。\n\n## 草案怎么改\n\n改一句，不用推翻：\n\n> **真正的问题**：新疆西藏的运费差价现在靠运营每周 2 小时手工兜底（Excel + 补贴流程），下个月运营减一人后这件事无人接手。按省份设偏远附加是 A 提的解法，前提是固定附加值能把残差压到不需要人工对账的程度——这一条待验证。\n>\n> **验收标准**（用 Outcome-Driven Innovation 的写法，写成可测结果而不是功能清单）：上线后运营每周人工处理时间 = 0，新疆西藏订单不再走补贴流程。\n>\n> **时间点**：下个月减人前。这是 A 给的硬约束，不是我们估的。\n\n另外，验证不用等新数据——那份每周 Excel 本身就是现成的 ground truth。拿过去三个月的表，用候选的省份固定附加值回算每单残差（backtesting），看残差分布；如果 95% 的单子残差在几块钱内，固定附加成立，否则得按「省份 × 重量段」或接快递公司报价。\n\n## 一个问题\n\n举个具体的：同样 3kg 的包裹，一单发乌鲁木齐、一单发喀什，在上周那张 Excel 里，运营补的差价是同一个数，还是两个数？\n\n（这一题的答案决定「按省份」这个粒度够不够，也就决定你的草案要不要连解法一起改。）"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.21350949999999996,
+            "judgeCostUsd": 0.009359999999999993,
+            "durationSeconds": 82,
+            "startedAt": "2026-09-19T09:18:48.563Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-evZ7EE\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "four-forces-from-answers",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说一件事:`switch-interview` 这个 skill 我这边没有 —— 不在可用列表里,cwd 下也没搜到同名文件。下面是按通用的需求验证打法(Continuous Discovery / Opportunity Solution Tree,Teresa Torres)自己答的,不是照那个 skill 的模板。\n\n## 先把事实和推断分开\n\nA 原话给的**事实**只有三个数:\n- 去年双十一,新疆西藏亏了约 2 万(已由运营走补贴流程补掉)\n- 每周导出 + 算差价 + 走流程,约 2 小时\n- 下个月运营减一人\n\n我的**推断**(A 没说,但从这三句能推):钱的口子其实已经被堵上了,是用人手堵的。商家不是在持续流血,是有人每周花两小时手工止血。真正没人接的,是这两小时。\n\n## 真正的问题\n\n你的草案「实际运费高于统一附加,商家在亏钱」是对的,但它描述的是**去年的**状态。A 的第二、三问把它推翻了一半:亏损已经有了兜底方案,而兜底方案下个月要塌。\n\n我会改成:\n\n> 新疆西藏实际运费高于统一附加,目前靠运营每周 2 小时手工导出、算差价、走补贴流程兜住。下个月运营减员,这 2 小时没有承接人。功能要消灭的是这 2 小时,顺带把 2 万从平台补贴转成买家运费。\n\n改这一句,有三处会跟着变:\n\n1. **验收标准**。原草案的验收会写成「附加费能按省配置」——配完了,运营那 2 小时可能一分没少(见下面的问题)。改完之后验收是「运营的周度导出补差流程归零」。\n2. **排期的理由**。截止日是下个月的减员,不是双十一。这个日期更近、也更硬。\n3. **要防的风险**。如果只做了省份附加但人工没归零,等于开发资源花了、减员问题原样还在——这是这个需求最容易出的错。\n\n顺带提一个 A 没提、但迟早要回答的:把附加费提上去是让买家掏这 2 万。新疆西藏单量本来就薄,涨价后可能直接不下单了。这不改变要不要做,但会影响附加费定多少,值得让 A 心里有数。\n\n另外我用的取舍规则是 Cost of Delay(Don Reinertsen):不做的代价算的是\"延期一个月多花什么\",这里是\"2 小时/周没人做\",不是\"2 万\"。2 万是一次性大促数字,日常单量下年化多少,A 没说。\n\n## 一个问题\n\n举个具体的:同样一单 5kg 发新疆,发乌鲁木齐和发喀什,承运商向你们收的钱一样吗?\n\n**运营每周算差价的时候,是查一张「省份 → 固定金额」的对照表,还是逐单去翻承运商账单?** 如果是前者,省份粒度就够,做完人工归零、草案照上面改就行;如果是后者,「按省份设偏远附加」只能把差价缩小、消不掉,那 2 小时照样要做——那连 A 提的这个方案本身都得重开。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.3333333333333333,
+        "passRate": 0.3333333333333333,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0.3333333333333333
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 1,
+    "casesPassed": 0,
+    "overallScore": 0.3333333333333333,
+    "overallPassRate": 0.3333333333333333,
+    "meanDelta": 0.3333333333333333
+  }
+}

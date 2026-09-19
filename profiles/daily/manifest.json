@@ -69,6 +69,26 @@
       "target": "plugins/flow-steps/skills/wrap-up"
     },
     {
+      "name": "switch-interview",
+      "target": "plugins/practices/skills/switch-interview"
+    },
+    {
+      "name": "ears",
+      "target": "plugins/practices/skills/ears"
+    },
+    {
+      "name": "specification-by-example",
+      "target": "plugins/practices/skills/specification-by-example"
+    },
+    {
+      "name": "requirement-elicitation",
+      "target": "plugins/flow-steps/skills/requirement-elicitation"
+    },
+    {
+      "name": "requirement-specification",
+      "target": "plugins/flow-steps/skills/requirement-specification"
+    },
+    {
       "name": "ask-matt",
       "target": "vendor/mattpocock/skills/ask-matt"
     },
