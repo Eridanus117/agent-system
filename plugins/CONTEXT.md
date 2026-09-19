@@ -17,8 +17,7 @@ _Avoid_: 容易混进来的近义词，和为什么不用
 
 ### 主人开口之后
 
-**请求**（request；出处：ITIL 4 服务请求管理）:
-主人开口到拿回东西的一次往返。不设总称，按「要拿回什么」分成下面三种；停下、交接、换机器不是第四种，是三种都能被打断。
+主人开口到拿回东西的一次往返不设总称，要指它时说「请求」（request）就够。按「要拿回什么」分成下面三种；停下、交接、换机器不是第四种，是三种都能被打断。
 _旧名_: 来往
 
 **查询**（query；出处：CQRS，Greg Young）:
@@ -38,7 +37,7 @@ _Avoid_: 大改动（分的依据不是体量）、需求
 ### 进了阶段之后
 
 **阶段**（stage；出处：Cooper 的 Stage-Gate）:
-常规变更被切成的九个阶段之一，每个阶段有门和产物；顺序、门、产物在 `flow` 正文的九段表。
+常规变更被切成的九个阶段之一，每个阶段有门和产物；顺序、门、产物在 `flow` 正文的九个阶段那张表。
 _旧名_: 段
 
 **门**（gate；出处：Cooper 的 Stage-Gate）:
@@ -59,12 +58,23 @@ _Avoid_: 交接记录（那是第 9 阶段 `/handoff` 的产物，给换机器�
 支撑一条声称的东西，三样齐才算（哪三样与怎么贴见 `verify-evidence`）；没有的声称标「未验证」。
 _Avoid_: 「应该没问题」「看着能过」
 
-**违例**（violation；出处：静态分析的 rule violation）:
+**违例**（violation；出处：SonarQube 的 rule violation）:
 审查意见里违反仓里文档化规则或 spec 明写要求的那种。
 _旧名_: 硬问题
 
 **判断题**（judgement call；出处：Google 代码审查指南）:
 审查意见里不是违例的其余那些。两个标签只帮主人分拣，修不修都由主人定。
+
+### skill 分哪两层
+
+**实践**（practice；出处：Kent Beck《Extreme Programming Explained》的 practices）:
+讲怎么做一件事的 skill：grilling、tdd、特征化测试这类。一条实践只在一个文件里。
+
+**规程**（procedure；出处：ISO 9000 对 procedure 的定义「进行某项活动的规定途径」）:
+按活动点名实践、把它们组合起来的 skill；`flow` 与 flow-steps 里的都是。正文只点名，做法在实践里。
+
+**真源**（source of truth；出处：The Pragmatic Programmer 的 DRY 与 single source of truth）:
+一件事只在一处定义、其余处引用它的那一处。路线的真源现在是 `flow`。
 
 ### 决定走多长的路线
 
@@ -82,15 +92,14 @@ _Avoid_: 门 skill
 **模型可拿的**（model-invoked；出处：Claude Code Skills 文档的 `disable-model-invocation`）:
 规则点名后由 agent 自己用的 skill。
 _旧名_: 自动调用
-_Avoid_: 步 skill
 
 ### 写完之后
 
-**反馈**（feedback；出处：通用词）:
+**反馈**（feedback；出处：The DevOps Handbook 的第二步「反馈」）:
 用一条 skill 时，它让做的和实际做的对不上或别扭的那一次现场，抄原文记成的一条 issue。
 _Avoid_: 摩擦、硌手、痛点、坑（「坑」在工作区里指工具链或环境的失败案例，是另一回事）
 
-**上线清单**（rollout checklist；出处：Google SRE 的 launch checklist）:
+**上线清单**（rollout checklist；出处：发布工程通用，Google SRE 的 launch checklist 为近例）:
 一条 skill 写好之后，要让它真正被点名或能敲，还需要在 skill 仓之外做的那几处改动：路由句、可见档、同步投影。
 _旧名_: 上线待办
 _Avoid_: 路由待办、部署待办
@@ -107,10 +116,10 @@ _旧名_: 领域分支
 
 ### 评测
 
-**基线**（baseline；出处：受控实验的基线）:
+**基线**（baseline；出处：Kohavi《Trustworthy Online Controlled Experiments》）:
 SKILL.md 还是占位、或不装 skill 时跑出来的结果；正文只针对它写。
 
-**对照组**（control group；出处：受控实验）:
+**对照组**（control group；出处：Kohavi《Trustworthy Online Controlled Experiments》）:
 评测里不装 skill 的那一组运行；装了 skill 的那一组叫**有 skill 组**，两组之差就是差值。
 _Avoid_: 臂、with arm、without arm
 

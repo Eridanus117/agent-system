@@ -35,7 +35,7 @@ description: >-
 
 5. **跑基线。** SKILL.md 还是占位时跑 `claude plugin eval plugins/<名> --runs 1`（默认带对照组），结果落 `evals/results/<日期>-baseline/`；基线看对照组那一列——那是 agent 没有 skill 时实际怎么做，写进 `evals/README.md`「基线观察」，一个用例一两句。有 skill 组此时只是占位，应当同样失败，否则用例没区分力。这就是真缺口，正文只针对它写。跑不了（当前会话没有 Bash）就把用例备好、写明下一步是跑基线，停在这里等。验收标准：README 里每个用例都有一条来自对照组的观察。
 
-6. **写正文。** 两节骨架必有：什么时候用、步骤（每步带完成判据）；产出、出口、为什么在哪按需；术语只用有出处的业界词，禁令紧跟正面句，写法按 [writing-rules.md](./references/writing-rules.md)。想清楚类的 skill 再加：一轮只递一题、说平语、先给具体例子。附件分 `scripts/`、`references/`、`assets/`，引用一层直达。验收标准：正文过了剪枝四查，不超过 500 行，`node plugins/tests/skills.test.ts` 的词汇守卫通过。
+6. **写正文。** 两节骨架必有：什么时候用、步骤（每步带完成判据）；产出、出口、为什么在哪按需；术语只用有出处的业界词，禁令紧跟正面句，写法按 [writing-rules.md](./references/writing-rules.md)。想清楚类的 skill 再加：一轮只递一题、说平语、先给具体例子。附件分 `scripts/`、`references/`、`assets/`，引用一层直达。验收标准：正文过了 writing-rules「写完过一遍」的四条，不超过 500 行，`node plugins/tests/skills.test.ts` 的词汇守卫通过。
 
 7. **跑有 skill 组对对照组。** `claude plugin eval plugins/<名> --output-dir evals/results/<日期>-gate`（默认带对照组、每用例 3 次）。看差值和每条 grader 的证据，读执行记录不只读最终答案；改正文再跑，直到有 skill 组全过、差值总体为正——某条差值为 0 的要在 README 说明它只是回归守卫。修改既有 skill：同一套用例在改前、改后各跑一遍，两份结果都提交；版本 patch 加一（`plugin.json` 与 `.claude-plugin/marketplace.json` 同步改）。跑完用 `scripts/scrub-eval-results.ts` 把结果里的本机用户名换成 `<user>`（ADR-0003）再提交。验收标准：`aggregate-result.json` 在 `evals/results/<日期>-<标签>/`，里面没有本机用户名。
 

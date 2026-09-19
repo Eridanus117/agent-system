@@ -12,7 +12,7 @@ decision-makers: 负责人
 - 八条工程规程（`plugins/workcoding`）各自把实践内联进正文。对照 Matt Pocock 的 writing-for-agents：预训练里已有的词（leading word）一个 token 就能招来模型先验，自造词要用定义句去买；实践单独成 skill、规程只组合，正文才薄。
 - 自造词分布（2026-09-18 统计）：flow 62 处、skill-authoring 24、worktree-baseline 16、wrap-up 15、review-response 5、verify-evidence 3；workcoding 八条 0 处。
 
-请负责人定的一件事：术语用什么、实践与规程分不分层。
+请负责人定的一件事：自建 skill 的术语该用什么，实践与规程要不要分成两层？
 
 ## 决策驱动因素（Decision Drivers）
 
@@ -39,7 +39,7 @@ decision-makers: 负责人
 2. 常驻规则（agent-config#57）：共用规则第 23、35、45、60 行的来往、焦点、领域分支换掉，第 60 行改「只用业界词」。
 3. flow 与 flow-steps（agent-system#117）：五条正文与评测副本、grader 同步换词。
 4. practices（agent-system#118 到 #122）：Matt 的四条实践复制入库（ADR-0007），workcoding 八条拆成实践加薄步。
-5. 收口（agent-system#123）：删「旧名」别名，`workcoding` 目录归档。
+5. 收口（agent-system#123）：删「旧名」别名，`workcoding` 目录归档；skill-authoring 自身正文里的旧名（手动调用、自动调用、上线待办、第 N 段）在这一步换掉，前四步都没点名它。
 
 不选 A：先验问题不解决，正文瘦了词汇表还在长。不选 C：中文正文难读。
 

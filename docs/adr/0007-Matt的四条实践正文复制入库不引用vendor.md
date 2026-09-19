@@ -11,7 +11,7 @@ decision-makers: 负责人
 - `flow` 已在点名 `/grill-with-docs`、`/implement`、`tdd`、`code-review`，它们的实践正文在 `vendor/mattpocock/skills/`（revision `6acc160`），工作方法地图上却是「未接入」。
 - ADR-0006 把实践层单列之后，这四条实践放哪：引用 vendor，还是复制进 `plugins/practices`。
 
-请负责人定的一件事：四条实践的正文是引用 vendor、复制入库，还是自己重写。
+请负责人定的一件事：四条实践的正文是引用 vendor、复制入库，还是自己重写？
 
 ## 决策驱动因素（Decision Drivers）
 

@@ -57,11 +57,19 @@ for (const plugin of plugins) {
 const glossaryPath = join(pluginsRoot, 'CONTEXT.md');
 const glossary = read(glossaryPath);
 assertNoCoinedMarker(glossary, 'plugins/CONTEXT.md');
-const glossaryEntries = glossary.split('\n').filter((line) => line.startsWith('**'));
+// 词条是行首 `**` 的行；先剥掉 fenced code block，表头里的模板行不算词条
+const glossaryEntries = glossary
+  .replace(/^```[\s\S]*?^```[ \t]*$/gmu, '')
+  .split('\n')
+  .filter((line) => line.startsWith('**'));
 assert.ok(glossaryEntries.length > 0, 'plugins/CONTEXT.md: 没有任何词条');
 for (const line of glossaryEntries) {
-  const m = /^\*\*[^*]+\*\*（([^）]+)）:\s*$/u.exec(line);
-  if (!m) assert.fail(`plugins/CONTEXT.md 词条形状不对，应为 **中文**（English；出处：…）: —— ${line}`);
+  // 括号取到行尾最后一个「）」，出处里可以嵌套全角括号
+  const m = /^\*\*[^*]+\*\*（(.+)）:\s*$/u.exec(line);
+  if (!m) {
+    assert.fail(`plugins/CONTEXT.md 词条形状不对，应为 **中文**（English；出处：…）: —— ${line}`);
+    continue;
+  }
   const [english, source] = m[1].split('；');
   assert.ok(
     english !== undefined && /[A-Za-z]{2,}/u.test(english) && !/[一-鿿]/u.test(english),
