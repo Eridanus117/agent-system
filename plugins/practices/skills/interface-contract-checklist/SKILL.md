@@ -31,4 +31,4 @@ description: >-
 ## 为什么在哪
 
 - agent-system#121（从 `integration` 拆出的第一条实践）、ADR-0006、desk#152。
-- 五种边界与「不变也要写出来」来自 `integration` 旧正文，到 agent-system#123 归档为止；消费者驱动契约测试（Pact）不在这里，上下游都要接工具，单人推不动。
+- 五种边界与「不变也要写出来」来自旧 `integration` 正文，已归档在 `_archive/plugins/workcoding/skills/integration`（agent-system#123）；消费者驱动契约测试（Pact）不在这里，上下游都要接工具，单人推不动。

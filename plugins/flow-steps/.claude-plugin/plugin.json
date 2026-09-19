@@ -1,6 +1,6 @@
 {
   "name": "flow-steps",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "flow 各阶段点名的活动：建工作树加基线、验证取证、接审查意见、收尾，以及改旧代码时才开的活动与第 8 阶段发布。",
   "author": {
     "name": "Eridanus117"

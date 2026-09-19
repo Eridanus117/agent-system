@@ -1,16 +1,16 @@
 ---
 name: skill-authoring
 description: >-
-  写一条自建 skill 或改一条既有自建 skill 时用：从机会 issue 或反馈 issue 走到「PR 开了、上线待办建了」，先跑基线再动笔。Author or modify a self-built skill, from an opportunity issue or a feedback issue to an installable skill directory plus a rollout todo, baseline first.
+  写一条自建 skill 或改一条既有自建 skill 时用：从机会 issue 或反馈 issue 走到「PR 开了、上线清单建了」，先跑基线再动笔。Author or modify a self-built skill, from an opportunity issue or a feedback issue to an installable skill directory plus a rollout checklist, baseline first.
 ---
 
 # 写一条自建 skill
 
-用词按本仓词汇表（`plugins/CONTEXT.md`）：是不是路由 skill 决定路线长短，手动调用还是自动调用决定 frontmatter，反馈是用中撞到的问题，上线待办是出口的另一半。frontmatter 与可见档的取舍已在 ADR-0004 定过，这里只执行，不重新论证。
+用词按本仓词汇表（`plugins/CONTEXT.md`）：是不是路由 skill 决定路线长短，人敲的（user-invoked）还是模型可拿的（model-invoked）决定 frontmatter，反馈是用中撞到的问题，上线清单是出口的另一半。frontmatter 与可见档的取舍已在 ADR-0004 定过，这里只执行，不重新论证。
 
 ## 什么时候用
 
-用：流程 skill 在第 5 段点名，或主人敲 `/skill-authoring`；手上有一条 desk 仓的机会 issue（带三行结论）要变成新 skill，或一条 agent-system 仓的反馈 issue、主人已说「改」，要改既有 skill。
+用：`flow` 在第 5 阶段点名，或主人敲 `/skill-authoring`；手上有一条 desk 仓的机会 issue（带三行结论）要变成新 skill，或一条 agent-system 仓的反馈 issue、主人已说「改」，要改既有 skill。
 
 不用，说一句该归谁然后停：
 
@@ -25,9 +25,9 @@ description: >-
 1. **读起点。** 新建：机会 issue 的三行结论（真正的问题、值不值得、往哪个方向）。修改：反馈 issue 的四样（哪一步、它让做什么的原文、实际做了什么和为什么、任务现场）。缺一样就先补，不猜。验收标准：能用一句话复述要解的问题和这条 skill 会做的事。
 
 2. **判两件事，原话写进最后的汇报和 PR 正文。**
-   - 是不是路由 skill。只影响自己那一格、不改别的 skill 什么时候被用 → 不是路由 skill，走短路线：SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审，不另写 spec、不拆票。会改别的 skill 什么时候被用（入口、段的门、点名关系）→ 路由 skill，到此停下，说明要回第 2 段方案对齐（grill、spec，等主人），本 skill 只在第 5 段回来。不给路由 skill 起脚手架、不写用例、不写正文。
-   - 手动调用还是自动调用。只有主人敲 `/名`、agent 不能自己启动 → 手动调用，frontmatter 加 `disable-model-invocation: true`。规则点名后 agent 自己用 → 自动调用，什么都不加，Claude 侧的 `name-only` 写进上线待办。`name-only` 挡不住模型调用，手动调用不能靠它。
-   验收标准：汇报里写明是不是路由 skill、手动还是自动调用，各带一行理由。
+   - 是不是路由 skill。只影响自己那一格、不改别的 skill 什么时候被用 → 不是路由 skill，走短路线：SKILL.md 的「什么时候用」「步骤」两节就是 spec，主人在 PR 里审，不另写 spec、不拆票。会改别的 skill 什么时候被用（入口、阶段的门、点名关系）→ 路由 skill，到此停下，说明要回第 2 阶段方案对齐（grill、spec，等主人），本 skill 只在第 5 阶段回来。不给路由 skill 起脚手架、不写用例、不写正文。
+   - 人敲的还是模型可拿的。只有主人敲 `/名`、agent 不能自己启动 → 人敲的（user-invoked），frontmatter 加 `disable-model-invocation: true`。规则点名后 agent 自己用 → 模型可拿的（model-invoked），什么都不加，Claude 侧的 `name-only` 写进上线清单。`name-only` 挡不住模型调用，人敲的不能靠它。
+   验收标准：汇报里写明是不是路由 skill、人敲的还是模型可拿的，各带一行理由。
 
 3. **起脚手架。** `plugins/<名>/.claude-plugin/plugin.json`（semver，新建 `0.1.0`），`skills/<名>/SKILL.md` 只写 frontmatter 加一行占位，`.claude-plugin/marketplace.json` 与 `profiles/daily/manifest.json`、`profiles/all/manifest.json` 各一条。frontmatter 按 [agent-skills-spec.md](./references/agent-skills-spec.md) 核对。验收标准：`claude plugin validate` 与 `node plugins/tests/skills.test.ts` 通过。
 
@@ -41,22 +41,22 @@ description: >-
 
 8. **收口。** 逐条过 [definition-of-done.md](./references/definition-of-done.md)：validate、测试、目录页重生成、manifest 与 marketplace、版本、结果提交、PR 四节。
 
-9. **出口。** 开 PR；在使用方仓建上线待办（模板在 definition-of-done.md）：路由句加在当前路线真源的哪一句、可见档、合并后 sync 与描述检查。到此为止。
+9. **出口。** 开 PR；在使用方仓建上线清单（模板在 definition-of-done.md）：路由句加在当前路线真源的哪一句、可见档、合并后 sync 与描述检查。到此为止。
 
 ## 用中记反馈
 
-用一条 skill 时它让做的和实际做的对不上，或别扭：不打断手上的事。建 agent-system 的 issue「反馈：<skill 名>：一句话」，正文四样（哪一步；它让做什么的原文；实际做了什么、为什么；任务现场：仓、issue、第几段），打 `needs-triage`，然后接着做手上的任务。等主人说「改」，再在新会话里从第 1 步走修改路径。
+用一条 skill 时它让做的和实际做的对不上，或别扭：不打断手上的事。建 agent-system 的 issue「反馈：<skill 名>：一句话」，正文四样（哪一步；它让做什么的原文；实际做了什么、为什么；任务现场：仓、issue、第几阶段），打 `needs-triage`，然后接着做手上的任务。等主人说「改」，再在新会话里从第 1 步走修改路径。
 
 ## 产出
 
 - 可装的 skill 目录：`plugin.json`、`SKILL.md`、`references/`、`evals/`（用例、README、结果）。
 - marketplace 与两份 manifest 的条目，重生成的目录页。
-- PR（四节）与上线待办 issue。
+- PR（四节）与上线清单 issue。
 - 修改时：改前、改后两份评测结果。
 
 ## 出口
 
-只有一个：PR 开了、上线待办建了。合并、`deploy.ts sync`、路由句生效由上线待办驱动，不在本 skill 里做。
+只有一个：PR 开了、上线清单建了。合并、`deploy.ts sync`、路由句生效由上线清单驱动，不在本 skill 里做。
 
 ## 为什么在哪
 

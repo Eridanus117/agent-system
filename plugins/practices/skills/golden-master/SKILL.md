@@ -12,7 +12,7 @@ description: >-
 
 用：改动碰了既有路径，验收要求老路径的输出不变；样本已按 `record-replay` 录好或正要录，要写回放比对、要判 diff、要定母版放哪。主人说「怎么证明没改坏」「母版」「approved」。
 
-不用：从零新建、没有老路径——没有可锁的行为，正确性归需求例子与 `tdd`。只锁一条入参证走读没编，那是特征化测试的用法，归 `legacy-change`。灰度期拿线上样本比对归 `canary-release`。分流前让新老同时算、只返回老结果的并行运行（parallel run，martinfowler.com；GitHub 的 Scientist 库）不在本实践里，样本够就不做。
+不用：从零新建、没有老路径——没有可锁的行为，正确性归需求例子与 `tdd`。只锁一条入参证走读没编，那是特征化测试的用法，归 `characterization-test`。灰度期拿线上样本比对归 `canary-release`。分流前让新老同时算、只返回老结果的并行运行（parallel run，martinfowler.com；GitHub 的 Scientist 库）不在本实践里，样本够就不做。
 
 ## 步骤
 

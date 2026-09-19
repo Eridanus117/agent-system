@@ -33,13 +33,17 @@
 以下发布记录保留迁移前编号以便仓库维护者溯源；其中私有链接对公共协作者不可用，只是可选历史来源。当前行为、贡献要求和验收必须在本仓公开内容中自足表达。
 `adaptive-problem-solving` `0.2.14` 随 2026-09-01 负责人裁定的 bmad 整组退库清理引用：description 与方法登记面 INDEX 的「与装配内其他 Skill 的分界」表不再列 bmad-* 执行流程承载者（仅保留 `grilling`），失效条款同步；行为合同与方法卡内容不变。
 
-仓库目前包含十三个可安装 Plugin：`self-improvement` `0.1.7`、`skill-maintenance` `0.1.1`、`knowledge-maintenance` `0.1.3`、`orchestrated-collaboration` `0.2.7`、`adaptive-problem-solving` `0.2.14`、`skill-appraisal` `0.2.0`、`clarify` `0.1.0`、`note` `0.1.0`、`workcoding` `0.1.0`（含 8 个规程 Skill）、`skill-authoring` `0.1.2`、`flow` `0.1.5`、`flow-steps` `0.1.4`（含 12 条活动 Skill）、`practices` `0.1.3`（含 18 条实践 Skill：`grilling`、`domain-modeling`、`tdd`、`code-review` 按 MIT 从 Matt Pocock 的 skills 仓复制入库改写，来源与 revision 见 `plugins/practices/SOURCE`，ADR-0007；其余 14 条从 workcoding 八条规程拆出的自建实践）。Matt 的其余 21 个 promoted Skill 与 Superpowers 的 14 个 Skill 由 daily profile 从 `vendor/` 固定来源装配，不属于本仓 Plugin 目录。以 `docs/skills-overview.md`（自动生成）为准。
+仓库目前包含十二个可安装 Plugin：`self-improvement` `0.1.7`、`skill-maintenance` `0.1.2`、`knowledge-maintenance` `0.1.3`、`orchestrated-collaboration` `0.2.7`、`adaptive-problem-solving` `0.2.14`、`skill-appraisal` `0.2.0`、`clarify` `0.1.1`、`note` `0.1.1`、`skill-authoring` `0.1.3`、`flow` `0.1.6`、`flow-steps` `0.1.5`（含 12 条活动 Skill）、`practices` `0.1.4`（含 18 条实践 Skill：`grilling`、`domain-modeling`、`tdd`、`code-review` 按 MIT 从 Matt Pocock 的 skills 仓复制入库改写，来源与 revision 见 `plugins/practices/SOURCE`，ADR-0007；其余 14 条从已归档的 workcoding 八条规程拆出的自建实践），合计 40 个 Skill。Matt 的其余 21 个 promoted Skill 与 Superpowers 的 14 个 Skill 由 daily profile 从 `vendor/` 固定来源装配，不属于本仓 Plugin 目录。以 `docs/skills-overview.md`（自动生成）为准。
 
 **2026-09-02 负责人裁定退库两组**：`github-collaboration`（六个 Skill）与 `resource-observability`。理由见下方「已退库」。此前写进符合性门禁的「GitHub 协作 Plugin 必须作为可发布资产保留」一条同时作废，已从 `plugins/tests/workflow-routing.test.ts` 移除。
 
 `skill-maintenance` `0.1.1` 在明确创建、审计、修正、拆分、升级、迁移或退役 Skill 时进入：先绑定当前行为合同与授权，预注册行为判据，再同步主合同、按需 reference、全部调用者、双端发现入口、版本、生成物和复杂度预算；安全门零回退，调用者 clean cutover，方案／实施同源时必须独立审查。它不维护普通业务代码，也不替 `self-improvement` 决定一次纠正应该落到哪里。
 
 仓库资产、Marketplace 可安装目录和当前装配是三个不同状态：`plugins/` 保存可发布资产，Marketplace 只声明可安装来源，实际装配由 `sk` 的 profile（`profiles/<name>/manifest.json`，源码 `packages/sk`）决定。仓内可安装资产不会因为出现在 Marketplace 或插件目录中就自动进入某个 profile。
+
+## 已归档（2026-09-19）
+
+`workcoding`（挑规程的壳 `workcoding` 加八条工程规程 `requirement-insight`、`requirement-translation`、`architecture-design`、`system-analysis`、`legacy-change`、`integration`、`evidence-regression`、`release-observe`）于 2026-09-19 按 agent-system#123 归档到 `_archive/plugins/workcoding/`。壳退役是负责人 2026-09-14 的裁定（desk#142，agent-system#111）：`flow` 在第 4 阶段的门上按缺口开改旧代码时才开的活动，壳失去角色；八条规程已在 agent-system#119 到 #122 拆成 `practices` 的 14 条实践与 `flow-steps` 的 8 条活动。marketplace 与两份 profile manifest 已清掉它的条目；正文原样保留，git 历史可查（`git log --follow -- _archive/plugins/workcoding`）。
 
 ## 已退库（2026-09-02）
 

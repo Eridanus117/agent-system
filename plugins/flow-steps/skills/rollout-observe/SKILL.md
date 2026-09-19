@@ -31,4 +31,4 @@ description: >-
 
 ## 为什么在哪
 
-- agent-system#122、agent-system#115（spec）、ADR-0006；原正文 `plugins/workcoding/skills/release-observe`，归档见 agent-system#123。
+- agent-system#122、agent-system#115（spec）、ADR-0006；原正文已归档在 `_archive/plugins/workcoding/skills/release-observe`（agent-system#123）。

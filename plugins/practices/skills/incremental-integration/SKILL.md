@@ -32,4 +32,4 @@ description: >-
 ## 为什么在哪
 
 - agent-system#121（从 `integration` 拆出的第二条实践）、ADR-0006、desk#152。
-- 「表与配置先扩不收 → 开关关着 → 合代码 → 下游 → 上游」这条顺序与「共库只读」来自 `integration` 旧正文，到 agent-system#123 归档为止。
+- 「表与配置先扩不收 → 开关关着 → 合代码 → 下游 → 上游」这条顺序与「共库只读」来自旧 `integration` 正文，已归档在 `_archive/plugins/workcoding/skills/integration`（agent-system#123）。

@@ -13,7 +13,7 @@
     },
     {
       "name": "clarify",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "source": "./plugins/clarify"
     },
     {
@@ -38,37 +38,32 @@
     },
     {
       "name": "skill-maintenance",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "source": "./plugins/skill-maintenance"
     },
     {
-      "name": "workcoding",
-      "version": "0.1.0",
-      "source": "./plugins/workcoding"
-    },
-    {
       "name": "note",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "source": "./plugins/note"
     },
     {
       "name": "skill-authoring",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "source": "./plugins/skill-authoring"
     },
     {
       "name": "flow",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "source": "./plugins/flow"
     },
     {
       "name": "flow-steps",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "source": "./plugins/flow-steps"
     },
     {
       "name": "practices",
-      "version": "0.1.3",
+      "version": "0.1.4",
       "source": "./plugins/practices"
     }
   ]

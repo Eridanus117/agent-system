@@ -8,7 +8,7 @@
 - `description`：非空，一句话说「做什么、什么时候用」，给人看；规范上限 1024 字符，本仓测试上限 1000 UTF-8 字节。中文正文加英文尾，便于三个客户端的搜索。
 - 描述里不写命令式路由句。agent-config 的 `deploy.ts check --scope=skill-descriptions` 会拦这些词：`MUST`、`ALWAYS`、`you must`、`prefer … over`、`instead of`、`before any`、`never use`、`必须先`、`一律`、`优先于`、`代替`、`任何…之前`。路由只在路线真源里写。
 - 规范允许的其他键：`license`、`allowed-tools`、`metadata`、`compatibility`。别的键不写。
-- 手动调用的 skill 加 `disable-model-invocation: true`。Claude Code 与 Codex 原生认；OMP 的解析器把 kebab-case 键转 camelCase 后认作 `disableModelInvocation`，被隐藏的 skill 仍注册 `/skill:<name>`。这个键不在开放规范的键表里，只影响 agent-plugins.org 那类打包校验，不影响三个客户端从 `~/.agents/skills`／`~/.claude/skills` 加载。
+- 人敲的（user-invoked）skill 加 `disable-model-invocation: true`。Claude Code 与 Codex 原生认；OMP 的解析器把 kebab-case 键转 camelCase 后认作 `disableModelInvocation`，被隐藏的 skill 仍注册 `/skill:<name>`。这个键不在开放规范的键表里，只影响 agent-plugins.org 那类打包校验，不影响三个客户端从 `~/.agents/skills`／`~/.claude/skills` 加载。
 - 用 `>-` 折叠写多行描述时，测试与目录页都会拼成一行。
 
 ## 正文与目录
@@ -23,7 +23,7 @@
 ## 三个客户端的差异（写的时候要知道）
 
 - Claude Code：只读 `~/.claude/skills`；可见档靠 agent-config 的 `skillOverrides`（`on`／`name-only`／`user-invocable-only`／`off`）或 frontmatter 的 `disable-model-invocation`。
-- Codex：读 `~/.agents/skills` 与 `.agents/skills`（向上到 git 根）；插件内的 skill 显示为 `<插件>:<名>`；认 `disable-model-invocation`；`$名` 或 `/skills` 手动调用。
+- Codex：读 `~/.agents/skills` 与 `.agents/skills`（向上到 git 根）；插件内的 skill 显示为 `<插件>:<名>`；认 `disable-model-invocation`；`$名` 或 `/skills` 由人敲。
 - OMP：读 `~/.agents/skills`；`hide`／`disableModelInvocation`（kebab 自动转）隐藏但 `/skill:<名>` 可敲；`ignoredSkills` 是加载时滤掉，等于关闭。
 
 ## 装配

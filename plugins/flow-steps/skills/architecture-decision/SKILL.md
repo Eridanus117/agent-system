@@ -12,7 +12,7 @@ description: >-
 
 用：`flow` 在第 4 阶段的门上开了它——在既有系统上加一项新能力，需求已收口但还没定承载方式与放哪；或主人说「先定架构」。
 
-不用：架构决定主人已经确认，票要的是按它改代码——进第 5 阶段，旧代码没测试就开 `legacy-change`，不重开候选；需求本身还没收口——先回第 1、2 阶段。
+不用：架构决定主人已经确认，票要的是按它改代码——进第 5 阶段，旧代码没测试就开 `legacy-code-change`，不重开候选；需求本身还没收口——先回第 1、2 阶段。
 
 ## 步骤
 
@@ -31,5 +31,5 @@ description: >-
 
 ## 为什么在哪
 
-- desk#152、agent-system#115（实践与规程分层）、agent-system#120；旧 `architecture-design` 的正文归档在 agent-system#123。
+- desk#152、agent-system#115（实践与规程分层）、agent-system#120；旧 `architecture-design` 的正文已归档在 `_archive/plugins/workcoding/skills/architecture-design`（agent-system#123）。
 - 为什么单独有这一步、为什么不做全套架构评审：wiki《架构设计》。

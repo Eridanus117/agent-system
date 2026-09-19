@@ -32,4 +32,4 @@ description: >-
 
 ## 为什么在哪
 
-- agent-system#122、agent-system#115（spec）、ADR-0006；原正文 `plugins/workcoding/skills/evidence-regression`，归档见 agent-system#123。
+- agent-system#122、agent-system#115（spec）、ADR-0006；原正文已归档在 `_archive/plugins/workcoding/skills/evidence-regression`（agent-system#123）。
