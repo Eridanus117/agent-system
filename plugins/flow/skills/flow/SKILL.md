@@ -18,9 +18,9 @@ description: >-
 
 ### 开场后的可撤动作
 
-issue、票、PR 开场时不等主人：先说开场那一句（形状由常驻规则定：「这是常规变更，〈issue 类型〉，从第 N 阶段进」），再按顺序做，做完直接给起始阶段门上那条消息：
+issue、票、PR 开场时说完就动：先说开场那一句（形状由常驻规则定：「这是常规变更，〈issue 类型〉，从第 N 阶段进」），再按顺序做，做完直接给起始阶段门上那条消息：
 
-1. 绑定。`orca worktree show --worktree issue:N` 查这个 issue 有没有活着的 worktree（只按编号查，查到的核对是不是同一个仓）：已有就告诉主人它的路径与分支，接着用它；没有就 `orca worktree set --worktree active --issue N`。PR 绑它关联的 issue。会话不在 Orca worktree 里（比如站在工作区根）就跳过绑定。
+1. 绑定。`orca worktree show --worktree issue:N` 查这个 issue 有没有活着的 worktree（只按编号查，查到的核对是不是同一个仓）：已有就告诉主人它的路径与分支，只问一句用不用它（做法在 `worktree-baseline`）；没有就 `orca worktree set --worktree active --issue N`。PR 绑它关联的 issue。会话不在 Orca worktree 里（比如站在工作区根）就跳过绑定。
 2. 读它最后一条站会记录（issue 下最后一条四栏评论：做成了、停在、下一步、等你；公开仓的事在 desk 里对应的父 issue 上），从「下一步」接着做；复用原范围内的决定，已有授权不因换会话失效，范围也还是原来那几件动作。
 3. 定起始阶段：机会 issue（第 1 阶段的产物）→ 第 2 阶段；spec issue（第 2 阶段的产物）或票 → 第 4 阶段；PR → 第 6 阶段；主人指定「从第 N 阶段进」→ 就从第 N 阶段进，跳过的阶段留一句为什么。起始阶段的活动标了「主人敲」的（第 2 阶段的 `/grill-with-docs`），门上那条消息最后那件事就是请主人敲它，方案的洞察与提问留给那条 skill。
 4. 在哪做：第 2 到 8 阶段在目标仓的 worktree 里做，第 1、9 阶段哪里都行。会话不在目标仓：说明要换仓，写站会记录、解绑，再到目标仓开 worktree。
@@ -66,7 +66,7 @@ issue、票、PR 开场时不等主人：先说开场那一句（形状由常驻
 
 按缺口挑（wiki《方法论模型》表三的四个关注点）：拆——需求不清 → `requirement-insight`、`requirement-translation`；方案——两条路要比 → `architecture-design`、`system-analysis`；做——旧行为没有测试、要改的地方牵连广 → `legacy-change`、`integration`；证——改完要证明没变 → `evidence-regression`、`release-observe`。
 
-在进第 4 阶段的门上列出（见 gate-message.md 的第二个例子），和 worktree、基线一起给主人，主人说行时一并定。判据 agent 自己查：有没有测试、改动牵连几处。从零新建的一个都不开，写一句「从零新建，不开改旧代码的活动」。
+在进第 4 阶段的门上列出（见 gate-message.md 的第二个例子），和 worktree、基线一起给主人，主人说行时一并定。判据 agent 自己查：有没有测试、改动牵连几处。从零新建的写一句「从零新建，不开改旧代码的活动」，一个都不开。
 
 完成判据：第 4 阶段门上那条消息里有清单和理由，或写明从零新建、不开。
 

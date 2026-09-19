@@ -67,27 +67,37 @@
 ### 0.1.1（2026-09-16，desk#140）：九个阶段那张表第 4、6、7 阶段四格改点名 flow-steps 的四条
 
 改前的结果就是上面那份（默认模型）。改后按主人当天的省钱决定用 `--model sonnet` 每用例 1 次复跑，结果在 `results/2026-09-16-v0.1.1-sonnet/`：有 skill 组 `docking-record`、`opening-issue`、`opening-ambiguous`、`opening-small-change`、`opening-want-to-build` 1.0；`enter-at-segment-4` 0.5（sonnet 在 orca、gh 不可用时停下来要主人贴绑定结果和站会记录，没给第 4 阶段门上那条消息）；`ticket-optional-steps` 0.75（门上消息齐全，收尾问了两件事）；`question-with-options` 0.33（选项里少了「不换」那一项）。三处都发生在改表没碰的地方，是 sonnet 单次运行的行为，不是这次改动引入的退化；被测模型不同，数字不与上面那份直接比。
+
 ### 0.1.2（2026-09-19，agent-system#117）：换词——阶段、活动、站会记录、常规变更
 
 正文按词汇表换词（来往→请求、要答案→查询、小改动→标准变更、改动落地→常规变更、段→阶段、步→活动、可选步→改旧代码时才开的活动、停靠记录→站会记录、硬问题→违例、上线待办→上线清单），站会记录标题改成 `### 站会 ·`，读取时按四栏认；门上那条消息与站会记录的模板和例子移到 `references/`，正文只引用。八份规则副本、grader 与提示词同步。用例目录名与 grader 文件名（`docking-record`、`enter-at-segment-4`、`no-segments-no-edit` 这类）是标识符，为了和旧结果对得上，保留不改。
 
-改前改后各跑一遍，同一命令（默认模型、裁判 sonnet、每用例 3 次、带对照组）。改前是 main 上 0.1.1 的正文与当时的用例（旧词），结果 `results/2026-09-19-before/`（48 次，745 秒，12.72 美元）；改后是 0.1.2 与换过词的用例，`results/2026-09-19-gate/`（48 次，841 秒，12.71 美元）；`opening-issue` 补两句正文后单独重跑，`results/2026-09-19-gate-rerun/`（6 次，116 秒，1.32 美元）。
+同一命令跑了四份（默认模型、裁判 sonnet、每用例 3 次、带对照组）：
 
-| 用例 | 改前 有 skill 组 | 改前 对照组 | 改前 差值 | 改后 有 skill 组 | 改后 对照组 | 改后 差值 | 来源 |
-|---|---|---|---|---|---|---|---|
-| `opening-issue` | 0.93 | 0 | +0.93 | 1.0 | 0 | +1.0 | rerun |
-| `opening-small-change` | 0.89 | 1.0 | -0.11 | 1.0 | 1.0 | 0 | gate |
-| `opening-ambiguous` | 1.0 | 1.0 | 0 | 1.0 | 0.78 | +0.22 | gate |
-| `opening-want-to-build` | 1.0 | 0.67 | +0.33 | 1.0 | 1.0 | 0 | gate |
-| `question-with-options` | 1.0 | 1.0 | 0 | 1.0 | 1.0 | 0 | gate |
-| `ticket-optional-steps` | 1.0 | 0 | +1.0 | 0.92 | 0.17 | +0.75 | gate |
-| `docking-record` | 1.0 | 0 | +1.0 | 1.0 | 0 | +1.0 | gate |
-| `enter-at-segment-4` | 0.83 | 0.17 | +0.67 | 1.0 | 0.25 | +0.75 | gate |
+- `results/2026-09-19-before/`：改前，main 上 0.1.1 的正文与当时的用例（旧词）。48 次，745 秒，12.72 美元。
+- `results/2026-09-19-gate/`：换词后第一轮。48 次，841 秒，12.71 美元。`opening-issue` 三次都在 `stops-at-gate` FAIL——agent 绑定、读站会记录、定第 2 阶段都对，接着自己做起了方案对齐的洞察与提问，没停下请主人敲 `/grill-with-docs`；改前那一轮同一 grader 三次里一次也这样。原因是原来正文里「请敲 /grill-with-docs」的例子随模板搬进了 references。补的不是模板，是两句正面句：起始阶段的活动标了「主人敲」的，门上那条消息最后那件事就是请主人敲它，洞察与提问留给那条 skill；标「主人敲」的活动里的事等它启动后再做。
+- `results/2026-09-19-gate-rerun/`：补两句后只重跑 `opening-issue`，三次 1.0。6 次，116 秒，1.32 美元。
+- `results/2026-09-19-gate-final/`：审查意见改完正文（已有工作树先问一句、两处禁令挪到正面句后、references 例子与九阶段表对齐）后在最终正文上全套重跑，改后数字以它为准。48 次，804 秒，12.93 美元。
 
-改后七条有 skill 组 1.0；平均差值改前 +0.48、改后（取 rerun 的 `opening-issue`）+0.47，差在对照组这次在 `opening-ambiguous`、`enter-at-segment-4`、`ticket-optional-steps` 上也拿了分，是默认模型当天的行为，不是有 skill 组退了。
+| 用例 | 改前 有 skill 组 | 改前 对照组 | 改前 差值 | 改后 有 skill 组 | 改后 对照组 | 改后 差值 |
+|---|---|---|---|---|---|---|
+| `opening-issue` | 0.93 | 0 | +0.93 | 1.0 | 0 | +1.0 |
+| `opening-small-change` | 0.89 | 1.0 | -0.11 | 0.78 | 1.0 | -0.22 |
+| `opening-ambiguous` | 1.0 | 1.0 | 0 | 1.0 | 1.0 | 0 |
+| `opening-want-to-build` | 1.0 | 0.67 | +0.33 | 1.0 | 1.0 | 0 |
+| `question-with-options` | 1.0 | 1.0 | 0 | 1.0 | 1.0 | 0 |
+| `ticket-optional-steps` | 1.0 | 0 | +1.0 | 0.83 | 0 | +0.83 |
+| `docking-record` | 1.0 | 0 | +1.0 | 1.0 | 0 | +1.0 |
+| `enter-at-segment-4` | 0.83 | 0.17 | +0.67 | 0.92 | 0.33 | +0.58 |
 
-模板移到 `references/` 暴露了一处真缺口：改后第一轮 `opening-issue` 三次都在 `stops-at-gate` FAIL——agent 绑定、读站会记录、定第 2 阶段都对，接着自己做起了方案对齐的洞察与提问，没有停下请主人敲 `/grill-with-docs`；改前那一轮同一 grader 三次里一次也这样。原因是原来正文里那个「请敲 /grill-with-docs」的例子随模板搬走了。补的不是模板，是两句正面句：起始阶段的活动标了「主人敲」的，门上那条消息最后那件事就是请主人敲它，洞察与提问留给那条 skill；标「主人敲」的活动里的事等它启动后再做。重跑三次 1.0。
+平均差值改前 +0.48、改后 +0.40；差在对照组这次在 `opening-want-to-build`、`enter-at-segment-4` 上也拿了分，不是有 skill 组退了。路线类四条（`opening-issue`、`ticket-optional-steps`、`docking-record`、`enter-at-segment-4`）改后差值 +0.58 到 +1.0，仍是这条 skill 带来的行为；分拣与说话规矩类四条是回归守卫。
 
-没到 1.0 的一条要说清：`ticket-optional-steps` 0.92——三次里一次 `segment` 三票 FAIL，那条回复开头说错「第 1 阶段」，下一句自己改成「票 → 第 4 阶段」，其余全对；判官按第一句判。一次口误，不是正文缺口；再跑只是换一组随机数，是否按 1.0 硬线重跑由主人在第 6 阶段的门上定。
+改后三条没到 1.0 的要说清，各是三次里一次（`ticket-optional-steps` 两次）：
 
-三份结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`。
+- `opening-small-change` 0.78：一次 `classification` FAIL，那条回复直接给了改好的全文、没先说「这是标准变更」。分拣句在 mock 规则里、对照组同一用例 1.0，不是 flow 正文的事。
+- `ticket-optional-steps` 0.83：两次 `gate-message-approval` FAIL，回复都先列了绑定、读站会记录三条命令并写「输出贴回来之前不往下动」，再给第 4 阶段的清单；grader 把「贴输出」算合法收尾，判官仍按「一串问题」判。
+- `enter-at-segment-4` 0.92：一次 `segment-4-prep` FAIL，那条回复把读站会记录的命令写成 `gh issue comment` 又自行更正，worktree 与基线都在。
+
+三处都是判官对合规回复的抖动或 agent 单次口误，不是正文缺口；再跑只是换一组随机数，是否按 1.0 硬线重跑由主人在第 6 阶段的门上定。
+
+四份结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`。
