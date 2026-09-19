@@ -21,7 +21,7 @@
 | `code-review-two-axes` | code-review | 固定点、diff、spec、`CONTRIBUTING.md` 都贴了 | Standards 与 Spec 两节分开、不跨轴重排、各轴各自小结；Spec 轴报出漏做的 `.trash/`、只做一半的「打印大小」和多做的 `--gzip-level`；Standards 轴报出英文注释、裸 `Error`、缺 JSDoc 三条违例，坏味道（重复代码）标为判断题 |
 | `code-review-missing-fixed-point` | code-review | 没有固定点也没有 diff | 一题问固定点，不编审查结论 |
 
-每条 llm grader 只判一个可观测面；判文件内容的用 `focus: files`，判「先问后写」这类顺序的用 `focus: trace`。正例各带一条 `tool_used: Skill` 的 with-only 指示器，只说明 skill 被点到，不计分；`domain-modeling-just-reading` 用 `tool_used: Write, min: 0, max: 0` 断言没写文件。
+每条 llm grader 判一个行为，行为有几个可观测面就在同一条里列出来（`good-first-test-one-slice`、`flags-coupling`、`standards-findings` 各列了两到六个面），与 flow-steps 的做法相同；拆成一面一条会把裁判费用翻几倍而分数的信息量不变，审查里作判断题留着。`axes-separate` 判的「各轴各自小结」是两轴分开的可观测结果，不是消息形状。判文件内容的用 `focus: {source: file, path: …}`，判「先问后写」这类顺序的用 `focus: trace`。正例各带一条 `tool_used: Skill` 的 with-only 指示器，只说明 skill 被点到，不计分；`domain-modeling-just-reading` 用 `tool_used: Write, min: 0, max: 0` 断言没写文件。
 
 ## 基线观察（对照组，不装 skill）
 
@@ -30,7 +30,7 @@
 - `grilling-plan-one-question`：对照组把整个方案的问题一次摆完（丢笔记的场景、不是 sync 是 upload、3000 个 PUT 的代价……），没有一题带推荐停下来等。有 skill 组在占位正文下也过了，靠的是 mock 规则里「一轮只问一题」，区分力来自对照组那一侧。
 - `grilling-facts-self-served`：两组都没把材料里的事实拿去问主人，问的是「`--json` 覆盖哪些子命令」。只作回归守卫。
 - `domain-modeling-glossary-conflict`：两组都发现了「取消」的冲突，但接着就自己主张「取消的对象是行项」、补「发货」词条、按聚合展开整套模型，没有一题问主人哪个算数就停下。真缺口是「指出冲突、问一句、停」。
-- `domain-modeling-update-inline`：两组都把「行项撤回」写进了 `CONTEXT.md`、带 `_Avoid_`、没建 ADR；判文件内容那条 grader 基线时看的是最后一条消息（两组都在消息里讨论 `withdrawn_at` 该放哪张表），门评测前改成 `focus: files`。词条本身两组都对，真缺口在别处。
+- `domain-modeling-update-inline`：两组都把「行项撤回」写进了 `CONTEXT.md`、带 `_Avoid_`、没建 ADR；判文件内容那条 grader 基线时看的是最后一条消息（两组都在消息里讨论 `withdrawn_at` 该放哪张表），门评测前改成 `focus: files`，门评测又发现它只给文件名，再改成 `{source: file, path: CONTEXT.md}`（见实跑记录）。词条本身两组都对，真缺口在别处。
 - `domain-modeling-just-reading`：两组都答对了定义、给了测试名，但都顺着往下推「发货后」「运营终止」这些边界，最后再问一题；没有把「只是查一个词」和「改模型」分开。`no-file-write` 基线时 `max: 0` 缺 `min: 0`，被当成 `1..0` 判败，门评测前补上。
 - `tdd-seams-first`：对照组直接写了 11 个用例、三个错误类、`pricing.ts`、`couponRepo.ts` 全套实现，替主人定了返回形状、门槛含等于、券码大小写；没有先列接缝问一句。有 skill 组（占位）同样，且撞了 10 轮上限。真缺口是「先定接缝」。
 - `tdd-first-slice`：对照组过了：一个穿公共接口的失败测试、字面值 90、最小实现、说了下一片。有 skill 组（占位）用负价行项做折扣、实现写死减 10（Fake It），grader 判败；Fake It 是 Beck 的合法转绿手法，门评测前把 grader 放宽到允许它。
@@ -61,6 +61,6 @@
 
 没到 1.0 的一条要说清：`grilling-plan-one-question` 0.78——两轮重跑里各有一次 `one-question-with-recommendation` 三票 FAIL，那两条回复都只向主人递了一题、带推荐和具体丢数据的例子、问完就停，和过了的几次一样；差别是回复先摆了决定树，树里的子项写成「怎么判定（mtime／hash）？」这种带问号的短语，裁判把它们数成了多问。grader 已两次改写明说「列树不算问」仍没拦住。这是裁判读法的问题，不是行为缺口；再改 grader 或再跑只是换一组随机数，是否按 1.0 硬线重跑由主人在第 6 阶段的门上定（与 flow-steps `worktree-baseline-open` 0.83 同一处理）。
 
-迭代过程：第一轮门评测（结果已提交）暴露的是 grader 问题多于正文问题——有 skill 组失败的运行逐条读执行记录，行为都对：`tdd-seams-first` 三次都只列公共接缝、问一题、没写测试，裁判把选项里的示例片段当成写了测试（grader 改成允许片段、回到看最后一条消息）；`domain-modeling-glossary-conflict` 两次都指出冲突、一题问完停下，裁判要求问法必须是「哪个意思算数」（grader 放宽到「一题解决这个冲突」）；`domain-modeling-update-inline` 三次写出的 `CONTEXT.md` 都干净，`focus: files` 给裁判的只是文件名（改成 `{source: file, path: CONTEXT.md}`）；`code-review-missing-fixed-point` 一次问的是「diff 怎么给我」而不是「固定点」（grader 改成「要到变更集就算」）；`domain-modeling-just-reading` 一次多问了一句「你的测试是整单还是行项」（grader 改成只判定义、不改文件、不产词条）。第二轮 `just-reading` 有一次是裁判调用断线（`judge call failed: Connection lost`），第三轮 6/6 过。正文在门评测后没有改动。
+迭代过程：第一轮门评测（结果已提交）暴露的是 grader 问题多于正文问题——有 skill 组失败的运行逐条读执行记录，行为都对：`tdd-seams-first` 三次都只列公共接缝、问一题、没写测试，裁判把选项里的示例片段当成写了测试（grader 改成允许片段、回到看最后一条消息）；`domain-modeling-glossary-conflict` 两次都指出冲突、一题问完停下，裁判要求问法必须是「哪个意思算数」（grader 放宽到「一题解决这个冲突」）；`domain-modeling-update-inline` 三次写出的 `CONTEXT.md` 都干净，`focus: files` 给裁判的只是文件名（改成 `{source: file, path: CONTEXT.md}`）；`code-review-missing-fixed-point` 一次问的是「diff 怎么给我」而不是「固定点」（grader 改成「要到变更集就算」）；`domain-modeling-just-reading` 一次多问了一句「你的测试是整单还是行项」（grader 改成只判定义、不改文件、不产词条）。第二轮 `just-reading` 有一次是裁判调用断线（`judge call failed: Connection lost`），第三轮 6/6 过。门评测之后正文只在审查（第 6 阶段）里改了四处，都没有重跑：四条头部补「与原版的差别」一句；`tdd` 探索前读 `CONTEXT.md` 那句并进第 1 步；`code-review` 删掉「为什么分两轴」一节并入来源段、第 4 步降级时加「报告开头写明两轴未隔离」。
 
 所有结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`，家目录路径与目录 slug 里的用户名已换成 `<user>`（这次补了两种写法：执行记录被当字符串再嵌进 JSON 的四反斜杠，和 Claude Code 的 `C--Users-<名>` slug）。

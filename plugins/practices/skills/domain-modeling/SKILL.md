@@ -6,7 +6,7 @@ description: >-
 
 # 领域建模（domain-modeling）
 
-来源：Matt Pocock 的 `domain-modeling`（github.com/mattpocock/skills，revision 6acc160，MIT，许可全文见 `plugins/practices/LICENSE-mattpocock`），按 ADR-0007 复制入库改写。用词按 `plugins/CONTEXT.md`；统一语言（ubiquitous language）与限界上下文（bounded context）出自 Evans《领域驱动设计》。
+来源：Matt Pocock 的 `domain-modeling`（github.com/mattpocock/skills，revision 6acc160，MIT，许可全文见 `plugins/practices/LICENSE-mattpocock`），按 ADR-0007 复制入库改写。与原版的差别：`CONTEXT.md` 与 ADR 的格式先按仓里既有的约定（本仓词条带英文原词与出处、ADR 用 MADR），没有才用 `references/` 里原版的默认；查词汇表时连带看 `docs/adr/`；普通实现决定进 issue 或 PR，不进词汇表。用词按 `plugins/CONTEXT.md`；统一语言（ubiquitous language）与限界上下文（bounded context）出自 Evans《领域驱动设计》。
 
 ## 什么时候用
 

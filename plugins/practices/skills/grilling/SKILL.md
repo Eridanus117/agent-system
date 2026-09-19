@@ -6,7 +6,7 @@ description: >-
 
 # 盘方案（grilling）
 
-来源：Matt Pocock 的 `grilling`（github.com/mattpocock/skills，revision 6acc160，MIT，许可全文见 `plugins/practices/LICENSE-mattpocock`），按 ADR-0007 复制入库改写。与原版的差别：原版一轮把前沿上的题一起问；本工作区常驻规则定「一轮只问一题」，这里改成一轮一题。用词按 `plugins/CONTEXT.md`。
+来源：Matt Pocock 的 `grilling`（github.com/mattpocock/skills，revision 6acc160，MIT，许可全文见 `plugins/practices/LICENSE-mattpocock`），按 ADR-0007 复制入库改写。与原版的差别（都来自本工作区常驻规则）：原版一轮把前沿上的题一起问，这里改成一轮一题；每题先给具体例子、选项面列全（含「不做／用现成的」）；收口时把已定决定列一遍请主人确认。用词按 `plugins/CONTEXT.md`。
 
 ## 什么时候用
 

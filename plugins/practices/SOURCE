@@ -7,6 +7,6 @@
 - revision：6acc160e4e0cd062dbbbd7a1b26ae92855edf07e（与 `vendor/mattpocock/SOURCE.json` 一致）
 - 许可证：MIT，全文见同目录 `LICENSE-mattpocock`；版权归 Matt Pocock。
 
-改写的范围：英文改中文；骨架改成本仓的两节（什么时候用、步骤，见 `plugins/skill-authoring` 的 writing-rules）；术语按 `plugins/CONTEXT.md`；与本工作区常驻规则冲突处按常驻规则改（各条 SKILL.md 头部逐条列出）。
+改写的范围：英文改中文；骨架改成本仓的两节（什么时候用、步骤，见 `plugins/skill-authoring` 的 writing-rules）；术语按 `plugins/CONTEXT.md`；与本工作区常驻规则或评测发现冲突处按本仓改（各条 SKILL.md 头部「与原版的差别」一句逐条列出）。
 
 要跟上游时：以上面的 revision 为基点对 `vendor/mattpocock/skills/<名>/` 做 diff，手动合进对应 SKILL.md，然后更新这里的 revision。
