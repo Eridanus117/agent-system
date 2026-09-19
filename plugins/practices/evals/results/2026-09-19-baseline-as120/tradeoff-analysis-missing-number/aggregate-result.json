@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:05:05.950Z",
+  "durationSeconds": 88,
+  "costUsd": 0.44453299999999996,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as120-split-design\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "tradeoff-analysis-missing-number",
+    "threshold": 1,
+    "concurrency": 2,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as120-split-design\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "tradeoff-analysis-missing-number",
+      "dir": "evals\\tradeoff-analysis-missing-number",
+      "source": "prose",
+      "promptMarkdown": "按 `tradeoff-analysis` 比这两个候选。Bash 不可用，代码不在这个工作目录里，能贴的贴给你。\n\n要决定的：偏远附加改成按省份查表之后，`RemoteFeeLookup.lookup` 每次算运费时怎么拿到「省份→金额」。\n\n候选 A：每次直接查 `remote_surcharge_rule` 表（一条主键查询）。\n候选 B：进程内缓存，启动时全量加载，运营改了配置后 5 分钟内生效。\n\n已知：一天订单量约 5 万，运费计算在下单同步路径上；数据库是同机房的 MySQL；表很小（几十行）。没人量过这条查询在现在的负载下要多久，也没人量过下单路径现在的耗时。\n\n```java\n// FreightCalc.java\npublic class FreightCalc {\n  private final RemoteFeeLookup remoteFee;\n  public Money calc(Order o) { Money base = calcInner(o); return base.plus(remoteFee.lookup(o.dest())); }\n  Money calcInner(Order o) { return Money.of(o.weightKg() * 8); }\n}\n// OrderService.java\nclass OrderService { Money quote(Order o) { return freightCalc.calc(o); } }\n// QuoteService.java\nclass QuoteService { Money preview(Order o) { return freightCalc.calc(o); } }\n// BatchCalc.java\nclass BatchCalc { void run(List<Order> os) { for (var o : os) sink.write(freightCalc.calcInner(o)); } }\n// RemoteFeeLookup.java\nclass RemoteFeeLookup { Money lookup(String dest) { return \"新疆\".equals(dest) || \"西藏\".equals(dest) ? Money.of(10) : Money.ZERO; } }\n```",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "both-sides-still",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Judge whether both candidates were still argued from both sides.\n\nPASS if A and B each carry support, objections, biggest risk and reversibility (for B: staleness window, memory, restart behaviour; for A: added latency, database dependency on the hot path), even though the deciding number is missing.\n\nFAIL if either candidate lacks objections or risk, or if the reply collapses into a single recommendation without the comparison.",
+          "config": {
+            "criteria": "Judge whether both candidates were still argued from both sides.\n\nPASS if A and B each carry support, objections, biggest risk and reversibility (for B: staleness window, memory, restart behaviour; for A: added latency, database dependency on the hot path), even though the deciding number is missing.\n\nFAIL if either candidate lacks objections or risk, or if the reply collapses into a single recommendation without the comparison.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "tradeoff-analysis",
+            "arm": "with-only"
+          }
+        },
+        {
+          "name": "unknown-not-invented",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge how the reply handles the number nobody has measured.\n\nPASS if the unmeasured facts (how long the lookup takes under current load, how long the ordering path takes now) are marked as unknown, the reply says how they would be obtained (measure the old and new path under the same conditions, or name the practice that does it), and the recommendation is stated conditionally on that number — for example \"if the lookup adds less than X ms of the current path, A; otherwise B\" — with X tied to the owner's tolerance rather than to an invented measurement.\n\nFAIL if the reply asserts a latency figure, a proportion, or a \"typically N ms\" as if it were known for this system and decides on that basis, or if it picks a candidate without acknowledging that the deciding number is missing.",
+          "config": {
+            "criteria": "Judge how the reply handles the number nobody has measured.\n\nPASS if the unmeasured facts (how long the lookup takes under current load, how long the ordering path takes now) are marked as unknown, the reply says how they would be obtained (measure the old and new path under the same conditions, or name the practice that does it), and the recommendation is stated conditionally on that number — for example \"if the lookup adds less than X ms of the current path, A; otherwise B\" — with X tied to the owner's tolerance rather than to an invented measurement.\n\nFAIL if the reply asserts a latency figure, a proportion, or a \"typically N ms\" as if it were known for this system and decides on that basis, or if it picks a candidate without acknowledging that the deciding number is missing.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.24014149999999998,
+            "judgeCostUsd": 0.027887999999999996,
+            "durationSeconds": 88,
+            "startedAt": "2026-09-19T09:05:06.020Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-L7UNWK\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "both-sides-still",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`practices:tradeoff-analysis` 这个 skill 目前是空的（内容只有「占位」两个字），所以下面我按通用做法自己做这次权衡分析，用到的实践我会标出来。\n\n---\n\n## 结论先说\n\n**选 A（每次直接查表）。** 现在没有任何一条数据支持 B，而 B 要付的代价是实实在在的。\n\n---\n\n## 一、先把「事实 / 推断 / 没量过」分开\n\n| | 内容 | 类别 |\n|---|---|---|\n| 1 | 5 万单/天；运费算在下单同步路径上；MySQL 同机房；表几十行 | 事实（你给的） |\n| 2 | 平均 ≈ 0.58 次/秒（50000 ÷ 86400） | 推断（算术） |\n| 3 | 几十行的表必然整个常驻 InnoDB buffer pool，主键查询不碰磁盘 | 推断（MySQL 行为，把握很大） |\n| 4 | 同机房主键查询典型 0.1–1 ms | 推断（经验数值，**不是**你这套环境实测的） |\n| 5 | `QuoteService.preview` 的调用量 | **没量过，也没人提过** |\n| 6 | 这条查询实际耗时、下单路径总耗时、峰值倍数 | **没量过**（你自己说的） |\n\n## 二、粗算一下量级（back-of-the-envelope estimation）\n\n平均 0.58 QPS。就算下单高度集中——比如 20% 的单落在一个小时内，那个小时里再有 10 倍的分钟级尖峰——也就 **30 QPS 上下**。\n\n30 QPS × 0.5 ms = 每秒占用约 1.5% 个 CPU 核的时间。这个数字离「瓶颈」差了两三个数量级。\n\n**也就是说：B 的理由（省查询）针对的是一个目前不存在的问题。** 这条对应 YAGNI（You Aren't Gonna Need It）和 Knuth 那条「没测量就别优化」（premature optimization）。\n\n## 三、B 的账单（这些是确定要付的）\n\n1. **5 分钟的不一致窗口，而且是多实例各自不一致。** 运营 14:00 把新疆从 10 块改成 15 块，14:01 用户在 A 机器上看到 15，刷新一下打到 B 机器看到 10。同一个用户、同一个地址、两个运费。A 方案完全没有这个问题。\n2. **运营改配置不生效的报障，是 B 自己造出来的。** A 方案下这类工单根本不存在。\n3. **启动时全量加载 = 新增一个启动期强依赖。** 如果那一刻 DB 抖了，是启动失败（还算好），还是加载成一张空表然后**全国都不收偏远费**？后者是静默漏钱，而且监控上一片绿。\n4. **刷新失败得能被发现。** 定时刷新挂了但进程还活着，缓存会一直停在旧值，不报错。这需要额外埋监控，又是要写要维护的东西。\n5. 测试要多考虑一个时间维度（缓存态）。\n\n代价 1–3 里，**3 是最值钱的那条**：为了省一个没人抱怨过的查询，换来一个会静默少收钱的失败模式。\n\n## 四、为什么现在选 A 不会把路堵死\n\n`RemoteFeeLookup` 现在已经是一个被注入进 `FreightCalc` 的独立类，只有 `lookup` 一个方法——**它本身就是那条缝**。将来真要加缓存，改动范围就在这个类内部，`FreightCalc`、`OrderService`、`QuoteService` 一行都不用动。\n\n这是一个 two-way door decision（可逆决策，Bezos 的说法）。可逆的决策就该选简单的那个先上，别为了将来可能的性能预支复杂度。\n\n## 五、建议的具体做法\n\n1. 按 A 实现：`lookup` 里一条按省份的主键查询。\n2. **顺手在 `lookup` 上打一个耗时指标（timer）+ 一个下单路径整体耗时指标。** 这样「要不要上缓存」将来有数据可依，而不是继续靠猜。成本很低，现在加最省事。\n3. 设一个明确的触发线，越过了再上 B。比如：这条查询占下单路径耗时 > 5%，**或者** 峰值超过 500 QPS。\n4. 真到了那一天，B 也别写成「启动全量加载」，而应该是**懒加载 + TTL 过期刷新 + 刷新失败保留上一次的好值**（read-through cache with last-known-good fallback）。这样第 3、4 条代价能消掉大半。\n\n## 六、顺带一个观察，不属于这次决策\n\n`BatchCalc.run` 调的是 `calcInner`，绕开了 `remoteFee.lookup`。也就是**批量算出来的运费不含偏远附加费，和 `OrderService.quote` 的结果对不上**。这是改成查表之前就有的，不影响 A/B 的选择，但看着像个 bug，你可能想单独确认一下是有意为之还是漏了。\n\n---\n\n## 有一个问题会影响上面的结论\n\n上面的算法假定：一次用户请求 = 一次 `lookup`。但有些场景不是。比如购物车页面一次展示 20 个商品各自的运费，那一次请求就是 20 次 lookup；再比如将来 `BatchCalc` 被改成调 `calc`（见第六节），跑一批 5 万单就是 5 万次连续查询。这种「一次请求里扇出 N 次」的情况一旦存在，B 的账就得重算。\n\n**问题：`lookup` 在一次用户请求里是只调一次，还是存在上面那种一次调很多次的场景？**"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "unknown-not-invented",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`practices:tradeoff-analysis` 这个 skill 目前是空的（内容只有「占位」两个字），所以下面我按通用做法自己做这次权衡分析，用到的实践我会标出来。\n\n---\n\n## 结论先说\n\n**选 A（每次直接查表）。** 现在没有任何一条数据支持 B，而 B 要付的代价是实实在在的。\n\n---\n\n## 一、先把「事实 / 推断 / 没量过」分开\n\n| | 内容 | 类别 |\n|---|---|---|\n| 1 | 5 万单/天；运费算在下单同步路径上；MySQL 同机房；表几十行 | 事实（你给的） |\n| 2 | 平均 ≈ 0.58 次/秒（50000 ÷ 86400） | 推断（算术） |\n| 3 | 几十行的表必然整个常驻 InnoDB buffer pool，主键查询不碰磁盘 | 推断（MySQL 行为，把握很大） |\n| 4 | 同机房主键查询典型 0.1–1 ms | 推断（经验数值，**不是**你这套环境实测的） |\n| 5 | `QuoteService.preview` 的调用量 | **没量过，也没人提过** |\n| 6 | 这条查询实际耗时、下单路径总耗时、峰值倍数 | **没量过**（你自己说的） |\n\n## 二、粗算一下量级（back-of-the-envelope estimation）\n\n平均 0.58 QPS。就算下单高度集中——比如 20% 的单落在一个小时内，那个小时里再有 10 倍的分钟级尖峰——也就 **30 QPS 上下**。\n\n30 QPS × 0.5 ms = 每秒占用约 1.5% 个 CPU 核的时间。这个数字离「瓶颈」差了两三个数量级。\n\n**也就是说：B 的理由（省查询）针对的是一个目前不存在的问题。** 这条对应 YAGNI（You Aren't Gonna Need It）和 Knuth 那条「没测量就别优化」（premature optimization）。\n\n## 三、B 的账单（这些是确定要付的）\n\n1. **5 分钟的不一致窗口，而且是多实例各自不一致。** 运营 14:00 把新疆从 10 块改成 15 块，14:01 用户在 A 机器上看到 15，刷新一下打到 B 机器看到 10。同一个用户、同一个地址、两个运费。A 方案完全没有这个问题。\n2. **运营改配置不生效的报障，是 B 自己造出来的。** A 方案下这类工单根本不存在。\n3. **启动时全量加载 = 新增一个启动期强依赖。** 如果那一刻 DB 抖了，是启动失败（还算好），还是加载成一张空表然后**全国都不收偏远费**？后者是静默漏钱，而且监控上一片绿。\n4. **刷新失败得能被发现。** 定时刷新挂了但进程还活着，缓存会一直停在旧值，不报错。这需要额外埋监控，又是要写要维护的东西。\n5. 测试要多考虑一个时间维度（缓存态）。\n\n代价 1–3 里，**3 是最值钱的那条**：为了省一个没人抱怨过的查询，换来一个会静默少收钱的失败模式。\n\n## 四、为什么现在选 A 不会把路堵死\n\n`RemoteFeeLookup` 现在已经是一个被注入进 `FreightCalc` 的独立类，只有 `lookup` 一个方法——**它本身就是那条缝**。将来真要加缓存，改动范围就在这个类内部，`FreightCalc`、`OrderService`、`QuoteService` 一行都不用动。\n\n这是一个 two-way door decision（可逆决策，Bezos 的说法）。可逆的决策就该选简单的那个先上，别为了将来可能的性能预支复杂度。\n\n## 五、建议的具体做法\n\n1. 按 A 实现：`lookup` 里一条按省份的主键查询。\n2. **顺手在 `lookup` 上打一个耗时指标（timer）+ 一个下单路径整体耗时指标。** 这样「要不要上缓存」将来有数据可依，而不是继续靠猜。成本很低，现在加最省事。\n3. 设一个明确的触发线，越过了再上 B。比如：这条查询占下单路径耗时 > 5%，**或者** 峰值超过 500 QPS。\n4. 真到了那一天，B 也别写成「启动全量加载」，而应该是**懒加载 + TTL 过期刷新 + 刷新失败保留上一次的好值**（read-through cache with last-known-good fallback）。这样第 3、4 条代价能消掉大半。\n\n## 六、顺带一个观察，不属于这次决策\n\n`BatchCalc.run` 调的是 `calcInner`，绕开了 `remoteFee.lookup`。也就是**批量算出来的运费不含偏远附加费，和 `OrderService.quote` 的结果对不上**。这是改成查表之前就有的，不影响 A/B 的选择，但看着像个 bug，你可能想单独确认一下是有意为之还是漏了。\n\n---\n\n## 有一个问题会影响上面的结论\n\n上面的算法假定：一次用户请求 = 一次 `lookup`。但有些场景不是。比如购物车页面一次展示 20 个商品各自的运费，那一次请求就是 20 次 lookup；再比如将来 `BatchCalc` 被改成调 `calc`（见第六节），跑一批 5 万单就是 5 万次连续查询。这种「一次请求里扇出 N 次」的情况一旦存在，B 的账就得重算。\n\n**问题：`lookup` 在一次用户请求里是只调一次，还是存在上面那种一次调很多次的场景？**"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0.3333333333333333,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.2043915,
+            "judgeCostUsd": 0.025626000000000003,
+            "durationSeconds": 69,
+            "startedAt": "2026-09-19T09:05:06.020Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-J7avBJ\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "both-sides-still",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "`tradeoff-analysis` 这个 skill 在当前环境里不存在（我试着调了，返回 `Unknown skill: tradeoff-analysis`；工作目录下也没有任何 `SKILL.md`）。所以我按通用做法给你做这个比较，用的是三条业界实践：\n\n- **Measure before optimizing**（避免过早优化，Knuth）\n- **YAGNI**（You Aren't Gonna Need It）\n- **Two-way door decision**（可逆决策先走简单的那条，Amazon 的说法）\n\n---\n\n## 先把事实、推断、未知分开\n\n**事实（从你贴的代码读出来的）**\n\n- `lookup` 只在 `FreightCalc.calc` 里被调一次，`calc` 的调用方是 `OrderService.quote` 和 `QuoteService.preview`，都是单订单路径。\n- `BatchCalc.run` 走的是 `calcInner`，**完全不经过 `lookup`**。所以批量路径不会把查询放大成循环里的 N 次查询。这是本题里最关键的一条事实——没有 N+1。\n\n**推断（我算的，不是实测）**\n\n- 5 万单/天均摊是 0.58 次/秒。就算 80% 的量压在 4 小时内，也就约 2.8 次/秒。再把 `QuoteService.preview` 的预览流量按订单的 10 倍估，量级在 30 次/秒上下。\n- 几十行的表，主键查询，同机房 MySQL：数据页常驻 buffer pool，单次耗时通常在亚毫秒到 1ms 量级，绝大部分是网络往返。这个量级的 QPS 对 MySQL 来说是空载。\n\n**未知（你已经点出来了）**\n\n- 这条查询在真实负载下的实际耗时。\n- 下单路径现在的总耗时——也就是「加 1ms」到底占百分之几。\n\n---\n\n## 对比\n\n| | A：每次查表 | B：进程内缓存 + 5 分钟刷新 |\n|---|---|---|\n| 下单路径增加 | 一次 PK 查询（推断 <1ms） | ~0 |\n| 数据新鲜度 | 强一致，运营改完立刻生效 | 最多 5 分钟陈旧 |\n| 多实例一致性 | 所有实例永远一致 | 刷新窗口内实例间会不一致 |\n| 启动依赖 | 无 | 启动时依赖 DB 可用 |\n| 失败模式 | 查询失败 = 下单失败（明显） | 后台刷新静默失败 = 永远用旧价（不明显） |\n| 要写和要测的代码 | 0 行 | 加载、定时刷新、失败兜底、并发可见性，都要测 |\n| 改成另一个的成本 | A→B 很便宜，`RemoteFeeLookup` 已经是现成的接缝 | B→A 也便宜，但已经付过了 |\n\nB 那个「实例间不一致」不是纸面风险，有具体后果：用户在 `QuoteService.preview` 看到的报价是实例 1 给的旧值 10 块，两秒后 `OrderService.quote` 落到实例 2 是新值 15 块，用户看到价格当面变了。5 分钟窗口里这种情况每次配置变更都会发生一批。\n\n---\n\n## 建议：选 A\n\n理由不是「A 更快」，而是：**B 在解决一个还没被证明存在的问题，代价是引入一个确定存在的一致性问题。**\n\n现有信息下，A 的成本是一个推断出来的、大概率可以忽略的延迟；B 的成本是一个确定会发生的陈旧窗口，外加四类要维护的代码。在两边都没实测数据的情况下，选那个没有新语义要向运营解释的。\n\n而且这是个 two-way door：`RemoteFeeLookup` 这个接口已经把查询封在里面了，将来要换成缓存，改动只落在这一个类里，`FreightCalc` 及以上一行不用动。所以现在选错 A 的代价很小，选错 B 的代价是已经付出去的复杂度。\n\n**配套做一件事**：在 `lookup` 和 `quote` 上各埋一个耗时统计。这样「这条查询占下单路径多少」这个空白，一周内就能用真实数据填上，而不是继续靠两边猜。真到了 `lookup` 占下单路径超过 5% 的那天，再上缓存，而且到那时你有数据决定 TTL 该是 5 分钟还是 30 秒。\n\n---\n\n## 一个问题\n\n`BatchCalc.run` 里写的是 `freightCalc.calcInner(o)`，不是 `calc(o)`——意味着批量算出来的运费不含偏远附加。举个具体的：一批 1000 个订单里有 50 个发新疆，批量结果里这 50 个都少算 10 块，和 `OrderService.quote` 给同一个订单算出来的不一样。\n\n这是有意为之（批量场景就是不该含附加费），还是漏了？\n\n这个答案会改上面的结论：如果是漏了、将来要把 `calcInner` 换成 `calc`，那循环里每条订单一次查询就成了实打实的 N+1，1000 条订单多 1000 次往返，缓存的账立刻算得过来。"
+              },
+              {
+                "name": "unknown-not-invented",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`tradeoff-analysis` 这个 skill 在当前环境里不存在（我试着调了，返回 `Unknown skill: tradeoff-analysis`；工作目录下也没有任何 `SKILL.md`）。所以我按通用做法给你做这个比较，用的是三条业界实践：\n\n- **Measure before optimizing**（避免过早优化，Knuth）\n- **YAGNI**（You Aren't Gonna Need It）\n- **Two-way door decision**（可逆决策先走简单的那条，Amazon 的说法）\n\n---\n\n## 先把事实、推断、未知分开\n\n**事实（从你贴的代码读出来的）**\n\n- `lookup` 只在 `FreightCalc.calc` 里被调一次，`calc` 的调用方是 `OrderService.quote` 和 `QuoteService.preview`，都是单订单路径。\n- `BatchCalc.run` 走的是 `calcInner`，**完全不经过 `lookup`**。所以批量路径不会把查询放大成循环里的 N 次查询。这是本题里最关键的一条事实——没有 N+1。\n\n**推断（我算的，不是实测）**\n\n- 5 万单/天均摊是 0.58 次/秒。就算 80% 的量压在 4 小时内，也就约 2.8 次/秒。再把 `QuoteService.preview` 的预览流量按订单的 10 倍估，量级在 30 次/秒上下。\n- 几十行的表，主键查询，同机房 MySQL：数据页常驻 buffer pool，单次耗时通常在亚毫秒到 1ms 量级，绝大部分是网络往返。这个量级的 QPS 对 MySQL 来说是空载。\n\n**未知（你已经点出来了）**\n\n- 这条查询在真实负载下的实际耗时。\n- 下单路径现在的总耗时——也就是「加 1ms」到底占百分之几。\n\n---\n\n## 对比\n\n| | A：每次查表 | B：进程内缓存 + 5 分钟刷新 |\n|---|---|---|\n| 下单路径增加 | 一次 PK 查询（推断 <1ms） | ~0 |\n| 数据新鲜度 | 强一致，运营改完立刻生效 | 最多 5 分钟陈旧 |\n| 多实例一致性 | 所有实例永远一致 | 刷新窗口内实例间会不一致 |\n| 启动依赖 | 无 | 启动时依赖 DB 可用 |\n| 失败模式 | 查询失败 = 下单失败（明显） | 后台刷新静默失败 = 永远用旧价（不明显） |\n| 要写和要测的代码 | 0 行 | 加载、定时刷新、失败兜底、并发可见性，都要测 |\n| 改成另一个的成本 | A→B 很便宜，`RemoteFeeLookup` 已经是现成的接缝 | B→A 也便宜，但已经付过了 |\n\nB 那个「实例间不一致」不是纸面风险，有具体后果：用户在 `QuoteService.preview` 看到的报价是实例 1 给的旧值 10 块，两秒后 `OrderService.quote` 落到实例 2 是新值 15 块，用户看到价格当面变了。5 分钟窗口里这种情况每次配置变更都会发生一批。\n\n---\n\n## 建议：选 A\n\n理由不是「A 更快」，而是：**B 在解决一个还没被证明存在的问题，代价是引入一个确定存在的一致性问题。**\n\n现有信息下，A 的成本是一个推断出来的、大概率可以忽略的延迟；B 的成本是一个确定会发生的陈旧窗口，外加四类要维护的代码。在两边都没实测数据的情况下，选那个没有新语义要向运营解释的。\n\n而且这是个 two-way door：`RemoteFeeLookup` 这个接口已经把查询封在里面了，将来要换成缓存，改动只落在这一个类里，`FreightCalc` 及以上一行不用动。所以现在选错 A 的代价很小，选错 B 的代价是已经付出去的复杂度。\n\n**配套做一件事**：在 `lookup` 和 `quote` 上各埋一个耗时统计。这样「这条查询占下单路径多少」这个空白，一周内就能用真实数据填上，而不是继续靠两边猜。真到了 `lookup` 占下单路径超过 5% 的那天，再上缓存，而且到那时你有数据决定 TTL 该是 5 分钟还是 30 秒。\n\n---\n\n## 一个问题\n\n`BatchCalc.run` 里写的是 `freightCalc.calcInner(o)`，不是 `calc(o)`——意味着批量算出来的运费不含偏远附加。举个具体的：一批 1000 个订单里有 50 个发新疆，批量结果里这 50 个都少算 10 块，和 `OrderService.quote` 给同一个订单算出来的不一样。\n\n这是有意为之（批量场景就是不该含附加费），还是漏了？\n\n这个答案会改上面的结论：如果是漏了、将来要把 `calcInner` 换成 `calc`，那循环里每条订单一次查询就成了实打实的 N+1，1000 条订单多 1000 次往返，缓存的账立刻算得过来。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0.3333333333333333,
+        "passRateWithout": 0,
+        "delta": -0.3333333333333333
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 1,
+    "casesPassed": 0,
+    "overallScore": 0,
+    "overallPassRate": 0,
+    "meanDelta": -0.3333333333333333
+  }
+}

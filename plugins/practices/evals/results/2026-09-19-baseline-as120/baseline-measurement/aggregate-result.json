@@ -1,0 +1,268 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:01:08.070Z",
+  "durationSeconds": 252,
+  "costUsd": 1.0942085000000001,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as120-split-design\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "baseline-measurement-*",
+    "threshold": 1,
+    "concurrency": 2,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as120-split-design\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "baseline-measurement-load-test",
+      "dir": "evals\\baseline-measurement-load-test",
+      "source": "prose",
+      "promptMarkdown": "帮我出一份运费计算接口的压测方案：并发多少、跑多久、看哪些指标。这是自足的练习，不对应真实系统。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "addresses-load-test",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Judge whether the agent answered the question that was asked.\n\nPASS if the reply gives a load-test plan — concurrency levels, duration, and the metrics to watch (latency percentiles, error rate, throughput, resource use) — possibly naming it as performance testing; it may ask one clarifying question but still engages with the load test as such.\n\nFAIL if it replaces the load test with tracing a single request, refuses until a decision is named, or answers something other than a load-test plan.",
+          "config": {
+            "criteria": "Judge whether the agent answered the question that was asked.\n\nPASS if the reply gives a load-test plan — concurrency levels, duration, and the metrics to watch (latency percentiles, error rate, throughput, resource use) — possibly naming it as performance testing; it may ask one clarifying question but still engages with the load test as such.\n\nFAIL if it replaces the load test with tracing a single request, refuses until a decision is named, or answers something other than a load-test plan.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.24420150000000002,
+            "judgeCostUsd": 0.023753999999999997,
+            "durationSeconds": 93,
+            "startedAt": "2026-09-19T09:01:08.133Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-2wxwHX\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "addresses-load-test",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一句前提：这是练习，我给的绝对数字是**按一组假设算出来的**，假设写在最前面，你替换成自己的数就行；方法部分（怎么选压力模型、看哪些指标、什么算通过）是通用的。\n\n---\n\n## 0. 假设（数字都从这里推）\n\n- 接口：`POST /v1/shipping/quote`，入参收发地、重量体积、品类、时效档，出参 N 个渠道的报价。\n- 依赖：内存费率表 + Redis 查分区/时效规则，**不调外部承运商 API**。\n- 业务量：大促峰值 3 万单/小时；结算页反复试算，调用放大 5× → 约 **42 RPS 业务峰值**。\n- 容量目标留 3 倍余量 → **目标容量 125 RPS**，验证上限压到 500~1200 RPS 找拐点。\n- SLO：`p99 ≤ 200ms`、`错误率 ≤ 0.1%`、`报价结果 100% 正确`。\n\n---\n\n## 1. 压力模型：用到达率，不用线程数\n\n业界做法叫 **open model / constant arrival rate**（k6 的 `constant-arrival-rate`、Gatling 的 `injectOpen`）。区别是：\n\n- **closed model（固定 100 个线程循环发）**：系统变慢 → 线程被堵住 → 发压自动变少 → 你测出来的延迟偏乐观。这就是 **coordinated omission**（Gil Tene 提出的经典陷阱）。\n- **open model（固定每秒发 125 个请求，不管上一个回没回）**：系统变慢 → 请求堆积 → 延迟真实暴露。线上真实用户就是这个行为。\n\n**运费接口必须用 open model**，因为它挂在结算页，用户不会因为你慢就少点。\n\n并发数不是输入而是**输出**，用 **Little's Law** 反推：\n```\n并发 = 到达率 × 响应时间\n125 RPS × 0.15s ≈ 19 并发\n500 RPS × 0.20s ≈ 100 并发\n```\n所以 VU 池给到 **500**（约 5 倍余量），只是保证发压端不成为瓶颈，不是压力大小的刻度。\n\n---\n\n## 2. 跑多久：五类测试，各有各的时长\n\n| # | 类型 | 压力 | 时长 | 看什么 |\n|---|---|---|---|---|\n| T0 | **Smoke** | 5 RPS | 2 min | 脚本对不对、断言有没有误报、监控接没接上 |\n| T1 | **Capacity ramp**（阶梯找拐点） | 50→125→250→500→800→1200 RPS | 每级 **5 min**，共 ~30 min | 拐点在哪 |\n| T2 | **Soak / 耐久** | 拐点的 70% | **2 h**（能过夜就 8 h） | 泄漏、GC 退化、连接池耗尽 |\n| T3 | **Spike** | 125 →(3s)→ 750，持 60s，回落 | 5 min | 恢复时间、有没有雪崩 |\n| T4 | **Stress / 破坏** | 一直加到崩 | ≤10 min | 降级是否优雅、能否自愈 |\n\n**为什么每级 5 min**：前 2 min 是预热和过渡（JIT 编译、连接池铺开、缓存填充），**只取后 3 min 的稳态窗口**作为该级的数字。少于 3 min 的稳态，p99 样本量不够，数字会抖。\n\n**为什么 soak 要 2 h 起**：内存泄漏、fd 泄漏、连接池慢漏，斜率要跑够长才看得出来。30 分钟的测试看不见每小时涨 2% 的堆。\n\n**拐点（knee point）判定**：满足任一条的那一级即为拐点 —\n- p99 首次超过 SLO；\n- 继续加压，**实际完成吞吐不再上升**（甚至下降）；\n- 错误率 > 0.1%。\n\n---\n\n## 3. 看哪些指标：三层\n\n### 3.1 客户端侧 —— **RED method**（Tom Wilkie）\n\n| 指标 | 怎么记 | 陷阱 |\n|---|---|---|\n| **Rate** | 目标到达率 vs **实际完成率** | 两者一背离，说明发压端或被测端已饱和，该级数据作废 |\n| **Errors** | 必须**按类型分开**：HTTP 5xx / 4xx / 连接超时 / 读超时 / 连接被拒 | 混成一个\"错误率\"就查不出是应用挂了还是连接池满了 |\n| **Duration** | p50 / p90 / p95 / **p99** / p99.9 / max | **不要看平均值**。另外：各级的百分位不能事后再平均，要用 HDR histogram 之类合并 |\n\n### 3.2 服务端资源 —— **USE method**（Brendan Gregg）\n\n对每个资源问三件事：**Utilization / Saturation / Errors**\n\n- CPU：使用率 + **run queue 长度**（饱和度比使用率更早预警）\n- 内存：堆占用 + **GC 暂停 p99 和频率**（Java/Go 常见真凶）\n- 线程池 / 事件循环：**队列长度和排队时间** —— 运费计算这类 CPU 密集接口，拐点通常先表现为队列排队，而不是 CPU 打满\n- 连接池（Redis/DB）：**等待获取连接的时间**，这是最常见的隐藏瓶颈\n- 网络：带宽 + TCP 重传 + `TIME_WAIT` 堆积\n\n### 3.3 业务正确性 —— 容易被漏掉的一层\n\n高压下**算错价比报错更可怕**（报错会重试，算错直接结算）。所以：\n\n- 每个请求带一组**预期报价**（离线算好的期望值），压测脚本逐条断言；\n- 统计 **mismatch 数必须为 0**，和错误率并列为通过条件；\n- 顺带记 **缓存命中率** —— 如果命中率 99%，说明你的测试数据太单一，测的是缓存不是运费计算。\n\n---\n\n## 4. 测试数据：最容易让结果失真的地方\n\n固定一个上海→北京 1kg 的请求打 10 万次，你测的是 Redis 和 CPU cache，不是业务。数据集要按真实分布造：\n\n- 地址：按实际订单的省市分布抽样，**偏远/不可达地区留 5%**（这些通常走慢路径）\n- 重量体积：覆盖**分段计费的边界值**（首重/续重临界、抛重和实重交叉点）\n- 多包裹拆分：占 10%（这是最重的计算路径）\n- 每个 VU 用**不同的参数组合**，预生成 CSV，随机不放回地取\n\n---\n\n## 5. 通过标准（exit criteria，压测前就写死）\n\n在 **125 RPS 目标容量**、稳态 3 min 窗口下，同时满足：\n\n- [ ] p99 ≤ 200 ms，p99.9 ≤ 500 ms\n- [ ] 错误率 ≤ 0.1%，且无连接层错误（超时/拒连为 0）\n- [ ] 报价结果 mismatch = 0\n- [ ] 实际完成率 = 目标到达率（偏差 < 1%）\n- [ ] 拐点 ≥ 375 RPS（即目标容量有 **3 倍余量**）\n- [ ] 2 h soak 期间，堆占用和连接数**无单调上升趋势**，p99 漂移 < 10%\n- [ ] Spike 回落后 **60s 内** p99 回到基线\n\n---\n\n## 6. 脚本骨架（k6）\n\n```js\nimport http from 'k6/http';\nimport { check } from 'k6';\nimport { SharedArray } from 'k6/data';\n\nconst cases = new SharedArray('quotes', () => JSON.parse(open('./quote_cases.json')));\n\nexport const options = {\n  discardResponseBodies: false,\n  scenarios: {\n    capacity_ramp: {\n      executor: 'ramping-arrival-rate',\n      startRate: 50, timeUnit: '1s',\n      preAllocatedVUs: 500, maxVUs: 500,   // 池子够大，不让发压端成为瓶颈\n      stages: [\n        { target: 50,   duration: '5m' },\n        { target: 125,  duration: '5m' },\n        { target: 250,  duration: '5m' },\n        { target: 500,  duration: '5m' },\n        { target: 800,  duration: '5m' },\n        { target: 1200, duration: '5m' },\n      ],\n    },\n  },\n  thresholds: {\n    'http_req_failed':   ['rate<0.001'],\n    'http_req_duration': ['p(99)<200', 'p(99.9)<500'],\n    'checks{kind:price}':['rate==1.0'],   // 报价正确性单独一条\n  },\n};\n\nexport default function () {\n  const c = cases[Math.floor(Math.random() * cases.length)];\n  const res = http.post(`${__ENV.BASE}/v1/shipping/quote`, JSON.stringify(c.req),\n                        { headers: { 'Content-Type': 'application/json' } });\n  check(res, {\n    'price correct': (r) => r.status === 200 && r.json('total') === c.expected,\n  }, { kind: 'price' });\n}\n```\n\n> **开跑前先自检发压端**：把被测端换成一个直接返回固定 JSON 的 mock，跑一遍 1200 RPS。如果 mock 都压不上去或 p99 很难看，说明瓶颈在压测机（CPU/端口耗尽/单机网卡），得先加机器或用分布式模式。这一步叫 **load generator saturation check**，跳过它的话后面所有数字都不可信。\n\n---\n\n## 我需要你确认一件事\n\n上面整套方案的**假设 2**（不调外部承运商 API）是承重墙。如果真实情况是：接口内部要实时调顺丰/京东的报价 API，那么 ——\n\n- 1200 RPS 会直接打爆对方的限流，可能触发封号或账单；\n- 拐点根本测不到你自己的服务，测到的是第三方的限流阈值；\n- 方案得改成：**外部依赖用可配置延迟的 mock**（比如注入 p99=300ms 的固定延迟），分别跑「mock 依赖」和「真实依赖但只压到 20 RPS」两组，前者测自身容量，后者校准 mock 的延迟参数是否贴近真实。\n\n**所以：这个运费接口在一次请求里，会不会同步调用外部承运商的报价服务？**"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.20848550000000002,
+            "judgeCostUsd": 0.019128,
+            "durationSeconds": 97,
+            "startedAt": "2026-09-19T09:01:08.133Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-NWalpu\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "addresses-load-test",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "下面是一份可以直接执行的方案。因为你说是自足练习，我把业务量假设也写出来了，数字可以照着换。\n\n## 0. 假设（换成你的口径即可）\n\n- 接口：`POST /v1/shipping/quote`，入参始发地/目的地/重量体积/时效类型/优惠券，返回多渠道报价。只读、幂等、无副作用。\n- 业务量推导：日单 100 万，80% 集中在 12 小时，每单平均触发 3 次询价（下单页、改地址、比价）→ 均值 ≈ 1,000,000×3÷(12×3600) ≈ **69 RPS**；早晚高峰系数 3 → **峰值 ≈ 208 RPS**。\n- 目标 SLO：p95 ≤ 200 ms，p99 ≤ 500 ms，错误率 < 0.1%。\n- 验证目标：**峰值 2 倍 headroom = 450 RPS 稳定达标**，并探出系统拐点。\n\n推导口径用的是容量规划的常规做法：先算稳态 RPS，再乘峰值系数，再留一倍余量（headroom）。\n\n## 1. 并发数怎么定（不要拍脑袋）\n\n用 **Little's Law**（L = λ × W）：并发不是你设的，是 RPS 和响应时间的乘积。\n\n- 450 RPS × 平均 80 ms = **36 个 in-flight 请求**。\n- 这就是服务端真正要承载的并发度；压测工具的\"线程数/VU 数\"只是达到这个 RPS 的手段。\n\n所以发压模型选 **open model（到达率恒定）**，不是 closed model（固定线程循环）。原因是 closed model 在服务端变慢时会自动降低发压速率，掩盖真实排队延迟，即 **Coordinated Omission**（Gil Tene 提出的经典压测偏差）。k6 用 `constant-arrival-rate`，Gatling 用 `constantUsersPerSec`。\n\nVU 池只是容量上限，按最坏响应时间算：`preAllocatedVUs = 450 × 2s ≈ 900`，`maxVUs = 1400`。\n\n## 2. 跑什么、跑多久\n\n分型参考 **k6 test types / performance testing types** 的标准分类：\n\n| 阶段 | 类型 | 负载 | 时长 | 目的 |\n|---|---|---|---|---|\n| 0 | Smoke test | 1 VU | 5 min | 验脚本、验数据、验断言，不看性能 |\n| 1 | Baseline | 20 RPS | 10 min | 无压力下的延迟基线，后面所有对比的分母 |\n| 2 | Ramp / Capacity | 50→100→200→300→450→600→800 RPS，每档 5 min | ~35 min | 找 **knee point**（拐点：RPS 不再涨、延迟开始拐上去） |\n| 3 | Load test | 450 RPS 恒定 | 45 min | 目标负载下是否达标、延迟是否随时间漂移 |\n| 4 | Stress test | 拐点 × 1.2，再阶梯回落 | 20 min | 看降级行为和**恢复能力**（压力撤掉后多久回到基线） |\n| 5 | Spike test | 30 s 内 0→1350 RPS（3×峰值），持续 2 min | 10 min | 大促开场/推送场景，看限流和熔断有没有生效 |\n| 6 | Soak test | 270 RPS（峰值 60%） | 4–8 h（过夜） | 内存泄漏、连接池泄漏、日志打满盘、缓存无限增长 |\n\n每个阶段前 3–5 min 是 **warm-up**（JIT 预热、连接池建满、缓存填充），**这段数据不计入统计**。阶段之间留 5 min 冷却。\n\n时长的依据：短测只能抓出 CPU 瓶颈，泄漏类问题至少要一个完整 GC 周期以上才暴露，所以 soak 单独跑且必须过夜。\n\n## 3. 看哪些指标\n\n分三层，别只盯着一层。\n\n**A. 客户端侧（压测机出的数，这是 SLO 的唯一判据）**\n- 吞吐：实际达成 RPS vs 目标 RPS；**dropped iterations**（发不出去说明压测机自己先挂了，数据作废）\n- 延迟分位：p50 / p90 / p95 / p99 / p99.9 / max —— **不要看平均值**，平均值会把长尾洗掉\n- 错误率，且必须分类：HTTP 5xx / 4xx / 连接超时 / 读超时 / 连接被拒 —— 这四类指向完全不同的瓶颈\n- 延迟直方图随时间的变化曲线（用 HdrHistogram 而非只存聚合值）\n\n**B. 服务端侧（RED method，Tom Wilkie 提出，面向服务）**\n- **R**ate：各接口 QPS，按渠道/时效类型拆\n- **E**rrors：异常类型分布、下游超时数、重试次数、熔断器开合状态\n- **D**uration：服务端自测延迟（和客户端延迟的差值就是排队+网络开销，这个差值变大是最早的过载信号）\n- 补充：线程池/协程队列长度、DB 连接池等待时长、GC 次数与 STW 暂停时间\n\n**C. 资源侧（USE method，Brendan Gregg 提出，面向资源）**\n\n对 CPU / 内存 / 网络 / 磁盘 / DB 连接池各看三项：\n- **U**tilization 利用率\n- **S**aturation 饱和度（CPU run queue 长度、连接池排队数）——**比利用率更早预警**\n- **E**rrors 错误（丢包、OOM、连接拒绝）\n\n饱和度比利用率重要：CPU 80% 但 run queue 为 0 是健康的，CPU 60% 但队列堆积就已经在排队了。\n\n运费接口特有的要单独看：**缓存命中率**（规则表/分区表/汇率）、**外部承运商 API 的调用量与被限流次数**。\n\n## 4. 通过标准（写成自动化断言，不要靠人眼看图）\n\n即 k6 的 `thresholds`，跑完自动判定 pass/fail：\n\n```js\nthresholds: {\n  'http_req_duration{scenario:load}': ['p(95)<200', 'p(99)<500'],\n  'http_req_failed': ['rate<0.001'],\n  'dropped_iterations': ['count<10'],\n}\n```\n\nSoak 额外标准：p99 相对前 1 小时漂移 < 10%，进程 RSS 增长 < 5%，均不得单调上升。\n\n## 5. 容易让整轮数据作废的几点\n\n1. **测试数据必须参数化**。用同一个\"北京→上海 1kg\"打 450 RPS，测的是缓存，不是运费引擎。按真实分布生成邮编、重量、体积对，**并把缓存命中率对齐线上真实值**（比如 70%）。\n2. **外部承运商 API 用 mock/stub，并注入真实的延迟分布**（比如 p50 40 ms、p99 800 ms、1% 超时）。直接压对方是既压不准也不合适的。\n3. **压测机先自测**。发压端的 CPU、网络带宽、本地端口耗尽（`TIME_WAIT`）都会先于被测服务成为瓶颈。压测机资源使用率超 50% 就加机器。\n4. **一次只改一个变量**。调完连接池就重跑全套，不要一次改三处。\n5. 环境配比要记录（实例数、规格、DB 规格），结论只在该配比下成立。\n\n## 一个问题\n\n上面第 5.2 条是整份方案里最不确定的地方。举个例子：如果你们的运费是**本地规则表计算**（价格区间表 + 分区表都在内存/Redis 里），那瓶颈基本在 CPU 和缓存，压测可以放开手压，拐点会很高（可能几千 RPS）；但如果是**实时调 顺丰/京东物流 的报价 API 再聚合**，那这个接口的延迟和容量基本由对方决定，压测重点要整个换成「超时设置、重试策略、熔断降级、本地兜底价」是否正确，绝对值反而没意义。\n\n**这个运费接口在算价时，会不会同步调用外部承运商的 API？**"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    },
+    {
+      "name": "baseline-measurement-one-request",
+      "dir": "evals\\baseline-measurement-one-request",
+      "source": "prose",
+      "promptMarkdown": "按 `baseline-measurement` 定测法。\n\n决定：偏远附加改成按省份查表之后，灰度第一档要不要只放测试模板——取决于新路径比老路径慢多少，慢超过 20 ms 就只放测试模板。\n\n系统：Java 运费服务。老路径 `FreightCalc.calc` 现在还在跑；新路径 `FreightCalc.calcV2` 已经部署到预发，同一个入口按开关 `remote.byProvince` 分流。工作机上装了 Arthas，预发上有一条线上真实请求的样本可以重放。\n\n本会话看不到代码，也跑不了任何命令：把要主人在工作机上做的按顺序写出来，命令原样写。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "baseline-first-same-conditions",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether the two measurements are comparable.\n\nPASS if the plan measures the old path (`calc`, flag off) first as the baseline and only then the new path (`calcV2`, flag on), using the same replayed request sample, the same environment (staging) and the same tool and metric for both, so that the difference is attributable to the path change; mentioning warm-up or repeating each side a few times is a plus, not a requirement.\n\nFAIL if only the new path is measured, if the two sides are measured under different conditions or with different metrics, or if there is no explicit comparison of new against old.",
+          "config": {
+            "criteria": "Judge whether the two measurements are comparable.\n\nPASS if the plan measures the old path (`calc`, flag off) first as the baseline and only then the new path (`calcV2`, flag on), using the same replayed request sample, the same environment (staging) and the same tool and metric for both, so that the difference is attributable to the path change; mentioning warm-up or repeating each side a few times is a plus, not a requirement.\n\nFAIL if only the new path is measured, if the two sides are measured under different conditions or with different metrics, or if there is no explicit comparison of new against old.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "bounded-no-invented-numbers",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Judge the scope of the measurement and the honesty of the result.\n\nPASS if the measurement is bounded to the one number the decision needs — a handful of real requests traced or timed with Arthas (`trace`, `monitor` or equivalent), not a load test or a profiling campaign — the decision rule is tied to that number (over 20 ms slower → only test templates in tier one), and no measured value is reported; the result is left for the owner to fill in after running the steps.\n\nFAIL if it proposes a load test or a broad profiling exercise instead, or if it states a latency difference it could not have measured.",
+          "config": {
+            "criteria": "Judge the scope of the measurement and the honesty of the result.\n\nPASS if the measurement is bounded to the one number the decision needs — a handful of real requests traced or timed with Arthas (`trace`, `monitor` or equivalent), not a load test or a profiling campaign — the decision rule is tied to that number (over 20 ms slower → only test templates in tier one), and no measured value is reported; the result is left for the owner to fill in after running the steps.\n\nFAIL if it proposes a load test or a broad profiling exercise instead, or if it states a latency difference it could not have measured.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "baseline-measurement",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0.6666666666666666,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.26711250000000003,
+            "judgeCostUsd": 0.030041999999999992,
+            "durationSeconds": 100,
+            "startedAt": "2026-09-19T09:02:40.673Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-krQYm0\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "baseline-first-same-conditions",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "`practices:baseline-measurement` 这个 skill 目前是**占位**（返回内容只有\"占位。\"），里面没有定好的测法。所以下面这套是按业界通行做法写的，每步标了用的是哪条。\n\n先说一处我对任务本身的顾虑，不影响你照做：**预发只有一条样本 = 只有一个省**。新路径是按省份查表，耗时很可能随省份不同（表命中 / 缓存冷热）而变，一条样本测出来的差值只能代表那个省。所以下面第 7 步我加了一个\"换省份补测\"的动作；如果拿不到第二条样本，这个结论的适用范围要在灰度评审时写清楚。\n\n---\n\n## 操作顺序\n\n### 1. 确认全限定类名和 JVM\n\n```\njps -l\n```\n\n挑出运费服务的 pid，记下来（下面写作 `<PID>`）。\n\nArthas 在工作机上，但 attach 要和目标 JVM 同机。所以先判断：\n\n- 如果预发就是这台工作机 → 直接 `java -jar arthas-boot.jar <PID>`\n- 如果预发是另一台 → 把 `arthas-boot.jar` 传过去，在预发上执行上面那条\n\n进 Arthas 后：\n\n```\nsc -d *FreightCalc\n```\n\n把输出里的 `class-info` 全限定名记下来（下面写作 `com.x.FreightCalc`，你按实际替换）。\n\n### 2. 先看清两条路径是不是真的走通了\n\n开关 `remote.byProvince` 置 **off**，重放一次样本，在 Arthas 里：\n\n```\nwatch com.x.FreightCalc calc '{params,returnObj,throwExp,#cost}' -x 2 -n 5\n```\n\n开关置 **on**，重放一次：\n\n```\nwatch com.x.FreightCalc calcV2 '{params,returnObj,throwExp,#cost}' -x 2 -n 5\n```\n\n**这一步是为了防一个坑**：新路径如果查表没命中、走了异常或默认分支提前返回，耗时会假性变快。确认 `throwExp` 为 null、`returnObj` 的金额是真算出来的，再往下走。\n\n用的是：**先证明测的是同一件事，再比快慢**（apples-to-apples comparison）。\n\n### 3. 预热\n\n开关 off，重放 200 次，**这批数据丢掉不看**：\n\n```\nfor i in $(seq 1 200); do curl -s -o /dev/null -X POST \"<预发入口URL>\" -H 'Content-Type: application/json' -d @sample.json; done\n```\n\n开关 on，同样跑 200 次丢掉。\n\n用的是：**JIT 预热后再采样**（JVM warm-up）。冷的 JVM 头几百次调用是解释执行，差值能差出一个数量级，直接测会得到完全错的结论。\n\n### 4. 交替采样，一轮一条路径\n\nArthas 里先挂上聚合监控（每 10 秒一行，共 6 行）：\n\n```\nmonitor -c 10 com.x.FreightCalc calc -n 6\n```\n\n另开一个终端，开关 off，重放 200 次（命令同第 3 步）。记下 `avg-rt` / `max-rt` / `fail-rate`。\n\n然后换：\n\n```\nmonitor -c 10 com.x.FreightCalc calcV2 -n 6\n```\n\n开关 on，重放 200 次，记下同样三个数。\n\n**按 off → on → off → on → off → on 的顺序重复三轮**，不要一次把 off 跑完再跑 on。\n\n用的是：**交替采样**（interleaved A/B measurement）。预发机器上有别的负载、GC 周期、CPU 频率都在漂，连着跑会把漂移算到路径头上。\n\n### 5. 先用均值做初筛\n\n把三轮的 `avg-rt` 各自取中位数，算 `calcV2 - calc`：\n\n- 差值 **< 5 ms** 或 **> 40 ms** → 结论已经定了，跳到第 7 步\n- 差值落在 **5–40 ms** 之间 → 均值不够判，做第 6 步\n\n用的是：**按门槛所需精度决定测量成本**。20 ms 这个门槛量级不小，大部分情况均值就能拍板，不用上重工具。\n\n### 6. 只在贴近门槛时采逐次耗时\n\n开关 off：\n\n```\ntt -t com.x.FreightCalc calc -n 200\n```\n\n重放 200 次后：\n\n```\ntt -l\n```\n\n把 `COST(ms)` 一列复制出来。开关 on，对 `calcV2` 重复一遍。\n\n两列分别排序取 p50 / p95 / p99，算差值。\n\n⚠\ufe0f `tt` 会把每次调用的对象留在内存里，200 次量级没问题，跑完记得：\n\n```\ntt --delete-all\n```\n\n用的是：**看分位数不看均值**（tail latency, p95/p99）。查表路径的慢尾往往来自缓存未命中，均值会把它抹平。\n\n### 7. 换省份补测\n\n如果能改样本里的省份字段，挑两个和原样本不同的省（最好一个大表省、一个冷门省），各重复第 3–5 步。目的是看差值是否稳定，而不是再拿一个数。\n\n### 8. 收尾\n\n```\nstop\n```\n\n关掉 Arthas，把开关恢复到你接手时的状态。\n\n**注意**：`monitor` / `watch` / `tt` 都是字节码增强，本身有开销。上面的设计里两条路径用的是同一套工具、同样的采样量，开销大体抵消，所以**差值**可信；但**绝对值**会比不挂 Arthas 时偏高，不要拿去报 SLO。\n\n用的是：**观测开销在两臂上保持一致**（keep instrumentation identical across arms）。\n\n---\n\n## 一个问题\n\n比如你测完是这样：p50 差 6 ms，p95 差 18 ms，p99 差 34 ms —— 均值差 9 ms。这种结果按\"慢超过 20 ms\"该判哪边？\n\n**20 ms 这条线，卡在哪个统计量上？** 我的建议是卡 **p99**：这次改的是查表，风险点恰好在缓存未命中的慢尾，均值会把它盖住；灰度第一档本来就是拿来兜风险的，按尾部判更保守。你认可的话我就按 p99 记进结论。"
+              },
+              {
+                "name": "bounded-no-invented-numbers",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`practices:baseline-measurement` 这个 skill 目前是**占位**（返回内容只有\"占位。\"），里面没有定好的测法。所以下面这套是按业界通行做法写的，每步标了用的是哪条。\n\n先说一处我对任务本身的顾虑，不影响你照做：**预发只有一条样本 = 只有一个省**。新路径是按省份查表，耗时很可能随省份不同（表命中 / 缓存冷热）而变，一条样本测出来的差值只能代表那个省。所以下面第 7 步我加了一个\"换省份补测\"的动作；如果拿不到第二条样本，这个结论的适用范围要在灰度评审时写清楚。\n\n---\n\n## 操作顺序\n\n### 1. 确认全限定类名和 JVM\n\n```\njps -l\n```\n\n挑出运费服务的 pid，记下来（下面写作 `<PID>`）。\n\nArthas 在工作机上，但 attach 要和目标 JVM 同机。所以先判断：\n\n- 如果预发就是这台工作机 → 直接 `java -jar arthas-boot.jar <PID>`\n- 如果预发是另一台 → 把 `arthas-boot.jar` 传过去，在预发上执行上面那条\n\n进 Arthas 后：\n\n```\nsc -d *FreightCalc\n```\n\n把输出里的 `class-info` 全限定名记下来（下面写作 `com.x.FreightCalc`，你按实际替换）。\n\n### 2. 先看清两条路径是不是真的走通了\n\n开关 `remote.byProvince` 置 **off**，重放一次样本，在 Arthas 里：\n\n```\nwatch com.x.FreightCalc calc '{params,returnObj,throwExp,#cost}' -x 2 -n 5\n```\n\n开关置 **on**，重放一次：\n\n```\nwatch com.x.FreightCalc calcV2 '{params,returnObj,throwExp,#cost}' -x 2 -n 5\n```\n\n**这一步是为了防一个坑**：新路径如果查表没命中、走了异常或默认分支提前返回，耗时会假性变快。确认 `throwExp` 为 null、`returnObj` 的金额是真算出来的，再往下走。\n\n用的是：**先证明测的是同一件事，再比快慢**（apples-to-apples comparison）。\n\n### 3. 预热\n\n开关 off，重放 200 次，**这批数据丢掉不看**：\n\n```\nfor i in $(seq 1 200); do curl -s -o /dev/null -X POST \"<预发入口URL>\" -H 'Content-Type: application/json' -d @sample.json; done\n```\n\n开关 on，同样跑 200 次丢掉。\n\n用的是：**JIT 预热后再采样**（JVM warm-up）。冷的 JVM 头几百次调用是解释执行，差值能差出一个数量级，直接测会得到完全错的结论。\n\n### 4. 交替采样，一轮一条路径\n\nArthas 里先挂上聚合监控（每 10 秒一行，共 6 行）：\n\n```\nmonitor -c 10 com.x.FreightCalc calc -n 6\n```\n\n另开一个终端，开关 off，重放 200 次（命令同第 3 步）。记下 `avg-rt` / `max-rt` / `fail-rate`。\n\n然后换：\n\n```\nmonitor -c 10 com.x.FreightCalc calcV2 -n 6\n```\n\n开关 on，重放 200 次，记下同样三个数。\n\n**按 off → on → off → on → off → on 的顺序重复三轮**，不要一次把 off 跑完再跑 on。\n\n用的是：**交替采样**（interleaved A/B measurement）。预发机器上有别的负载、GC 周期、CPU 频率都在漂，连着跑会把漂移算到路径头上。\n\n### 5. 先用均值做初筛\n\n把三轮的 `avg-rt` 各自取中位数，算 `calcV2 - calc`：\n\n- 差值 **< 5 ms** 或 **> 40 ms** → 结论已经定了，跳到第 7 步\n- 差值落在 **5–40 ms** 之间 → 均值不够判，做第 6 步\n\n用的是：**按门槛所需精度决定测量成本**。20 ms 这个门槛量级不小，大部分情况均值就能拍板，不用上重工具。\n\n### 6. 只在贴近门槛时采逐次耗时\n\n开关 off：\n\n```\ntt -t com.x.FreightCalc calc -n 200\n```\n\n重放 200 次后：\n\n```\ntt -l\n```\n\n把 `COST(ms)` 一列复制出来。开关 on，对 `calcV2` 重复一遍。\n\n两列分别排序取 p50 / p95 / p99，算差值。\n\n⚠\ufe0f `tt` 会把每次调用的对象留在内存里，200 次量级没问题，跑完记得：\n\n```\ntt --delete-all\n```\n\n用的是：**看分位数不看均值**（tail latency, p95/p99）。查表路径的慢尾往往来自缓存未命中，均值会把它抹平。\n\n### 7. 换省份补测\n\n如果能改样本里的省份字段，挑两个和原样本不同的省（最好一个大表省、一个冷门省），各重复第 3–5 步。目的是看差值是否稳定，而不是再拿一个数。\n\n### 8. 收尾\n\n```\nstop\n```\n\n关掉 Arthas，把开关恢复到你接手时的状态。\n\n**注意**：`monitor` / `watch` / `tt` 都是字节码增强，本身有开销。上面的设计里两条路径用的是同一套工具、同样的采样量，开销大体抵消，所以**差值**可信；但**绝对值**会比不挂 Arthas 时偏高，不要拿去报 SLO。\n\n用的是：**观测开销在两臂上保持一致**（keep instrumentation identical across arms）。\n\n---\n\n## 一个问题\n\n比如你测完是这样：p50 差 6 ms，p95 差 18 ms，p99 差 34 ms —— 均值差 9 ms。这种结果按\"慢超过 20 ms\"该判哪边？\n\n**20 ms 这条线，卡在哪个统计量上？** 我的建议是卡 **p99**：这次改的是查表，风险点恰好在缓存未命中的慢尾，均值会把它盖住；灰度第一档本来就是拿来兜风险的，按尾部判更保守。你认可的话我就按 p99 记进结论。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0.6666666666666666,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.37440899999999994,
+            "judgeCostUsd": 0.03728999999999999,
+            "durationSeconds": 155,
+            "startedAt": "2026-09-19T09:02:45.382Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-3BhB2I\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "baseline-first-same-conditions",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "开工前先说一件事：**我这边没有 `baseline-measurement` 这份东西**。可用技能列表里没有它，工作目录 `C:\\Users\\<user>\\...\\cwd` 是空的，记忆目录这次读被权限拒了（`Permission to read ... has been denied`）。所以下面这套测法是我按业界通行做法拼的，每步都标了用的是哪条；你把 `baseline-measurement` 贴给我，我再对一遍差异。\n\n另外两个假设，先摆明：样本我当作是一个能 `curl` 重放的 HTTP 请求、存成 `sample.json`；开关 `remote.byProvince` 你自己那边有办法翻（配置中心/启动参数都行），我不猜它的翻法，只给\"翻完怎么验\"。\n\n---\n\n## 总原则\n\n三条，贯穿全程：\n\n- **单变量（single-variable change）**：同一台预发、同一个 JVM 进程、同一条样本、串行不并发，两轮之间只有开关不同。预发的机器配置跟线上不一样没关系——我们要的是**两条路径的差值**，不是绝对值，差值在同机比较下是成立的。\n- **稳态测量（steady-state measurement / JVM warm-up）**：JIT 没编译完的前几千次调用没有参考价值，必须先预热再计数。\n- **先测噪声再测差异（A/A test）**：20 ms 这个闸门，得先知道\"同一条路径自己跟自己比，轮与轮之间能飘多少\"。噪声底要是 ±15 ms，20 ms 的结论就是假的。这一步不能省。\n\n---\n\n## 步骤\n\n### 1. 挂上 Arthas\n\n在预发机器上：\n\n```\njava -jar arthas-boot.jar\n```\n\n列出来的进程里选运费服务那个 pid。类的全限定名下面一律写成 `<FQCN>`，你换成真的，比如 `com.xxx.freight.FreightCalc`。\n\n### 2. 先确认开关真的在分流\n\n别信配置页面显示的值，信实际被调用的方法。开关设成**老路径**，然后：\n\n```\nmonitor -c 10 <FQCN> calc\n```\n\n另开一个窗口跑几十次重放，看 `total` 涨不涨。然后 `reset` 掉，换 `calcV2` 同样看一遍，`total` 应该是 0。开关翻到新路径，两个方法反过来再验一次。\n\n```\nreset\n```\n\n这一步没过，后面全部作废。\n\n### 3. 冷启动那一刀，单独记（要就现在记，之后记不到了）\n\n省份查表大概率有懒加载/首次建缓存的成本。这个成本是**一次性**的，跟稳态慢多少是两回事，但它决定灰度开关打开那一瞬间头几个用户的体验——所以单独记一笔。\n\n**前提**：这个预发实例还没跑过 `calcV2`。跑过了就得重启实例才有真冷数据；不想重启就跳过这步，代价是\"开关打开首包成本\"这个数据缺失，我会在结论里标成未知。\n\n开关翻到新路径，然后：\n\n```\ntt -t -n 20 <FQCN> calcV2\n```\n\n重放 20 次，看 `tt -l` 里第 1 条和第 20 条的 `cost` 差多少。记下来，然后：\n\n```\ntt --delete-all\nreset\n```\n\n### 4. 预热\n\n两条路径都要预热，各自开关状态下各跑 2000 次。这一段的数不要。\n\n```\nfor i in $(seq 1 2000); do curl -s -o /dev/null -X POST 'http://<预发地址>/<运费接口路径>' -H 'Content-Type: application/json' --data-binary @sample.json; done\n```\n\n**串行、并发 1**。上并发会引入排队效应，测的就不是代码路径的成本了。\n\n### 5. A/A 空跑 —— 拿噪声底\n\n开关保持在**老路径**，连着跑 3 轮，每轮 1000 次。每轮开始前挂 monitor：\n\n```\nmonitor -c 60 -n 3 <FQCN> calc\n```\n\n另一窗口：\n\n```\ntime (for i in $(seq 1 1000); do curl -s -o /dev/null -X POST 'http://<预发地址>/<运费接口路径>' -H 'Content-Type: application/json' --data-binary @sample.json; done)\n```\n\n记 3 轮的 `avg-rt`。三个数里**最大减最小 = 噪声底**。轮间 `reset` 一次。\n\n### 6. A/B 交替测 —— 拿差值\n\n不要\"老路径全测完再测新路径\"，那样机器状态漂移会混进结果里。按 **A→B→A→B→A→B** 交替，每轮 1000 次，共 6 轮：\n\n老路径轮：\n\n```\nmonitor -c 60 -n 3 <FQCN> calc\n```\n\n新路径轮（翻开关后）：\n\n```\nmonitor -c 60 -n 3 <FQCN> calcV2\n```\n\n每轮之间：\n\n```\nreset\n```\n\n**一轮只 enhance 一个方法**，两个一起挂会互相加 instrumentation 开销。\n\n记成这样一张表：\n\n| 轮次 | 路径 | avg-rt(ms) |\n|---|---|---|\n| 1 | calc | |\n| 2 | calcV2 | |\n| ... | | |\n\n差值 = 3 轮 calcV2 均值 − 3 轮 calc 均值。\n\n### 7. 分位数（因为 monitor 只给均值）\n\nArthas 的 `monitor` 没有 p99。要分位数就用 `tt` 逐次采：\n\n```\ntt -t -n 1000 <FQCN> calc\n```\n\n跑完 `tt -l`，把 `cost` 那列拷出来算 p50/p95/p99。新路径同样来一遍。\n\n```\ntt --delete-all\n```\n\n`tt` 自身开销比 `monitor` 大，但**两边一样大**，所以差值仍然可比——绝对值别拿去跟 monitor 的数混着看。另外 1000 条记录是常驻内存的，测完务必 `--delete-all`。\n\n### 8. 只有超了 20 ms 才做这步：定位慢在哪\n\n```\ntrace -n 20 <FQCN> calcV2 '#cost > 20'\n```\n\n想看全貌就打火焰图：\n\n```\nprofiler start --event itimer\n```\n\n重放 1000 次，然后：\n\n```\nprofiler stop --format html\n```\n\n### 9. 收尾\n\n```\nstop\n```\n\ninstrumentation 不摘干净会一直挂在预发上。\n\n---\n\n## 判定\n\n拿到三个数：差值 `Δ`、噪声底 `N`、冷启动首刀。\n\n- `Δ > 20ms` 且 `Δ > 2N` → 结论成立，灰度第一档**只放测试模板**。\n- `Δ ≤ 20ms` 且 `Δ > 2N` → 结论成立，第一档可以放真实流量。\n- `Δ` 和 `N` 量级接近（比如 Δ=12ms、N=10ms）→ **这个测法分辨不了**，别硬判。把每轮次数加到 3000 再来一遍；还是分辨不了，说明 20 ms 这条线在预发环境根本量不出来，得换策略（比如第一档直接放小比例真实流量+看线上埋点）。\n- 冷启动首刀很贵但稳态不贵 → 这不是\"新路径慢\"，是\"开关打开那一刻贵\"。不该拿它否掉第一档，该做的是开关打开前先预热查表。这个我会单独标出来，别混进 20 ms 的判断里。\n\n---\n\n一个问题，决定你第 7 步的数怎么用：\n\n假设测出来 **均值只慢 8 ms，但 p99 慢 40 ms**（省份没命中缓存时回源了）——这种形态挺可能出现。**20 ms 这条线，是卡在均值上还是 p99 上？**\n\n我的建议是卡 p99。灰度第一档怕的就是尾部那几个请求，而查表这种改动一旦有缓存未命中回源，均值会把它稀释掉看不见。你定了我就按那个数出结论。"
+              },
+              {
+                "name": "bounded-no-invented-numbers",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "开工前先说一件事：**我这边没有 `baseline-measurement` 这份东西**。可用技能列表里没有它，工作目录 `C:\\Users\\<user>\\...\\cwd` 是空的，记忆目录这次读被权限拒了（`Permission to read ... has been denied`）。所以下面这套测法是我按业界通行做法拼的，每步都标了用的是哪条；你把 `baseline-measurement` 贴给我，我再对一遍差异。\n\n另外两个假设，先摆明：样本我当作是一个能 `curl` 重放的 HTTP 请求、存成 `sample.json`；开关 `remote.byProvince` 你自己那边有办法翻（配置中心/启动参数都行），我不猜它的翻法，只给\"翻完怎么验\"。\n\n---\n\n## 总原则\n\n三条，贯穿全程：\n\n- **单变量（single-variable change）**：同一台预发、同一个 JVM 进程、同一条样本、串行不并发，两轮之间只有开关不同。预发的机器配置跟线上不一样没关系——我们要的是**两条路径的差值**，不是绝对值，差值在同机比较下是成立的。\n- **稳态测量（steady-state measurement / JVM warm-up）**：JIT 没编译完的前几千次调用没有参考价值，必须先预热再计数。\n- **先测噪声再测差异（A/A test）**：20 ms 这个闸门，得先知道\"同一条路径自己跟自己比，轮与轮之间能飘多少\"。噪声底要是 ±15 ms，20 ms 的结论就是假的。这一步不能省。\n\n---\n\n## 步骤\n\n### 1. 挂上 Arthas\n\n在预发机器上：\n\n```\njava -jar arthas-boot.jar\n```\n\n列出来的进程里选运费服务那个 pid。类的全限定名下面一律写成 `<FQCN>`，你换成真的，比如 `com.xxx.freight.FreightCalc`。\n\n### 2. 先确认开关真的在分流\n\n别信配置页面显示的值，信实际被调用的方法。开关设成**老路径**，然后：\n\n```\nmonitor -c 10 <FQCN> calc\n```\n\n另开一个窗口跑几十次重放，看 `total` 涨不涨。然后 `reset` 掉，换 `calcV2` 同样看一遍，`total` 应该是 0。开关翻到新路径，两个方法反过来再验一次。\n\n```\nreset\n```\n\n这一步没过，后面全部作废。\n\n### 3. 冷启动那一刀，单独记（要就现在记，之后记不到了）\n\n省份查表大概率有懒加载/首次建缓存的成本。这个成本是**一次性**的，跟稳态慢多少是两回事，但它决定灰度开关打开那一瞬间头几个用户的体验——所以单独记一笔。\n\n**前提**：这个预发实例还没跑过 `calcV2`。跑过了就得重启实例才有真冷数据；不想重启就跳过这步，代价是\"开关打开首包成本\"这个数据缺失，我会在结论里标成未知。\n\n开关翻到新路径，然后：\n\n```\ntt -t -n 20 <FQCN> calcV2\n```\n\n重放 20 次，看 `tt -l` 里第 1 条和第 20 条的 `cost` 差多少。记下来，然后：\n\n```\ntt --delete-all\nreset\n```\n\n### 4. 预热\n\n两条路径都要预热，各自开关状态下各跑 2000 次。这一段的数不要。\n\n```\nfor i in $(seq 1 2000); do curl -s -o /dev/null -X POST 'http://<预发地址>/<运费接口路径>' -H 'Content-Type: application/json' --data-binary @sample.json; done\n```\n\n**串行、并发 1**。上并发会引入排队效应，测的就不是代码路径的成本了。\n\n### 5. A/A 空跑 —— 拿噪声底\n\n开关保持在**老路径**，连着跑 3 轮，每轮 1000 次。每轮开始前挂 monitor：\n\n```\nmonitor -c 60 -n 3 <FQCN> calc\n```\n\n另一窗口：\n\n```\ntime (for i in $(seq 1 1000); do curl -s -o /dev/null -X POST 'http://<预发地址>/<运费接口路径>' -H 'Content-Type: application/json' --data-binary @sample.json; done)\n```\n\n记 3 轮的 `avg-rt`。三个数里**最大减最小 = 噪声底**。轮间 `reset` 一次。\n\n### 6. A/B 交替测 —— 拿差值\n\n不要\"老路径全测完再测新路径\"，那样机器状态漂移会混进结果里。按 **A→B→A→B→A→B** 交替，每轮 1000 次，共 6 轮：\n\n老路径轮：\n\n```\nmonitor -c 60 -n 3 <FQCN> calc\n```\n\n新路径轮（翻开关后）：\n\n```\nmonitor -c 60 -n 3 <FQCN> calcV2\n```\n\n每轮之间：\n\n```\nreset\n```\n\n**一轮只 enhance 一个方法**，两个一起挂会互相加 instrumentation 开销。\n\n记成这样一张表：\n\n| 轮次 | 路径 | avg-rt(ms) |\n|---|---|---|\n| 1 | calc | |\n| 2 | calcV2 | |\n| ... | | |\n\n差值 = 3 轮 calcV2 均值 − 3 轮 calc 均值。\n\n### 7. 分位数（因为 monitor 只给均值）\n\nArthas 的 `monitor` 没有 p99。要分位数就用 `tt` 逐次采：\n\n```\ntt -t -n 1000 <FQCN> calc\n```\n\n跑完 `tt -l`，把 `cost` 那列拷出来算 p50/p95/p99。新路径同样来一遍。\n\n```\ntt --delete-all\n```\n\n`tt` 自身开销比 `monitor` 大，但**两边一样大**，所以差值仍然可比——绝对值别拿去跟 monitor 的数混着看。另外 1000 条记录是常驻内存的，测完务必 `--delete-all`。\n\n### 8. 只有超了 20 ms 才做这步：定位慢在哪\n\n```\ntrace -n 20 <FQCN> calcV2 '#cost > 20'\n```\n\n想看全貌就打火焰图：\n\n```\nprofiler start --event itimer\n```\n\n重放 1000 次，然后：\n\n```\nprofiler stop --format html\n```\n\n### 9. 收尾\n\n```\nstop\n```\n\ninstrumentation 不摘干净会一直挂在预发上。\n\n---\n\n## 判定\n\n拿到三个数：差值 `Δ`、噪声底 `N`、冷启动首刀。\n\n- `Δ > 20ms` 且 `Δ > 2N` → 结论成立，灰度第一档**只放测试模板**。\n- `Δ ≤ 20ms` 且 `Δ > 2N` → 结论成立，第一档可以放真实流量。\n- `Δ` 和 `N` 量级接近（比如 Δ=12ms、N=10ms）→ **这个测法分辨不了**，别硬判。把每轮次数加到 3000 再来一遍；还是分辨不了，说明 20 ms 这条线在预发环境根本量不出来，得换策略（比如第一档直接放小比例真实流量+看线上埋点）。\n- 冷启动首刀很贵但稳态不贵 → 这不是\"新路径慢\"，是\"开关打开那一刻贵\"。不该拿它否掉第一档，该做的是开关打开前先预热查表。这个我会单独标出来，别混进 20 ms 的判断里。\n\n---\n\n一个问题，决定你第 7 步的数怎么用：\n\n假设测出来 **均值只慢 8 ms，但 p99 慢 40 ms**（省份没命中缓存时回源了）——这种形态挺可能出现。**20 ms 这条线，是卡在均值上还是 p99 上？**\n\n我的建议是卡 p99。灰度第一档怕的就是尾部那几个请求，而查表这种改动一旦有缓存未命中回源，均值会把它稀释掉看不见。你定了我就按那个数出结论。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.6666666666666666,
+        "passRate": 0,
+        "scoreWithout": 0.6666666666666666,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 2,
+    "casesPassed": 1,
+    "overallScore": 0.8333333333333333,
+    "overallPassRate": 0.5,
+    "meanDelta": 0
+  }
+}

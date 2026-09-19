@@ -62,9 +62,9 @@ issue、票、PR 开场时说完就动：先说开场那一句（形状由常驻
 
 ### 改旧代码时才开的活动
 
-八条：`requirement-elicitation`（需求收口成验收判据）、`requirement-specification`（EARS 一句一例）、`architecture-design`（两候选攻防）、`system-analysis`（一个决定查一个数）、`legacy-code-change`（特征化测试加萌芽）、`regression-evidence`（录母版、回放逐字节比）、`system-integration`（列边界定顺序）、`rollout-observe`（放量三档加观测点）。
+八条：`requirement-elicitation`（需求收口成验收判据）、`requirement-specification`（EARS 一句一例）、`architecture-decision`（两候选各写两面）、`impact-analysis`（一个决定查一个数）、`legacy-code-change`（特征化测试加萌芽）、`regression-evidence`（录母版、回放逐字节比）、`system-integration`（列边界定顺序）、`rollout-observe`（放量三档加观测点）。
 
-按缺口挑（wiki《方法论模型》表三的四个关注点）：拆——需求不清 → `requirement-elicitation`、`requirement-specification`；方案——两条路要比 → `architecture-design`、`system-analysis`；做——旧行为没有测试、要改的地方牵连广 → `legacy-code-change`、`system-integration`；证——改完要证明没变 → `regression-evidence`、`rollout-observe`。
+按缺口挑（wiki《方法论模型》表三的四个关注点）：拆——需求不清 → `requirement-elicitation`、`requirement-specification`；方案——两条路要比 → `architecture-decision`、`impact-analysis`；做——旧行为没有测试、要改的地方牵连广 → `legacy-code-change`、`system-integration`；证——改完要证明没变 → `regression-evidence`、`rollout-observe`。
 
 在进第 4 阶段的门上列出（见 gate-message.md 的第二个例子），和 worktree、基线一起给主人，主人说行时一并定。判据 agent 自己查：有没有测试、改动牵连几处。从零新建的写一句「从零新建，不开改旧代码的活动」，一个都不开。
 

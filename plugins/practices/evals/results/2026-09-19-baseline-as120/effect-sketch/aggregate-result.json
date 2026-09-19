@@ -1,0 +1,268 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T08:59:38.699Z",
+  "durationSeconds": 87,
+  "costUsd": 0.512976,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as120-split-design\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "effect-sketch-*",
+    "threshold": 1,
+    "concurrency": 2,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as120-split-design\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "effect-sketch-plain-count",
+      "dir": "evals\\effect-sketch-plain-count",
+      "source": "prose",
+      "promptMarkdown": "只读计数，全部证据如下：`api.ts` 和 `batch.ts` 里各有一处调用 `buildReport`，`types.ts` 只声明 `Report` 类型。`buildReport` 有几个直接调用方？直接给数量与文件名。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "direct-answer",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Judge whether the question was simply answered.\n\nPASS if the reply says 2 direct callers, names `api.ts` and `batch.ts`, and does not count `types.ts`; it answers in this turn without wrapping the count in a procedure — no request to first name a decision the number feeds, no call-graph ceremony, no demand for tools it does not need.\n\nFAIL if the count or files are wrong, `types.ts` is counted, or the answer is withheld behind a procedure or a question.",
+          "config": {
+            "criteria": "Judge whether the question was simply answered.\n\nPASS if the reply says 2 direct callers, names `api.ts` and `batch.ts`, and does not count `types.ts`; it answers in this turn without wrapping the count in a procedure — no request to first name a decision the number feeds, no call-graph ceremony, no demand for tools it does not need.\n\nFAIL if the count or files are wrong, `types.ts` is counted, or the answer is withheld behind a procedure or a question.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.0772285,
+            "judgeCostUsd": 0.003625999999999999,
+            "durationSeconds": 10,
+            "startedAt": "2026-09-19T08:59:38.763Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-X4kUsC\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "direct-answer",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "**2 个**：`api.ts`、`batch.ts`。\n\n`types.ts` 只声明 `Report` 类型，不构成调用。\n\n注：这是按你给的证据直接计数，我没有去查仓库核实证据本身是否完整。"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.0661565,
+            "judgeCostUsd": 0.002064,
+            "durationSeconds": 7,
+            "startedAt": "2026-09-19T08:59:38.763Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-gJHaRr\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "direct-answer",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "2 个:`api.ts` 和 `batch.ts` 各一处。\n\n`types.ts` 只声明 `Report` 类型,不算调用方。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    },
+    {
+      "name": "effect-sketch-two-hops",
+      "dir": "evals\\effect-sketch-two-hops",
+      "source": "prose",
+      "promptMarkdown": "按 `effect-sketch` 从改动点画影响草图。改动点：在 `FreightCalc.calc` 里加偏远附加的分流。Bash 不可用，仓库不在这个工作目录里，能贴的五个文件贴给你；README 里写着「定时对账任务在 `scheduler` 模块，每晚重算一遍运费」，那个模块的代码我手头没有。\n\n```java\n// FreightCalc.java\npublic class FreightCalc {\n  private final RemoteFeeLookup remoteFee;\n  public Money calc(Order o) { Money base = calcInner(o); return base.plus(remoteFee.lookup(o.dest())); }\n  Money calcInner(Order o) { return Money.of(o.weightKg() * 8); }\n}\n// OrderService.java\nclass OrderService { Money quote(Order o) { return freightCalc.calc(o); } }\n// QuoteService.java\nclass QuoteService { Money preview(Order o) { return freightCalc.calc(o); } }\n// BatchCalc.java\nclass BatchCalc { void run(List<Order> os) { for (var o : os) sink.write(freightCalc.calcInner(o)); } }\n// RemoteFeeLookup.java\nclass RemoteFeeLookup { Money lookup(String dest) { return \"新疆\".equals(dest) || \"西藏\".equals(dest) ? Money.of(10) : Money.ZERO; } }\n```",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "effect-sketch",
+            "arm": "with-only"
+          }
+        },
+        {
+          "name": "two-hops-from-change-point",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the sketch itself, read against the pasted code.\n\nPASS if the sketch is centred on `FreightCalc.calc` and gives one hop each way from it: callers `OrderService.quote` and `QuoteService.preview`; callees `calcInner` and `RemoteFeeLookup.lookup`; and it points out that `BatchCalc.run` calls `calcInner` directly and therefore bypasses `calc`. Going one hop further on a single edge is acceptable; drawing the whole system is not.\n\nFAIL if it misses the `BatchCalc` bypass, invents callers or callees that are not in the pasted code, or expands into a whole-program call graph instead of two hops from the change point.",
+          "config": {
+            "criteria": "Judge the sketch itself, read against the pasted code.\n\nPASS if the sketch is centred on `FreightCalc.calc` and gives one hop each way from it: callers `OrderService.quote` and `QuoteService.preview`; callees `calcInner` and `RemoteFeeLookup.lookup`; and it points out that `BatchCalc.run` calls `calcInner` directly and therefore bypasses `calc`. Going one hop further on a single edge is acceptable; drawing the whole system is not.\n\nFAIL if it misses the `BatchCalc` bypass, invents callers or callees that are not in the pasted code, or expands into a whole-program call graph instead of two hops from the change point.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "uncertain-edges-marked",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Judge how the sketch handles what the material does not show.\n\nPASS if the `scheduler` module (whose code was not provided) appears as an uncertain edge — an assumption or a thing to verify, with what would settle it — and the reply keeps what it read from the code apart from what it assumed.\n\nFAIL if it states as fact that `scheduler` does or does not call `calc`/`calcInner`, omits `scheduler` altogether, or mixes assumptions into the facts without marking them.",
+          "config": {
+            "criteria": "Judge how the sketch handles what the material does not show.\n\nPASS if the `scheduler` module (whose code was not provided) appears as an uncertain edge — an assumption or a thing to verify, with what would settle it — and the reply keeps what it read from the code apart from what it assumed.\n\nFAIL if it states as fact that `scheduler` does or does not call `calc`/`calcInner`, omits `scheduler` altogether, or mixes assumptions into the facts without marking them.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.19876149999999998,
+            "judgeCostUsd": 0.021251999999999997,
+            "durationSeconds": 80,
+            "startedAt": "2026-09-19T08:59:45.679Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-eFnNTu\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "two-hops-from-change-point",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "`effect-sketch` 这个 skill 目前是占位（文件内容只有「占位。」），没有给出具体步骤。我按通行做法自己画：从改动点出发做**变更影响分析（change impact analysis）**，具体是沿调用图取**扇入闭包（call-graph fan-in / forward slicing）**，再单独标出绕过改动点的旁路和看不见的边。\n\n## 影响草图\n\n```\n                          ┌─ OrderService.quote(o)    对外报价（下单）\n  FreightCalc.calc  ──────┼─ QuoteService.preview(o)  对外预览（页面）\n   ★ 改动点               └─ scheduler 夜间重算 ?     ← 看不见的边\n        │\n        ├─ calcInner(o)   基础运费 weight*8\n        │      ↑\n        │      └──────────── BatchCalc.run → sink.write   ← 旁路，不经过 calc\n        │\n        └─ remoteFee.lookup(dest)   ← 偏远判定当前唯一所在地\n               RemoteFeeLookup: \"新疆\"/\"西藏\" 字符串相等 → 10，否则 ZERO\n```\n\n## 三圈\n\n**第一圈 · 确定受影响**（事实，来自你贴的代码）\n`OrderService.quote` 和 `QuoteService.preview` 都直接调 `calc`，两者会同步变。这两条一条是下单收钱、一条是页面展示，必须给出同一个数——它们共用 `calc`，这点现在是成立的，改动别把它拆开。\n\n**第二圈 · 旁路，改了也够不着**（事实）\n`BatchCalc.run` 调的是 `calcInner`，绕过 `calc`。也就是说**今天批量输出里就没有偏远附加**（8kg 发新疆：`calc` 出 74，`calcInner` 出 64）。这不是你这次改动引入的，是已经存在的口径分叉；但你在 `calc` 里加分流会让这道缝更宽——新逻辑对 `BatchCalc` 完全不可见。`calcInner` 是包级可见（package-private），同包内谁都能绕过 `calc`，这是个没被封住的接缝。\n\n**第三圈 · 看不见的边**（未知）\nREADME 说 `scheduler` 每晚重算一遍运费，但代码不在手上，仓库也不在这个工作目录、Bash 不可用，我查不了——这条边只能标成问号。两种走法都有坑，且方向相反：\n- 走 `calcInner`：夜间对账口径永远比下单时少一笔偏远费，每晚出差异。\n- 走 `calc`：夜间会用**今天的新规则**重算**历史订单**，等于追溯改价；分流条件一上线，旧单金额当晚就会变。\n\n## 顺带看到的两点（推断）\n\n1. **偏远判定会被劈成两处。** 现在「什么算偏远」只写在 `RemoteFeeLookup` 里。你在 `calc` 里加分流后，判定逻辑一半在 `calc`、一半在 `lookup`，以后改口径要同时动两个类。\n2. **分流大概率落在 `calc` 是被签名逼的。** `lookup(String dest)` 只收目的地，拿不到订单上的其他信息（客户、渠道、是否包邮）。如果你的分流条件要用这些，确实塞不进 `lookup`——那更值得考虑把入参改成 `Order`，让判定留在一处，而不是在 `calc` 里开分支。\n\n## 要问你一题\n\n举个具体的：一笔 8kg、目的地新疆的订单。下单时 `OrderService.quote` 走 `calc`，收 74 元（64 基础 + 10 偏远）。夜间那一遍如果走的是 `calcInner`，对账表上记的是 64，和实收差 10 元，每晚都对不平；如果走的是 `calc`，那这笔单在你新分流上线的当晚就会被重新定价成新规则的结果。\n\n**`scheduler` 夜间那一遍，调的是 `calc` 还是 `calcInner`？** 这一条决定了草图里最大的那块问号往哪边落，也决定你的分流要不要带生效日期。"
+              },
+              {
+                "name": "uncertain-edges-marked",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "`effect-sketch` 这个 skill 目前是占位（文件内容只有「占位。」），没有给出具体步骤。我按通行做法自己画：从改动点出发做**变更影响分析（change impact analysis）**，具体是沿调用图取**扇入闭包（call-graph fan-in / forward slicing）**，再单独标出绕过改动点的旁路和看不见的边。\n\n## 影响草图\n\n```\n                          ┌─ OrderService.quote(o)    对外报价（下单）\n  FreightCalc.calc  ──────┼─ QuoteService.preview(o)  对外预览（页面）\n   ★ 改动点               └─ scheduler 夜间重算 ?     ← 看不见的边\n        │\n        ├─ calcInner(o)   基础运费 weight*8\n        │      ↑\n        │      └──────────── BatchCalc.run → sink.write   ← 旁路，不经过 calc\n        │\n        └─ remoteFee.lookup(dest)   ← 偏远判定当前唯一所在地\n               RemoteFeeLookup: \"新疆\"/\"西藏\" 字符串相等 → 10，否则 ZERO\n```\n\n## 三圈\n\n**第一圈 · 确定受影响**（事实，来自你贴的代码）\n`OrderService.quote` 和 `QuoteService.preview` 都直接调 `calc`，两者会同步变。这两条一条是下单收钱、一条是页面展示，必须给出同一个数——它们共用 `calc`，这点现在是成立的，改动别把它拆开。\n\n**第二圈 · 旁路，改了也够不着**（事实）\n`BatchCalc.run` 调的是 `calcInner`，绕过 `calc`。也就是说**今天批量输出里就没有偏远附加**（8kg 发新疆：`calc` 出 74，`calcInner` 出 64）。这不是你这次改动引入的，是已经存在的口径分叉；但你在 `calc` 里加分流会让这道缝更宽——新逻辑对 `BatchCalc` 完全不可见。`calcInner` 是包级可见（package-private），同包内谁都能绕过 `calc`，这是个没被封住的接缝。\n\n**第三圈 · 看不见的边**（未知）\nREADME 说 `scheduler` 每晚重算一遍运费，但代码不在手上，仓库也不在这个工作目录、Bash 不可用，我查不了——这条边只能标成问号。两种走法都有坑，且方向相反：\n- 走 `calcInner`：夜间对账口径永远比下单时少一笔偏远费，每晚出差异。\n- 走 `calc`：夜间会用**今天的新规则**重算**历史订单**，等于追溯改价；分流条件一上线，旧单金额当晚就会变。\n\n## 顺带看到的两点（推断）\n\n1. **偏远判定会被劈成两处。** 现在「什么算偏远」只写在 `RemoteFeeLookup` 里。你在 `calc` 里加分流后，判定逻辑一半在 `calc`、一半在 `lookup`，以后改口径要同时动两个类。\n2. **分流大概率落在 `calc` 是被签名逼的。** `lookup(String dest)` 只收目的地，拿不到订单上的其他信息（客户、渠道、是否包邮）。如果你的分流条件要用这些，确实塞不进 `lookup`——那更值得考虑把入参改成 `Order`，让判定留在一处，而不是在 `calc` 里开分支。\n\n## 要问你一题\n\n举个具体的：一笔 8kg、目的地新疆的订单。下单时 `OrderService.quote` 走 `calc`，收 74 元（64 基础 + 10 偏远）。夜间那一遍如果走的是 `calcInner`，对账表上记的是 64，和实收差 10 元，每晚都对不平；如果走的是 `calc`，那这笔单在你新分流上线的当晚就会被重新定价成新规则的结果。\n\n**`scheduler` 夜间那一遍，调的是 `calc` 还是 `calcInner`？** 这一条决定了草图里最大的那块问号往哪边落，也决定你的分流要不要带生效日期。"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.1708295,
+            "judgeCostUsd": 0.016512000000000002,
+            "durationSeconds": 64,
+            "startedAt": "2026-09-19T08:59:48.484Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-8r01Ht\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "two-hops-from-change-point",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "`effect-sketch` 这个 skill 我这边没有（当前可用清单里只有 dataviz、code-review、simplify、run 等，没有它）。下面按常规的**变更影响分析（Change Impact Analysis）**手画，方法一样，只是不是走你那套模板。\n\n## 影响草图\n\n```\n                    [改动点]\n                 FreightCalc.calc\n                   ├── calcInner(o)        ← 纯重量 × 8\n                   └── remoteFee.lookup()  ← 偏远附加在这一层\n                         ▲ 新分流落在这里\n\n── 第 1 圈：直接调 calc，一定跟着变 ──────────────\n   OrderService.quote     下单报价\n   QuoteService.preview   报价预览\n   （两者共用 calc，所以\"预览价 = 下单价\"这条不变，是好事）\n\n── 第 2 圈：旁路，不会变 ────────────────────────\n   BatchCalc.run → calcInner\n   整条偏远附加它压根没走过。你的改动不影响它，\n   但会把本来就存在的口径差拉大。\n\n── 第 3 圈：看不见，未知 ───────────────────────\n   scheduler 每晚重算运费\n   调的是 calc 还是 calcInner？两种都会出事，方式不同。\n```\n\n## 三个具体风险\n\n**1. `calcInner` 是个被绕开的缝（package-private，BatchCalc 同包直接调）**\n发往新疆的订单，`OrderService.quote` 出 8×kg+10，`BatchCalc` 出 8×kg。今天已经差 10 块，加了新分流后差得更多。\n\n**2. scheduler 走 `calcInner` → 每晚对账必出差异**\n夜里算一遍不含偏远附加的价，跟白天下单时含附加的价一比，所有新疆/西藏订单天天报差。\n\n**3. scheduler 走 `calc` → 历史订单金额集体跳变**\n上线当晚重算，三个月前已成交的偏远订单会按新规则重新定价。这类改动业界的做法是**价格生效日期（effective dating）**——规则带 `effectiveFrom`，重算时按订单下单时点取规则，而不是按\"当前规则\"。\n\n另外一句建议（这是我的推断，不是从代码读出来的）：新分流别直接写在 `calc` 里，否则\"什么算偏远\"就有两个源头了——`RemoteFeeLookup` 里硬编码的 `新疆/西藏` 是一处，你的新分流是另一处。放进 `RemoteFeeLookup`，保持**单一事实源（Single Source of Truth）**。\n\n## 想先确认一件事\n\n比如有个 3 月份下的西藏单，当时收了 10 块附加，现在新规则要收 25 块。今晚 scheduler 跑完之后：\n\n**它是把这单的运费字段改写成 25，还是只往对账报表里记一条「差 15」？**\n\n改写的话，这次改动就得先做生效日期，不能直接上；只记差异的话，风险小很多，改完补一条对账规则就行。"
+              },
+              {
+                "name": "uncertain-edges-marked",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "`effect-sketch` 这个 skill 我这边没有（当前可用清单里只有 dataviz、code-review、simplify、run 等，没有它）。下面按常规的**变更影响分析（Change Impact Analysis）**手画，方法一样，只是不是走你那套模板。\n\n## 影响草图\n\n```\n                    [改动点]\n                 FreightCalc.calc\n                   ├── calcInner(o)        ← 纯重量 × 8\n                   └── remoteFee.lookup()  ← 偏远附加在这一层\n                         ▲ 新分流落在这里\n\n── 第 1 圈：直接调 calc，一定跟着变 ──────────────\n   OrderService.quote     下单报价\n   QuoteService.preview   报价预览\n   （两者共用 calc，所以\"预览价 = 下单价\"这条不变，是好事）\n\n── 第 2 圈：旁路，不会变 ────────────────────────\n   BatchCalc.run → calcInner\n   整条偏远附加它压根没走过。你的改动不影响它，\n   但会把本来就存在的口径差拉大。\n\n── 第 3 圈：看不见，未知 ───────────────────────\n   scheduler 每晚重算运费\n   调的是 calc 还是 calcInner？两种都会出事，方式不同。\n```\n\n## 三个具体风险\n\n**1. `calcInner` 是个被绕开的缝（package-private，BatchCalc 同包直接调）**\n发往新疆的订单，`OrderService.quote` 出 8×kg+10，`BatchCalc` 出 8×kg。今天已经差 10 块，加了新分流后差得更多。\n\n**2. scheduler 走 `calcInner` → 每晚对账必出差异**\n夜里算一遍不含偏远附加的价，跟白天下单时含附加的价一比，所有新疆/西藏订单天天报差。\n\n**3. scheduler 走 `calc` → 历史订单金额集体跳变**\n上线当晚重算，三个月前已成交的偏远订单会按新规则重新定价。这类改动业界的做法是**价格生效日期（effective dating）**——规则带 `effectiveFrom`，重算时按订单下单时点取规则，而不是按\"当前规则\"。\n\n另外一句建议（这是我的推断，不是从代码读出来的）：新分流别直接写在 `calc` 里，否则\"什么算偏远\"就有两个源头了——`RemoteFeeLookup` 里硬编码的 `新疆/西藏` 是一处，你的新分流是另一处。放进 `RemoteFeeLookup`，保持**单一事实源（Single Source of Truth）**。\n\n## 想先确认一件事\n\n比如有个 3 月份下的西藏单，当时收了 10 块附加，现在新规则要收 25 块。今晚 scheduler 跑完之后：\n\n**它是把这单的运费字段改写成 25，还是只往对账报表里记一条「差 15」？**\n\n改写的话，这次改动就得先做生效日期，不能直接上；只记差异的话，风险小很多，改完补一条对账规则就行。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 2,
+    "casesPassed": 2,
+    "overallScore": 1,
+    "overallPassRate": 1,
+    "meanDelta": 0
+  }
+}

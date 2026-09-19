@@ -1,0 +1,800 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:15:40.542Z",
+  "durationSeconds": 327,
+  "costUsd": 3.1530950000000004,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as120-split-design\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "effect-sketch-*",
+    "threshold": 1,
+    "concurrency": 3,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as120-split-design\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "effect-sketch-plain-count",
+      "dir": "evals\\effect-sketch-plain-count",
+      "source": "prose",
+      "promptMarkdown": "只读计数，全部证据如下：`api.ts` 和 `batch.ts` 里各有一处调用 `buildReport`，`types.ts` 只声明 `Report` 类型。`buildReport` 有几个直接调用方？直接给数量与文件名。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "direct-answer",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Judge whether the question was simply answered.\n\nPASS if the reply says 2 direct callers, names `api.ts` and `batch.ts`, and does not count `types.ts`; it answers in this turn without wrapping the count in a procedure — no request to first name a decision the number feeds, no call-graph ceremony, no demand for tools it does not need.\n\nFAIL if the count or files are wrong, `types.ts` is counted, or the answer is withheld behind a procedure or a question.",
+          "config": {
+            "criteria": "Judge whether the question was simply answered.\n\nPASS if the reply says 2 direct callers, names `api.ts` and `batch.ts`, and does not count `types.ts`; it answers in this turn without wrapping the count in a procedure — no request to first name a decision the number feeds, no call-graph ceremony, no demand for tools it does not need.\n\nFAIL if the count or files are wrong, `types.ts` is counted, or the answer is withheld behind a procedure or a question.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.0831655,
+            "judgeCostUsd": 0.0037080000000000004,
+            "durationSeconds": 9,
+            "startedAt": "2026-09-19T09:15:40.601Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-rwSyrw\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "direct-answer",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "**2 个**：`api.ts`、`batch.ts`。\n\n`types.ts` 只声明 `Report` 类型，不算调用方。"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.0896565,
+            "judgeCostUsd": 0.004374,
+            "durationSeconds": 16,
+            "startedAt": "2026-09-19T09:15:40.601Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-KLrb6F\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "direct-answer",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "2 个：`api.ts`、`batch.ts`。\n\n`types.ts` 只声明 `Report` 类型，没有调用，不计入。\n\n这只是对你给的证据做计数，没有另外查仓库。要我 grep 一遍 `buildReport` 确认没有漏掉的调用方吗？"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.08397450000000001,
+            "judgeCostUsd": 0.004542,
+            "durationSeconds": 10,
+            "startedAt": "2026-09-19T09:15:40.601Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-jYUlyD\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "direct-answer",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "2 个：`api.ts`、`batch.ts`。\n\n`types.ts` 只声明 `Report` 类型，不算调用方。\n\n这是按你给的证据直接计数，我没有去仓库里核对——如果 `api.ts` 或 `batch.ts` 里那处调用在循环或多次分支中出现，调用点数仍是 1 个，计数不变。"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.0694935,
+            "judgeCostUsd": 0.005706,
+            "durationSeconds": 7,
+            "startedAt": "2026-09-19T09:15:49.758Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-uakcf7\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "direct-answer",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "2 个：`api.ts`、`batch.ts`（`types.ts` 只有类型声明，不算调用方）。"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.0702195,
+            "judgeCostUsd": 0.006372,
+            "durationSeconds": 8,
+            "startedAt": "2026-09-19T09:15:50.729Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-aGk7dQ\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "direct-answer",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "2 个：`api.ts`、`batch.ts`。\n\n`types.ts` 只有类型声明，不算调用方。"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.0658465,
+            "judgeCostUsd": 0.0020040000000000006,
+            "durationSeconds": 7,
+            "startedAt": "2026-09-19T09:15:56.558Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-YBAsv1\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "direct-answer",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "2 个：`api.ts` 和 `batch.ts`。`types.ts` 只有类型声明，不算调用方。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    },
+    {
+      "name": "effect-sketch-two-hops",
+      "dir": "evals\\effect-sketch-two-hops",
+      "source": "prose",
+      "promptMarkdown": "按 `effect-sketch` 从改动点画影响草图。改动点：在 `FreightCalc.calc` 里加偏远附加的分流。Bash 不可用，仓库不在这个工作目录里，能贴的五个文件贴给你；README 里写着「定时对账任务在 `scheduler` 模块，每晚重算一遍运费」，那个模块的代码我手头没有。\n\n```java\n// FreightCalc.java\npublic class FreightCalc {\n  private final RemoteFeeLookup remoteFee;\n  public Money calc(Order o) { Money base = calcInner(o); return base.plus(remoteFee.lookup(o.dest())); }\n  Money calcInner(Order o) { return Money.of(o.weightKg() * 8); }\n}\n// OrderService.java\nclass OrderService { Money quote(Order o) { return freightCalc.calc(o); } }\n// QuoteService.java\nclass QuoteService { Money preview(Order o) { return freightCalc.calc(o); } }\n// BatchCalc.java\nclass BatchCalc { void run(List<Order> os) { for (var o : os) sink.write(freightCalc.calcInner(o)); } }\n// RemoteFeeLookup.java\nclass RemoteFeeLookup { Money lookup(String dest) { return \"新疆\".equals(dest) || \"西藏\".equals(dest) ? Money.of(10) : Money.ZERO; } }\n```",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "effect-sketch",
+            "arm": "with-only"
+          }
+        },
+        {
+          "name": "two-hops-from-change-point",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the sketch itself, read against the pasted code.\n\nPASS if the sketch is centred on `FreightCalc.calc` and gives one hop each way from it: callers `OrderService.quote` and `QuoteService.preview`; callees `calcInner` and `RemoteFeeLookup.lookup`; and it points out that `BatchCalc.run` calls `calcInner` directly and therefore bypasses `calc`. Going one hop further on a single edge is acceptable; drawing the whole system is not.\n\nFAIL if it misses the `BatchCalc` bypass, invents callers or callees that are not in the pasted code, or expands into a whole-program call graph instead of two hops from the change point.",
+          "config": {
+            "criteria": "Judge the sketch itself, read against the pasted code.\n\nPASS if the sketch is centred on `FreightCalc.calc` and gives one hop each way from it: callers `OrderService.quote` and `QuoteService.preview`; callees `calcInner` and `RemoteFeeLookup.lookup`; and it points out that `BatchCalc.run` calls `calcInner` directly and therefore bypasses `calc`. Going one hop further on a single edge is acceptable; drawing the whole system is not.\n\nFAIL if it misses the `BatchCalc` bypass, invents callers or callees that are not in the pasted code, or expands into a whole-program call graph instead of two hops from the change point.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "uncertain-edges-marked",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Judge how the sketch handles what the material does not show.\n\nPASS if the `scheduler` module (whose code was not provided) appears as an uncertain edge — an assumption or a thing to verify, with what would settle it — and the reply keeps what it read from the code apart from what it assumed.\n\nFAIL if it states as fact that `scheduler` does or does not call `calc`/`calcInner`, omits `scheduler` altogether, or mixes assumptions into the facts without marking them.",
+          "config": {
+            "criteria": "Judge how the sketch handles what the material does not show.\n\nPASS if the `scheduler` module (whose code was not provided) appears as an uncertain edge — an assumption or a thing to verify, with what would settle it — and the reply keeps what it read from the code apart from what it assumed.\n\nFAIL if it states as fact that `scheduler` does or does not call `calc`/`calcInner`, omits `scheduler` altogether, or mixes assumptions into the facts without marking them.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.19510850000000002,
+            "judgeCostUsd": 0.028906,
+            "durationSeconds": 39,
+            "startedAt": "2026-09-19T09:15:57.057Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-VjTQTz\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "two-hops-from-change-point",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "照 `effect-sketch` 画了两跳。仓库不在这个目录、Bash 也不可用，所以下面只有两类东西：从你贴的五个文件里读到的**事实**，和标了**待核实**的边。\n\n## 草图\n\n```\n改动点｜FreightCalc.calc(Order)（FreightCalc.java）\n调它的｜OrderService.quote（OrderService.java）、QuoteService.preview（QuoteService.java）\n        绕过它直调 calcInner 的：BatchCalc.run（BatchCalc.java）\n它调的｜FreightCalc.calcInner（同类）、RemoteFeeLookup.lookup（RemoteFeeLookup.java）、Money.of / Money.plus\n待核实｜① scheduler 模块（README 说每晚重算运费）：代码没贴，不知道它走 calc 还是 calcInner\n        ② calcInner 是包级可见（没写 private），同包里可能还有别的调用方\n        ③ RemoteFeeLookup.lookup 是否还被别处直接调用（若有，分流后可能双算）\n假设｜贴出的五个文件是 calc/calcInner 的全部调用方；FreightCalc 没有被反射或 AOP 代理包一层\n```\n\n核实办法（你那边一条 grep 就够，不用抓栈）：\n- ①②：`grep -rn \"calcInner\\|freightCalc\\.\\|FreightCalc\" --include=*.java .`，重点看 `scheduler/` 下面有没有命中；若 grep 看不出（比如经 Spring 注入 + 接口），再在夜里任务上用 Arthas `stack com.*.FreightCalc calc*`。\n- ③：`grep -rn \"RemoteFeeLookup\\|\\.lookup(\" --include=*.java .`\n\n## 已经能看出来的一件事（事实，不是推断）\n\n`BatchCalc.run` 调的是 `calcInner`，而偏远附加现在加在 `calc` 里。也就是说**批量这条路今天就已经不含偏远附加**——这是现状，不是你这次改动带来的。所以分流放哪里，直接决定波及范围：\n\n- 放 `calc` 里：OrderService、QuoteService 受影响，BatchCalc 不受影响。\n- 放 `calcInner` 里：三条路全受影响，`calc` 里那句 `plus(remoteFee.lookup(...))` 就得挪走，否则双算。\n\n## 一个问题\n\n举个具体的：一单去西藏、10 公斤。走 `OrderService.quote` 报给客户的是 80 + 10 = 90；同一单走 `BatchCalc.run` 写进 sink 的是 80。README 说 scheduler 每晚重算一遍运费用来对账——\n\n**对账那边算出来的运费，该不该含这 10 块偏远附加？**"
+              },
+              {
+                "name": "uncertain-edges-marked",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "照 `effect-sketch` 画了两跳。仓库不在这个目录、Bash 也不可用，所以下面只有两类东西：从你贴的五个文件里读到的**事实**，和标了**待核实**的边。\n\n## 草图\n\n```\n改动点｜FreightCalc.calc(Order)（FreightCalc.java）\n调它的｜OrderService.quote（OrderService.java）、QuoteService.preview（QuoteService.java）\n        绕过它直调 calcInner 的：BatchCalc.run（BatchCalc.java）\n它调的｜FreightCalc.calcInner（同类）、RemoteFeeLookup.lookup（RemoteFeeLookup.java）、Money.of / Money.plus\n待核实｜① scheduler 模块（README 说每晚重算运费）：代码没贴，不知道它走 calc 还是 calcInner\n        ② calcInner 是包级可见（没写 private），同包里可能还有别的调用方\n        ③ RemoteFeeLookup.lookup 是否还被别处直接调用（若有，分流后可能双算）\n假设｜贴出的五个文件是 calc/calcInner 的全部调用方；FreightCalc 没有被反射或 AOP 代理包一层\n```\n\n核实办法（你那边一条 grep 就够，不用抓栈）：\n- ①②：`grep -rn \"calcInner\\|freightCalc\\.\\|FreightCalc\" --include=*.java .`，重点看 `scheduler/` 下面有没有命中；若 grep 看不出（比如经 Spring 注入 + 接口），再在夜里任务上用 Arthas `stack com.*.FreightCalc calc*`。\n- ③：`grep -rn \"RemoteFeeLookup\\|\\.lookup(\" --include=*.java .`\n\n## 已经能看出来的一件事（事实，不是推断）\n\n`BatchCalc.run` 调的是 `calcInner`，而偏远附加现在加在 `calc` 里。也就是说**批量这条路今天就已经不含偏远附加**——这是现状，不是你这次改动带来的。所以分流放哪里，直接决定波及范围：\n\n- 放 `calc` 里：OrderService、QuoteService 受影响，BatchCalc 不受影响。\n- 放 `calcInner` 里：三条路全受影响，`calc` 里那句 `plus(remoteFee.lookup(...))` 就得挪走，否则双算。\n\n## 一个问题\n\n举个具体的：一单去西藏、10 公斤。走 `OrderService.quote` 报给客户的是 80 + 10 = 90；同一单走 `BatchCalc.run` 写进 sink 的是 80。README 说 scheduler 每晚重算一遍运费用来对账——\n\n**对账那边算出来的运费，该不该含这 10 块偏远附加？**"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.195039,
+            "judgeCostUsd": 0.034002000000000004,
+            "durationSeconds": 39,
+            "startedAt": "2026-09-19T09:15:58.616Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-on5zJ3\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "two-hops-from-change-point",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "用的是 **影响草图（effect sketch）**，Feathers《修改代码的艺术》第 11 章的做法：从改动点往外静态画两跳，不画全图。\n\n## 草图\n\n```\n改动点｜FreightCalc.calc(Order)（FreightCalc.java）\n调它的｜OrderService.quote（OrderService.java）、QuoteService.preview（QuoteService.java）；\n        绕过它直调 calcInner 的：BatchCalc.run（BatchCalc.java，for 循环里逐单写 sink）\n它调的｜FreightCalc.calcInner（同类，包级可见）、RemoteFeeLookup.lookup（RemoteFeeLookup.java）、\n        Money.of / Money.plus（Money）\n待核实｜scheduler 模块的夜间对账任务：README 说每晚重算一遍运费，但代码没贴，\n        不知道它走 calc、走 calcInner，还是走 BatchCalc；\n        核实：在仓库里 grep -rn \"freightCalc\\|calcInner\\|BatchCalc\" scheduler/，\n        或跑一次夜间任务、用 Arthas stack com.*.FreightCalc calcInner 看真实调用栈\n待核实｜RemoteFeeLookup.lookup 是否还有别的调用方（有人绕过 FreightCalc 自己加偏远费）：\n        贴的五个文件里只看到 calc 一处；核实：grep -rn \"RemoteFeeLookup\\|\\.lookup(\" --include=*.java\n假设｜「所有运费计算都走 calc」——BatchCalc 已经证明不成立\n假设｜calcInner 包级可见，所以绕过它的调用方只可能在 FreightCalc 同包内；跨包的绕过需要反射才做得到\n```\n\n事实与推断分开说：\n\n- **事实**（从贴的代码读到的）：calc 里已经有一处偏远附加——`base.plus(remoteFee.lookup(o.dest()))`，无条件加；BatchCalc 走 calcInner，所以批量路径现在完全不带偏远附加。\n- **推断**：你要加的「分流」大概率是在这处无条件相加外面套条件（按客户、按渠道、按时间生效之类）。如果分流写在 calc 里，BatchCalc 那条路既不受新分流影响，也本来就没有附加费。\n- **没观察到**：scheduler 走哪条路。这是目前唯一会翻盘的边——如果它调 calcInner，夜间重算出来的运费会和报价口径对不上。\n\n## 一个问题\n\n举个具体的：同一张发往西藏、10kg 的订单，OrderService.quote 报出来是 `80 + 10 = 90`，而 BatchCalc.run 写进 sink 的是 `80`，差 10 块。\n\n这个差额是当初有意设计的（批量口径本来就不含偏远附加），还是没人注意到的漏网？"
+              },
+              {
+                "name": "uncertain-edges-marked",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "用的是 **影响草图（effect sketch）**，Feathers《修改代码的艺术》第 11 章的做法：从改动点往外静态画两跳，不画全图。\n\n## 草图\n\n```\n改动点｜FreightCalc.calc(Order)（FreightCalc.java）\n调它的｜OrderService.quote（OrderService.java）、QuoteService.preview（QuoteService.java）；\n        绕过它直调 calcInner 的：BatchCalc.run（BatchCalc.java，for 循环里逐单写 sink）\n它调的｜FreightCalc.calcInner（同类，包级可见）、RemoteFeeLookup.lookup（RemoteFeeLookup.java）、\n        Money.of / Money.plus（Money）\n待核实｜scheduler 模块的夜间对账任务：README 说每晚重算一遍运费，但代码没贴，\n        不知道它走 calc、走 calcInner，还是走 BatchCalc；\n        核实：在仓库里 grep -rn \"freightCalc\\|calcInner\\|BatchCalc\" scheduler/，\n        或跑一次夜间任务、用 Arthas stack com.*.FreightCalc calcInner 看真实调用栈\n待核实｜RemoteFeeLookup.lookup 是否还有别的调用方（有人绕过 FreightCalc 自己加偏远费）：\n        贴的五个文件里只看到 calc 一处；核实：grep -rn \"RemoteFeeLookup\\|\\.lookup(\" --include=*.java\n假设｜「所有运费计算都走 calc」——BatchCalc 已经证明不成立\n假设｜calcInner 包级可见，所以绕过它的调用方只可能在 FreightCalc 同包内；跨包的绕过需要反射才做得到\n```\n\n事实与推断分开说：\n\n- **事实**（从贴的代码读到的）：calc 里已经有一处偏远附加——`base.plus(remoteFee.lookup(o.dest()))`，无条件加；BatchCalc 走 calcInner，所以批量路径现在完全不带偏远附加。\n- **推断**：你要加的「分流」大概率是在这处无条件相加外面套条件（按客户、按渠道、按时间生效之类）。如果分流写在 calc 里，BatchCalc 那条路既不受新分流影响，也本来就没有附加费。\n- **没观察到**：scheduler 走哪条路。这是目前唯一会翻盘的边——如果它调 calcInner，夜间重算出来的运费会和报价口径对不上。\n\n## 一个问题\n\n举个具体的：同一张发往西藏、10kg 的订单，OrderService.quote 报出来是 `80 + 10 = 90`，而 BatchCalc.run 写进 sink 的是 `80`，差 10 块。\n\n这个差额是当初有意设计的（批量口径本来就不含偏远附加），还是没人注意到的漏网？"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.17172300000000004,
+            "judgeCostUsd": 0.019740000000000008,
+            "durationSeconds": 38,
+            "startedAt": "2026-09-19T09:16:03.657Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-2Dpk8O\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "two-hops-from-change-point",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 effect-sketch（Feathers《修改代码的艺术》第 11 章的 effect sketch）画，只往外两跳，不画全图。\n\n## 草图\n\n```\n改动点｜FreightCalc.calc(Order)（FreightCalc.java）\n调它的｜OrderService.quote（OrderService.java）、QuoteService.preview（QuoteService.java）；\n        绕过它直调 calcInner 的：BatchCalc.run（BatchCalc.java）\n它调的｜FreightCalc.calcInner（FreightCalc.java）、RemoteFeeLookup.lookup（RemoteFeeLookup.java）\n待核实｜scheduler 模块（README 说每晚重算一遍运费）：代码没贴，不知道它进的是 calc、calcInner\n        还是 OrderService.quote；核实：在仓库根上 grep -rn \"calcInner\\|freightCalc\\|FreightCalc\" scheduler/\n待核实｜calcInner 是包内可见（无修饰符），同包里可能还有别的直调方；\n        核实：grep -rn \"calcInner\" --include=*.java .\n假设｜所有运费计算都走 calc —— BatchCalc 已经证明不是\n```\n\n## 两条要紧的\n\n**一、BatchCalc 天然绕过改动点。** 它调的是 `calcInner`，而偏远附加从来只加在 `calc` 里（`base.plus(remoteFee.lookup(...))`）。这不是新问题，是现状：`sink` 里写出去的那份数今天就不含那 10 块。分流加在 `calc` 里，BatchCalc 依旧拿不到；加在 `calcInner` 里，BatchCalc 的口径会跟着变——所以开关放哪，取决于 BatchCalc 那份数据本来该是什么口径。\n\n**二、scheduler 是这张图上唯一悬着的边。** README 说它每晚重算运费，但它接在哪一跳我判断不了（这是事实缺口，不是推断）。它要是走 `OrderService.quote`，改动跟着走；要是像 BatchCalc 一样直插 `calcInner`，就多一条漏网路径。上面那条 grep 能一次问清。\n\n## 一个问题\n\n举个具体的：一个 3kg 发西藏的订单，`OrderService.quote` 给用户报 34（24 + 10），而 `BatchCalc` 往 `sink` 里写的是 24。\n\nBatchCalc 写出去的这份数，本来就该是不含偏远附加的裸运费（比如给成本核算用），还是它其实也该报 34、只是一直漏了？"
+              },
+              {
+                "name": "uncertain-edges-marked",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 effect-sketch（Feathers《修改代码的艺术》第 11 章的 effect sketch）画，只往外两跳，不画全图。\n\n## 草图\n\n```\n改动点｜FreightCalc.calc(Order)（FreightCalc.java）\n调它的｜OrderService.quote（OrderService.java）、QuoteService.preview（QuoteService.java）；\n        绕过它直调 calcInner 的：BatchCalc.run（BatchCalc.java）\n它调的｜FreightCalc.calcInner（FreightCalc.java）、RemoteFeeLookup.lookup（RemoteFeeLookup.java）\n待核实｜scheduler 模块（README 说每晚重算一遍运费）：代码没贴，不知道它进的是 calc、calcInner\n        还是 OrderService.quote；核实：在仓库根上 grep -rn \"calcInner\\|freightCalc\\|FreightCalc\" scheduler/\n待核实｜calcInner 是包内可见（无修饰符），同包里可能还有别的直调方；\n        核实：grep -rn \"calcInner\" --include=*.java .\n假设｜所有运费计算都走 calc —— BatchCalc 已经证明不是\n```\n\n## 两条要紧的\n\n**一、BatchCalc 天然绕过改动点。** 它调的是 `calcInner`，而偏远附加从来只加在 `calc` 里（`base.plus(remoteFee.lookup(...))`）。这不是新问题，是现状：`sink` 里写出去的那份数今天就不含那 10 块。分流加在 `calc` 里，BatchCalc 依旧拿不到；加在 `calcInner` 里，BatchCalc 的口径会跟着变——所以开关放哪，取决于 BatchCalc 那份数据本来该是什么口径。\n\n**二、scheduler 是这张图上唯一悬着的边。** README 说它每晚重算运费，但它接在哪一跳我判断不了（这是事实缺口，不是推断）。它要是走 `OrderService.quote`，改动跟着走；要是像 BatchCalc 一样直插 `calcInner`，就多一条漏网路径。上面那条 grep 能一次问清。\n\n## 一个问题\n\n举个具体的：一个 3kg 发西藏的订单，`OrderService.quote` 给用户报 34（24 + 10），而 `BatchCalc` 往 `sink` 里写的是 24。\n\nBatchCalc 写出去的这份数，本来就该是不含偏远附加的裸运费（比如给成本核算用），还是它其实也该报 34、只是一直漏了？"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.21485899999999997,
+            "judgeCostUsd": 0.03604399999999998,
+            "durationSeconds": 66,
+            "startedAt": "2026-09-19T09:16:36.075Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-NDoehO\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "two-hops-from-change-point",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一件事：**可用的 skill 列表里没有 `effect-sketch`**。我试着用 Glob 在配置目录里找它，权限被拒（don't ask mode），所以也没法确认它是不是装在别处。下面这张图我按通用做法画的——change impact analysis，具体是从改动点做**正向切片 + 调用图可达性**（static forward slicing / call-graph reachability），看不到源码的模块显式标成盲区，不猜。如果你那个 skill 有固定模板，把模板贴我，我按它重排。\n\n## 影响草图\n\n```\n                         [改动点]\n                  FreightCalc.calc(Order)\n                     ├── calcInner(o)            base = weightKg * 8\n                     └── remoteFee.lookup(dest)  新疆/西藏 → 10，其余 ZERO\n\n  ── 一跳上游（跟着变）──────────────────────────\n     OrderService.quote   ──> calc      ★ 真实报价，出钱\n     QuoteService.preview ──> calc      ★ 页面预览，必须和 quote 一致\n\n  ── 一跳上游（不跟着变）────────────────────────\n     BatchCalc.run        ──> calcInner  绕开偏远附加，永远是裸基价\n\n  ── 盲区 ──────────────────────────────────────\n     scheduler（每晚重算运费对账）──> calc？calcInner？  ⚠ 未知\n```\n\n事实部分：上面三条调用关系直接来自你贴的五个文件。`calc` 和 `calcInner` 构成一个接缝（seam，Feathers 的说法），`BatchCalc` 从下面那半进来，本来就拿不到偏远附加。\n\n## 四个风险点\n\n**1. 双重计费（最急）。** `calc` 现在已经无条件 `base.plus(remoteFee.lookup(dest))`。你再加一层分流，如果写成新分支里自己 `plus(surcharge)` 而原来那句还在，一个发新疆的订单会被加两次 10 块。改完请确保 calc 的任一路径上偏远附加只累加一次。\n\n**2. preview 与 quote 的漂移。** 这俩都走 `calc`，同步变化，本身是好的。但如果分流条件依赖 `Order` 之外的东西（配置开关、当前时间、灰度分桶），用户下午预览和晚上下单会拿到两个数。业界做法是把分流输入做成显式入参而不是隐式读取（explicit dependencies over ambient state）。\n\n**3. `BatchCalc` 的口径分叉。** 它走 `calcInner`，这次改动完全不会影响它。这是事实，不是好消息——如果业务上这批数据本该含偏远费，那是个已经存在的口径差，你这次把 calc 那半改厚了，两边差距只会更大。\n\n**4. scheduler 重算（推断，取决于盲区）。** 假设它调的是 `calc`：9/18 已经按旧规则出账的新疆订单，今晚重算会套上新分流，金额变了，对账就不平。定价系统的常规防法是成交时把运费**快照**写进订单（price snapshot + effective-dated rules），夜间任务只做校验、不回写覆盖。\n\n## 一个问题\n\n具体点说：一个 9/18 下单、目的地新疆、已经出过账的订单，今晚 scheduler 跑到它身上——\n\n**scheduler 那边调的是 `calc` 还是 `calcInner`？** 你手头没代码的话，grep 一下 `freightCalc.` 就能定；这条答案不定下来，风险点 4 我只能停在推断，影响面是\"两个调用方\"还是\"两个调用方 + 全部历史订单\"也说不准。"
+              },
+              {
+                "name": "uncertain-edges-marked",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一件事：**可用的 skill 列表里没有 `effect-sketch`**。我试着用 Glob 在配置目录里找它，权限被拒（don't ask mode），所以也没法确认它是不是装在别处。下面这张图我按通用做法画的——change impact analysis，具体是从改动点做**正向切片 + 调用图可达性**（static forward slicing / call-graph reachability），看不到源码的模块显式标成盲区，不猜。如果你那个 skill 有固定模板，把模板贴我，我按它重排。\n\n## 影响草图\n\n```\n                         [改动点]\n                  FreightCalc.calc(Order)\n                     ├── calcInner(o)            base = weightKg * 8\n                     └── remoteFee.lookup(dest)  新疆/西藏 → 10，其余 ZERO\n\n  ── 一跳上游（跟着变）──────────────────────────\n     OrderService.quote   ──> calc      ★ 真实报价，出钱\n     QuoteService.preview ──> calc      ★ 页面预览，必须和 quote 一致\n\n  ── 一跳上游（不跟着变）────────────────────────\n     BatchCalc.run        ──> calcInner  绕开偏远附加，永远是裸基价\n\n  ── 盲区 ──────────────────────────────────────\n     scheduler（每晚重算运费对账）──> calc？calcInner？  ⚠ 未知\n```\n\n事实部分：上面三条调用关系直接来自你贴的五个文件。`calc` 和 `calcInner` 构成一个接缝（seam，Feathers 的说法），`BatchCalc` 从下面那半进来，本来就拿不到偏远附加。\n\n## 四个风险点\n\n**1. 双重计费（最急）。** `calc` 现在已经无条件 `base.plus(remoteFee.lookup(dest))`。你再加一层分流，如果写成新分支里自己 `plus(surcharge)` 而原来那句还在，一个发新疆的订单会被加两次 10 块。改完请确保 calc 的任一路径上偏远附加只累加一次。\n\n**2. preview 与 quote 的漂移。** 这俩都走 `calc`，同步变化，本身是好的。但如果分流条件依赖 `Order` 之外的东西（配置开关、当前时间、灰度分桶），用户下午预览和晚上下单会拿到两个数。业界做法是把分流输入做成显式入参而不是隐式读取（explicit dependencies over ambient state）。\n\n**3. `BatchCalc` 的口径分叉。** 它走 `calcInner`，这次改动完全不会影响它。这是事实，不是好消息——如果业务上这批数据本该含偏远费，那是个已经存在的口径差，你这次把 calc 那半改厚了，两边差距只会更大。\n\n**4. scheduler 重算（推断，取决于盲区）。** 假设它调的是 `calc`：9/18 已经按旧规则出账的新疆订单，今晚重算会套上新分流，金额变了，对账就不平。定价系统的常规防法是成交时把运费**快照**写进订单（price snapshot + effective-dated rules），夜间任务只做校验、不回写覆盖。\n\n## 一个问题\n\n具体点说：一个 9/18 下单、目的地新疆、已经出过账的订单，今晚 scheduler 跑到它身上——\n\n**scheduler 那边调的是 `calc` 还是 `calcInner`？** 你手头没代码的话，grep 一下 `freightCalc.` 就能定；这条答案不定下来，风险点 4 我只能停在推断，影响面是\"两个调用方\"还是\"两个调用方 + 全部历史订单\"也说不准。"
+              }
+            ]
+          },
+          {
+            "score": 0.3333333333333333,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.21600899999999995,
+            "judgeCostUsd": 0.030703999999999967,
+            "durationSeconds": 70,
+            "startedAt": "2026-09-19T09:16:37.247Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-XekOY0\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "two-hops-from-change-point",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说一件事实：你环境里没有 `effect-sketch` 这个 skill。我查了可用 skill 列表和 `**/.claude/skills/**`、`**/effect-sketch*`，都没有。所以下面这份是我手画的，方法用的是**调用图可达性 + 影响半径分析**（call-graph reachability / blast radius analysis）。\n\n## 影响草图\n\n```\n                  [改动点] FreightCalc.calc\n                        │\n        ┌───────────────┼───────────────┐\n        │               │               │\n  OrderService     QuoteService      scheduler?     ← 盲区\n    .quote()        .preview()      (每晚重算)\n        │               │\n     对外报价         预览报价\n\n  ───────────────── 绕过改动点 ─────────────────\n  BatchCalc.run ──→ FreightCalc.calcInner   ← 不经过 calc，改动对它不可见\n        │\n     sink.write\n```\n\n## 三个发现\n\n**1. `BatchCalc` 从旁门进来，改动打不到它**\n\n`calcInner` 没写修饰符，是 package-private，`BatchCalc` 直接调它、跳过了 `calc`。按 Feathers 的说法这是个 **seam**，但现在被当正门用了。结果是同一批订单，`OrderService` 报的价含偏远附加，`BatchCalc` 写进 `sink` 的不含 —— 这个 10 块的差**今天就已经存在**，你加了分流之后差额规则会变，但差还在。\n\n**2. `scheduler` 是唯一的未知边，也是最大风险**\n\n- 如果它调 `calc`：上线当晚，历史单重算出来的运费和当初落库的报价对不上，对账会整片报差异。\n- 如果它调 `calcInner`：这次改动对它零影响，但它和 `OrderService`/`QuoteService` 的口径本来就不一致。\n\n**3. 「什么算偏远」会变成两处判定**\n\n`RemoteFeeLookup.lookup` 已经在判了（硬编码 `新疆`/`西藏`，还是精确 `equals`）。你在 `calc` 里再加一层分流，就有两套规则 —— 要么重复加价，要么两边慢慢漂移。顺带一提，现在 `\"新疆\".equals(dest)` 对「新疆维吾尔自治区」是不命中的；如果新分流用了另一种口径，两边漏掉的订单集合不一样，出了问题很难查。\n\n## 建议顺序\n\n1. 改之前先给 `calc` 和 `calcInner` 各补一条**特征测试**（Characterization Test）把当前数字钉住。\n2. 偏远判定收敛到一个地方（**Single Source of Truth**），`calc` 里的分流只做分流、不重新判定。\n3. 上线前对 `scheduler` 做一次**影子跑**（shadow run / parallel run）：新旧两套算同一批历史单，先出差异清单再切。\n\n---\n\n举个例子：如果 `scheduler` 里写的是 `freightCalc.calc(order)`，那上线后当晚，所有发往新疆/西藏的历史单都会被重算出新数、跟落库报价对不上；如果写的是 `calcInner`，这次改动对它完全没影响，草图右边那条虚线就可以划掉。\n\n你能翻一下 `scheduler` 那边调的是哪个方法吗（贴那一行调用就够）？"
+              },
+              {
+                "name": "uncertain-edges-marked",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一件事实：你环境里没有 `effect-sketch` 这个 skill。我查了可用 skill 列表和 `**/.claude/skills/**`、`**/effect-sketch*`，都没有。所以下面这份是我手画的，方法用的是**调用图可达性 + 影响半径分析**（call-graph reachability / blast radius analysis）。\n\n## 影响草图\n\n```\n                  [改动点] FreightCalc.calc\n                        │\n        ┌───────────────┼───────────────┐\n        │               │               │\n  OrderService     QuoteService      scheduler?     ← 盲区\n    .quote()        .preview()      (每晚重算)\n        │               │\n     对外报价         预览报价\n\n  ───────────────── 绕过改动点 ─────────────────\n  BatchCalc.run ──→ FreightCalc.calcInner   ← 不经过 calc，改动对它不可见\n        │\n     sink.write\n```\n\n## 三个发现\n\n**1. `BatchCalc` 从旁门进来，改动打不到它**\n\n`calcInner` 没写修饰符，是 package-private，`BatchCalc` 直接调它、跳过了 `calc`。按 Feathers 的说法这是个 **seam**，但现在被当正门用了。结果是同一批订单，`OrderService` 报的价含偏远附加，`BatchCalc` 写进 `sink` 的不含 —— 这个 10 块的差**今天就已经存在**，你加了分流之后差额规则会变，但差还在。\n\n**2. `scheduler` 是唯一的未知边，也是最大风险**\n\n- 如果它调 `calc`：上线当晚，历史单重算出来的运费和当初落库的报价对不上，对账会整片报差异。\n- 如果它调 `calcInner`：这次改动对它零影响，但它和 `OrderService`/`QuoteService` 的口径本来就不一致。\n\n**3. 「什么算偏远」会变成两处判定**\n\n`RemoteFeeLookup.lookup` 已经在判了（硬编码 `新疆`/`西藏`，还是精确 `equals`）。你在 `calc` 里再加一层分流，就有两套规则 —— 要么重复加价，要么两边慢慢漂移。顺带一提，现在 `\"新疆\".equals(dest)` 对「新疆维吾尔自治区」是不命中的；如果新分流用了另一种口径，两边漏掉的订单集合不一样，出了问题很难查。\n\n## 建议顺序\n\n1. 改之前先给 `calc` 和 `calcInner` 各补一条**特征测试**（Characterization Test）把当前数字钉住。\n2. 偏远判定收敛到一个地方（**Single Source of Truth**），`calc` 里的分流只做分流、不重新判定。\n3. 上线前对 `scheduler` 做一次**影子跑**（shadow run / parallel run）：新旧两套算同一批历史单，先出差异清单再切。\n\n---\n\n举个例子：如果 `scheduler` 里写的是 `freightCalc.calc(order)`，那上线后当晚，所有发往新疆/西藏的历史单都会被重算出新数、跟落库报价对不上；如果写的是 `calcInner`，这次改动对它完全没影响，草图右边那条虚线就可以划掉。\n\n你能翻一下 `scheduler` 那边调的是哪个方法吗（贴那一行调用就够）？"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.197664,
+            "judgeCostUsd": 0.03388399999999999,
+            "durationSeconds": 59,
+            "startedAt": "2026-09-19T09:16:41.895Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-U96fNW\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "two-hops-from-change-point",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一件事：这个会话里没有注册 `effect-sketch` 这个 skill（可用列表里没有，我也在工作目录搜了 `effect-sketch*`，无结果）。下面这张影响草图是我按常规做法手画的——调用图扇出 + 变更影响分析（change impact analysis / call-graph reachability），你要是有 `effect-sketch` 的具体格式，发我一份我照着重排。\n\n## 影响草图\n\n```\n  [OrderService.quote]   ──┐\n                            ├──>  FreightCalc.calc  ──> calcInner\n  [QuoteService.preview] ──┘            │                (纯重量 × 8)\n                                        └──> RemoteFeeLookup.lookup  ← 已有偏远逻辑\n                                                (新疆/西藏 → 10)\n\n  [BatchCalc.run]  ─────────────────>  FreightCalc.calcInner   ✗ 绕开 calc\n                                              │\n                                              └──> sink.write(...)   ← 下游未知\n\n  [scheduler 夜间对账] ──── ? ────>  ???                       ← 盲区\n```\n\n## 分三层说\n\n**事实（从你贴的五个文件直接读出来的）**\n\n1. `calc` 的直接调用方两个：`OrderService.quote`（真实下单报价）、`QuoteService.preview`（预览报价）。改 `calc` 会同时动这两条路径，二者保持一致。\n2. `BatchCalc.run` 调的是 `calcInner`，**不经过 `calc`**。你在 `calc` 里加的偏远分流，BatchCalc 一行都拿不到。\n3. `calc` 当前已经无条件加了一次 `remoteFee.lookup(o.dest())`，而 `RemoteFeeLookup` 里已经写死了新疆/西藏 → 10。\n\n**推断（我的判断，没代码佐证）**\n\n4. 第 3 条是这次改动最直接的坑：如果新的分流是在 `calc` 里再判一次「是否偏远」然后加钱，新疆/西藏会被**加两次**；如果是判一次然后决定要不要调 `lookup`，那 `RemoteFeeLookup` 里的判断就成了重复的真相源。偏远地区的判定规则应当只有一处（single source of truth）——建议把分流条件下沉进 `RemoteFeeLookup`，`calc` 保持 `base.plus(lookup(...))` 不变。这样第 2 条的破坏面也会小一些，但仍然救不了 `BatchCalc`（它连 `lookup` 都不碰）。\n5. `BatchCalc` 写进 `sink` 的那份数据，如果和报价是同一套口径（比如账单、报表、对账基准），改完之后两边会稳定差一个偏远附加费。\n\n**盲区（拿不到代码，无法定论）**\n\n6. `scheduler` 模块：README 说每晚重算运费对账。它走 `calc` 还是 `calcInner`、还是绕过 `FreightCalc` 自己算，结论完全相反——走 `calc` 就自动跟随；走 `calcInner`（像 `BatchCalc` 那样）就会把每一笔新疆/西藏订单判成金额不符，每晚刷一批假告警。\n7. `sink` 的下游消费方。\n\n## 改之前建议先做的\n\n- 在 `calc` 上加一条覆盖新疆/西藏/普通地区的用例，确认偏远费只加一次。\n- 给 `calcInner` 标注「不含附加费」的语义（注释或改名，比如 `baseFreight`），避免下一个人再从这里进。\n\n举个具体例子：假设 `scheduler` 里写的是 `freightCalc.calcInner(order)`，那明晚一到，所有发往新疆的订单都会报「账面比重算结果多 10」；假设写的是 `orderService.quote(order)`，那它跟着 `calc` 走，什么都不会发生。\n\n所以，想请你确认一件事：能不能查一下 `scheduler` 模块里重算那行代码，调的是 `calc`、`calcInner`，还是 `OrderService.quote`？"
+              },
+              {
+                "name": "uncertain-edges-marked",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一件事：这个会话里没有注册 `effect-sketch` 这个 skill（可用列表里没有，我也在工作目录搜了 `effect-sketch*`，无结果）。下面这张影响草图是我按常规做法手画的——调用图扇出 + 变更影响分析（change impact analysis / call-graph reachability），你要是有 `effect-sketch` 的具体格式，发我一份我照着重排。\n\n## 影响草图\n\n```\n  [OrderService.quote]   ──┐\n                            ├──>  FreightCalc.calc  ──> calcInner\n  [QuoteService.preview] ──┘            │                (纯重量 × 8)\n                                        └──> RemoteFeeLookup.lookup  ← 已有偏远逻辑\n                                                (新疆/西藏 → 10)\n\n  [BatchCalc.run]  ─────────────────>  FreightCalc.calcInner   ✗ 绕开 calc\n                                              │\n                                              └──> sink.write(...)   ← 下游未知\n\n  [scheduler 夜间对账] ──── ? ────>  ???                       ← 盲区\n```\n\n## 分三层说\n\n**事实（从你贴的五个文件直接读出来的）**\n\n1. `calc` 的直接调用方两个：`OrderService.quote`（真实下单报价）、`QuoteService.preview`（预览报价）。改 `calc` 会同时动这两条路径，二者保持一致。\n2. `BatchCalc.run` 调的是 `calcInner`，**不经过 `calc`**。你在 `calc` 里加的偏远分流，BatchCalc 一行都拿不到。\n3. `calc` 当前已经无条件加了一次 `remoteFee.lookup(o.dest())`，而 `RemoteFeeLookup` 里已经写死了新疆/西藏 → 10。\n\n**推断（我的判断，没代码佐证）**\n\n4. 第 3 条是这次改动最直接的坑：如果新的分流是在 `calc` 里再判一次「是否偏远」然后加钱，新疆/西藏会被**加两次**；如果是判一次然后决定要不要调 `lookup`，那 `RemoteFeeLookup` 里的判断就成了重复的真相源。偏远地区的判定规则应当只有一处（single source of truth）——建议把分流条件下沉进 `RemoteFeeLookup`，`calc` 保持 `base.plus(lookup(...))` 不变。这样第 2 条的破坏面也会小一些，但仍然救不了 `BatchCalc`（它连 `lookup` 都不碰）。\n5. `BatchCalc` 写进 `sink` 的那份数据，如果和报价是同一套口径（比如账单、报表、对账基准），改完之后两边会稳定差一个偏远附加费。\n\n**盲区（拿不到代码，无法定论）**\n\n6. `scheduler` 模块：README 说每晚重算运费对账。它走 `calc` 还是 `calcInner`、还是绕过 `FreightCalc` 自己算，结论完全相反——走 `calc` 就自动跟随；走 `calcInner`（像 `BatchCalc` 那样）就会把每一笔新疆/西藏订单判成金额不符，每晚刷一批假告警。\n7. `sink` 的下游消费方。\n\n## 改之前建议先做的\n\n- 在 `calc` 上加一条覆盖新疆/西藏/普通地区的用例，确认偏远费只加一次。\n- 给 `calcInner` 标注「不含附加费」的语义（注释或改名，比如 `baseFreight`），避免下一个人再从这里进。\n\n举个具体例子：假设 `scheduler` 里写的是 `freightCalc.calcInner(order)`，那明晚一到，所有发往新疆的订单都会报「账面比重算结果多 10」；假设写的是 `orderService.quote(order)`，那它跟着 `calc` 走，什么都不会发生。\n\n所以，想请你确认一件事：能不能查一下 `scheduler` 模块里重算那行代码，调的是 `calc`、`calcInner`，还是 `OrderService.quote`？"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 0.7777777777777777,
+        "passRateWithout": 0.6666666666666666,
+        "delta": 0.22222222222222232
+      }
+    },
+    {
+      "name": "effect-sketch-verify-only-uncertain",
+      "dir": "evals\\effect-sketch-verify-only-uncertain",
+      "source": "prose",
+      "promptMarkdown": "按 `effect-sketch` 画影响草图，然后告诉我要在工作机上核实什么、怎么核实。改动点：在 `FreightCalc.calc` 里加偏远附加的分流。\n\n工作机上装了 Arthas，预发环境可以重放线上请求，定时任务也能手动触发一次。本会话跑不了任何命令，代码不在这个工作目录里；能贴的五个文件贴给你，README 里写着「定时对账任务在 `scheduler` 模块，每晚重算一遍运费」，那个模块的代码我手头没有。\n\n```java\n// FreightCalc.java\npublic class FreightCalc {\n  private final RemoteFeeLookup remoteFee;\n  public Money calc(Order o) { Money base = calcInner(o); return base.plus(remoteFee.lookup(o.dest())); }\n  Money calcInner(Order o) { return Money.of(o.weightKg() * 8); }\n}\n// OrderService.java\nclass OrderService { Money quote(Order o) { return freightCalc.calc(o); } }\n// QuoteService.java\nclass QuoteService { Money preview(Order o) { return freightCalc.calc(o); } }\n// BatchCalc.java\nclass BatchCalc { void run(List<Order> os) { for (var o : os) sink.write(freightCalc.calcInner(o)); } }\n// RemoteFeeLookup.java\nclass RemoteFeeLookup { Money lookup(String dest) { return \"新疆\".equals(dest) || \"西藏\".equals(dest) ? Money.of(10) : Money.ZERO; } }\n```",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "effect-sketch",
+            "arm": "with-only"
+          }
+        },
+        {
+          "name": "verify-only-uncertain",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge what the agent chose to verify at runtime.\n\nPASS if runtime verification (an Arthas `stack`/`trace`/`watch` capture, triggering the scheduled job once, or an equivalent) is proposed only for the edges the pasted code cannot settle — the `scheduler` module, and reasonably any reflection/proxy path it names — while the edges visible in the code (`OrderService.quote`, `QuoteService.preview`, `BatchCalc.run` calling `calcInner`) are reported as settled by reading, without a runtime capture of their own.\n\nFAIL if it proposes tracing every caller or the whole call graph at runtime, if it omits the `scheduler` edge from what to verify, or if it asks the owner to confirm edges the code already shows.",
+          "config": {
+            "criteria": "Judge what the agent chose to verify at runtime.\n\nPASS if runtime verification (an Arthas `stack`/`trace`/`watch` capture, triggering the scheduled job once, or an equivalent) is proposed only for the edges the pasted code cannot settle — the `scheduler` module, and reasonably any reflection/proxy path it names — while the edges visible in the code (`OrderService.quote`, `QuoteService.preview`, `BatchCalc.run` calling `calcInner`) are reported as settled by reading, without a runtime capture of their own.\n\nFAIL if it proposes tracing every caller or the whole call graph at runtime, if it omits the `scheduler` edge from what to verify, or if it asks the owner to confirm edges the code already shows.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.21263,
+            "judgeCostUsd": 0.020268000000000008,
+            "durationSeconds": 62,
+            "startedAt": "2026-09-19T09:17:40.577Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-0zxMU6\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "verify-only-uncertain",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "## 影响草图\n\n用的是 Feathers《修改代码的艺术》第 11 章的影响草图（effect sketch）：从改动点往外静态画两跳，不画全图。\n\n```\n改动点｜FreightCalc.calc(Order)（FreightCalc.java）\n调它的｜OrderService.quote（OrderService.java）、QuoteService.preview（QuoteService.java）\n        绕过它直调 calcInner 的：BatchCalc.run（BatchCalc.java）\n它调的｜calcInner(Order)（同类）、RemoteFeeLookup.lookup(String)（RemoteFeeLookup.java）\n待核实｜scheduler 模块的夜间对账任务：代码没贴，不知道它走 calc、走 calcInner、还是自己算一遍\n        BatchCalc 的 sink 写到哪：写库还是写文件，决定错值能不能回滚\n        lookup 是不是只有 calc 在调：别处也调就会重复加 10\n假设｜「所有运费计算都走 calc」——BatchCalc 已经证伪这一条\n```\n\n### 事实（从贴的代码读到的）\n\n- `calc` = `calcInner` + `lookup`，偏远逻辑现在全在 `RemoteFeeLookup` 里，写死了新疆/西藏 10 元。\n- `BatchCalc.run` 调的是 `calcInner`，拿不到任何偏远费。**分流加在 `calc` 里，批量这条路一分钱都涨不到。**\n- `calcInner` 是 package-private，静态上只有同包（加上反射/代理）能调到它 —— 这缩小了搜索范围，但不等于安全。\n- 加分支不改签名，**编译器不会替你找出漏掉的路径**，只能靠核实。\n\n### 推断（还没证据）\n\n- README 说「每晚重算一遍运费」，重算的结果多半要跟白天报价对账。如果 scheduler 走的是 `calcInner`（像 `BatchCalc` 那样），改完当晚就会出现「白天报价多 X 元、夜里重算少 X 元」的系统性差额。这是我认为最大的风险，但它是推断，不是我看到的。\n\n---\n\n## 工作机上核实什么、怎么核实\n\n只核实草图上标「待核实」的边，静态能定的不抓。\n\n**1. scheduler 到底走哪条路（最要紧）**\n\n挂上 Arthas，然后手动触发一次夜间对账任务：\n\n```\nstack com.你的包.FreightCalc calcInner -n 50\nstack com.你的包.FreightCalc calc -n 50\n```\n\n三种结果三种含义：命中 `calcInner` → 和 `BatchCalc` 同病，分流必须往下放；命中 `calc` → 安全；两个都不命中 → 存在第三条自己算运费的路，那条路得单独找出来。\n\n**2. `lookup` 现在有几个调用方**\n\n```\nstack com.你的包.RemoteFeeLookup lookup -n 50\n```\n\n跑一轮重放 + 触发一次定时任务。只有 `calc` 出现，说明偏远费是单一出口，分流放这儿最省事；出现别人，就得先确认不会重复加。\n\n**3. 改完之后的金额比对**\n\n预发重放同一批线上请求，取一组含新疆/西藏 + 一组不含的，比对 `quote`、`preview`、批量 sink 三处的金额差；再触发一次对账任务，看它和白天报价对不对得平。\n\n**4. 顺手能查清的（不用 Arthas）**\n\n```\ngrep -rn \"calcInner\\|RemoteFeeLookup\\|freightCalc\" --include=*.java scheduler/\n```\n\npackage-private 意味着调用方只可能在同包或走反射 —— 这条 grep 加上第 1 步的 `stack`，两边互相印证。\n\n---\n\n具体一点：一单 20kg 发西藏，`calcInner` 算 160。白天 `quote` 走 `calc`，拿到 160 + 10 + 新加的偏远附加；晚上如果对账走 `calcInner`，拿到的还是 160。这个差额每晚都会记一笔。\n\n所以想先问一题：**这次的偏远附加，是只影响对外报价，还是也要进夜间对账的口径？** 前者分流就放 `calc`，后者得放到 `calcInner` 或 `RemoteFeeLookup` 里去（放哪儿等第 1、2 步的核实结果出来再定）。"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.21751700000000004,
+            "judgeCostUsd": 0.013926000000000022,
+            "durationSeconds": 67,
+            "startedAt": "2026-09-19T09:17:42.034Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-StwZ2y\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "verify-only-uncertain",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "读完了。先给草图（Feathers 影响草图 / effect sketch，《Working Effectively with Legacy Code》第 11 章，固定两跳，不画全图）。\n\n## 影响草图\n\n```\n改动点｜FreightCalc.calc(Order)（FreightCalc.java）\n\n调它的｜OrderService.quote（OrderService.java）、QuoteService.preview（QuoteService.java）\n        绕过它直调 calcInner 的：BatchCalc.run（BatchCalc.java）—— 它拿不到偏远附加，现在拿不到，加了分流之后还是拿不到\n\n它调的｜FreightCalc.calcInner（同类，包级私有）、RemoteFeeLookup.lookup(String dest)（RemoteFeeLookup.java）、Money.plus / Money.of\n\n待核实｜① scheduler 模块的夜间对账任务：README 说它「每晚重算一遍运费」，但代码没贴，走 calc 还是走 calcInner 不知道；这条边决定分流该放哪一层\n        ② 除贴的五个文件外还有没有别的 calcInner / lookup 直调方\n        ③ 有没有反射、动态代理、消息消费者这类静态 grep 看不到的入口\n        ④ dest 实际传进来的字符串长什么样（lookup 是 \"新疆\".equals(dest) 这种精确匹配）\n\n假设｜（a）所有运费计算都从 calc 进 —— BatchCalc 已经证明这条不成立，scheduler 是第二个疑点\n      （b）RemoteFeeLookup 只被 calc 调，没有第二个调用方\n      （c）calcInner 是包级私有 → 能直调它的代码必须和 FreightCalc 同包，这缩小了②的搜索范围（这条是从修饰符推的，不是看到的）\n```\n\n事实：调它的两个、绕过它的一个、它调的三个，都能在贴的文件里指到行。其余都是假设或待核实。\n\n## 在工作机上核实什么、怎么核实\n\n按「便宜的先做、只核实拿不准的边」的顺序，四步：\n\n**1｜先静态搜，不用任何运行时（最便宜，能定的就别抓）**\n\n```bash\n# ① scheduler 走哪条路 —— 这是最关键的一条边\ngrep -rn \"calcInner\\|FreightCalc\\|\\.calc(\" scheduler/ --include=*.java\n# ② 全仓找 calcInner 的直调方（只需搜和 FreightCalc 同包的目录，包级私有出不了包）\ngrep -rn \"calcInner\" . --include=*.java\n# ③ RemoteFeeLookup 有没有第二个调用方\ngrep -rn \"RemoteFeeLookup\\|remoteFee\" . --include=*.java\n```\n\n判定：如果 scheduler 里出现 `calcInner`，那它和 BatchCalc 一样绕过改动点，分流放在 `calc` 里就漏了对账口径；如果只出现 `calc`，分流放 `calc` 覆盖得到。\n\n**2｜预发重放线上请求 + Arthas 抓真实调用栈（补静态搜不到的入口，即待核实③）**\n\n```bash\n# 抓所有进 calcInner 的栈，包含反射/代理/消费者进来的\nstack com.你的包.FreightCalc calcInner -n 20\n# 同时看 calc 的栈，对照两边调用方集合\nstack com.你的包.FreightCalc calc -n 20\n```\n重放一批覆盖面广的请求，把两个 `stack` 的调用方去重，和第 1 步 grep 的结果对一遍。**grep 有、栈里没有**只说明这次没覆盖到；**栈里有、grep 没有**就是动态入口，必须记进草图。\n\n**3｜手动触发一次夜间对账任务，栈还挂着**\n\n这是把①从「待核实」变成事实的唯一确定办法，也是手动触发这张牌最该用在的地方。触发前先挂上 `stack com.你的包.FreightCalc calcInner`，任务跑起来看它命中的是 `calcInner` 还是 `calc`。注意：对账任务可能写库，确认预发的库是隔离的再触发。\n\n**4｜顺手确认 dest 的实际形态（待核实④）**\n\n```bash\nwatch com.你的包.RemoteFeeLookup lookup \"{params[0],returnObj}\" -n 50\n```\n重放时看一眼真实传进来的是 `新疆` 还是 `新疆维吾尔自治区` / 行政区划码。现有 `equals` 匹配如果本来就打不中，你加的分流不管怎么写都不会生效——这个坑要在写代码之前排掉，不是之后。\n\n还有一条低优先级的：如果 `FreightCalc` 是被 AOP 代理的 bean，`calc` 内部调 `calcInner` 是 self-invocation，不走代理；分流如果依赖切面注入的开关配置，这里会静默失效。看一眼 `FreightCalc` 上有没有 `@Transactional` 之类的注解就能排除。\n\n## 一个问题\n\n假设第 1 步或第 3 步的结论是「scheduler 的对账任务走的是 `calcInner`」——也就是它和 BatchCalc 一样，重算出来的运费里**不含**偏远附加，而 `OrderService` 报给客户的价**含**。这种情况下你要的是哪个：对账口径也跟着带上偏远附加（那分流就得往 `calcInner` 里放，或者让 scheduler 改调 `calc`），还是对账本来就该算裸运费、两边不一致是有意为之？"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.217061,
+            "judgeCostUsd": 0.02465400000000001,
+            "durationSeconds": 56,
+            "startedAt": "2026-09-19T09:17:47.075Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-NeaEPg\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "verify-only-uncertain",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "画完了。先说一句我看到的问题：`calc` 里已经有一次偏远判断（`remoteFee.lookup` 就是按新疆/西藏加 10），再加一条分流就是同一件事判两处，容易双算。下面按你说的范围画，这点放在待核实里一起验。\n\n## 影响草图\n\n```\n改动点｜FreightCalc.calc(Order)\n\n调它的｜OrderService.quote（OrderService.java）、QuoteService.preview（QuoteService.java）\n        绕过它直调 calcInner 的：BatchCalc.run（BatchCalc.java）\n\n它调的｜FreightCalc.calcInner（FreightCalc.java）、RemoteFeeLookup.lookup（RemoteFeeLookup.java）\n        Money.plus / Money.of（Money，未贴）\n\n待核实｜① scheduler 模块每晚重算运费，走的是 calc 还是 calcInner —— 代码没贴，README 只说「重算一遍运费」，连它调不调 FreightCalc 都是推的\n        ② 除 BatchCalc 外还有没有别的 calcInner 调用方 —— 只贴了 5 个文件，不是全仓\n        ③ calcInner 是包级可见（没写修饰符），跨包调不到；scheduler 要是另一个包，又没用反射或 Spring 代理，那它只能走 calc，①就自动有答案了\n        ④ 新分流和 RemoteFeeLookup 是否双算新疆/西藏\n\n假设｜「所有运费计算都走 calc」——BatchCalc 已经证明不成立，scheduler 是不是第二个反例还不知道\n      Money 是不可变值对象，plus 不改原值（没见到源码）\n```\n\n一句话结论：**开关放在 `calc` 里，`BatchCalc` 这条路一定拿不到偏远附加**。这是事实，不是推断——`BatchCalc.run` 直接调 `calcInner`，不经过 `calc`。scheduler 如果也是这条路，那每晚对账算出来的运费会比下单报价少一笔偏远费，天天对不平。\n\n## 在工作机上核实什么、怎么核实\n\n按「便宜的先做」排，前三步 grep 就够，grep 说不清的再上 Arthas。\n\n**1. scheduler 到底调哪个方法（最要紧）**\n\n先看包名，这一步可能直接结案：\n\n```bash\ngrep -rn \"^package\" scheduler/src/main/java | head\ngrep -rn \"^package\" --include=FreightCalc.java .\n```\n\n两边包名不同 → scheduler 调不到 `calcInner`（包级可见），只能走 `calc`。包名相同或结果可疑，继续：\n\n```bash\ngrep -rn \"calcInner\\|freightCalc\\|FreightCalc\" scheduler/\n```\n\n**2. 全仓捞一遍 `calcInner` 的调用方**\n\n```bash\ngrep -rn \"calcInner\" --include=*.java .\n```\n\n预期只有 `FreightCalc` 自己和 `BatchCalc`。多出第三个，草图要改。\n\n**3. 反射、动态代理、配置里注册的处理器**——grep 看不见的那种\n\n在预发起 Arthas 挂上，包名换成你们真实的：\n\n```\nstack com.你们的包.FreightCalc calcInner -n 50\nstack com.你们的包.FreightCalc calc -n 50\n```\n\n然后做两件事，让所有路径都跑一遍：\n- 手动触发一次那个对账定时任务 → 看 `calcInner` 的栈里有没有 scheduler 的类。**有，就是绕过路径**，开关不能只放 `calc`。\n- 重放一批线上请求（带几单新疆/西藏的）→ 看 `calc` 的调用方是不是只有 `OrderService`、`QuoteService`。\n\n再补一条看有没有被代理包了一层（有代理的话 `calc` 的自调用也可能绕过切面）：\n\n```\nsc -d *FreightCalc\n```\n\n**4. 双算验证**——改完之后做，别改之前\n\n预发重放同一单新疆的订单，改动前后各一次：\n\n```\nwatch com.你们的包.FreightCalc calc \"{params[0].dest(),returnObj}\" -x 2\nwatch com.你们的包.RemoteFeeLookup lookup \"{params,returnObj}\" -x 2\n```\n\n新疆单的总额如果比改动前多了两笔偏远费，就是 `RemoteFeeLookup` 和新分流撞了。\n\n**5. 报价一致性**——同一单分别走 `OrderService.quote` 和 `QuoteService.preview`，金额必须相同。预览比实际下单少收一笔偏远费，是会被客户投诉的那种 bug。\n\n---\n\n现在问你一题。假设一单发西藏、10 公斤：下单报价 `calc` 给的是 80 + 10 = 90，而 `BatchCalc` 走 `calcInner` 只得 80。**每晚对账那一遍，应该算出 90 还是 80？** 算 90，开关就得下沉到 `calcInner`（或者加一个两边都走的中间层）；算 80，说明对账本来就是比基础运费，开关放 `calc` 没问题，但这事得在代码里写清楚，不然下一个人还会来改。"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.23130450000000005,
+            "judgeCostUsd": 0.01618200000000003,
+            "durationSeconds": 107,
+            "startedAt": "2026-09-19T09:18:42.743Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Zspejb\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "verify-only-uncertain",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "`effect-sketch` 不在本会话可用的 skill 列表里（列表里只有 dataviz / code-review / simplify / run / init 等），所以下面是我按影响面分析（blast radius analysis）手画的，不是那个 skill 的产物。\n\n---\n\n## 一、影响草图\n\n调用扇出（以下都是贴出的 5 个文件里的**事实**）：\n\n```\nFreightCalc.calc(o)  = calcInner(o) + remoteFee.lookup(o.dest())   ← 改动点在这\n   ├── OrderService.quote     下单金额，落库，是钱\n   ├── QuoteService.preview   前台报价，用户先看到\n   └── scheduler.???          README 说每晚重算对账，代码没贴 → 未知\n\nFreightCalc.calcInner(o) = weightKg * 8\n   └── BatchCalc.run → sink.write      ← 绕开 calc，永远不含偏远附加\n```\n\n三条我认为你动手前必须先看一眼的：\n\n**1. `calc` 里现在已经有一份偏远附加了。**\n事实：`calc` 的返回值是 `calcInner + remoteFee.lookup(dest)`，而 `RemoteFeeLookup` 对「新疆」「西藏」返回 10。你说的「加偏远附加的分流」如果写成 `base.plus(newRemoteSurcharge)`，新疆单会变成 `+10 +新附加`，双算。\n\n**2. 两套「偏远」的口径可能对不上。**\n事实：现有判定是 `\"新疆\".equals(dest)`，精确相等。\n推断（待核实）：线上 `dest` 如果是「新疆维吾尔自治区」或整串收货地址，这 10 块钱其实从来没生效过——那样的话你的新分流是第一次真正开始收钱，影响面比「只是加个分支」大得多。\n\n**3. `BatchCalc` 走的是 `calcInner`，你的改动它一点都吃不到。**\n事实。于是 `BatchCalc` 写进 `sink` 的金额和 `OrderService` 收的钱差距会从 10 块扩大到新附加的额度。如果 `sink` 的下游正是对账，差异会直接冒出来。\n\n**4. 最危险的是 scheduler。**\n它每晚重算运费。如果它调 `calc`，那么改动上线后的第一晚，**所有历史偏远订单**会被重算成新价，和已收款不一致 → 对账差异量 = 历史偏远单量 × 差额。如果它调 `calcInner`，则完全无感。这条是未知，必须在工作机上查实，不能猜。\n\n---\n\n## 二、工作机上核实什么、怎么核实\n\n顺序按「先定事实，再测差异」。前三条用 Arthas，在**预发**做（贴出的 `RemoteFeeLookup.lookup` 是纯本地字符串比较，没有远程副作用，`tt` 回放是安全的；但别在生产上回放）。类名包路径按你实际的替换。\n\n**A. scheduler 到底调哪个方法**（最高优先级，决定有没有历史重算风险）\n\n```\nstack com.x.FreightCalc calc -n 50\nstack com.x.FreightCalc calcInner -n 50\n```\n两条挂上后，手动触发一次那个定时任务。\n- 判定：栈里出现 scheduler 包名 → 风险成立，走 D；只在 `calcInner` 出现 → 本次改动不进对账；两条都没命中 → 说明 scheduler 有自己的一套算法，那是另一个更大的问题。\n\n**B. `dest` 的真实取值长什么样**（验证上面第 2 条推断）\n\n```\nwatch com.x.RemoteFeeLookup lookup \"{params[0], returnObj}\" -x 2 -n 200\n```\n挂上后重放一批线上请求，特别是偏远地区的单。\n- 判定：`returnObj` 全是 `Money.ZERO` → 现有这 10 块是死代码，你的改动等于**首次开始收偏远费**，要按「涨价」走业务确认，不能按「重构」上线。\n\n**C. 改完之后，确认没双算**\n\n```\nwatch com.x.FreightCalc calc \"{params[0].dest(), returnObj}\" -x 2 -n 50\ntrace com.x.FreightCalc calc -n 20\n```\n- 判定：`trace` 的调用链里 `RemoteFeeLookup.lookup` 只出现一次，且新疆单的 `calc` 返回 = `calcInner` + 一份附加，不是两份。\n\n**D. 改前改后跑对比**（back-to-back diff testing / parity test）\n\n预发用同一批重放请求，跑改前基线一次、改后一次，落两份金额，diff：\n- **非偏远单差异必须为 0**，这是回归安全线，有一单不为 0 就说明分流条件写宽了。\n- 偏远单差异应当等于预期附加额，条数对得上你按 B 统计出的偏远单占比。\n\n然后手动触发一次定时任务，比对它输出的对账结果。如果 A 证实 scheduler 走 `calc`，这一步的差异条数就是上线当晚运维要面对的告警量——提前拿到这个数字，比上线后解释强。\n\n**E. 报价 / 下单一致性**\n\n`QuoteService.preview` 和 `OrderService.quote` 都走 `calc`，同参数返回必须相等（事实，代码保证）。重放时抽一批同单号的 preview 和 quote 对一下即可，主要是防你改动时不小心只在某条路径上加了分流。\n\n**F. 上线方式建议**\n\n按 dark launch + feature flag 做：新分流先只记日志不改返回值（shadow mode），跑一晚，拿 D 的真实差异数据再开开关。开关要能一键关（kill switch）。这条对「动到钱」的改动是业界默认做法。\n\n另外建议改之前先给 `calc` 补一组 characterization test（Michael Feathers 的说法，也叫 golden master test）——把现在的输出原样固化成断言，你的改动只允许让偏远单那几条断言变红。\n\n---\n\n## 一个问题\n\n举个具体的：一单 10kg 发新疆，现在 `calc` 返回 `80 + 10 = 90`。假设新的偏远附加规则算出来是 25。\n\n你要的是 **90 变 105**（新分流叠加在现有的 10 块之上），还是 **90 变 105 但那 10 块被新规则吸收、`RemoteFeeLookup` 这条线就此下线**（也就是 80 + 25 = 105）？\n\n抱歉这两个数字我举得一样了——重说：叠加是 `80+10+25=115`，取代是 `80+25=105`。你要哪个？"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 2,
+            "costUsd": 0.27531550000000005,
+            "judgeCostUsd": 0.01891200000000004,
+            "durationSeconds": 109,
+            "startedAt": "2026-09-19T09:18:43.255Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-9qDWwQ\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "verify-only-uncertain",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一件事实：这个会话里**没有 `effect-sketch` 这个 skill**。我实际调了一次，返回 `Unknown skill: effect-sketch`（可用列表里也没有）。所以下面是我按通用的变更影响分析（change impact analysis / blast radius）手画的，不是那个 skill 的产物。如果它是你工作机上的项目级 skill，那得在那边跑。\n\n---\n\n## 影响草图\n\n```\nFreightCalc.calc(Order)              ← 改动点\n├── OrderService.quote()             下单/计费口径\n├── QuoteService.preview()           报价预览口径\n└── ??? scheduler 夜间重算            ← 最大未知\n\nFreightCalc.calcInner(Order)         ← 不经过 calc，拿不到任何附加费\n└── BatchCalc.run() → sink.write()   批量口径，天生少一笔偏远费\n    └── ??? sink 落到哪\n```\n\n结构上的要点：`calc` 和 `calcInner` 是两条平行的接缝（seam，Feathers《Working Effectively with Legacy Code》的说法）。分流加在 `calc`，`BatchCalc` 完全照不到，在线口径和批量口径会进一步分叉；加在 `calcInner`，两边都变，但会和 `calc` 里已有的 `plus(remoteFee.lookup(...))` 叠起来。\n\n### 从贴的代码能直接读出来的（事实）\n\n- `calc` 无条件加了一次 `remoteFee.lookup(o.dest())`。新分流如果也命中新疆/西藏，同一单会收两次 10 元。\n- `quote` 和 `preview` 都走 `calc`，所以报价和下单天然同步变。反过来说，想只改下单不改预览，当前结构做不到，得另开入口。\n- `BatchCalc` 走 `calcInner`，现在就已经不含偏远费。\n- `RemoteFeeLookup` 是 `\"新疆\".equals(dest)` 精确串比。新分流如果按省份编码、区域表或地址前缀判定，会出现\"一个命中另一个不命中\"。\n\n### 推断，没法在这儿证实\n\n- README 说 scheduler 每晚重算运费，但它走 `calc`、`calcInner` 还是 `BatchCalc`，决定了两件完全不同的事：走 `calc` → 今晚会用新规则重算历史老单，可能生出补收/退款/对账差异；走 `calcInner` → 夜间对账口径和在线报价对不上。**这是改之前必须先查清的那一件事。**\n\n---\n\n## 工作机上核实什么、怎么核实\n\n### A. 动手改之前，只读观测\n\n1. **查 scheduler 到底调谁** —— 这是上面那个未知项的正解：\n   ```\n   stack com.xxx.FreightCalc calcInner -n 20\n   stack com.xxx.FreightCalc calc -n 20\n   ```\n   挂上之后手动触发一次定时任务，调用栈直接告诉你答案。\n2. **代码不在手头就反编译线上类**：`sc -d *Scheduler*` / `sc *Recalc*` 找到类名，再 `jad --source-only com.xxx.scheduler.XxxJob` 看它调的哪个方法。比翻代码库快。\n3. **看真实的 `dest` 长什么样**：\n   ```\n   watch com.xxx.FreightCalc calc '{params[0].dest(), returnObj}' -x 2 -n 50\n   ```\n   直接回答\"是 `新疆` 还是 `新疆维吾尔自治区`\"，决定串比那条风险是不是真的。\n\n### B. 改完，在预发重放\n\n用 Parallel Run（Fowler）+ 特征测试（characterization test，Feathers）：新老两版跑同一批重放请求，只比金额、出 diff。\n\n- 抽样必须覆盖：新疆/西藏、普通地区、`dest` 为 null 和空串、别名写法、`weightKg` 为 0。\n- 判定标准写死两条：**非偏远单 diff 必须为 0**（证明没有意外波及）；**偏远单的 diff 恰好等于新规则的增量，不能等于 20**（20 就是双加了）。\n- 想抓真实调用重放，`tt -t com.xxx.FreightCalc calc` 录一段，再 `tt -i <index> -p` 打回去。\n\n### C. 定时任务，手动触发验证\n\n1. 取同一批订单，比对\"在线 `calc` 的结果\"和\"任务算出的结果\"。不相等就说明它走的是 `calcInner` 那条线。\n2. **幂等**：连触发两次，第二次逐单结果必须和第一次相同，且不应再新增差异/补收记录。\n3. 挑几个改动前已结算的老单，确认重算后金额没变——这条最容易出事，也最容易在上线当晚才发现。\n\n改动本身建议用开关（feature flag）包住，默认关，预发过了再灰度，出问题能一秒退回去。\n\n---\n\n一个问题，先给例子：一单 `dest=\"新疆\"`、`weightKg=1`，现在是 `8 + 10 = 18`。\n\n你说的\"加偏远附加的分流\"，是在现有 `remoteFee.lookup` **之外**再加一条判定，还是要把 `RemoteFeeLookup` 整个换掉？换句话说，这一单改完之后你期望它是 18、28，还是别的数？"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.34650850000000005,
+            "judgeCostUsd": 0.01582800000000001,
+            "durationSeconds": 138,
+            "startedAt": "2026-09-19T09:18:49.064Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-8ya58U\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "verify-only-uncertain",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一件事：**`effect-sketch` 这个 skill 我这儿没有**，可用清单里只有 dataviz / code-review / simplify / run 那几个,我也在工作目录搜过 `effect-sketch*`,没有文件。所以下面是我手画的影响草图,不是按那个模板走的——如果它有固定格式,你把模板贴我,我再套一遍。\n\n---\n\n## 一、调用图(只凭手上这五个文件能确定的)\n\n```\nOrderService.quote  ─┐\n                     ├─→ FreightCalc.calc ─┬─→ calcInner ──→ weight*8\nQuoteService.preview ─┘   ★改动点          └─→ RemoteFeeLookup.lookup(dest) → 新疆/西藏 +10\n\nBatchCalc.run ─────────────────────────────→ calcInner     ← 绕过 calc,拿不到任何偏远附加\n\nscheduler 模块(代码不在手上)──→ ??? calc 还是 calcInner/BatchCalc\n                                └─ README 说「每晚重算一遍运费」,这是最大的未知\n```\n\n关键结构:`calc` 和 `calcInner` 是两个不同的接缝(seam,Michael Feathers《Working Effectively with Legacy Code》的说法)。你改在 `calc` 上,`calcInner` 那条线完全不动。\n\n## 二、影响分三层\n\n**第一层 · 确定会变**\n`quote` 和 `preview` 都走 `calc`,两个一起变。好消息:报价页和下单价不会打架。\n\n**第二层 · 确定不会变**\n`BatchCalc.run` 走 `calcInner`,一分钱不变。改完之后 `calc` 与 `calcInner` 的口径差额变大了。\n\n**第三层 · 未知,必须查**\nscheduler 每晚重算。走 `calc` → 历史订单运费被改写;走 `calcInner`/`BatchCalc` → 每晚对账全量冒出差异。两种都不好,但处理方式完全不同。\n\n## 三、四个风险,按严重度排\n\n| # | 风险 | 说明 |\n|---|---|---|\n| A | **重复收费** | `RemoteFeeLookup` 已经对新疆/西藏 +10。新分流若也判这两个地区,同一单收两遍 |\n| B | **对账炸开** | 夜里重算的口径和在线口径不一致,差异条数暴涨,可能触发告警甚至自动补差 |\n| C | **这不是重构,是涨价** | 现在是 `\"新疆\".equals(dest)` **精确相等**。真实 dest 大概率是「新疆维吾尔自治区乌鲁木齐市…」,根本命中不了——也就是说那 10 块很可能从来没收到过。新分流一旦改成前缀/区划匹配,等于**第一次真的开征**,要走价格变更流程 |\n| D | **历史对不上** | 改完后旧单重算价 ≠ 当时报价,客诉和财务都会来问 |\n\n---\n\n## 四、工作机上核实什么、怎么核实\n\n### 1. scheduler 到底走哪条路(最高优先)\n\n```bash\nsc  '*scheduler*'                                  # 先把类名摸出来\njad --source-only com.xxx.scheduler.你的Job        # 代码不在手上也能看源码\nstack com.xxx.FreightCalc calcInner -n 50          # 两个都挂上\nstack com.xxx.FreightCalc calc      -n 50\n```\n判定:栈里出现 `BatchCalc`/`calcInner` → 口径已经分叉,本次要么一起改,要么白纸黑字接受差异。\n\n### 2. dest 的真实取值(验证风险 C)\n\n```bash\ntt -t com.xxx.RemoteFeeLookup lookup -n 200\n# 或 watch com.xxx.RemoteFeeLookup lookup '{params[0],returnObj}' -n 200\n```\n判定:200 条里 `returnObj` 全是 ZERO、`params[0]` 全是长地址 → 坐实「现有分支从未生效」。这条结论直接决定这次是技术改动还是商务改动。\n\n### 3. 预发重放做新旧对比\n\n这是 **traffic replay + diff testing**(影子对比,GitHub 的 Scientist 是典型实现)。同一批线上请求分别打旧版和新版,只比 `quote`/`preview` 的返回值。\n判定:差异集应当只含你预期命中的地区;冒出非偏远地区 → 分流条件写宽了。\n\n更稳一档:新逻辑先**只记日志不改价**(dark launch / shadow mode),跑一晚看命中量和金额,再真正放开。\n\n### 4. 定时任务那一次手动触发——只有一次,先摆好观测再按\n\n触发**前**:\n- `stack`/`watch` 挂好\n- `monitor -c 10 com.xxx.FreightCalc calcInner` 统计调用量\n- 确认对账结果落到哪张表/哪个文件,能事后捞\n\n触发**后**看三个数:处理单数、与在线报价的差异条数、差异总金额。\n判定:差异条数 ≈ 偏远订单数 → 口径分叉,符合预期但要业务点头;远超这个量 → 条件写宽了。\n\n### 5. 还有没有别的调用方(手上只有五个文件)\n\nIDE 里 Find Usages `calcInner`(包级可见,范围限本包 + 反射/AOP)。但 AOP 代理会让静态查不全,所以拿第 1 步的动态调用栈做补充,跑一轮预发全量回归后再看 `monitor` 的计数。\n\n---\n\n## 五、动手顺序建议\n\n1. 先补 **characterization test**:把现有 `calc`/`calcInner` 在若干 dest 上的输出钉成断言,锁住现状再改。\n2. 新分流挂 **feature flag**(带 kill switch),默认关。\n3. 影子跑一晚 → 看命中量 → 再开。\n4. `calcInner` 和 `calc` 的口径差,写进注释或干脆改名(比如 `calcBase`),别留给下一个人踩。\n\n---\n\n举个具体的:一单发「新疆维吾尔自治区乌鲁木齐市天山区」,5 公斤,现在 `calc` 算出来是 **40**(`equals` 没命中,加了 0)。\n\n**你这次加的偏远附加,是要在 40 上再叠一笔,还是让新分流接管、`RemoteFeeLookup` 那 10 块不再单独加?**"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 3,
+    "casesPassed": 3,
+    "overallScore": 1,
+    "overallPassRate": 1,
+    "meanDelta": 0.07407407407407411
+  }
+}
