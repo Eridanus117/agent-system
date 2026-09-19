@@ -77,4 +77,47 @@
 
 没到 1.0 的一条要说清：`wrap-up-pr-body` 改后三次都在 `docking-and-one-ask` 被判 FAIL——三条回复的站会记录四栏齐、结尾只问推不推，但「等你」栏与结尾各写了一遍同一问句，判官数成两问；改前同一 grader 三次里两次也这样 FAIL。grader 补一句「同一问句在等你栏与结尾各出现一次算一问」后单独重跑（`results/2026-09-19-gate-rerun/`，6 次，115 秒，0.68 美元）：三次 1.0、0.75、0.25。0.25 那次是真错：站会记录第一栏写成「做了什么」，四栏名之一被换掉（正文已写明四栏名，是 sonnet 单次的失误），同一次 PR 正文也被判缺项而正文四节齐、证据带命令与退出码；0.75 那次四栏与问句都对仍被判 FAIL。判断：一次真错加两次判官抖动，不是正文缺口；再跑只是换一组随机数，是否按 1.0 硬线重跑由主人在第 6 阶段的门上定。
 
-三份结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`。
+三份门评测之后正文在审查（第 6 阶段）里按「规程只点名、做法在实践里」删掉了两条里重述实践内容的括号与开头那句「先把三步的顺序说全」，`rollout-observe` 的触发句改成不与 `canary-release` 抢「怎么灰度」；都没有重跑，评测沙箱里没装实践，这几处对沙箱里的 sonnet 只会更难，对装了实践的真实会话没有影响。
+
+结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`。
+
+### 0.1.2（2026-09-19，agent-system#122）：两条薄的规程 skill——regression-evidence、rollout-observe
+
+旧 workcoding 的 `evidence-regression`、`release-observe` 各拆成实践（practices 里的 `record-replay`、`golden-master`、`feature-toggle`、`canary-release`）加一条薄的规程 skill：`regression-evidence`（改旧代码时才开的活动「证」：改前录、改后比、三样进 PR）、`rollout-observe`（第 8 阶段：回滚点、三档与观测点、门上那条消息、多数改动一句跳过）。跑法同上（被测 sonnet、裁判 sonnet），`--case '<skill>-*'` 两条各跑一次；结果在 `results/2026-09-19-baseline-as122/<skill>/`、`results/2026-09-19-gate-as122/<skill>/`，单跑在 `-gate-as122-rerun/`、`-rerun2/`。提示词都写明实践 skill 没装、工具不可用，测的是这两条自己的东西：顺序、点名谁、完成判据、停在哪。
+
+| 用例 | skill | 测什么 | 该怎么判 |
+|---|---|---|---|
+| `regression-evidence-before-change` | regression-evidence | 第 5 阶段刚开始、门上已开「证」 | 点名 record-replay 改前录、golden-master 改后比；顺序是清单 → 主人否 → 录 → 改 → 回放 → 三样进同一个 PR；停在请主人否样本处 |
+| `regression-evidence-new-only` | regression-evidence | 从零新建的命令，主人不放心要不要也录母版 | 没有老路径就没有母版，一句跳过写进 PR 或站会记录，正确性归需求例子与 tdd |
+| `rollout-observe-plan` | rollout-observe | 第 8 阶段、开关在配置中心 | 点名 feature-toggle 定回滚点、canary-release 定三档与观测点；门上那条消息有三档（放谁、停多久或观测窗口）、一句一观测加四个黄金信号、冒烟带期望值；结尾只留「请主人定档 1」，agent 不拨开关 |
+| `rollout-observe-skip` | rollout-observe | 行为不变的重构、没有开关、跟例行发版走 | 第 8 阶段跳过，留一句为什么写进 PR 或站会记录，不出放量方案 |
+
+#### 基线观察（对照组，不装 skill）
+
+取自 `results/2026-09-19-baseline-as122/<skill>/`（SKILL.md 占位，每用例 1 次，两组，被测 sonnet）：
+
+- `regression-evidence-before-change`：对照组自己拼出「定范围 → 采样 → 跑旧代码出基线 → 改 → 比」的七步，顺序对，但没有请主人否样本这一步，停在「工具不可用，给我仓库路径或导出的流量」。有 skill 组（占位）同样。真缺口是点名两条实践、主人否、工具不可用时照样列清单。
+- `regression-evidence-new-only`：两组都答「不适用，没有改动前的行为可拍」。只作回归守卫；门评测里对照组三次有一次被判败（那次没说跳过写在哪、把正确性归哪）。
+- `rollout-observe-plan`：对照组写 1% → 5% → 25% → 50% → 100%「业界默认节奏」，进档按观察窗口自动推进，没有主人定每档、没有回滚点。有 skill 组（占位）三档与主人拨都有，但结尾问的是回滚阈值。
+- `rollout-observe-skip`：对照组给「完整放量方案」和「轻量观察清单」两个选项让主人选，不是一句跳过。有 skill 组（占位）靠描述那句「多数改动跳过」就过了。
+
+#### 实跑记录
+
+2026-09-19，被测 sonnet、裁判 sonnet，有 skill 组对对照组，每用例 3 次，阈值 1.0。四个用例的最终数字来自两条各跑一次的门评测 `results/2026-09-19-gate-as122/<skill>/`（合计 24 次运行，2.03 美元）与之后单跑的 `-gate-as122-rerun/`、`-rerun2/`（各 6 次，合计 1.75 美元）。
+
+| 用例 | 有 skill 组 | 对照组 | 差值 | 来源 |
+|---|---|---|---|---|
+| `regression-evidence-before-change` | 1.0 | 0 | +1.0 | rerun |
+| `regression-evidence-new-only` | 1.0 | 0.67 | +0.33 | gate |
+| `rollout-observe-plan` | 0.67 | 0 | +0.67 | rerun2 |
+| `rollout-observe-skip` | 1.0 | 0 | +1.0 | gate |
+
+平均差值 +0.75。
+
+没到 1.0 的一条要说清：`rollout-observe-plan` 0.67——第二次重跑三次里一次 `names-practices-and-stops` 三票 FAIL，那条回复的回滚点、三档、观测点、冒烟都齐，结尾却把「谁拨、什么时间拨、观测窗口多长」三件事一起问了主人，违反门上那条消息只留一件事的规矩；是 sonnet 单次的失误，不是正文缺口（正文已写明「最后只留一件事——请主人定档 1 放谁」）。再跑只是换一组随机数，主人已定不为 1.0 硬线重跑。
+
+迭代过程：第一轮门评测两条正例有 skill 组都 0/3。`regression-evidence-before-change` 三次都点名了 record-replay、列了新路径两条样本，但老路径四条样本卡在「工具不可用拿不到真实请求」上，停下要主人给日志，也没把改后的 golden-master 与三样进 PR 说全——正文第 1 步补一句「样本清单是计划，不用先拿到真实请求就能列；工具不可用时照样列出来请主人否」，开头补「先把三步的顺序说全，再停在第 1 步」，提示词从「说到该停下的地方为止」改成「从头到尾说出来，然后停在该等我的地方」，重跑 3/3。`rollout-observe-plan` 第一轮三次都没写冒烟的期望值——提示词里例子用的模板 1032 不在档 1 白名单（9001）里，冒烟打不出 26，提示词补「9001 与 1032 配置相同」；第一次重跑三次三档、回滚点、观测点都齐，败在 sonnet 把「停多久」写成「观测窗口由主人定」、结尾问的是阈值或省份清单，正文第 3 步补「三档各一行放谁、停多久」与「回滚阈值、名单范围这类细节等主人定了档 1 再谈」，grader 放宽到「观测窗口算停多久」并写明结尾那一件事必须关于档 1，第二次重跑 2/3。
+
+门评测之后正文在审查（第 6 阶段）里按「规程只点名、做法在实践里」删掉了两条里重述实践内容的括号与开头那句「先把三步的顺序说全」，`rollout-observe` 的触发句改成不与 `canary-release` 抢「怎么灰度」；都没有重跑，评测沙箱里没装实践，这几处对沙箱里的 sonnet 只会更难，对装了实践的真实会话没有影响。
+
+结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`。

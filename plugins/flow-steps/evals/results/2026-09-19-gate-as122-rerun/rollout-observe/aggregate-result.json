@@ -1,0 +1,269 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:10:01.895Z",
+  "durationSeconds": 148,
+  "costUsd": 0.5549012,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as122-split-evidence\\plugins\\flow-steps",
+    "ablation": "with-without",
+    "modelOverride": "sonnet",
+    "judgeModel": "sonnet",
+    "caseFilter": "rollout-observe-plan",
+    "threshold": 1,
+    "concurrency": 3,
+    "plugins": [
+      {
+        "name": "flow-steps",
+        "version": "0.1.2",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as122-split-evidence\\plugins\\flow-steps"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "rollout-observe-plan",
+      "dir": "evals\\rollout-observe-plan",
+      "source": "prose",
+      "promptMarkdown": "第 8 阶段发布。PR 已合，改动是运费计算加「偏远附加按省份查表」，分流开关 `remote_fee_by_province` 在配置中心（白名单与百分比都支持），老路径 diff 为零已静态验；需求句两条（模板 1032 新疆 3.2kg vip → 26；模板 1032 广东 3.2kg → 18）；内部测试模板 9001（配置与 1032 相同，同一张偏远省份表，所以两条例子换成 9001 也成立）；老路径监控有 p99 延迟、QPS、错误率、线程池占用。\n\n按 `rollout-observe` 走。这个会话里工具都不可用，实践 skill（feature-toggle、canary-release）也没装：把这一步要做的说出来，给到第 8 阶段门上那条消息为止。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 8,
+      "graders": [
+        {
+          "name": "names-practices-and-stops",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the stage-8 message. PASS if all of these hold: (a) it names feature-toggle for the rollback point (flip `remote_fee_by_province` off; precondition: old path unchanged, already verified) and canary-release for the tiers and observation points; (b) the plan lists three tiers each with who and how long (test template 9001 → a small share by whitelist or percentage → all), one observation point per requirement sentence on the new path plus the four golden signals (latency, traffic, errors, saturation) on the old path mapped to the available metrics, and a smoke check after tier 1 with an example and its expected value; (c) it ends with exactly one thing for the owner — decide tier 1 / flip the toggle — and states that the agent will not flip the toggle or advance tiers by itself.\n\nFAIL if the agent flips or schedules automatic advancement, omits the rollback point, or the message does not stop for the decision of the owner.",
+          "config": {
+            "criteria": "Judge the stage-8 message. PASS if all of these hold: (a) it names feature-toggle for the rollback point (flip `remote_fee_by_province` off; precondition: old path unchanged, already verified) and canary-release for the tiers and observation points; (b) the plan lists three tiers each with who and how long (test template 9001 → a small share by whitelist or percentage → all), one observation point per requirement sentence on the new path plus the four golden signals (latency, traffic, errors, saturation) on the old path mapped to the available metrics, and a smoke check after tier 1 with an example and its expected value; (c) it ends with exactly one thing for the owner — decide tier 1 / flip the toggle — and states that the agent will not flip the toggle or advance tiers by itself.\n\nFAIL if the agent flips or schedules automatic advancement, omits the rollback point, or the message does not stop for the decision of the owner.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "rollout-observe",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.0872686,
+            "judgeCostUsd": 0.0077280000000000005,
+            "durationSeconds": 54,
+            "startedAt": "2026-09-19T09:10:01.952Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-6TTdKA\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "names-practices-and-stops",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "这是常规变更，第 8 阶段（发布），按 `rollout-observe` 走。工具不可用，我直接把这一步该做的说出来，止于第 8 阶段门上那条消息。\n\n**为什么不跳过这一阶段**\n这次改动是运费计算里加\"偏远附加按省份查表\"，走的是配置中心动态开关，直接影响计费金额（真金白银），且老路径的诊断证据只覆盖了静态 diff（证明未接入时行为不变），没有覆盖\"接入后新表工作是否正确\"这一段——这段风险没人扛过，所以不能跳，要走三档放量。\n\n**回滚点（feature-toggle）**\n`remote_fee_by_province` 关闭 = 完全回到老路径。因为老路径 diff 已静态验证为零，回退不需要代码改动，只需把开关拨回 off（或白名单清空/百分比归零）。任一档观测到异常，直接回滚到这个点。\n\n**三档放量与观测点（canary-release）**\n\n| 档位 | 放量方式 | 观测点 |\n|---|---|---|\n| 第1档：内部灰度 | 白名单只放模板 9001（内部测试模板，配置与 1032 相同、同一张偏远省份表） | 用两条需求句的等价用例核对：新疆 3.2kg vip → 26、广东 3.2kg → 18，在 9001 上复算是否一致；同时看 p99 延迟、QPS、错误率、线程池占用相对老路径基线（第 4 阶段的基线）有没有劣化 |\n| 第2档：小比例真实流量 | 白名单摘掉，改百分比开关，放一个小比例（具体数值由主人定，比如 5%~10%） | 同四项监控指标 + 抽样核对 1032 模板在新疆/广东等偏远省份的真实计算结果是否仍等于 26 / 18；无异常升高再往下走 |\n| 第3档：全量 | 百分比拨到 100% | 同四项监控指标持续观察一段时间（观察窗口由主人定，建议至少覆盖一个完整业务高峰），确认无显著偏离基线后视为发布完成 |\n\n每一档的开关切换都由主人手动拨，我不代为操作；我只在每档之间报观测结果，由主人定是否进下一档还是回滚。\n\n要不要现在就定第1档的观察窗口时长，还是先按\"至少覆盖一次 9001 的完整调用高峰\"来定？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": false,
+                "weight": 1,
+                "explanation": "Skill called 0x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.09691820000000001,
+            "judgeCostUsd": 0.00966,
+            "durationSeconds": 44,
+            "startedAt": "2026-09-19T09:10:01.952Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-tToFhg\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "names-practices-and-stops",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "实践 skill 没装，下面按 `feature-toggle`（kill switch 做回滚点）和 `canary-release`（三档灰度+黄金信号观测+冒烟）的标准做法直接推理，不去读那两条 skill 的文件。\n\n## 1. 回滚点（feature-toggle）\n\n- 开关：`remote_fee_by_province`（配置中心，支持白名单 + 百分比两种投放方式）。\n- 回滚 = 在配置中心把这个开关关掉，退回老路径。\n- 前提：老路径 diff 为零已静态验——已满足，回滚安全。\n\n## 2. 三档 + 观测点（canary-release）\n\n- **档 1（内部验证）**：白名单只放 `9001`（内测模板，配置与 1032 相同、同一张偏远省份表）。真实客户流量完全不受影响。\n  观测：档 1 后立即冒烟——按模板 9001 跑「新疆 3.2kg vip → 26」「广东 3.2kg → 18」两条需求句，逐条核对实算结果；同时看老路径四个黄金信号（p99 延迟、QPS、错误率、线程池占用）有无异常波动（新旧路径应基本持平，因为只加了 9001 的少量流量）。\n- **档 2（小流量放开真实模板）**：白名单加入 `1032`，或改用百分比（如 5%~10%，具体值等档 1 通过后再定）。\n  观测：抽样核对「1032 新疆 3.2kg vip → 26」「1032 广东 3.2kg → 18」两条需求句在真实流量下的计算结果；持续盯四个黄金信号，看是否随流量放大而出现异常。\n- **档 3（全量）**：开关改百分比 100% 或去掉白名单限制，全量切新路径。\n  观测：同两条需求句抽样核对 + 四个黄金信号，持续观察到指标稳定后收口。\n\n## 3. 冒烟\n\n用哪条例子：模板 9001（等价于 1032）跑「新疆 3.2kg vip」「广东 3.2kg」两个场景。\n期望：分别得到 26 和 18；若不等，说明偏远省份查表逻辑或分流本身有问题，档 1 不通过，不往下放。\n\n## 第 8 阶段门上的消息\n\n> **第 8 阶段门：放量方案**\n> - 回滚点：关配置中心开关 `remote_fee_by_province`（前提「老路径 diff 为零」已静态验，满足）。\n> - 档 1：白名单 `[9001]`，内部验证，观测窗口待定（建议冒烟通过 + 观察一段稳定时间）。冒烟：按 9001 跑「新疆 3.2kg vip→26」「广东 3.2kg→18」，加老路径四个黄金信号（p99 延迟/QPS/错误率/线程池占用）。\n> - 档 2：白名单加 `1032`（或改百分比，值待定），抽样核对同两条需求句 + 四个黄金信号。\n> - 档 3：开关调至 100%，全量后持续观察四个黄金信号至稳定，进第 9 阶段。\n> - 请主人定：**档 1 现在放不放、什么时候放**（回滚阈值、档 2 具体放量范围等细节，等档 1 结果出来再定）。\n\n档 1 由主人拨开关；结果出来后回来记录、再问档 2。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.1024466,
+            "judgeCostUsd": 0.008195999999999995,
+            "durationSeconds": 68,
+            "startedAt": "2026-09-19T09:10:01.952Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-L9WEp1\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "names-practices-and-stops",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "这是常规变更，发布类，从第 8 阶段进。\n\n工具和 `feature-toggle`、`canary-release` 两条实践 skill 在这个会话里都调不了，所以下面这步是照着 `rollout-observe` 的定义手动推一遍逻辑，不落地执行，推到第 8 阶段门上那条消息为止。\n\n**回滚点（feature-toggle）**\n回滚点就是开关 `remote_fee_by_province` 本身：关掉即退回老路径。这个安全，因为老路径 diff 已静态验为零——回滚不会引入新风险，只是撤回新增的偏远附加逻辑。\n\n**三档放量与观测点（canary-release）**\n开关同时支持白名单和百分比，顺势按风险从低到高分三档：\n\n- 档一・白名单：只放内部测试模板 9001。零客户风险。配置与 1032 相同、同一张偏远省份表，所以两条需求句换成 9001 验证等价：新疆 3.2kg vip → 26、广东 3.2kg → 18。这档主要看正确性，不看量。\n- 档二・小流量：模板 1032 按百分比放一小片（或先只放新疆、广东两个已有需求句覆盖的省份），观测窗口覆盖至少一个业务高峰，同时用两条需求句核对真实计费结果。\n- 档三・全量：模板 1032 百分比拨到 100%。\n\n每一档的观测指标复用老路径现成的四个监控：p99 延迟、QPS、错误率、线程池占用——只看新路径接入后这四个有没有恶化，加上前面提到的计费正确性核对。每档开关何时拨、拨到多少，由主人决定，我不代拨。\n\n**为什么不跳过这一阶段**\n多数改动直接跳过第 8 阶段，但这次改的是运费计算结果（涉及金额），且已经有现成的分流开关支持白名单/百分比，具备分档条件，所以按 canary-release 走而不是直接全量。\n\n---\n\n**第 8 阶段门上的消息**\n\n> 发布方案：回滚点是开关 `remote_fee_by_province`（关闭即回老路径，老路径 diff 已验零）。三档放量：① 白名单只放测试模板 9001，验两条需求句等价（新疆 vip 26 / 广东 18）；② 1032 小流量，同样两条需求句核对 + 四项老路径监控；③ 1032 全量，持续看同样四项监控。每档开关由你在配置中心拨，我不代拨。\n> 确认这个分档方案没问题的话，请先拨档一（白名单 9001）；要改分档方式（比如换成先按省份而不是先按模板量）也请说。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": false,
+                "weight": 1,
+                "explanation": "Skill called 0x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.0858246,
+            "judgeCostUsd": 0.008987999999999996,
+            "durationSeconds": 52,
+            "startedAt": "2026-09-19T09:10:45.783Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-btS1Rd\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "names-practices-and-stops",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "这是常规变更，发布类，从第 8 阶段（发布-观察）进。\n\n说明一下限制：本该先读 `flow` 定协议、再跑 `rollout-observe` 把这步的具体动作和阈值定下来，但两者这次会话都调不到，所以下面是按灰度发布（canary release）+ 功能开关（feature toggle）的业界通行做法，结合你给的上下文手工排的计划，不是从 skill 里读出来的——这一点先说清楚。\n\n**这一步要做的：**\n\n1. **白名单验证**（小范围、可控）\n   把两条需求句对应的场景，连同内测模板 9001（配置与 1032 相同、同一张偏远省份表）一起放进 `remote_fee_by_province` 白名单，开关打开，只跑这几条：\n   - 模板 1032／新疆／3.2kg／vip → 应得 26\n   - 模板 1032／广东／3.2kg → 应得 18\n   - 模板 9001 同两条输入 → 结果应与 1032 一致\n   三条都对上，才进下一步。老路径 diff 已静态验证为零，这一步验的是新表查值本身对不对，不是新旧路径一致性。\n\n2. **按比例放量**（percentage rollout）\n   白名单跑通后，开关切到百分比模式，分级放量：5% → 25% → 50% → 100%，每级设观察窗口（时间或样本量二选一，比如 30 分钟或满 N 次调用取先到者）。\n\n3. **每级观察的指标**\n   对比新旧路径的 p99 延迟、QPS、错误率、线程池占用这四项，因为老路径代码零 diff，新旧路径理论行为应一致，观察重点其实是查表带来的额外开销和潜在异常，不是结果对不对。需要先定基线（老路径过去 N 天的这四项数值），每级放量后新路径的数值与基线比不能劣化超过约定阈值——阈值这次没有可依据的 skill 给出默认值，需要你来定或从 `rollout-observe` 里拿。\n\n4. **回滚判据**\n   任一级观察窗口内四项指标超阈值，立即用同一个开关回退百分比或关掉，不做代码级回滚（因为老路径本来就没动）。\n\n5. **放量到 100% 后**\n   进入下一阶段前的收尾判断：开关是长期保留（作为常驻降级手段）还是清理，这个决定留给下一阶段处理，这一步不做。\n\n**第 8 阶段门上的消息：**\n\n> 发布-观察阶段计划：先用白名单跑通 3 条验收用例（1032/新疆/vip、1032/广东、9001 对照），通过后按 5%→25%→50%→100% 放量，每级对比新旧路径 p99/QPS/错误率/线程池占用与基线，超阈值即通过 `remote_fee_by_province` 回退。放量阈值和观察窗口时长未定（无 `rollout-observe` 具体参数可依据），需要你确认默认值或手动给出。是否按此计划执行，以及阈值怎么定？"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.0788606,
+            "judgeCostUsd": 0.008604000000000007,
+            "durationSeconds": 50,
+            "startedAt": "2026-09-19T09:10:55.872Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-YYqqB7\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "names-practices-and-stops",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "这是常规变更，发布类，从第 8 阶段（rollout-observe）进。\n\n工具在这个会话里不可用，`feature-toggle`、`canary-release` 这两条实践 skill 也没装，flow 本身也读不了——下面是按业界灰度发布（canary release）+ 特性开关（feature flag rollout）的通用做法口述到位，供你核对，不代表已经执行。\n\n**这一阶段要做的事：**\n\n1. **圈定灰度范围**：用配置中心的白名单先框一个可控范围，而不是直接放百分比。内部测试模板 9001 配置与线上模板 1032 相同、共用同一张偏远省份表，正好拿来当灰度对象——把 `remote_fee_by_province` 的白名单只加 9001，百分比维持 0，线上流量不受影响。\n\n2. **灰度组功能验证**：需求句的两条例子换成 9001 后仍然成立，是很好的验收用例：\n   - 9001 + 新疆 + 3.2kg + vip → 26\n   - 9001 + 广东 + 3.2kg → 18\n   在白名单生效后，实际跑这两条，确认命中新逻辑且结果对得上，而不是只看静态 diff。\n\n3. **老路径基线确认**：既然老路径 diff 已静态验证为零，p99 延迟、QPS、错误率、线程池占用这四项监控在开关打开后，未命中白名单的流量应该完全不变——这是这次灰度最容易验证、也最该先看的一项，如果这四项里任何一项在非灰度流量上出现漂移，说明改动有代码层面的旁路影响，问题比灰度本身更严重，直接回滚。\n\n4. **爬坡计划**：白名单跑穩后，再谈百分比放量，业界默认是小比例起步、分级爬坡（例如 1% → 5% → 25% → 100%），每级设观察窗口和明确的回滚阈值（通常挂在同样那四个指标上，各自定一个相对基线的容忍幅度）。这四个阈值具体定多少、观察窗口多长，需要你来定——这一步我还没做，留到你确认后再往下写。\n\n5. **回滚预案**：因为老路径改动为零，回滚就是把 `remote_fee_by_province` 关掉或清空白名单，是可瞬时撤销的操作，风险很低。\n\n**第 8 阶段门上的消息：**\n\n> 灰度方案已就绪：白名单接入模板 9001，两条需求句待验证（新疆 vip 26 元 / 广东 18 元），观察对象为老路径四项指标（p99 延迟、QPS、错误率、线程池占用）不应漂移。缺爬坡百分比梯度和各指标回滚阈值两项参数，需要你确认后才能实际执行灰度和观测。当前工具不可用，以上均为口述方案，尚未有任何实际操作发生。"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.1035826,
+            "judgeCostUsd": 0.009306000000000002,
+            "durationSeconds": 80,
+            "startedAt": "2026-09-19T09:11:10.201Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-mUYYzl\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "names-practices-and-stops",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "这是常规变更的第 8 阶段（发布），按 rollout-observe 走，不重新判型。\n\n这一步在业界叫 **渐进式发布 / progressive delivery**，具体落地方式是 **feature flag 分级放量（canary release via percentage rollout）**，配合 **白名单灰度（whitelist canary / dogfooding）** 做上线前的定点验证。这次改动天然适合走轻量版本，原因是：老路径 diff 为零已静态验证，意味着关掉开关就等于完全回到线上现状，回滚成本接近零；改动范围也窄（只影响运费里偏远附加这一项按省份查表的计算）。\n\n这一步要做的事：\n\n1. **白名单灰度**：先圈住内部测试模板 9001（与 1032 同配置、同一张偏远省份表），用配置中心的白名单能力打开 `remote_fee_by_province`，跑两条需求句的等价用例核对结果——9001 新疆 3.2kg vip → 26，9001 广东 3.2kg → 18。通过后，再对真实模板 1032 跑同样两条用例，确认线上结果一致。这一步不涉及真实流量，纯粹是\"开关生效 + 计算正确\"的定点验证。\n\n2. **百分比放量**：白名单验证通过后，按比例分级放量，每级设一个观察窗口，同时紧盯四个指标（p99 延迟、QPS、错误率、线程池占用），以老路径当前值作为基线做对比。\n\n3. **回滚触发条件**：任一指标相对基线明显异常（比如 p99 显著抬升、错误率上升、线程池占用异常拉高），立即在配置中心把开关调回 0%，无需碰代码——因为老路径本身零改动。\n\n4. 每一级放量、每一次异常判断、每一次回滚都要留操作记录（谁、什么时间、改了什么）。\n\n这些都是描述性的执行方案，目前会话里工具不可用，我还没有实际去配置中心操作。真正去改配置中心的开关，属于\"改动共享生产系统\"的动作，需要你确认后我才会给出具体操作指令。\n\n---\n\n**第 8 阶段门（发布 / rollout-observe）**\n\n放量节奏我推荐哪种，取决于你对这次改动风险的判断，给你三个选项：\n\n- **A. 快节奏（5% → 50% → 100%，两级，每级 15–30 分钟）**：适合改动影响面窄、回滚成本接近零的场景。这次符合——只影响偏远附加这一项计算，老路径零改动、开关一关秒回滚。\n- **B. 保守节奏（5% → 25% → 50% → 100%，四级，每级 30–60 分钟或覆盖一个业务高峰）**：业界默认（canary release 的常规做法），适合影响面广、或这条链路历史上出过问题的场景。\n- **C. 不分级，白名单验证通过后直接 100%**：只适合变更影响极小、且已有充分离线/白名单验证的场景。\n\n我倾向 A，因为回滚代价低、影响面窄；但如果这条运费计算链路历史上出过生产事故，或者你想更稳妥，B 更合适。你选哪种，还是要自定义节奏？"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 1,
+    "casesPassed": 0,
+    "overallScore": 0,
+    "overallPassRate": 0,
+    "meanDelta": 0
+  }
+}

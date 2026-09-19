@@ -1,0 +1,504 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:05:22.125Z",
+  "durationSeconds": 335,
+  "costUsd": 2.6241605,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as122-split-evidence\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "feature-toggle-*",
+    "threshold": 1,
+    "concurrency": 3,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as122-split-evidence\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "feature-toggle-rollback-plan",
+      "dir": "evals\\feature-toggle-rollback-plan",
+      "source": "prose",
+      "promptMarkdown": "按 `feature-toggle` 帮我定回滚方案。Bash 不可用，仓库文件也不在这个工作目录里。\n\n改动：运费计算加「偏远附加按省份查表」。legacy-change 那一步在 `FreightCalc.calc` 入口按「模板是否配了偏远省份表」分流，开关名 `remote_fee_by_province`，配置中心里能改。老路径的代码我只是抽了个方法，没动逻辑。\n\n我打算这样：上线后如果出问题，就 revert 那个 PR 再重新部署一次。你看行不行，给我一份回滚方案。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "rollback-is-toggle-off",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the rollback plan. PASS if all of these hold: (a) the rollback action is flipping `remote_fee_by_province` off, and the message says why that beats revert-and-redeploy (seconds, reversible, no window in which neither path is live); (b) it states the precondition that the old executable path is unchanged (diff zero) — and because the owner says they extracted a method, it requires that to be verified before relying on toggle-off (a static diff of the old path, or recorded samples replayed), instead of taking \"did not touch the logic\" on faith; (c) the toggle starts off and the owner flips it; the agent does not flip it.\n\nFAIL if it accepts revert-and-redeploy as the rollback, omits the diff-zero precondition, or has the agent operate the toggle.",
+          "config": {
+            "criteria": "Judge the rollback plan. PASS if all of these hold: (a) the rollback action is flipping `remote_fee_by_province` off, and the message says why that beats revert-and-redeploy (seconds, reversible, no window in which neither path is live); (b) it states the precondition that the old executable path is unchanged (diff zero) — and because the owner says they extracted a method, it requires that to be verified before relying on toggle-off (a static diff of the old path, or recorded samples replayed), instead of taking \"did not touch the logic\" on faith; (c) the toggle starts off and the owner flips it; the agent does not flip it.\n\nFAIL if it accepts revert-and-redeploy as the rollback, omits the diff-zero precondition, or has the agent operate the toggle.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "feature-toggle",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.17219800000000002,
+            "judgeCostUsd": 0.00972,
+            "durationSeconds": 58,
+            "startedAt": "2026-09-19T09:05:22.181Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Y9eSXe\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "rollback-is-toggle-off",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 `feature-toggle`（Pete Hodgson / Fowler 的 release toggle，配 strangler fig 的分流）给方案。先说结论：**你的 revert 方案不当主方案**，理由在下面第 2 条。\n\n先声明一件事实边界：我没看到仓库和 diff，下面凡是涉及「老路径没动」的部分都是按你的说法写的，未经我验证。\n\n## 回滚方案\n\n**1. 开关**\n- 名字：`remote_fee_by_province`，就是 `legacy-change` 在 `FreightCalc.calc` 入口按「模板是否配了偏远省份表」分流的那一个，位置在配置中心，初始状态：关。\n- 发布放量沿用这一个开关，白名单、百分比都挂在它上面。不要再加一个「发布开关」——两个开关有四种状态组合，出事时说不清该关哪个。\n\n**2. 回滚动作**\n- 一行：**主人**在配置中心把 `remote_fee_by_province` 关掉。秒级生效、可逆、不需要构建和部署。\n- 不用 revert PR 当主方案，原因是时间窗：revert 要走构建 + 部署，这段时间新路径已经撤了、老路径还没上，出问题的那类请求两头都不在，而且你实际的止血时间取决于流水线有多快。关开关是当场生效。\n- revert 只留作兜底，触发条件是「关了开关也没好」——那说明问题出在老路径也要走的共享代码（就是你抽出来的那个方法），已经不是分流能隔开的了。\n\n**3. 前提**\n- 关开关等于回到发布前，这个等式只在**老可执行路径的 diff 为零**时成立。你说只抽了个方法没动逻辑，但这一条必须验过才能写进方案，不能按说法采信。\n- 验法，二选一（够一个就行）：\n  - 静态看：只看老路径那条分支的 diff，确认抽出来的方法是逐字搬家 —— 控制流、异常类型、日志时机、可变变量的读写顺序都没变。\n  - 回放看：用 `record-replay` 在改动前录的样本，改后原样回放，老类别逐字节比对（这就是 `golden-master`）。\n- 验不过：先回 `legacy-change` 把老路径退回去，不要靠发布开关兜。\n\n**4. 谁拨**\n- 每一次拨开关都是**主人**动手。我只给方案，不改配置中心、不发公告。放量分几档、每档看什么，归 `canary-release`，这份方案不覆盖。\n\n**额外提一句（不在本实践范围内）**：关开关只止住后续请求，已经按新路径算出来的运费如果落到了订单上，关开关不会把它改回去。这类数据要不要修、怎么修，是另一件事，你要的话我单独出。\n\n## 一个问题\n\n具体例子：假设原来 `calc` 里那段算基础运费的代码中间有个 `if (template.isXxx()) return ZERO;`，抽成 `calcBase(...)` 之后，方法内的 `return` 只退出了 `calcBase`，外层 `calc` 会继续往下走 —— diff 上看起来就是一段代码整块搬走，读着像纯搬家，行为却变了。异常从 `calc` 里抛变成从 `calcBase` 里抛、日志里的方法名变了，也是同一类。\n\n所以问你：**老路径那段抽方法的 diff，你能贴给我看一眼吗？** 我看过之后把第 3 条的「验法与结果」填实，这份方案才算闭环。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.164226,
+            "judgeCostUsd": 0.009996000000000001,
+            "durationSeconds": 49,
+            "startedAt": "2026-09-19T09:05:22.181Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-vdycvx\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "rollback-is-toggle-off",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "我用的是特性开关（feature toggle，Pete Hodgson / Fowler），里面的发布开关（release toggle）一种。\n\n## 先回答「行不行」\n\n**不建议把 revert PR 当回滚方案。** 三个具体问题：\n\n1. **慢，且有真空期。** revert 要重新构建 + 部署，按常见流水线是分钟级；这段窗口里新路径已经出问题、老路径还没回来，两边都不在。关开关是秒级、进程内生效。\n2. **revert 掉之后回不去灰度。** 开关没了，想再上就得重新合、重新发一轮，前面放量攒的观察全作废。配置中心里 `remote_fee_by_province` 的那条配置还留着，下次部署带上新代码时它是什么状态得另外确认——多一个能踩的坑。\n3. **有一种故障 revert 才管用，恰好就是你要先排除的那种。** 如果 bug 在你抽出来的那个老路径方法里（抽方法时漏了一行、参数顺序变了），关开关**没用**——老路径本身已经被改坏了。这正是下面那条前提要验的东西。\n\nrevert 不是完全没位置：它是**回滚之后的清理手段**，不是回滚动作本身。\n\n## 回滚方案\n\n**开关**：`remote_fee_by_province`\n- 位置：配置中心\n- 分流点：`FreightCalc.calc` 入口，按「模板是否配了偏远省份表」分流\n- 初始状态：关\n- 全流程只有这一个开关，白名单、百分比都挂在它上面。不要再加「发布开关」——两个开关状态数翻倍，出事时说不清该关哪个。\n\n**回滚动作**：把 `remote_fee_by_province` 关掉。\n- 一步，不 revert 代码，不重新部署。\n- 关掉后所有请求走老路径，等价于发布前。\n- 谁拨：**主人**。我不改配置中心、不发公告。\n\n**触发条件**：任一放量档出现异常即关，不等定位原因。先关、再查。\n\n**前提（关开关等于回到发布前，只在这条成立时才对）**：老可执行路径 diff 为零。\n- 你说的是「只抽了个方法，没动逻辑」——按实践这条也要验，不是不信你，是这条前提塌了整个方案就塌了。\n- 验法一（静态）：看 PR 里老路径那部分的 diff，确认只有「整段代码平移进新方法 + 原地换成一次调用」，没有顺序、取整、空值、异常处理上的顺手改动。\n- 验法二（行为）：开关关着的状态下，用 `record-replay` 录的老路径样本回放，逐字节比对（`golden-master`）。\n- 验不过怎么办：先回 `legacy-change` 那一步，把老路径退回原样，再谈发布。\n- **当前状态：未验证。** 我读不到仓库文件（不在这个工作目录，Bash 也不可用）。\n\n**清理（不是回滚）**：开关全量放开、观察期过了之后，再删开关和老路径分支，走正常 PR。\n\n放量怎么分档、放开后看什么指标，属于 `canary-release`，这份方案里不含。\n\n---\n\n现在只差前提那一条没落实。比如：`FreightCalc.calc` 里原先直接算基础运费的那段，你抽成了一个私有方法——我想确认的是抽完之后每一步的顺序、`BigDecimal` 的取整方式、模板字段为 null 时的走向都和原来逐字一致。\n\n**能不能把那个 PR 里老路径相关文件的 diff 贴给我？** 或者告诉我仓库在本机的绝对路径，我直接读（只读，不改）。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.1891165,
+            "judgeCostUsd": 0.010259999999999998,
+            "durationSeconds": 54,
+            "startedAt": "2026-09-19T09:05:22.181Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-wZ3K14\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "rollback-is-toggle-off",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先回答「行不行」：**作为首选不行，作为兜底行。**\n\n你这个改动是 `legacy-change` 建了分流的，入口有开关能把请求挡回老路径 —— 按特性开关（feature toggle，Pete Hodgson / Humble & Farley《持续交付》）里的发布开关（release toggle）一条：**有分流开关时，回滚动作是关开关，不是 revert 代码。** 理由是速度和窗口期 —— 关开关秒级生效、随时可逆；revert PR 要重新构建、重新部署，中间几分钟到几十分钟里跑的是哪套逻辑说不准，而且这时候你手上已经没有开关可拨了。\n\n下面是方案。有一处我没法自己查，写在最后。\n\n## 回滚方案\n\n**开关**\n- 名字：`remote_fee_by_province`\n- 位置：配置中心\n- 初始状态：关。上线（部署）时它就是关的，所以「上线」本身不是风险点，**放量才是**；怎么分档放量、放开后看什么，走 `canary-release`，不在这份方案里。\n- 只有这一个。白名单、百分比都挂在它上面，不要再加第二个「发布开关」—— 状态数翻倍之后，出事时说不清该关哪个。\n\n**回滚动作（一行）**\n\n> 主人在配置中心把 `remote_fee_by_province` 关掉。\n\n任一档放量期间出现异常，动作就是这一条。不需要构建、不需要部署、不需要走发布流程。\n\n**前提**\n\n关开关等于回到发布前，这件事**只在老路径的可执行 diff 为零时成立**。你说「只抽了个方法，没动逻辑」—— 这条要验，不能按口头结论写进方案。验法两条，任一条过即可：\n\n1. 静态看 diff：抽方法（extract method）后，老路径应当只有代码位置移动，没有条件、顺序、取值的改动。重点看抽出来的方法有没有顺手改了入参默认值、提前 return、异常处理。\n2. 回放：按 `record-replay` 录的老类别样本，改前改后逐字节比对（`golden-master`）。\n\n**当前结果：未验。** 我这边 Bash 不可用、仓库文件也不在工作目录，拿不到 diff，所以这是一条待办，不是已观察的结论。验不过的话先回 `legacy-change` 把老路径退回去，再谈放量。\n\n**谁拨**\n\n每次拨开关都是**主人**。我给方案，不改配置中心、不发公告。\n\n**revert PR 放在哪**\n\n保留，作为兜底：**关掉开关之后问题没消失**时才用。那说明要么老路径被动过（前提不成立），要么问题根本不在分流里（比如启动期加载省份表就把内存打爆了）。走不走 revert + 重新部署，是主人的决定。\n\n---\n\n## 一个问题\n\n你说分流条件是「模板是否配了偏远省份表」，开关名又是配置中心里的 `remote_fee_by_province`。这两个听起来是两样东西。\n\n举个具体的：华东模板没配省份表，西北模板配了表。现在把配置中心的 `remote_fee_by_province` 关掉，然后来一条走西北模板的运费计算请求 ——\n\n**它走新路径还是老路径？**\n\n- 如果走老路径（代码是 `if (开关开 && 模板配了表)`），上面那份方案原样成立，一个开关管全部。\n- 如果还走新路径（代码只看模板有没有配表，配置中心那个开关管的是别的事），那你真正的回滚动作是「把 N 个模板的省份表逐个清掉」—— 不是秒级、不是一行、还可能删掉运营刚录好的数据。那样的话方案要重写，第一步是在入口把 `remote_fee_by_province` 加成与条件（AND）。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.27891350000000004,
+            "judgeCostUsd": 0.013074000000000002,
+            "durationSeconds": 107,
+            "startedAt": "2026-09-19T09:06:11.638Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-qEYRkQ\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "rollback-is-toggle-off",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`feature-toggle` 这个 skill 在当前环境里没装（我试着调了，返回 `Unknown skill: feature-toggle`），Glob 也被权限拦了，所以没法按它的步骤名逐条对。下面这份是按通用实践写的，`legacy-change` 那步我按你描述的理解来写——如果你们 skill 里有固定模板，名字对不上的话你告诉我，我再改。\n\n## 结论先说\n\n你的方案能用，但**顺序反了**。开关在配置中心能改，那关开关就是最快的回滚手段：秒级、不发版、不排 CI。`revert + 重新部署` 是第二层，只在「关了开关还不对」时才上。这条业界叫 **flag-first rollback / kill switch**——有开关的改动，回滚的第一动作永远是关开关，不是动代码。\n\n## 三层回滚\n\n| 层 | 动作 | 什么时候用 |\n|---|---|---|\n| L1 | 配置中心 `remote_fee_by_province` 置 off | 默认第一手段。运费算错、`calc` 抛异常、耗时飙升，都先关 |\n| L2 | revert PR + 重新部署 | 关了开关问题还在。说明故障点在分流判断之外 |\n| L3 | 订单运费数据修复 | 已经有订单按错运费下单/支付了 |\n\nL2 需要存在，是因为有几种情况关开关救不了：抽方法时把老逻辑改坏了、新代码在分流判断**之前**就执行了查表、静态初始化时就读了配置。你说「老路径只是抽了个方法，没动逻辑」——这句话要被验证，不是被相信。抽方法最常见的手滑是提取时动了 early return 或异常处理的语义，肉眼 review 看不出来。\n\n## 触发条件（上线前写死阈值，别临场拍）\n\n别等「感觉不对」。至少这几条，阈值按你们自己的基线填：\n\n- 偏远省份订单的平均运费，环比变化超过 ±X% → L1\n- `FreightCalc.calc` 异常率超过 X%（查表多半引入了 DB 或缓存调用，这是新增的失败点）→ L1\n- `calc` 耗时 P99 超过 X ms → L1\n- 「运费不对」类工单 N 小时内超过 M 单 → L1\n\n谁有权执行 L1，写进值班文档。这种秒级操作不该走审批。\n\n## L1 的前提：上线前必须演练一次\n\n这几条不验证，回滚方案就是纸面的：\n\n1. **预发演练关开关**，确认确实走回老路径。\n2. **确认配置是热生效还是要重启**。这决定 L1 是 10 秒还是 10 分钟。要重启的话 L1 相对 L2 的优势就只剩「不动代码」了，但仍然该排第一。\n3. **flag 默认值是 off**，且实例读不到配置中心时 fallback 也是 off（fail-safe default，失败时退回老逻辑）。新扩容的机器不能因为拉不到配置就走新路径。\n\n## L2 的两个坑\n\n**顺序不能反**：先关开关，再 revert。反过来的话，revert 后这个 key 没人读了，等你把代码重新部署上去，flag 还停在 ON，问题会「自动复发」。revert 完成后把 key 显式置 off 并留档。\n\n**revert 会把抽方法的重构一起带走**。所以建议：**现在就把 PR 拆成两个**——一个纯重构（抽方法），一个加新逻辑 + flag。这样 L2 只 revert 功能那个，重构留着，revert 干净、不容易冲突。这是 separate refactoring from behavior change 的做法，只要还没合并就来得及。\n\n## L3：回滚不会退钱\n\n运费一般在下单时就落在订单上了。关开关只影响之后的计算，**已经按新运费下的单不会自己变回去**。\n\n所以要**上线前**就准备好一条查询：时间窗内走了新路径的订单 + 新旧运费的差额。补不补差、补给谁、走什么流程，要产品和财务先定口径——别等出事了再讨论。这条查询要提前跑通，不是出事时现写。\n\n## 重新上线\n\n你这个分流条件天然就是灰度单位：按模板放量。先挑 1 个单量小的模板配表，观察几天，再扩。这是 progressive delivery 的常规做法，比一次性全开安全得多。\n\n稳定之后记得删分支和 key（flag debt cleanup），现在就定个日期，否则这个 if 会在代码里留三年。\n\n---\n\n一个地方我没看懂，想确认。假设模板 A 已经配好了偏远省份表，现在把 `remote_fee_by_province` 关掉：\n\n- **情况一**：代码是 `if (flag && 模板配了表) 走新路径`——模板 A 回到老路径，L1 一步到位。\n- **情况二**：代码是 `if (模板配了表) 走新路径`，flag 只控制「允不允许配表」——模板 A 已经配好了，关开关它照样走新路径，还得把表清掉。那 L1 就不是一步操作，回滚方案得重写。\n\n你那边是哪种？"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 6,
+            "costUsd": 0.25802749999999997,
+            "judgeCostUsd": 0.014939999999999998,
+            "durationSeconds": 92,
+            "startedAt": "2026-09-19T09:06:15.977Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-DSWa1q\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "rollback-is-toggle-off",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说一件事实：我在这个工作目录里没找到 `feature-toggle` 这个 skill（目录是空的，Skill 调用也报 `Unknown skill: feature-toggle`），代码也看不到。所以下面是我按通用发布实践给的方案，里面凡是涉及你们代码/部署的具体数字，我都标了「需你确认」。如果 `feature-toggle` 是你们内部的规范文档，你贴给我，我按它再对一遍。\n\n## 结论\n\n**可以，但不能只有这一条。** \"revert PR + 重新部署\" 应该是第三顺位的兜底，不是第一反应。\n\n理由：你已经花力气做了开关，开关的意义就是**把\"发布\"和\"生效\"拆开**（decouple deploy from release）。出问题时先关开关，几十秒止血；revert 是之后从容做的\"拆除动作\"，不是在事故里做的\"急救动作\"。在事故压力下走 revert + 部署，你要等 CI、等审核、等发布窗口，这段时间钱一直在算错。\n\n## 回滚阶梯（三级，按顺序用）\n\n**第一级 · 关开关（止血，秒级）**\n把 `remote_fee_by_province` 在配置中心置为 off，`FreightCalc.calc` 全量走老路径。这是主回滚手段。\n对应实践：kill switch / ops toggle（Martin Fowler 的 Feature Toggles 分类里的\"运维开关\"）。\n\n**第二级 · 缩小范围（如果只是部分场景坏了）**\n比如只有某几个模板、某几个省份算错，就只关那部分，别全关。\n对应实践：blast radius limitation（限制爆炸半径）。前提是开关支持按维度关 —— 这点需你确认。\n\n**第三级 · revert PR + 重新部署（拆除，你原来的方案）**\n只在这两种情况下用：① 开关关了但问题还在（说明 bug 在开关管不到的地方，比如那个抽方法的重构动了老路径）；② 确认这个功能短期不做了，要清理代码。\n执行时注意：先关开关、线上稳定之后再 revert，不要在事故中 revert。\n\n**revert 本身的两个坑（推断，需你确认）：**\n- 你抽的那个方法，如果这个 PR 之后已经有别的 PR 调用它或者改过它，revert 会冲突或者编译不过。合并前先看一眼这个方法的后续提交。\n- revert 只回滚代码，不回滚已经写进订单的运费数据。见下面第 4 条。\n\n## 让开关真的是开关（上线前必须验证的 4 条）\n\n这几条不验证，上面的第一级就是个摆设：\n\n1. **热生效**：配置中心改完，`FreightCalc.calc` 下一次调用就读到新值，不需要重启。如果开关值是启动时读一次缓存在内存里的，那\"关开关\"实际等于\"重启全部实例\"，速度和 revert 差不多。\n2. **默认关**：PR 合并、代码上线时开关是 off，上线和放量分两次做（dark launch）。这样万一上线就炸，你知道炸的不是新逻辑。\n3. **演练过一次**：在预发把开关开→关→开走一遍，确认两条路径都跑通；线上放量前在低峰期真的关一次。\n   对应实践：test your rollback path —— 没演练过的回滚方案不算方案。\n4. **谁能关**：值班的人有配置中心权限，不用找人审批。半夜出问题时这条最要命。\n\n## 什么时候拍板回滚\n\n上线前先定好触发条件和判定人，别等出事了现场讨论（对应实践：预设 rollback trigger / error budget）。建议至少这三条，具体阈值需你填：\n\n- `FreightCalc.calc` 的异常率或超时率超过基线 X%\n- 走新路径的订单，平均运费相对老路径偏离超过 X%（这条最能抓住\"没报错但算错了\"）\n- 客服侧运费相关工单 N 分钟内超过 X 单\n\n判定人：值班研发可以直接关，不用等产品同意 —— 关开关是可逆的，等待不是。\n\n## 别忘了钱已经写出去了（这条最容易漏）\n\n关开关只能停止**新**订单算错，已经用新逻辑算出运费并且下单、支付、发货的订单，改不回来。所以上线前要准备好：\n\n- **打标**：走新路径算出来的运费，在日志或者订单上留个可查的标记（比如算费明细里记 `remote_fee_by_province=true`）。没有这个标记，事后你没法把受影响订单捞出来。\n- **对账 SQL**：能按时间段 + 标记捞出所有受影响订单，并能重算老逻辑下的金额做差额。\n- **补救口径**：多收了怎么退、少收了认不认，提前和业务对齐，别事故当天现想。\n\n对应实践：把\"回滚代码\"和\"补救数据\"当成两件事分开规划，money-affecting change 一律要有 remediation plan。\n\n## 稳定之后\n\n设个清理期限（建议放量 100% 后 2～4 周），把开关和老路径一起删掉，别让它烂在代码里（toggle debt）。\n\n## 一个问题\n\n先看个具体例子：假设运营三天前已经给「华东标准模板」配好了偏远省份表，现在你把 `remote_fee_by_province` 关成 off，这时来一单发新疆的货 ——\n\n**`FreightCalc.calc` 入口的判断，到底是 `if (flag && template.hasRemoteTable())`，还是只有 `if (template.hasRemoteTable())`？**\n\n你描述里分流条件说的是\"模板是否配了偏远省份表\"，但开关名是 `remote_fee_by_province`，这是两个不同的条件。如果是后者（只看模板数据），那关开关根本关不掉新路径，唯一的回滚方式变成\"让运营去把每个模板的省份表删掉\"—— 又慢又是破坏性操作，整个第一级就没了，你原来的 revert 方案反而成了唯一手段。这个得先确认。"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 7,
+            "costUsd": 0.2696405,
+            "judgeCostUsd": 0.010985999999999996,
+            "durationSeconds": 92,
+            "startedAt": "2026-09-19T09:06:20.680Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-VvLTnw\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "rollback-is-toggle-off",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说一件事：我这儿没有 `feature-toggle` 这个 skill，我试着调了，返回 `Unknown skill: feature-toggle`；工作目录里也搜不到（仓库文件不在这儿，而且往上层目录搜被权限挡了）。所以下面这份方案是按通用做法写的，不是按你那份 skill 的步骤。你说的「legacy-change 那一步」我按字面理解成了「改老路径那一步」。如果那份 skill 有固定模板，把内容贴我，我按它重排。\n\n以下全部基于你的描述，我没看过代码。\n\n## 结论\n\nrevert PR 重新部署可以留着，但不该是第一手段。你已经有配置中心开关了，第一手段应该是**关开关**（kill switch），秒级、不发版。revert 是兜底。\n\n## 回滚分级\n\n**L0 关开关（首选）**\n配置中心 `remote_fee_by_province` 置 false，全量走回老路径。适用于：新逻辑算错、报错、变慢。\n\n**L0.5 单模板回滚（爆炸半径更小）**\n你的分流条件是「开关 AND 模板配了偏远省份表」，等于有两个闸。如果只是某一个模板的表配错了（比如把江苏配成偏远），清掉那个模板的省份表就行，其它模板继续跑新逻辑，不用全量退。\n\n**L1 改配置数据**\n省份表内容错了但代码没问题 —— 直接改表，不碰代码也不碰开关。\n\n**L2 revert PR 重新部署（兜底）**\n只在两种情况用：① 关了开关问题还在（说明是你抽方法那步引入的）；② 开关读取本身出问题。两个操作细节：revert commit 提前准备好并验证过，别等出事现写；上线到稳定期之间尽量别让别人动 `FreightCalc`，否则 revert 会冲突。\n\n## 回滚触发条件要提前写成数字\n\n别留成「看着不对就回」。上线前定好几条，值班的人照着执行：新老运费 diff 率超过 X%、`calc` 错误率比基线高 N 个点、P99 涨 N ms、「运费不对」工单 ≥2 单。这是 SLO-based rollback trigger 的做法。\n\n## 两件事关开关救不回来，得单独处理\n\n1. **抽方法那步的风险。** 你说没动逻辑，但关开关之后走的仍然是新代码里的老路径，不是今天线上跑的那份。所以「抽方法是行为等价的」必须是被验证过的，不能靠人眼。业界做法是 characterization tests（Michael Feathers）：拿线上真实订单样本，抽方法前后各跑一遍，逐条比金额。这条是 L0 能成立的前提。\n\n2. **已经按新逻辑算过并收了钱的订单。** 关开关只是止住新的，存量该退差价还得退。所以回滚方案里要有一步「圈定受影响订单」，口径是「开关开启的时间窗 ∩ 命中偏远省份表的模板」。这条 SQL 提前写好，别出事了现拼。\n\n## 上线前的准备清单\n\n- 开关默认值设成 false，配置中心读不到时走老路径（fail-static）\n- 日志里打上开关状态、模板 ID、算出来的附加费，出事能直接圈订单\n- 建议先 dark launch：开关 off 时也把新逻辑算一遍，只记日志不计费，跑一两天看 diff 再真开\n- 确认配置中心改完多久在所有实例生效；如果运费结果或模板配置有缓存，缓存 TTL 决定了 L0 的真实生效时间 —— 这个数要写进方案，必要时准备手动刷缓存的步骤\n- 稳定后删掉开关（flag cleanup），别留成永久分支\n\n## 问你一个\n\n比如退款重算运费、对账 job、购物车里的运费预估，这类场景在有些项目里不走 `calc` 入口，而是直接调内部方法或者另有一套算法。\n\n除了 `FreightCalc.calc`，还有别的地方会算运费吗？如果有，L0 就不是完整的 kill switch，方案结构得改。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 1
+      }
+    },
+    {
+      "name": "feature-toggle-second-toggle",
+      "dir": "evals\\feature-toggle-second-toggle",
+      "source": "prose",
+      "promptMarkdown": "按 `feature-toggle` 来。Bash 不可用，仓库文件也不在这个工作目录里。\n\n`FreightCalc.calc` 入口已经有分流开关 `remote_fee_by_province`（模板配了偏远省份表就走新路径），是 legacy-change 那步建的，配置中心支持白名单和百分比。现在要发布了，我想再加一个专门的发布开关 `remote_fee_release`，放量的时候拨它，分流开关保持原样。帮我把这个发布开关的设计写一下。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "reuse-routing-toggle",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether the agent kept one toggle. PASS if the agent says the existing routing toggle `remote_fee_by_province` is the release toggle — rolling out means widening the category it routes, using the whitelist and percentage of the config centre on that same toggle — and advises against adding `remote_fee_release`, with a reason (two toggles multiply the states to reason about and make rollback ambiguous). Asking the owner one question is fine.\n\nFAIL if the agent designs the second toggle as asked.",
+          "config": {
+            "criteria": "Judge whether the agent kept one toggle. PASS if the agent says the existing routing toggle `remote_fee_by_province` is the release toggle — rolling out means widening the category it routes, using the whitelist and percentage of the config centre on that same toggle — and advises against adding `remote_fee_release`, with a reason (two toggles multiply the states to reason about and make rollback ambiguous). Asking the owner one question is fine.\n\nFAIL if the agent designs the second toggle as asked.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "feature-toggle",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.16827550000000002,
+            "judgeCostUsd": 0.008454000000000003,
+            "durationSeconds": 48,
+            "startedAt": "2026-09-19T09:07:47.687Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-JyJGav\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "reuse-routing-toggle",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一条：按 `feature-toggle`（Pete Hodgson 的 release toggle + Fowler 的 strangler fig 分流），**分流开关就是发布开关**，不该再加第二个。你要的发布开关我不建议建，理由和替代方案在下面，完整的回滚方案我按一个开关写了。\n\n## 为什么不加 `remote_fee_release`\n\n两个开关就是四种状态，其中两种说不清：\n\n| `remote_fee_by_province` | `remote_fee_release` | 一条广东偏远件走哪条路 |\n|---|---|---|\n| 开 | 开 | 新路径 |\n| 关 | 关 | 老路径 |\n| 开 | 关 | ？被发布开关拦回老路径，还是已经走新的 |\n| 关 | 开 | ？ |\n\n真出事的场景：凌晨运费算错，值班的人看到两个开关，关了 `remote_fee_release` 没效果（因为实际拦截点在分流那一层），再去关分流开关——这中间几分钟就是钱。\n\n还有一个具体的坑：白名单和百分比现在挂在分流开关上。如果发布开关也配百分比，10% × 10% = 1%，实际放出去多少要算，放量时没人能一眼说准。\n\n**替代方案**：放量就是逐步放大 `remote_fee_by_province` 这一个开关的类别范围（白名单 → 百分比 → 全量），这正是你已经建好的能力。「分流」和「发布」在 strangler fig 里本来就是同一件事。\n\n## 回滚方案（按一个开关）\n\n- **开关名**：`remote_fee_by_province`，配置中心，初始**关**。\n- **放量载体**：白名单、百分比都挂这一个开关；`FreightCalc.calc` 入口的分流条件不动。\n- **回滚动作**：**关 `remote_fee_by_province`**。秒级、可逆。不写 revert——回滚代码要重新构建部署，那个窗口期里新老路径都不在。\n- **前提**：关开关等于回到发布前，只在老路径可执行 diff 为零时成立。\n- **验法**（我这边没法查，仓库不在这个工作目录、Bash 也不可用，这两项得你或下一步做）：\n  1. 静态看 `legacy-change` 那次提交里老路径的 diff，确认只有入口加了分流分支，老分支一行没动；\n  2. 或用 `record-replay` 录的老类别样本，开关关闭状态下回放，逐字节比对。\n  验不过先回 `legacy-change` 把老路径退回去，再谈发布。\n- **谁拨**：**主人**。每一档放量、每一次回滚都由你在配置中心拨，我不改配置、不发公告。\n\n放量分几档、每档停多久、放开后看什么信号，归 `canary-release`，这次没写。\n\n## 一个问题\n\n有没有这样一种情况：**模板配了偏远省份表，但你仍然不想让它走新路径**？比如某个大客户的模板已经配了表，你想单独把它排除在外。\n\n如果有，那第二个开关是真需求（但该做成分流开关上的黑名单，不是并联的第二个开关）；如果没有，我就按上面这份一个开关的方案交。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.1832405,
+            "judgeCostUsd": 0.008405999999999997,
+            "durationSeconds": 59,
+            "startedAt": "2026-09-19T09:07:52.999Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-lfDlbZ\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "reuse-routing-toggle",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "主人，先说结论：这个发布开关我建议不加，`remote_fee_by_province` 本身就是发布开关。这是 feature toggle（Hodgson / Fowler）里发布开关那一种的用法——`legacy-change` 建的分流开关按请求类别分新老路径，放量就是把这个类别逐步放大，所以它和发布开关是同一个东西。\n\n## 加了之后长什么样\n\n两个开关就是四种状态，中间两格没人说得清：\n\n| `remote_fee_by_province` | `remote_fee_release` | 走哪条路径 |\n|---|---|---|\n| 关 | 关 | 老 |\n| 开 | 关 | ？分流开了但没发布 |\n| 关 | 开 | ？发布了但不分流 |\n| 开 | 开 | 新 |\n\n更具体的一个坑：配置中心两个开关都支持百分比，分流开关拨到 10%、发布开关拨到 50%，实际落在新路径上的不是 50% 也不是 10%，是两次独立哈希的交集约 5%，而且除非两边用同一个哈希键，同一个模板这次命中、下次可能不命中——放量曲线就读不出来了。\n\n出事那一刻更麻烦：值班的人要判断关哪个。稳妥做法是两个都关，但那样放量到哪一档的信息也一起丢了，恢复时得从头来。\n\n## 回滚方案（单开关）\n\n- **开关名**：`remote_fee_by_province`，配在配置中心，初始关。白名单、百分比都挂在它身上。\n- **回滚动作**：关 `remote_fee_by_province`。不写 revert——回滚代码要重新构建部署，窗口期里新老路径都不在。\n- **前提**：关开关等于回到发布前，只在老可执行路径 diff 为零时成立。**这条我现在验不了**——仓库文件不在这个工作目录，Bash 也不可用。两个验法任选：静态看 `legacy-change` 那次提交里 `FreightCalc.calc` 老分支的 diff；或者用 `record-replay` 录的老类别样本回放、逐字节比对（golden master）。验不过就先回 `legacy-change` 把老路径退回原样，再谈发布。\n- **谁拨**：主人。每一档放量、每一次回滚，都是主人拨开关；我只给方案，不改配置、不发公告。\n\n放量分几档、每档停多久、放开后看什么，那是 `canary-release` 的事，等这个定了再走。\n\n## 一个问题\n\n你说「分流开关保持原样」，我想确认原样指的是哪种：\n\n- **(a)** 它现在是关的，你不想在放量期间拿它当放量旋钮，怕和「模板配没配偏远省份表」这个业务语义混在一起；\n- **(b)** 它已经开着、或者预期上线后一直开着（比如已经有模板配了表在跑），所以你需要另外一个能随时关掉的闸。\n\n如果是 (a)，一个开关够用，语义上它本来就是「这类请求走新算法」，不冲突。如果是 (b)，那问题不在开关数量，在于分流开关已经先于发布被打开了——那得先把它关回去，而不是在上面叠一个。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.17912999999999998,
+            "judgeCostUsd": 0.008832000000000007,
+            "durationSeconds": 60,
+            "startedAt": "2026-09-19T09:07:59.027Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-wr4B0w\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "reuse-routing-toggle",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "我先说一条冲突,再把方案写出来。\n\n## 冲突在哪\n\n`feature-toggle` 这条实践的第 1 步就是\"开关只有一个\":`legacy-change` 建的分流开关**就是**发布开关,白名单和百分比都挂在它上面。再加 `remote_fee_release` 会把状态数从 2 变成 4,回滚时说不清关哪个。\n\n具体一点。两个开关在一起,是这四种:\n\n| `remote_fee_by_province` | `remote_fee_release` | 实际走哪条路 |\n|---|---|---|\n| on(白名单含 A 商户) | on 10% | A 商户在不在那 10% 里? |\n| on(白名单含 A 商户) | off | A 商户的新路径没了 —— 那 `by_province` 的白名单还算数吗 |\n| off | on 100% | 全走老路径,放量拨了个寂寞 |\n| off | off | 老路径 |\n\n凌晨两点,偏远省份的运费算出来是负数,值班的人打开配置中心看到两个开关。他关 `remote_fee_release`,`by_province` 的白名单还在,那批白名单商户还在新路径上流血;他两个都关,明天要开回来时没人记得白名单原来放了谁。**回滚动作必须是一行,一行里只能有一个开关名。**\n\n## 回滚方案(单开关)\n\n- **开关名**:`remote_fee_by_province`\n- **在哪配**:配置中心(具体路径我这边看不到仓库,烦请你补一下)\n- **初始状态**:关(白名单空、百分比 0)\n- **回滚动作**:**关 `remote_fee_by_province`** —— 百分比归 0、白名单清空。不 revert 代码。代码回滚要重新构建部署,窗口期里新老路径都不在,比现在更糟。\n- **前提**:`FreightCalc.calc` 的老路径可执行 diff 为零 —— 关开关才等于回到发布前。\n- **前提验法**:**这条我还没验**,也验不了(Bash 不可用、仓库不在工作目录)。两个办法任选:① 静态看 `legacy-change` 那步 `FreightCalc.calc` 老路径分支的 diff,确认只有新增的 if 分流,没动原有计算;② 用 `record-replay` 录的老类别样本改后回放,逐字节比对。验不过的话先回 `legacy-change` 把老路径退干净,再谈发布。\n- **谁拨**:主人。每一档放量、每一次回滚,都是你拨配置中心,我不碰。\n\n放量分几档、每档停多久、放开后看哪几个信号,归 `canary-release`,这里不展开。\n\n## 我想问你一题\n\n你说\"分流开关保持原样\"——是下面哪种?\n\n**(a)** `remote_fee_by_province` 现在已经在跑了,比如 `legacy-change` 阶段放了两三个内部测试模板进白名单,你不想在放量时动这批人的配置;\n\n**(b)** 它现在还是关的,你只是想让\"哪类请求走新路径\"和\"放多少量\"这两件事在配置中心上分开看、分开审。\n\n如果是 (a),正解不是加开关,是把那批测试模板留在白名单里、百分比从 0 往上拨 —— 白名单和百分比本来就是并集,互不影响。如果是 (b),那是配置中心的展示问题,不该用运行时状态去换。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.24449800000000002,
+            "judgeCostUsd": 0.014154,
+            "durationSeconds": 105,
+            "startedAt": "2026-09-19T09:08:35.364Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-faVRTH\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "reuse-routing-toggle",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说两件我实际查到的情况（观察结果，不是推断）：\n\n1. 当前会话里**没有** `feature-toggle` 这个 skill，可用列表里也没有 `legacy-change`。我没法加载你们的规范，下面按通用实践写。\n2. 工作目录 `cwd` 是空的，仓库文件确实不在,Bash 也不可用 —— 所以下面的代码部分是基于你描述的伪代码，不是照着 `FreightCalc.calc` 实际代码写的。\n\n一个顾虑，说完就照你的要求做：同一条路径串两个开关会变成 4 种状态组合，其中 3 种语义模糊，事故时容易犹豫该拨哪个。Fowler / Pete Hodgson 的 Feature Toggles 一文建议同一处只保留一个**决策点（single decision point）**。不过你说的场景是合理的——分流开关是 legacy-change 那步的产物、有自己的生命周期，不该被发布节奏绑架。所以下面用「职责切分」的方式来消掉这个歧义。\n\n---\n\n## `remote_fee_release` 设计\n\n### 1. 类型与职责切分\n\n| 开关 | 类型 | 回答的问题 | 生命周期 |\n|---|---|---|---|\n| `remote_fee_by_province` | 已有，保持原样 | **有没有资格**走新路径（模板配了偏远省份表） | 跟 legacy-change 走 |\n| `remote_fee_release` | Release Toggle | **放不放量**给这一单 | 短命，100% 稳定后删 |\n\n取值关系固定为与（AND），写死不给第二种解释：\n\n```\nuseNewPath = remote_fee_by_province(ctx) && remote_fee_release(ctx)\n```\n\n关键约定：`remote_fee_release = true` **不能**越过资格判定。没配偏远省份表的模板，开关拨到 100% 也走 legacy。\n\n### 2. 求值点：入口一次，向下传递\n\n在 `FreightCalc.calc` 入口求值一次，结果塞进 context/局部变量，调用链里不再二次读配置中心。\n\n理由：配置中心一般是轮询刷新，一次 calc 里读两次可能拿到不同值，出现半新半旧的运费。这是 toggle point 和 decision point 分离的做法。\n\n### 3. 默认值与降级\n\n- 默认 `false`。\n- 配置中心读不到 / 超时 / 反序列化失败 → 一律按 `false`，走 legacy，**不抛异常**。\n- 理由:fail-safe 到已知行为。运费算错是钱的问题,宁可少个新功能。\n\n注意一个坑:别长期把 `default=false` 当隐性回滚手段。放到 100% 稳定后要先删开关,而不是把默认值翻成 `true` 然后忘了。\n\n### 4. 回滚动作（写进发布预案）\n\n事故时**只拨 `remote_fee_release` → 0%**,`remote_fee_by_province` 一律不动。单一动作、可演练。\n\n需要向配置中心确认一个数:从改配置到所有实例生效的最长时间(建议要到 ≤30s 的承诺),这个数要写进预案,否则\"已回滚\"和\"实际停止\"之间有盲区。\n\n### 5. 放量阶梯\n\n`0% → 内部白名单 → 1% → 5% → 25% → 50% → 100%`\n\n白名单用 `remote_fee_release` **自己的**,不要复用分流开关的白名单——否则回滚时两个开关的人群会错位。\n\n每档观察:\n- 新旧路径运费差额分布(P50 / P99、差额超阈值的单量占比)\n- `calc` 异常率\n- `calc` 耗时\n\n### 6. 可观测性(这条不做,放量期间出问题没法归因)\n\n每次 `calc` 落一条结构化日志/埋点,带上:\n\n```\nremote_fee_by_province = true|false\nremote_fee_release     = true|false\nbucket_key             = <分桶键的值>\nhit_reason             = whitelist | percentage | default | degraded\npath                   = new | legacy\n```\n\n`hit_reason` 里的 `degraded` 单独标出来,用来区分\"命中了 0%\"和\"配置中心挂了\",这两种都表现为走 legacy,但含义完全不同。\n\n另外建议:1% 之前先做一段 **dark launch**(双跑新旧路径、只用旧结果、异步对比差异)。性价比很高,能在真实流量上把差异摸清楚,而不用承担算错的风险。\n\n### 7. 测试要覆盖的组合\n\n```\n(by_province=true,  release=true)  → new\n(by_province=true,  release=false) → legacy\n(by_province=false, release=true)  → legacy   # 这条必须断言,防止有人以为发布开关能越权\n(by_province=false, release=false) → legacy\n```\n\n### 8. 清理\n\n在开关描述字段里写死过期日期,同时建一张 removal ticket。100% 稳定 N 天后,删 `remote_fee_release` 和 legacy 分支;`remote_fee_by_province` 按它自己的节奏处理,不跟着一起删。这是 Fowler 说的给 toggle 设 expiry、控制 toggle debt。\n\n---\n\n## 我需要你定一件事:百分比放量按什么分桶?\n\n举个具体的:假设分桶键用**订单号**,商家 A 今天下 10 单,在 5% 这档可能有 1 单走了新路径、9 单走旧的。这个商家会看到同样的偏远省份、同样的重量,两单运费不一样,大概率直接来投诉,而且客服查不出原因。\n\n如果分桶键用**商家 ID**(或模板 ID),同一个商家在整个放量期间要么一直新、要么一直旧,对外一致。代价是放量粒度粗一些,1% 那档可能只覆盖到很少的商家。\n\n`remote_fee_release` 的百分比,你想按订单号、商家/租户 ID,还是模板 ID 来分桶?"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.23531849999999999,
+            "judgeCostUsd": 0.013578000000000007,
+            "durationSeconds": 94,
+            "startedAt": "2026-09-19T09:08:51.784Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-8prKCZ\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "reuse-routing-toggle",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "开头两个事实，都跟这次能交付的东西有关：\n\n1. 这个会话里可用的 skill 列表没有 `feature-toggle`（也没有你提到的 `legacy-change`）。所以我**没有**按那个 skill 走，下面是按通用实践写的，每条我标了英文名。如果它是你们项目里的 skill，这次没被加载进来。\n2. Bash 不可用、仓库也不在这个目录，我没读到 `FreightCalc.calc` 的真实代码。下面的代码形状是按你的描述推的，落地时对着真代码改。\n\n## 先说一个风险\n\n两个开关叠在同一条路径上，状态组合是 4 个（combinatorial explosion）。更麻烦的是：`remote_fee_by_province` 本身就支持百分比，`remote_fee_release` 也要支持百分比，两套独立哈希叠在一起，实际放量是 p1 × p2，而且这个交集你事后没法回答\"现在到底放了多少量\"。\n\n所以下面的设计把**放量旋钮收敛到一个**（single source of rollout），另一个降级成纯能力判断。这和你说的\"分流开关保持原样\"可能有点冲突，我在最后问了。\n\n## 1. 职责划分\n\n| 开关 | 回答的问题 | 类别 | 寿命 |\n|---|---|---|---|\n| `remote_fee_by_province` | 这个模板配了偏远省份表吗，**允不允许**走新算法 | 能力/配置形状判断 | 长期 |\n| `remote_fee_release` | 这次发布，这笔单子**准不准**用新算法 | Release Toggle | 短命，放完量就删 |\n\nRelease Toggle 是 Pete Hodgson 那套分类（Release / Experiment / Ops / Permissioning Toggles）里的第一类，定义上就是短命的、发布完就该删的。你新加的这个正好是它。\n\n## 2. 求值顺序和真值表\n\nrelease 在外层，短路求值：\n\n| `remote_fee_by_province` | `remote_fee_release` | 走哪条 |\n|---|---|---|\n| off | 任意 | 老路径 |\n| on | off | 老路径 |\n| on | on，未命中百分比/白名单 | 老路径 |\n| on | on，命中 | **新路径** |\n\n只有一格走新路径。意味着 `remote_fee_release` = off 时，线上行为和放量前**逐字节一致**，代码可以先合主干、先上线（trunk-based development），不用等放量窗口。\n\n## 3. 默认值和失败方向\n\n- 默认 off。\n- 配置中心拿不到、超时、解析失败 → 一律落老路径（fail to legacy）。\n\n这是 kill switch 的基本要求：出事拨回 off 要立刻生效，不能依赖发版，也不能依赖配置中心是健康的。\n\n## 4. 分桶键要粘（sticky bucketing）\n\n运费场景特有的坑：同一笔订单在下单页、提交订单、支付、售后会多次计价。如果按随机数或 requestId 分桶，同一单会在两条路径之间跳，用户直接看到运费变化。\n\n必须用稳定键做一致性哈希：有订单号用订单号，下单前用购物车 id / 用户 id。同一个哈希函数、同一个 salt，全链路统一。\n\n## 5. 开关点只有一个\n\n只在 `FreightCalc.calc` 入口判一次，结果往下传，子方法里不再读开关（避免 toggle point scattering）。同一次计价内只读一次配置快照 —— 否则配置中心中途推送变更，一次计算里会混用两条路径的中间结果。\n\n```\n// 语言按你们实际的改\ndecision = resolveRemoteFeeDecision(ctx)   // 入口唯一判定点\n  ├─ if !byProvinceEnabled(template) → LEGACY (reason: NO_REMOTE_TABLE)\n  ├─ if !releaseToggle.isOn()        → LEGACY (reason: RELEASE_OFF)\n  ├─ if !releaseToggle.hit(stableKey) → LEGACY (reason: NOT_BUCKETED)\n  └─ else                            → NEW\n```\n\n## 6. 可观测性\n\n埋点带上 `decision` 和 `reason`（上面四个枚举值）。没有 reason，放量时看到指标波动没法归因 —— 分不清是\"没命中桶\"还是\"模板没偏远表\"。\n\n可选：shadow mode（dark launch）—— 两条路径都算，只返回老路径结果，差异落日志。放量前跑一周能提前捞出算错的模板，代价是一次多余计算。运费计算通常不重，值得。\n\n## 7. 下线计划\n\n现在就建 ticket，写死日期，别等放完量再说（toggle debt / toggle retirement）。顺序：放量 100% → 稳定观察 N 天 → 删 `remote_fee_release` 和老路径分支 → 再单独评估 `remote_fee_by_province` 的去留。\n\n---\n\n一个问题：`remote_fee_by_province` 现在在配置中心里实际配的是什么？\n\n比如是这两种里的哪种 ——\n- **A**：百分比已经拨到 100%、白名单空着，实际分流完全靠\"模板有没有配偏远表\"；\n- **B**：还挂着白名单或者部分百分比（比如 30%）。\n\n如果是 A，上面的设计直接成立，`remote_fee_by_province` 天然就是纯能力判断，你说的\"保持原样\"没问题。如果是 B，那就是两个开关同时在放量，得先把它拨到 100% 才能让 `remote_fee_release` 成为唯一旋钮 —— 这一步会动到分流开关。"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.281576,
+            "judgeCostUsd": 0.015018000000000031,
+            "durationSeconds": 118,
+            "startedAt": "2026-09-19T09:08:58.874Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-eJx0E9\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "reuse-routing-toggle",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`feature-toggle` 这个 skill 在当前环境里不存在（已确认：skill 列表里没有，cwd 下也没有 `.claude/` 或同名文件）。我按业界通行做法来写，用的是 Pete Hodgson 的 feature toggle 分类（Release Toggle / Ops Toggle，martinfowler.com），下面每条都标了名字。\n\n先说一个顾虑，然后照你的要求完整写：`remote_fee_by_province` 本身已经支持白名单和百分比，再加一个 `remote_fee_release`，同一条路径上就有两个能拨的旋钮、四种状态组合。我的建议不是取消新开关，而是放量期间把 `remote_fee_by_province` 钉死（见最后的问题），让\"能放量的旋钮\"始终只有一个。\n\n---\n\n## 一、两个开关的职责切分（single responsibility）\n\n| 开关 | 类型 | 回答的问题 | 生命周期 |\n|---|---|---|---|\n| `remote_fee_by_province` | 分流开关，长期存在 | 这个模板**该不该**走省份运费算法 | 长期，随业务留着 |\n| `remote_fee_release` | **Release Toggle** | 新算法现在**允不允许**生效 | 短期，放量完就删 |\n\n一句话：分流开关回答\"是谁\"，发布开关回答\"现在行不行\"。发布开关不做业务判断，只做总闸。\n\n## 二、求值位置和语义：AND，发布开关短路优先\n\n保持 `FreightCalc.calc` 入口**只有一个判断点**，不要在下游再散落判断：\n\n```java\nboolean useNewPath =\n        toggles.isOn(\"remote_fee_release\", ctx)      // 总闸，先短路\n     && toggles.isOn(\"remote_fee_by_province\", ctx); // 原有分流，逻辑不动\n```\n\n真值表（四种组合必须有明确答案，不留\"看情况\"）：\n\n| `remote_fee_release` | `remote_fee_by_province` | 结果 |\n|---|---|---|\n| off | off | legacy |\n| off | on | **legacy**（总闸压住分流） |\n| on | off | legacy |\n| on | on | 新路径 |\n\n关键约束：`remote_fee_release = off` 时，系统行为必须和这次上线之前**逐字节一致**。这是回滚能生效的前提。\n\n## 三、求值一次，全程携带（consistent evaluation）\n\n运费场景这条特别要紧：同一个订单先估价、后下单、再对账，如果三次求值落到不同分桶，会出现\"估价 ≠ 实收\"的客诉。\n\n- 在请求入口求值一次，把结果放进计算 context 往下传，**不要**在 calc 内部反复问配置中心。\n- 百分比分桶的 hash key 用稳定标识（`tenant_id` 或 `template_id`，不要用时间戳、不要用 random）。同一租户今天在桶内、明天还在桶内。\n- 已生成的订单按落单时记录的路径重算，不重新求值。\n\n## 四、失败默认关（fail-safe default）\n\n- 配置中心超时、不可达、返回脏数据 → 一律当 off，走 legacy。\n- 默认值硬编码在代码里，不依赖远端下发。\n- 求值整体包 try/catch，异常即 off。运费算错的代价远大于晚点放量。\n\n## 五、放量步骤（progressive delivery）\n\n1. **代码先合并、开关先关**（dark launch，发布与上线解耦）。上线后确认线上零行为变化。\n2. 内部白名单：自己的测试租户 + 1～2 个愿意配合的模板。\n3. 百分比：1% → 5% → 25% → 50% → 100%，每档至少观察一个完整业务周期（含晚高峰）。\n4. 每档的放行指标定死在拨之前，不要事后找理由：\n   - 新旧路径运费差异率 / 差异金额分布\n   - `calc` 异常率\n   - `calc` P99 耗时\n   - 偏远省份相关客诉数\n5. 回滚就是拨回 off，不发版。前提是 legacy 分支在开关删除前**不许被重构或删掉**。\n\n## 六、可观测性\n\n每次 `calc` 打一条结构化日志，随订单号落库：开关名、取到的值、命中原因（白名单命中 / 百分比分桶 / 默认值兜底）、最终走的路径、算出的金额。对账时要能回答\"这单当时到底走的哪条\"——没有这个，放量到 25% 出现金额争议时你会完全抓瞎。\n\n## 七、测试策略（避免组合爆炸）\n\nCI 只跑两条：`release=on` 全开、`release=off` 全关。**不要**为四种组合各写一套用例——Hodgson 的建议是只测\"当前生产配置\"和\"下一个生产配置\"两种。分流开关的组合行为由上面的真值表用一个单测覆盖即可。\n\n## 八、下线（toggle debt）\n\n建开关时就登记：owner、创建日 2026-09-19、**预计下线日**（建议 +30 天）、关联需求号。100% 稳定满两周后，同一个 PR 里删掉 `remote_fee_release` 的判断、删掉 legacy 分支、删掉配置中心的项。`remote_fee_by_province` 留着不动。\n\n## 九、可选：影子双跑（shadow run）\n\n如果 `calc` 是纯计算、没有副作用、耗时可接受，可以把 `remote_fee_release` 做成三态 `off / shadow / on`：`shadow` 时两条路径都跑，采用 legacy 结果，只把差异打点上报。这样在真正放量前就能拿到全量的差异分布。代价是多一档状态要测，你可以权衡。\n\n---\n\n举个具体例子：假设租户 A 的模板配了省份表，而 `remote_fee_by_province` 现在是 30% 灰度。我把 `remote_fee_release` 拨到 100%，A 实际只有 30% 的单走新路径——你以为的\"全量\"其实是 30%，指标也会被稀释得看不出问题。\n\n所以想确认一件事：放量期间，`remote_fee_by_province` 能不能先拨到 100%（或者白名单全覆盖）当常量用，让唯一会动的旋钮是 `remote_fee_release`？还是说它现在就有一批线上租户处在灰度中、不能动？"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 1
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 2,
+    "casesPassed": 2,
+    "overallScore": 1,
+    "overallPassRate": 1,
+    "meanDelta": 1
+  }
+}

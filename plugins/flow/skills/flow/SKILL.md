@@ -40,7 +40,7 @@ issue、票、PR 开场时说完就动：先说开场那一句（形状由常驻
 | 5 实现 | 动手前确认接缝 | 测试与实现的 commit | `/implement`（主人敲，内含 `tdd`）；产出是一条自建 skill 时按 `skill-authoring` 走 |
 | 6 验证与审查 | 违例修不修、审查认不认 | 命令输出、审查报告、修正 commit | `verify-evidence`（每条声称配命令、退出码、关键行）；`code-review`；`review-response`（逐条核实、整份报主人、主人定了再改） |
 | 7 收尾 | 开 PR 还是放着；合由主人做 | PR，或放着的分支 | `wrap-up`（PR 正文四节、站会记录、挂起物，只问一句推不推；合并由主人做） |
-| 8 发布 | 灰度三档、回滚点 | 观测点与线上比对 | 多数改动跳过；要发布时 `release-observe` |
+| 8 发布 | 灰度三档、回滚点 | 观测点与线上比对 | 多数改动跳过；要发布时 `rollout-observe` |
 | 9 落家与交接 | 无门，随时 | 工作日志、裁决、耐用结论、交接文档 | `note`（沉淀）、工作日志（没有 issue 的外部变更）、`/handoff`（主人敲）、站会记录 |
 
 规矩：
@@ -62,9 +62,9 @@ issue、票、PR 开场时说完就动：先说开场那一句（形状由常驻
 
 ### 改旧代码时才开的活动
 
-八条：`requirement-insight`（需求收口成验收判据）、`requirement-translation`（EARS 一句一例）、`architecture-design`（两候选攻防）、`system-analysis`（一个决定查一个数）、`legacy-change`（特征化测试加萌芽）、`evidence-regression`（母版逐字节比）、`integration`（列边界定顺序）、`release-observe`（放量三档加观测点）。
+八条：`requirement-insight`（需求收口成验收判据）、`requirement-translation`（EARS 一句一例）、`architecture-design`（两候选攻防）、`system-analysis`（一个决定查一个数）、`legacy-change`（特征化测试加萌芽）、`regression-evidence`（录母版、回放逐字节比）、`integration`（列边界定顺序）、`rollout-observe`（放量三档加观测点）。
 
-按缺口挑（wiki《方法论模型》表三的四个关注点）：拆——需求不清 → `requirement-insight`、`requirement-translation`；方案——两条路要比 → `architecture-design`、`system-analysis`；做——旧行为没有测试、要改的地方牵连广 → `legacy-change`、`integration`；证——改完要证明没变 → `evidence-regression`、`release-observe`。
+按缺口挑（wiki《方法论模型》表三的四个关注点）：拆——需求不清 → `requirement-insight`、`requirement-translation`；方案——两条路要比 → `architecture-design`、`system-analysis`；做——旧行为没有测试、要改的地方牵连广 → `legacy-change`、`integration`；证——改完要证明没变 → `regression-evidence`、`rollout-observe`。
 
 在进第 4 阶段的门上列出（见 gate-message.md 的第二个例子），和 worktree、基线一起给主人，主人说行时一并定。判据 agent 自己查：有没有测试、改动牵连几处。从零新建的写一句「从零新建，不开改旧代码的活动」，一个都不开。
 

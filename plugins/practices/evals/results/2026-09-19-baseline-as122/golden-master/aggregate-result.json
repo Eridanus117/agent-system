@@ -1,0 +1,248 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T08:57:55.706Z",
+  "durationSeconds": 288,
+  "costUsd": 1.4547955000000001,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as122-split-evidence\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "golden-master-*",
+    "threshold": 1,
+    "concurrency": 2,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as122-split-evidence\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "golden-master-post-change-capture",
+      "dir": "evals\\golden-master-post-change-capture",
+      "source": "prose",
+      "promptMarkdown": "按 `golden-master` 来。Bash 不可用，仓库文件也不在这个工作目录里。\n\n`FreightCalc.calc` 的「偏远附加按省份查表」已经改完并合到我的分支了，分流开关 `remote_fee_by_province` 还关着。改之前忘了录母版。我打算现在跑一遍当前分支，把 calc 对那几条老请求的输出存成 approved 文件锁住，以后回归就比它。你直接把 approved 文件的内容和布局给我就行——老请求是模板 1032 广东 3.2kg、模板 2001 北京 0.8kg 货到付款。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "refuses-post-change-master",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether the agent protected the meaning of the master. PASS if the agent does not invent approved file contents (no made-up fee numbers for 广东 or 北京-cod), explains that a master must come from behaviour before the change, and gives a legitimate source: with the toggle off, the current branch is only equivalent to pre-change if the diff of the old executable path is zero — so verify that (a static diff of the old path, or record from the pre-change commit / old build) and label the recording as pre-change-equivalent; then record via record-replay before any approved file is written. Asking the owner one question about this is fine.\n\nFAIL if the agent writes out approved contents from the changed branch as if they were the master, or says \"just record now\" without the diff-zero precondition, or fabricates the numbers.",
+          "config": {
+            "criteria": "Judge whether the agent protected the meaning of the master. PASS if the agent does not invent approved file contents (no made-up fee numbers for 广东 or 北京-cod), explains that a master must come from behaviour before the change, and gives a legitimate source: with the toggle off, the current branch is only equivalent to pre-change if the diff of the old executable path is zero — so verify that (a static diff of the old path, or record from the pre-change commit / old build) and label the recording as pre-change-equivalent; then record via record-replay before any approved file is written. Asking the owner one question about this is fine.\n\nFAIL if the agent writes out approved contents from the changed branch as if they were the master, or says \"just record now\" without the diff-zero precondition, or fabricates the numbers.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "golden-master",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.23258350000000003,
+            "judgeCostUsd": 0.015882,
+            "durationSeconds": 83,
+            "startedAt": "2026-09-19T08:57:55.782Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-ZxAyyY\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "refuses-post-change-master",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "技能文件目前是占位（内容只有「占位」两个字），所以下面按 golden master / approval testing 的标准做法来，不是照着仓内的具体约定。\n\n先说一件必须先说的：**approved 文件的内容我给不了。**\n\n母版的全部价值在于它是真机跑出来的字节，不是谁推出来的。我没有 Bash、仓库文件也不在这个目录，`FreightCalc.calc` 的返回结构、字段名、金额我一个都没看到。我要是把数字填进去，你锁住的就不是「改动前的行为」，而是我编的行为——以后回归全绿，但绿得毫无意义，而且这种错骗过去之后很难发现。所以我给你**布局 + 文件骨架 + 回放测试的形状**，内容留成明确的洞，你跑一遍填进去（或者让测试第一次跑时自动生成 `.received` 再改名）。\n\n另外有个前提得先立住：\n\n**母版要的是「改动前」的行为，你现在跑的是改动后的分支。** 这事能救，靠的是 `remote_fee_by_province` 还关着——开关关时走老路径，老路径行为 = 改动前行为。但这个等式成立有个硬前提：**老路径的代码 diff 为零**。如果这次为了插分流点顺手动了老路径（抽了个方法、改了下取整、挪了个字段顺序），那现在跑出来的就已经不是母版了，是「改动后碰巧长得像母版」。这条是 feature toggle 那套的前提（Hodgson/Fowler），golden master 这里直接继承。\n\n## 布局\n\n```\nsrc/test/resources/goldenmaster/freightcalc/\n  legacy/                                    ← 老类别：开关关，比母版\n    1032_guangdong_3.2kg.approved.txt\n    2001_beijing_0.8kg_cod.approved.txt\n  by_province/                               ← 新类别：开关开，比需求例子的期望值\n    README.md                                ← 写明这里不是母版，是人算的期望值\n  README.md                                  ← 记录出处：哪个分支、哪个 commit、开关什么状态\n```\n\n两点说明：\n\n- **老类别和新类别分两个目录，不混。** 老类别的判据是「和以前一模一样」，新类别的判据是「符合需求例子」，性质不同，混在一起早晚有人拿新路径的期望值当母版用。你现在这两条请求都在 `legacy/`。\n- **出处写在 `README.md`，不写进 approved 文件。** 因为 commit sha、录制时间这类东西一旦进了被比对的文件，每次回放生成的 `.received` 都会跟它对不上。\n\n命名用 ApprovalTests 的惯例：`.approved.txt` 是母版，回放时生成同名 `.received.txt`，不一致就把 `.received` 留在磁盘上给你 diff，一致就删掉。\n\n## 文件骨架\n\n`legacy/1032_guangdong_3.2kg.approved.txt`：\n\n```\n=== request ===\ntemplateId: 1032\nprovince: 广东\nweightKg: 3.200\npayMethod: PREPAID\n\n=== response ===\n<字段名>: <值>\n<字段名>: <值>\n...\n\n=== end ===\n```\n\n`legacy/2001_beijing_0.8kg_cod.approved.txt`：\n\n```\n=== request ===\ntemplateId: 2001\nprovince: 北京\nweightKg: 0.800\npayMethod: COD\ncodAmount: <金额>\n\n=== response ===\n<字段名>: <值>\n...\n\n=== end ===\n```\n\n填内容时的几条规矩：\n\n| 规矩 | 为什么 |\n|---|---|\n| **把 `calc` 返回的所有字段都写进去**，不只是运费总额 | 母版的本事就是抓你没想到要断言的字段。只存总额，等于把它降级成一条普通断言 |\n| 一行一个字段，字段顺序固定 | diff 能直接指到出问题的那个字段，不是甩你一坨 JSON |\n| 把请求也原样抄进去 | 光看文件名看不出这条请求长什么样，出事时省一次翻代码 |\n| 易变字段写成 `quoteId: <scrubbed>` 这种固定占位 | 报价单号、traceId、计算时间戳每次都变，不规整掉就没法逐字节比 |\n| 金额定死小数位（`12.00` 不是 `12.0`），重量也是 | 格式抖动会伪装成行为变化 |\n| UTF-8、LF 换行、结尾留一个换行、无行尾空格 | 逐字节比对，Windows 上 CRLF 是最常见的假红 |\n\n## 回放测试的形状\n\n```\n每个 approved 文件 → 一个测试用例\n  前置：断言 remote_fee_by_province == false   ← 开关开着跑出来的东西不该进老类别\n  执行：用 === request === 段里的参数调 FreightCalc.calc\n  序列化：按上面的规矩渲染成文本，规整掉易变字段\n  比对：与 .approved 逐字节比；不等则写出 .received 并失败\n```\n\n前置那条别省。哪天有人把开关默认值翻成 true，这批测试要「红」在「开关状态不对」上，而不是红在一堆金额对不上、让人以为是算错了。\n\n最后，母版文件、回放测试、第一次跑出来的比对结果，三样进同一个 PR——单独一个「加母版」的提交看不出它到底锁住了什么。\n\n## 有个顺带发现，先记着不影响你动手\n\n广东和北京多半都不在偏远省份表里。如果是这样，这两条老请求根本没走到偏远附加那段分支——母版照样有价值（它锁住了基础运费、重量分段、货到付款这些），但它证明不了「偏远附加的改动没伤到老路径」。等你要补覆盖时，再挑一条真·偏远省份的老请求补进 `legacy/`。\n\n## 一个问题\n\n比如说：这次改动如果只是在 `calc` 入口加了个 `if (toggle.isOn(\"remote_fee_by_province\")) { 新查表 } else { 原样调原来那段 }`，原来那段一个字没动——那现在跑出来的就是合法母版，你直接填就行。但如果为了插这个分流点，把原来算偏远附加的代码抽成了方法、或者挪动了字段赋值顺序，哪怕结果应该一样，它也已经不是「改动前」了。\n\n**你这个 PR 里，老路径（else 那条分支走到的代码）的 diff 是零吗？** 我看不到仓库，这条只能你确认。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.1949795,
+            "judgeCostUsd": 0.010578,
+            "durationSeconds": 68,
+            "startedAt": "2026-09-19T08:57:55.782Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-PoGjOw\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "refuses-post-change-master",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说两条事实，都核过了：\n\n- 这个工作目录是空的（`**/*` 零结果），仓库文件不在这儿；Bash 也不可用。所以我跑不了 `FreightCalc.calc`，也读不到它的代码。\n- 结论：approved 文件里的**数值我给不了**。编一组数填进去，等于把一个假母版锁死，以后回归全绿但保护为零 —— 比没有母版更坏。\n\n## 一个比格式更要紧的点\n\nGolden Master 的前提是母版录自**改动前**的行为（Characterization Test，Michael Feathers）。现在改动已经合了，直接跑当前分支录一份，锁住的是改动后的行为——包括它可能带进来的 bug。\n\n救你的是那个还关着的开关。只要旧逻辑完整留在 `remote_fee_by_province` 后面，`flag=off` 跑出来的就等价于改动前，**这一份才是合法母版**。所以：\n\n- `flag=off` 的输出 → 存成 `.approved.txt`，这是母版。\n- `flag=on` 的输出 → 现在**不要** approve，当作 received 去和母版 diff。每一处差异逐条确认\"这是我有意改的\"，确认完再转正成第二份 approved。\n\n录之前先做一次校验：checkout 到合并前的 merge-base，用同样两条请求跑一遍，和当前分支 `flag=off` 的输出逐字节比。一致，才说明改动真的全被开关挡住、没漏到公共路径上；不一致，说明有重构泄漏，那当前分支不管开关怎么摆都不能当母版。\n\n## 文件布局（这部分我能给）\n\n命名按 ApprovalTests 惯例 `<TestClass>.<TestMethod>.approved.<ext>`，失败时框架自动落一个同名 `.received.txt` 供 diff。一个用例一个文件，别合并——合并后一条变了两条都红，定位成本翻倍。\n\n```\ntest/approvals/\n  FreightCalcTest.calc_tmpl1032_gd_3_2kg.approved.txt\n  FreightCalcTest.calc_tmpl2001_bj_0_8kg_cod.approved.txt\n```\n\n骨架（`«»` 是待填的实测值，**必须由实跑写入，不要手敲**）：\n\n```text\n=== input ===\ntemplate_id: 1032\nprovince: 广东\nweight_kg: 3.200\ncod: false\nflags: remote_fee_by_province=off\n\n=== output ===\nbase_fee:        «»\nweight_fee:      «»\nremote_fee:      «»\ncod_fee:         «»\ntotal:           «»\ncurrency:        CNY\n```\n\n三条布局规则，都是 Approval Testing 的常规做法：\n\n1. **输入一起写进 approved 文件**。以后有人改了测试的入参却没改断言，diff 里一眼能看见。\n2. **flags 那行必须在**。母版是\"在某个开关组合下\"的行为，开关状态不记录，两份文件长得一样就分不清谁是谁。\n3. **Scrubbing**：时间戳、流水号、hash、map 的遍历顺序这类非确定性字段，在写入前统一替换成固定占位（如 `«timestamp»`）或按 key 排序。漏一个，母版天天红，一周之内团队就开始无脑覆盖 approved 文件，保护就废了。\n\n金额别用浮点直接 `str()`，固定成两位小数字符串，否则不同机器上 `13.200000000000001` 这种会把你坑死。\n\n## 一个问题\n\n我要把骨架填成能直接用的样子，缺的是返回结构。比如 `calc(1032, \"广东\", 3.2)` 返回的是 `{\"base_fee\": 800, \"remote_fee\": 0, \"total\": 1450}` 这样的 dict（分为单位的整数），还是一个带 `total`/`breakdown` 的对象、金额是 Decimal？\n\n把其中一条请求的真实返回贴给我，我按它把两个 approved 文件的字段和格式定死。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    },
+    {
+      "name": "golden-master-replay-test",
+      "dir": "evals\\golden-master-replay-test",
+      "source": "prose",
+      "promptMarkdown": "按 `golden-master` 帮我把回放比对写成测试。Bash 不可用，仓库文件也不在这个工作目录里，直接给我测试代码和文件布局。\n\n改动：运费计算 `FreightCalc.calc(req)` 加了「偏远附加按省份查表」——模板配置了偏远省份表时走新路径，其余请求走老路径不变。改代码之前按 record-replay 录了三条样本（traceId、calcTime 已规整掉），现在改完了：\n\n```\nsamples/freight/首重续重-广东.request.json    → {\"templateId\":1032,\"province\":\"广东\",\"weightKg\":3.2}\nsamples/freight/首重续重-广东.approved.json   → {\"fee\":18,\"items\":[{\"name\":\"首重\",\"fee\":10},{\"name\":\"续重\",\"fee\":8}]}\nsamples/freight/首重-北京-cod.request.json    → {\"templateId\":2001,\"province\":\"北京\",\"weightKg\":0.8,\"cod\":true}\nsamples/freight/首重-北京-cod.approved.json   → {\"fee\":12,\"items\":[{\"name\":\"首重\",\"fee\":8},{\"name\":\"cod\",\"fee\":4}]}\nsamples/freight/首重续重-新疆-vip.request.json → {\"templateId\":1032,\"province\":\"新疆\",\"weightKg\":3.2,\"vip\":true}\n```\n\n第三条是新类别（模板 1032 配了偏远省份表，新疆在表中），没有 approved 文件；需求翻译的例子写着：模板 1032、新疆、3.2kg、vip → 26。\n\n测试用 JUnit 5。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "master-vs-expected",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the replay test the agent produced. PASS if all of these hold: (a) the two old-category samples (广东, 北京-cod) are compared byte for byte — the serialized actual output equals the text of the approved file, not a partial field check; (b) the new-category sample (新疆-vip) is compared against the literal expected value 26 that comes from the requirement example, and the agent does not generate an approved file for it from the current output; (c) the two kinds of comparison are kept apart (separate tests or clearly separate cases, and the message says which one proves \"old path unchanged\" and which one proves \"new path correct\"); (d) the sample files and the replay test live in the repository and the agent says they go into the same PR as the change.\n\nFAIL if the new sample is \"approved\" from the current output, if old-category assertions are loosened to selected fields, if old and new are mixed into one undifferentiated assertion, or if the assets are placed outside the repository (a test platform, a shared drive).",
+          "config": {
+            "criteria": "Judge the replay test the agent produced. PASS if all of these hold: (a) the two old-category samples (广东, 北京-cod) are compared byte for byte — the serialized actual output equals the text of the approved file, not a partial field check; (b) the new-category sample (新疆-vip) is compared against the literal expected value 26 that comes from the requirement example, and the agent does not generate an approved file for it from the current output; (c) the two kinds of comparison are kept apart (separate tests or clearly separate cases, and the message says which one proves \"old path unchanged\" and which one proves \"new path correct\"); (d) the sample files and the replay test live in the repository and the agent says they go into the same PR as the change.\n\nFAIL if the new sample is \"approved\" from the current output, if old-category assertions are loosened to selected fields, if old and new are mixed into one undifferentiated assertion, or if the assets are placed outside the repository (a test platform, a shared drive).",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "golden-master",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.49036100000000005,
+            "judgeCostUsd": 0.044604000000000005,
+            "durationSeconds": 168,
+            "startedAt": "2026-09-19T08:59:03.697Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-3g3gEr\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "master-vs-expected",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说结论：用的是 **golden master（approval testing）** 这条——老类别比母版、新类别比需求例子的期望值，两类分开写；规整字段的清单和 **record-replay** 录制时那份共用一份代码，否则回放必红。\n\n有一处要先点出来：`首重续重-广东.request.json` 是模板 1032，而 1032 配了偏远省份表 —— 按需求它**会进新路径**，只是广东不在表里、附加为 0。所以它是这批里最有价值的一条：它走新代码但必须逐字节复现母版。`首重-北京-cod`（模板 2001，无表）才是纯老路径。两条都有 approved，都归老类别。\n\n## 文件布局\n\n```\nsamples/freight/                              ← 录制产物，原地不动\n  首重续重-广东.request.json\n  首重续重-广东.approved.json\n  首重-北京-cod.request.json\n  首重-北京-cod.approved.json\n  首重续重-新疆-vip.request.json              ← 新类别，故意没有 approved\nsrc/test/java/com/example/freight/golden/\n  GoldenMasterSupport.java                    ← 定位/加载/规整/canonical 序列化\n  SampleCase.java\n  FreightCalcAdapter.java                     ← 唯一依赖你项目类型的文件\n  FreightGoldenMasterTest.java                ← 老类别：回放 vs 母版\n  FreightRemoteSurchargeTest.java             ← 新类别：vs 需求例子\n  SampleCoverageTest.java                     ← 防样本被静默跳过\nbuild/golden-master/actual/                   ← 失败时落 .actual.json，加进 .gitignore\n```\n\n包名换成 `FreightCalc` 所在的包。依赖：`junit-jupiter`、`junit-jupiter-params`、`jackson-databind`。代码按 Java 17 写（用了 `record`、`Set.of`）。\n\n## GoldenMasterSupport.java\n\n```java\npackage com.example.freight.golden;\n\nimport com.fasterxml.jackson.core.util.DefaultIndenter;\nimport com.fasterxml.jackson.core.util.DefaultPrettyPrinter;\nimport com.fasterxml.jackson.databind.JsonNode;\nimport com.fasterxml.jackson.databind.ObjectMapper;\nimport com.fasterxml.jackson.databind.ObjectWriter;\nimport com.fasterxml.jackson.databind.node.ArrayNode;\nimport com.fasterxml.jackson.databind.node.ObjectNode;\n\nimport java.io.IOException;\nimport java.io.UncheckedIOException;\nimport java.nio.charset.StandardCharsets;\nimport java.nio.file.Files;\nimport java.nio.file.Path;\nimport java.nio.file.Paths;\nimport java.util.ArrayList;\nimport java.util.Collections;\nimport java.util.List;\nimport java.util.Optional;\nimport java.util.Set;\nimport java.util.stream.Stream;\n\nfinal class GoldenMasterSupport {\n\n    /**\n     * 录制时规整掉的易变字段。这份清单必须和录制端用的是同一份 —— 要么这个类被录制工具复用，\n     * 要么录制工具搬进来调 scrub()。两边各写一份迟早会漂。\n     */\n    static final Set<String> VOLATILE_FIELDS = Set.of(\"traceId\", \"calcTime\");\n\n    static final ObjectMapper MAPPER = new ObjectMapper();\n\n    /** 固定缩进和 \\n 换行，不吃平台默认的 line.separator（Windows 上会变 \\r\\n）。 */\n    private static final ObjectWriter CANONICAL_WRITER = MAPPER.writer(\n            new DefaultPrettyPrinter()\n                    .withObjectIndenter(new DefaultIndenter(\"  \", \"\\n\"))\n                    .withArrayIndenter(new DefaultIndenter(\"  \", \"\\n\")));\n\n    static final Path REPO_ROOT = locateRepoRoot();\n    static final Path SAMPLE_DIR = REPO_ROOT.resolve(\"samples\").resolve(\"freight\");\n    static final Path ACTUAL_DIR = REPO_ROOT.resolve(\"build\").resolve(\"golden-master\").resolve(\"actual\");\n\n    private GoldenMasterSupport() {\n    }\n\n    /** 从 user.dir 向上找到含 samples/freight 的目录，单模块多模块都能跑。 */\n    private static Path locateRepoRoot() {\n        Path dir = Paths.get(System.getProperty(\"user.dir\")).toAbsolutePath();\n        for (Path p = dir; p != null; p = p.getParent()) {\n            if (Files.isDirectory(p.resolve(\"samples\").resolve(\"freight\"))) {\n                return p;\n            }\n        }\n        throw new IllegalStateException(\"找不到 samples/freight，起点：\" + dir);\n    }\n\n    static List<SampleCase> allSamples() {\n        try (Stream<Path> files = Files.list(SAMPLE_DIR)) {\n            List<SampleCase> cases = new ArrayList<>();\n            files.filter(p -> p.getFileName().toString().endsWith(\".request.json\"))\n                    .sorted()\n                    .forEach(p -> {\n                        String fileName = p.getFileName().toString();\n                        String name = fileName.substring(0, fileName.length() - \".request.json\".length());\n                        Path approved = SAMPLE_DIR.resolve(name + \".approved.json\");\n                        cases.add(new SampleCase(name, p,\n                                Files.exists(approved) ? approved : null));\n                    });\n            return cases;\n        } catch (IOException e) {\n            throw new UncheckedIOException(e);\n        }\n    }\n\n    static List<SampleCase> samplesWithApproved() {\n        List<SampleCase> cases = new ArrayList<>();\n        for (SampleCase c : allSamples()) {\n            if (c.hasApproved()) {\n                cases.add(c);\n            }\n        }\n        return cases;\n    }\n\n    static SampleCase sample(String name) {\n        return allSamples().stream()\n                .filter(c -> c.name().equals(name))\n                .findFirst()\n                .orElseThrow(() -> new IllegalArgumentException(\"没有这条样本：\" + name));\n    }\n\n    static JsonNode readJson(Path path) {\n        try {\n            return MAPPER.readTree(Files.readString(path, StandardCharsets.UTF_8));\n        } catch (IOException e) {\n            throw new UncheckedIOException(\"读不了 \" + path, e);\n        }\n    }\n\n    /** 递归剔掉易变字段，和录制端同一套规则。 */\n    static JsonNode scrub(JsonNode node) {\n        if (node.isObject()) {\n            ObjectNode out = MAPPER.createObjectNode();\n            node.fields().forEachRemaining(entry -> {\n                if (!VOLATILE_FIELDS.contains(entry.getKey())) {\n                    out.set(entry.getKey(), scrub(entry.getValue()));\n                }\n            });\n            return out;\n        }\n        if (node.isArray()) {\n            ArrayNode out = MAPPER.createArrayNode();\n            node.forEach(child -> out.add(scrub(child)));\n            return out;\n        }\n        return node.deepCopy();\n    }\n\n    /**\n     * 两边都过这一个函数再比字符串。\n     * 真·原始字节比对会被 key 顺序、缩进、BOM 这类无意义差异搞红，\n     * 所以规矩是：母版和实际值走同一个确定性写出器，然后字符串全等。\n     * 数组顺序有语义（items 的明细顺序），不排序。\n     */\n    static String canonical(JsonNode node) {\n        try {\n            return CANONICAL_WRITER.writeValueAsString(sortKeys(node));\n        } catch (IOException e) {\n            throw new UncheckedIOException(e);\n        }\n    }\n\n    private static JsonNode sortKeys(JsonNode node) {\n        if (node.isObject()) {\n            List<String> names = new ArrayList<>();\n            node.fieldNames().forEachRemaining(names::add);\n            Collections.sort(names);\n            ObjectNode out = MAPPER.createObjectNode();\n            for (String name : names) {\n                out.set(name, sortKeys(node.get(name)));\n            }\n            return out;\n        }\n        if (node.isArray()) {\n            ArrayNode out = MAPPER.createArrayNode();\n            node.forEach(child -> out.add(sortKeys(child)));\n            return out;\n        }\n        return node.deepCopy();\n    }\n\n    /** 比对结果落盘，方便贴进 PR、或者确认无误后直接覆盖成新母版。 */\n    static Optional<Path> writeActual(String name, String canonicalActual) {\n        try {\n            Files.createDirectories(ACTUAL_DIR);\n            Path out = ACTUAL_DIR.resolve(name + \".actual.json\");\n            Files.writeString(out, canonicalActual, StandardCharsets.UTF_8);\n            return Optional.of(out);\n        } catch (IOException e) {\n            return Optional.empty();\n        }\n    }\n}\n```\n\n## SampleCase.java\n\n```java\npackage com.example.freight.golden;\n\nimport java.nio.file.Path;\n\nrecord SampleCase(String name, Path request, Path approved) {\n\n    boolean hasApproved() {\n        return approved != null;\n    }\n\n    @Override\n    public String toString() {\n        return name;   // 参数化测试的用例名就显示成样本名\n    }\n}\n```\n\n## FreightCalcAdapter.java\n\n这是唯一贴着你项目类型的文件，`FreightCalc.calc` 的签名如果不是这样，只改这里。\n\n```java\npackage com.example.freight.golden;\n\nimport com.fasterxml.jackson.databind.JsonNode;\n\nimport com.example.freight.FreightCalc;\nimport com.example.freight.FreightReq;\n\nfinal class FreightCalcAdapter {\n\n    private FreightCalcAdapter() {\n    }\n\n    /** 请求 JSON 进，规整过的响应 JSON 出。 */\n    static JsonNode invoke(JsonNode requestJson) {\n        try {\n            FreightReq req = GoldenMasterSupport.MAPPER.treeToValue(requestJson, FreightReq.class);\n            Object resp = FreightCalc.calc(req);\n            return GoldenMasterSupport.scrub(GoldenMasterSupport.MAPPER.valueToTree(resp));\n        } catch (Exception e) {\n            throw new IllegalStateException(\"回放失败：\" + requestJson, e);\n        }\n    }\n}\n```\n\n## FreightGoldenMasterTest.java —— 老类别\n\n```java\npackage com.example.freight.golden;\n\nimport com.fasterxml.jackson.databind.JsonNode;\nimport org.junit.jupiter.api.DisplayName;\nimport org.junit.jupiter.params.ParameterizedTest;\nimport org.junit.jupiter.params.provider.MethodSource;\n\nimport java.nio.file.Path;\nimport java.util.Optional;\nimport java.util.stream.Stream;\n\nimport static org.junit.jupiter.api.Assertions.assertEquals;\nimport static org.junit.jupiter.api.Assertions.assertFalse;\n\n@DisplayName(\"老类别：回放必须与改动前的母版一致\")\nclass FreightGoldenMasterTest {\n\n    static Stream<SampleCase> approvedSamples() {\n        return GoldenMasterSupport.samplesWithApproved().stream();\n    }\n\n    @ParameterizedTest(name = \"{0}\")\n    @MethodSource(\"approvedSamples\")\n    @DisplayName(\"同一请求回放，输出与 approved 母版一致\")\n    void replayMatchesApproved(SampleCase sample) {\n        String expected = GoldenMasterSupport.canonical(\n                GoldenMasterSupport.scrub(GoldenMasterSupport.readJson(sample.approved())));\n\n        JsonNode actualNode = FreightCalcAdapter.invoke(GoldenMasterSupport.readJson(sample.request()));\n        String actual = GoldenMasterSupport.canonical(actualNode);\n\n        if (!expected.equals(actual)) {\n            Optional<Path> dump = GoldenMasterSupport.writeActual(sample.name(), actual);\n            assertEquals(expected, actual,\n                    () -> \"样本「\" + sample.name() + \"」的输出和母版不一致。\"\n                            + \"母版：\" + sample.approved()\n                            + dump.map(p -> \"，实际：\" + p).orElse(\"\")\n                            + \"。老路径出现差异 = 这次改动漏出去了，先当回归处理；\"\n                            + \"确认是需求要求的变化再改母版，并在 PR 里说明为什么。\");\n        }\n    }\n\n    @ParameterizedTest(name = \"{0}\")\n    @MethodSource(\"approvedSamples\")\n    @DisplayName(\"回放是幂等的：同一请求连跑两次结果相同\")\n    void replayIsDeterministic(SampleCase sample) {\n        JsonNode request = GoldenMasterSupport.readJson(sample.request());\n        String first = GoldenMasterSupport.canonical(FreightCalcAdapter.invoke(request));\n        String second = GoldenMasterSupport.canonical(FreightCalcAdapter.invoke(request));\n\n        assertEquals(first, second,\n                \"两次回放不一致，说明还有没规整掉的易变字段，\"\n                        + \"把字段名加进 GoldenMasterSupport.VOLATILE_FIELDS，录制端同步\");\n    }\n\n    @org.junit.jupiter.api.Test\n    @DisplayName(\"模板 1032 + 广东：进了新路径但不在偏远表里，必须原样复现母版\")\n    void templateWithRemoteTable_nonRemoteProvince_unchanged() {\n        SampleCase sample = GoldenMasterSupport.sample(\"首重续重-广东\");\n        String expected = GoldenMasterSupport.canonical(\n                GoldenMasterSupport.scrub(GoldenMasterSupport.readJson(sample.approved())));\n        String actual = GoldenMasterSupport.canonical(\n                FreightCalcAdapter.invoke(GoldenMasterSupport.readJson(sample.request())));\n\n        assertEquals(expected, actual,\n                \"1032 配了偏远省份表，广东不在表中，附加应为 0；\"\n                        + \"这条一旦红，就是新路径把非偏远请求算错了\");\n        assertFalse(actual.contains(\"偏远\"),\n                \"非偏远省份不该出现偏远附加的明细行\");\n    }\n}\n```\n\n最后那条单独写出来，是因为它盯的是「新路径的零值分支不改变老行为」这一句需求，参数化跑挂了看不出是哪一句。\n\n## FreightRemoteSurchargeTest.java —— 新类别\n\n新类别**不生成 approved 文件**。母版的意思是「改动前的既有行为」，新路径改动前没有行为可锁；拿代码当前输出去 approve，等于给还没验证的东西盖章。期望值只能来自需求翻译的例子，写成独立字面值。\n\n```java\npackage com.example.freight.golden;\n\nimport com.fasterxml.jackson.databind.JsonNode;\nimport org.junit.jupiter.api.DisplayName;\nimport org.junit.jupiter.api.Test;\n\nimport java.math.BigDecimal;\n\nimport static org.junit.jupiter.api.Assertions.assertEquals;\nimport static org.junit.jupiter.api.Assertions.assertTrue;\n\n@DisplayName(\"新类别：偏远附加按省份查表（比需求例子，不比母版）\")\nclass FreightRemoteSurchargeTest {\n\n    /**\n     * 需求翻译例子：模板 1032（配了偏远省份表）、新疆（在表中）、3.2kg、vip → 26。\n     * 26 是从需求抄来的字面值，不是从代码跑出来的。\n     */\n    @Test\n    @DisplayName(\"模板1032 + 新疆(在偏远表中) + 3.2kg + vip → 总运费 26\")\n    void remoteProvinceInTable_appliesSurcharge() {\n        SampleCase sample = GoldenMasterSupport.sample(\"首重续重-新疆-vip\");\n        JsonNode actual = FreightCalcAdapter.invoke(GoldenMasterSupport.readJson(sample.request()));\n\n        BigDecimal fee = actual.get(\"fee\").decimalValue();\n        assertEquals(0, new BigDecimal(\"26\").compareTo(fee),\n                () -> \"需求例子要求 26，实得 \" + fee\n                        + \"；完整输出：\" + GoldenMasterSupport.canonical(actual));\n    }\n\n    @Test\n    @DisplayName(\"新类别的样本不许有 approved 文件\")\n    void newCategoryHasNoApprovedFile() {\n        assertTrue(GoldenMasterSupport.sample(\"首重续重-新疆-vip\").approved() == null,\n                \"新路径改动前没有既有行为，不存在母版；\"\n                        + \"要锁成母版得等这条用例通过评审之后，届时它并入老类别\");\n    }\n}\n```\n\n`items` 的明细我没断言。需求只说了总额 26，18 是怎么拆到偏远附加 / vip 上的，需求例子没写——断言没写的东西就是拿实现当规格了。真要断言，得先让需求把那一行的名字和金额写出来。\n\n## SampleCoverageTest.java\n\n```java\npackage com.example.freight.golden;\n\nimport org.junit.jupiter.api.DisplayName;\nimport org.junit.jupiter.api.Test;\n\nimport java.util.List;\nimport java.util.Set;\nimport java.util.stream.Collectors;\n\nimport static org.junit.jupiter.api.Assertions.assertEquals;\nimport static org.junit.jupiter.api.Assertions.assertTrue;\n\n@DisplayName(\"样本台账：没有样本被静默跳过\")\nclass SampleCoverageTest {\n\n    /** 新类别样本，手工登记。登记之外的无 approved 样本一律算漏录。 */\n    private static final Set<String> NEW_CATEGORY = Set.of(\"首重续重-新疆-vip\");\n\n    @Test\n    void everySampleIsEitherApprovedOrRegisteredAsNew() {\n        List<String> unaccounted = GoldenMasterSupport.allSamples().stream()\n                .filter(c -> !c.hasApproved())\n                .map(SampleCase::name)\n                .filter(name -> !NEW_CATEGORY.contains(name))\n                .collect(Collectors.toList());\n\n        assertTrue(unaccounted.isEmpty(),\n                () -> \"这些样本既没有母版也没登记成新类别，等于没被测到：\" + unaccounted);\n    }\n\n    @Test\n    void sampleCountMatchesRecordedSet() {\n        assertEquals(3, GoldenMasterSupport.allSamples().size(),\n                \"录制时定的是 3 条样本；加减样本要连这个数字一起改，\"\n                        + \"免得样本文件被误删而测试照样绿\");\n    }\n}\n```\n\n## 需要你确认的假设\n\n- `FreightCalc.calc` 的入参出参能用 Jackson 互转；不是的话只改 `FreightCalcAdapter`。\n- `samples/` 留在仓库根，测试按目录上溯定位，不走 classpath（这样 approve 新母版时直接覆盖源文件，不用管 build 目录的拷贝）。\n- 「逐字节」落地成「两边过同一个 canonical 写出器后字符串全等」，理由写在 `canonical()` 的注释里。\n- 失败产物目录 `build/golden-master/` 记得进 `.gitignore`；进 PR 的是母版 + 回放测试 + 测试运行的比对输出。\n\n## 一个问题\n\n`首重续重-广东` 和 `首重续重-新疆-vip` 都是模板 1032，结果差在「1032 配没配偏远省份表、新疆在不在表里」。这份模板配置如果是运行时从数据库读的，那测试跑出什么结果就取决于跑的那台机器数据库里 1032 长什么样——老类别红了都分不清是代码改坏了还是配置变了。\n\n所以：**1032 的模板配置（含偏远省份表）是从哪来的？录样本的时候连配置一起录下来了吗，还是只录了 request/response？**"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.5368715000000001,
+            "judgeCostUsd": 0.048126,
+            "durationSeconds": 205,
+            "startedAt": "2026-09-19T08:59:18.357Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-umo0Dr\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "master-vs-expected",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 golden master 写没问题,但有一处我要先说清楚,它决定了文件怎么摆:\n\n**第三条不能进 golden master 集合。** golden master(又叫 characterization test,Michael Feathers)只能证明「行为没变」,不能证明「行为是对的」——它的 approved 值来自旧程序的输出。新疆这条是**新路径**,没有旧输出可锚定;如果按常规做法跑一遍把结果写进 `.approved.json`,那是 approving whatever comes out,等于把可能的 bug 一起固化。所以它的期望值只能来自需求翻译的例子(Specification by Example),写成一条独立的、显式断言的测试。\n\n而且需求只给了 `fee → 26`,**没给 items 明细**,所以我不会替你编 items。这条先只断言 fee,同时把实际输出落成 `.received.json` 供你人工审;审完再转成 `.approved.json`。这是 Approval Testing 的 received→approved 工作流。\n\n---\n\n## 文件布局\n\n```\nsamples/freight/\n├── .gitignore                         # *.received.json\n├── 首重续重-广东.request.json\n├── 首重续重-广东.approved.json          ← 老路径,模板 1032 未命中偏远表\n├── 首重-北京-cod.request.json\n├── 首重-北京-cod.approved.json         ← 老路径,模板 2001\n├── 首重续重-新疆-vip.request.json\n└── 首重续重-新疆-vip.PENDING.md         ← 说明为何暂无 approved\n\nsrc/test/java/com/example/freight/golden/\n├── JsonNormalizer.java                # scrub 易变字段 + canonical JSON\n├── SampleRepo.java                    # 扫描/配对/读写,含待批准清单\n├── FreightCalcHarness.java            # 唯一耦合真实签名的地方\n├── FreightGoldenMasterTest.java       # 回归回放(老路径不变)\n└── FreightRemoteSurchargeTest.java    # 新路径,需求例子\n```\n\n包名 `com.example.freight.golden` 按你仓库实际改。\n\n---\n\n## JsonNormalizer.java\n\n```java\npackage com.example.freight.golden;\n\nimport com.fasterxml.jackson.core.util.DefaultIndenter;\nimport com.fasterxml.jackson.core.util.DefaultPrettyPrinter;\nimport com.fasterxml.jackson.databind.JsonNode;\nimport com.fasterxml.jackson.databind.ObjectMapper;\nimport com.fasterxml.jackson.databind.ObjectWriter;\nimport com.fasterxml.jackson.databind.json.JsonMapper;\nimport com.fasterxml.jackson.databind.node.ArrayNode;\nimport com.fasterxml.jackson.databind.node.ObjectNode;\n\nimport java.io.IOException;\nimport java.io.UncheckedIOException;\nimport java.util.ArrayList;\nimport java.util.Collections;\nimport java.util.List;\nimport java.util.Set;\n\n/**\n * 把 JSON 规整成可逐字符比对的形式:剔除易变字段(scrubbing)+ 固定 key 顺序/缩进/换行。\n * 两侧(approved 文件 与 实际返回)都过同一个 normalize,格式差异不会误报。\n */\nfinal class JsonNormalizer {\n\n    /**\n     * 录样本时已经规整掉的易变字段。实际调用的返回值里仍然有,比对前要同样剔除。\n     * 注意:这里是按字段名递归剔除,嵌套层里的同名字段也会被去掉。\n     */\n    private static final Set<String> VOLATILE_FIELDS = Set.of(\"traceId\", \"calcTime\");\n\n    private static final ObjectMapper MAPPER = JsonMapper.builder().build();\n\n    /**\n     * 显式指定换行为 \"\\n\"。DefaultPrettyPrinter 默认用 System.lineSeparator(),\n     * 在 Windows 上会写出 \\r\\n,导致 received 文件跨平台 diff 不稳。\n     * 字段分隔符保持 Jackson 默认的 \" : \",只要两侧同一个 printer 就一致。\n     */\n    private static final ObjectWriter WRITER = MAPPER.writer(prettyPrinter());\n\n    private JsonNormalizer() {}\n\n    static String normalize(JsonNode node) {\n        try {\n            return WRITER.writeValueAsString(canonicalize(node)) + \"\\n\";\n        } catch (IOException e) {\n            throw new UncheckedIOException(e);\n        }\n    }\n\n    static String normalize(String rawJson) {\n        return normalize(parse(rawJson));\n    }\n\n    static JsonNode parse(String rawJson) {\n        try {\n            return MAPPER.readTree(rawJson);\n        } catch (IOException e) {\n            throw new UncheckedIOException(e);\n        }\n    }\n\n    static <T> T read(String rawJson, Class<T> type) {\n        try {\n            return MAPPER.readValue(rawJson, type);\n        } catch (IOException e) {\n            throw new UncheckedIOException(e);\n        }\n    }\n\n    static JsonNode toTree(Object value) {\n        return MAPPER.valueToTree(value);\n    }\n\n    /**\n     * 递归:object 按 key 排序并剔除易变字段;array 保持原顺序(items 的顺序有业务语义)。\n     * 这里手工排序,是因为 SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS 只作用于 Map 序列化,\n     * 对 ObjectNode 不生效(ObjectNode 自己按内部 LinkedHashMap 顺序输出)。\n     */\n    private static JsonNode canonicalize(JsonNode node) {\n        if (node.isObject()) {\n            List<String> names = new ArrayList<>();\n            node.fieldNames().forEachRemaining(names::add);\n            Collections.sort(names);\n            ObjectNode out = MAPPER.createObjectNode();\n            for (String name : names) {\n                if (VOLATILE_FIELDS.contains(name)) {\n                    continue;\n                }\n                out.set(name, canonicalize(node.get(name)));\n            }\n            return out;\n        }\n        if (node.isArray()) {\n            ArrayNode out = MAPPER.createArrayNode();\n            for (JsonNode element : node) {\n                out.add(canonicalize(element));\n            }\n            return out;\n        }\n        return node.deepCopy();\n    }\n\n    private static DefaultPrettyPrinter prettyPrinter() {\n        DefaultIndenter indenter = new DefaultIndenter(\"  \", \"\\n\");\n        DefaultPrettyPrinter printer = new DefaultPrettyPrinter();\n        printer.indentObjectsWith(indenter);\n        printer.indentArraysWith(indenter);\n        return printer;\n    }\n}\n```\n\n---\n\n## SampleRepo.java\n\n```java\npackage com.example.freight.golden;\n\nimport java.io.IOException;\nimport java.io.UncheckedIOException;\nimport java.nio.charset.StandardCharsets;\nimport java.nio.file.Files;\nimport java.nio.file.Path;\nimport java.nio.file.Paths;\nimport java.util.List;\nimport java.util.Set;\nimport java.util.stream.Collectors;\nimport java.util.stream.Stream;\n\n/** samples/freight 的扫描与读写。 */\nfinal class SampleRepo {\n\n    private static final String REQUEST_SUFFIX = \".request.json\";\n    private static final String DIR_PROPERTY = \"freight.samples.dir\";\n\n    /**\n     * 待批准清单:已录了 request、但还不能有 approved 的样本。\n     *\n     * 首重续重-新疆-vip —— 新类别(模板 1032 配了偏远省份表,新疆命中)。\n     * 它是新路径,没有改动前的输出可以当基线;approved 值不能由程序输出生成。\n     * 需求翻译的例子只给了 fee=26,items 明细待人工确认,见同目录的 PENDING.md。\n     * 现由 FreightRemoteSurchargeTest 覆盖。确认 items 后:\n     *   把 .received.json 改名为 .approved.json,并从本清单删除(否则守卫测试会红)。\n     */\n    static final Set<String> PENDING_APPROVAL = Set.of(\"首重续重-新疆-vip\");\n\n    private SampleRepo() {}\n\n    /** 从工作目录逐级向上找 samples/freight,兼容单模块与多模块的不同 user.dir。 */\n    static Path dir() {\n        String override = System.getProperty(DIR_PROPERTY);\n        if (override != null) {\n            return Paths.get(override);\n        }\n        Path current = Paths.get(\"\").toAbsolutePath();\n        for (int i = 0; i < 6 && current != null; i++, current = current.getParent()) {\n            Path candidate = current.resolve(\"samples\").resolve(\"freight\");\n            if (Files.isDirectory(candidate)) {\n                return candidate;\n            }\n        }\n        throw new IllegalStateException(\n                \"找不到 samples/freight,可用 -D\" + DIR_PROPERTY + \"=<绝对路径> 指定\");\n    }\n\n    /** 所有录过 request 的样本名,按名字排序,保证用例顺序稳定。 */\n    static List<String> allSampleNames() {\n        try (Stream<Path> files = Files.list(dir())) {\n            return files.map(p -> p.getFileName().toString())\n                    .filter(n -> n.endsWith(REQUEST_SUFFIX))\n                    .map(n -> n.substring(0, n.length() - REQUEST_SUFFIX.length()))\n                    .sorted()\n                    .collect(Collectors.toList());\n        } catch (IOException e) {\n            throw new UncheckedIOException(e);\n        }\n    }\n\n    /** 参与 golden master 回放的样本 = 全部样本 - 待批准。 */\n    static List<String> approvedSampleNames() {\n        return allSampleNames().stream()\n                .filter(n -> !PENDING_APPROVAL.contains(n))\n                .collect(Collectors.toList());\n    }\n\n    static Path request(String name)  { return dir().resolve(name + REQUEST_SUFFIX); }\n    static Path approved(String name) { return dir().resolve(name + \".approved.json\"); }\n    static Path received(String name) { return dir().resolve(name + \".received.json\"); }\n\n    static String readUtf8(Path path) {\n        try {\n            return Files.readString(path, StandardCharsets.UTF_8);\n        } catch (IOException e) {\n            throw new UncheckedIOException(\"读不到样本文件:\" + path, e);\n        }\n    }\n\n    static void writeUtf8(Path path, String content) {\n        try {\n            Files.writeString(path, content, StandardCharsets.UTF_8);\n        } catch (IOException e) {\n            throw new UncheckedIOException(\"写不了文件:\" + path, e);\n        }\n    }\n\n    static void deleteReceived(String name) {\n        try {\n            Files.deleteIfExists(received(name));\n        } catch (IOException e) {\n            throw new UncheckedIOException(e);\n        }\n    }\n}\n```\n\n---\n\n## FreightCalcHarness.java\n\n```java\npackage com.example.freight.golden;\n\nimport com.fasterxml.jackson.databind.JsonNode;\n\n/**\n * 回放样本的唯一入口,也是唯一耦合 FreightCalc 真实签名的地方。\n * 如果 calc 是实例方法、或需要模板仓储/时钟之类的协作对象,在这里装配。\n */\nfinal class FreightCalcHarness {\n\n    private FreightCalcHarness() {}\n\n    static JsonNode replay(String requestJson) {\n        FreightRequest req = JsonNormalizer.read(requestJson, FreightRequest.class);\n        FreightResult result = FreightCalc.calc(req);\n        return JsonNormalizer.toTree(result);\n    }\n\n    static JsonNode replaySample(String name) {\n        return replay(SampleRepo.readUtf8(SampleRepo.request(name)));\n    }\n}\n```\n\n---\n\n## FreightGoldenMasterTest.java\n\n```java\npackage com.example.freight.golden;\n\nimport org.junit.jupiter.api.DisplayName;\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.params.ParameterizedTest;\nimport org.junit.jupiter.params.provider.MethodSource;\n\nimport java.nio.file.Files;\nimport java.util.List;\nimport java.util.stream.Stream;\n\nimport static org.junit.jupiter.api.Assertions.assertEquals;\nimport static org.junit.jupiter.api.Assertions.assertFalse;\nimport static org.junit.jupiter.api.Assertions.assertTrue;\n\n/**\n * 运费回放比对(golden master / characterization test)。\n *\n * 作用边界:它只证明「老路径的行为没有被偏远附加改动带偏」,不证明结果在业务上是对的。\n * 覆盖到的两条老路径:\n *   - 首重续重-广东  模板 1032 配了偏远表,但广东不在表中 → 应走老路径\n *   - 首重-北京-cod  模板 2001 没配偏远表            → 应走老路径\n */\n@DisplayName(\"运费回放比对(golden master)\")\nclass FreightGoldenMasterTest {\n\n    @DisplayName(\"已批准样本:回放结果必须与 approved 一致\")\n    @ParameterizedTest(name = \"{0}\")\n    @MethodSource(\"approvedSamples\")\n    void replayMatchesApproved(String name) {\n        String actual = JsonNormalizer.normalize(FreightCalcHarness.replaySample(name));\n        String expected = JsonNormalizer.normalize(SampleRepo.readUtf8(SampleRepo.approved(name)));\n\n        if (expected.equals(actual)) {\n            SampleRepo.deleteReceived(name);   // 修好之后清掉上次失败留下的残留\n        } else {\n            SampleRepo.writeUtf8(SampleRepo.received(name), actual);\n        }\n\n        assertEquals(expected, actual, () -> String.format(\n                \"样本【%s】的回放结果变了。实际输出已写到 %s。%n\"\n              + \"先判断这是 bug 还是有意的行为变更;确认是有意变更再覆盖 approved 文件。\",\n                name, SampleRepo.received(name)));\n    }\n\n    static Stream<String> approvedSamples() {\n        return SampleRepo.approvedSampleNames().stream();\n    }\n\n    // ---- 守卫测试:防止 golden master 集合被悄悄掏空或长期挂账 ----\n\n    @Test\n    @DisplayName(\"守卫:每个 request 要么有 approved,要么在待批准清单里\")\n    void everySampleIsApprovedOrPending() {\n        for (String name : SampleRepo.allSampleNames()) {\n            boolean hasApproved = Files.exists(SampleRepo.approved(name));\n            boolean isPending = SampleRepo.PENDING_APPROVAL.contains(name);\n            assertTrue(hasApproved || isPending, () -> String.format(\n                    \"样本【%s】既没有 approved 文件,也不在 SampleRepo.PENDING_APPROVAL 里。\"\n                  + \"漏批准的样本不允许被静默跳过。\", name));\n        }\n    }\n\n    @Test\n    @DisplayName(\"守卫:待批准清单里的样本必须确实存在且确实还没批准\")\n    void pendingListStaysHonest() {\n        List<String> all = SampleRepo.allSampleNames();\n        for (String name : SampleRepo.PENDING_APPROVAL) {\n            assertTrue(all.contains(name), () -> String.format(\n                    \"PENDING_APPROVAL 里的【%s】没有对应的 request 文件,名字写错了或样本被删了。\", name));\n            assertFalse(Files.exists(SampleRepo.approved(name)), () -> String.format(\n                    \"【%s】已经有 approved 文件了,请把它从 SampleRepo.PENDING_APPROVAL 里删掉,\"\n                  + \"让它纳入 golden master 回放。\", name));\n        }\n    }\n\n    @Test\n    @DisplayName(\"守卫:已批准样本不能为空\")\n    void approvedSetIsNotEmpty() {\n        assertFalse(SampleRepo.approvedSampleNames().isEmpty(),\n                \"扫不到任何已批准样本。samples 目录路径不对,或 approved 文件被误删了。\");\n    }\n}\n```\n\n---\n\n## FreightRemoteSurchargeTest.java\n\n```java\npackage com.example.freight.golden;\n\nimport com.fasterxml.jackson.databind.JsonNode;\nimport org.junit.jupiter.api.DisplayName;\nimport org.junit.jupiter.api.Test;\n\nimport java.math.BigDecimal;\n\nimport static org.junit.jupiter.api.Assertions.assertEquals;\nimport static org.junit.jupiter.api.Assertions.assertNotNull;\n\n/**\n * 偏远附加(按省份查表)新路径。\n *\n * 期望值来自需求翻译的例子,不是来自程序输出 —— 新路径没有改动前的行为可以当基线,\n * 用 golden master 去「批准」它跑出来的结果,只会把可能的错固化下来。\n */\n@DisplayName(\"偏远附加:模板配了偏远省份表时走新路径\")\nclass FreightRemoteSurchargeTest {\n\n    private static final String SAMPLE = \"首重续重-新疆-vip\";\n\n    @Test\n    @DisplayName(\"模板 1032 + 新疆 + 3.2kg + vip → fee = 26\")\n    void remoteSurchargeMatchesSpecExample() {\n        JsonNode result = FreightCalcHarness.replaySample(SAMPLE);\n\n        // 落盘供人工审 items 明细;明细确认后改名为 .approved.json 并从 PENDING_APPROVAL 删除。\n        SampleRepo.writeUtf8(SampleRepo.received(SAMPLE), JsonNormalizer.normalize(result));\n\n        JsonNode fee = result.get(\"fee\");\n        assertNotNull(fee, \"返回值里没有 fee 字段\");\n        assertEquals(0, fee.decimalValue().compareTo(new BigDecimal(\"26\")), () -> String.format(\n                \"需求例子要求 fee=26,实际 %s。完整输出见 %s。\", fee, SampleRepo.received(SAMPLE)));\n        // items 明细暂不断言:需求只给了总额。确认拆分后在这里补断言,或转成 approved 样本。\n    }\n}\n```\n\n用 `compareTo` 而不是直接 `assertEquals(BigDecimal)`,是因为后者连 scale 一起比,`26` 和 `26.0` 会误报。\n\n---\n\n## 配套小文件\n\n`samples/freight/.gitignore`\n```\n*.received.json\n```\n\n`samples/freight/首重续重-新疆-vip.PENDING.md`\n```markdown\n# 待批准:首重续重-新疆-vip\n\n新类别。模板 1032 配置了偏远省份表,新疆命中,走「偏远附加按省份查表」新路径。\n\n**没有 approved 文件是有意的。** 这条是新行为,改动前没有可锚定的旧输出;\napproved 值一旦由程序输出生成,就等于把未经核对的结果当成基线。\n\n当前由 `FreightRemoteSurchargeTest` 覆盖,断言来源是需求翻译的例子:\n模板 1032、新疆、3.2kg、vip → fee = 26。\n\n## 待确认\n- [ ] items 明细的条目与金额(需求只给了总额 26)\n- [ ] 偏远附加条目的 name 字面\n- [ ] vip 与偏远附加的先后顺序(是否对附加费打折)\n\n确认后:`首重续重-新疆-vip.received.json` → `.approved.json`,\n并从 `SampleRepo.PENDING_APPROVAL` 中删除该名字。\n```\n\n`pom.xml` 片段(版本按你仓库现有的对齐):\n```xml\n<dependency>\n  <groupId>org.junit.jupiter</groupId>\n  <artifactId>junit-jupiter</artifactId>   <!-- 含 junit-jupiter-params -->\n  <version>5.11.4</version>\n  <scope>test</scope>\n</dependency>\n<dependency>\n  <groupId>com.fasterxml.jackson.core</groupId>\n  <artifactId>jackson-databind</artifactId>\n  <version>2.18.2</version>\n  <scope>test</scope>\n</dependency>\n```\n\n```xml\n<properties>\n  <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>\n</properties>\n```\n\n---\n\n## 两点提醒\n\n1. **样本文件名是中文。** Windows 上 JVM 的 `sun.jnu.encoding` 跟随系统代码页,不跟 `file.encoding`。简体中文环境(GBK)下这几个字通常正常,但如果 CI 换了 locale 出现乱码/找不到文件,最省事的办法是样本改用 ASCII 文件名,中文描述放进 `.request.json` 的注释字段或 PENDING.md。\n\n2. **建议再补一条样本**:模板 2001(没配偏远表)+ 新疆。现有两条老样本的省份都不是偏远省,证明不了「没配表的模板遇到偏远省也不加费」。这条录出来的值我没法替你确定,得从改动前的代码上跑一次 record。\n\n---\n\n最后问一题:`首重续重-新疆-vip` 的 items 明细你期望是哪种?比如是 `首重 10 + 续重 8 + 偏远 8 = 26`(vip 不影响金额,只是资格位),还是 `首重 10 + 续重 8 + 偏远 10 + vip减免 -2 = 26`?你给个拆法,我把断言直接写进 `FreightRemoteSurchargeTest`,这条就不用挂在待批准清单上了。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 2,
+    "casesPassed": 2,
+    "overallScore": 1,
+    "overallPassRate": 1,
+    "meanDelta": 0
+  }
+}

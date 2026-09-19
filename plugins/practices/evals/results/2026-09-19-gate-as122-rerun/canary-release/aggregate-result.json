@@ -1,0 +1,268 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:11:44.292Z",
+  "durationSeconds": 179,
+  "costUsd": 1.2810145,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as122-split-evidence\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "canary-release-three-tiers",
+    "threshold": 1,
+    "concurrency": 3,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as122-split-evidence\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "canary-release-three-tiers",
+      "dir": "evals\\canary-release-three-tiers",
+      "source": "prose",
+      "promptMarkdown": "按 `canary-release` 帮我出发布方案。Bash 不可用，仓库文件也不在这个工作目录里。\n\n改动：运费计算加「偏远附加按省份查表」；开关 `remote_fee_by_province` 在配置中心，支持白名单（模板 id）和百分比；老路径 diff 为零已静态验过。\n\n需求句与例子：\n\n1. 当模板配置了偏远省份表且省份在表中时，加该省附加。例：模板 1032、新疆、3.2kg、vip → 26。\n2. 当省份不在表中时，不加附加。例：模板 1032、广东、3.2kg → 18。\n\n测试模板 9001 是我们内部的，配置与 1032 相同（同一张偏远省份表），两条例子换成 9001 也成立。老路径的监控有 p99 延迟、QPS、错误率、线程池占用。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "canary-release",
+            "arm": "with-only"
+          }
+        },
+        {
+          "name": "tiers-observation-owner",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the release plan. PASS if all of these hold: (a) three tiers, each saying who is included and how long to hold — something like internal test template 9001, then a small share of the routed category by whitelist or percentage, then everyone; (b) advancing to each tier and flipping the toggle is the decision of the owner — the agent does not flip and does not write \"advance automatically if metrics look fine\"; the message ends with one thing for the owner (decide tier 1 or confirm the plan); (c) each of the two requirement sentences has an observation point on the new path (hits, sampled results checked against the examples, exceptions), and the old path is watched through the four golden signals — latency, traffic, errors, saturation — mapped onto the available p99, QPS, error rate and thread-pool metrics; (d) after tier 1 a smoke check fires a requirement example with its expected value (模板 1032 新疆 3.2kg vip → 26).\n\nFAIL if tiers lack who or how long, if the agent advances tiers itself or by rule, if a requirement sentence has no observation point, or if the smoke check has no expected value.",
+          "config": {
+            "criteria": "Judge the release plan. PASS if all of these hold: (a) three tiers, each saying who is included and how long to hold — something like internal test template 9001, then a small share of the routed category by whitelist or percentage, then everyone; (b) advancing to each tier and flipping the toggle is the decision of the owner — the agent does not flip and does not write \"advance automatically if metrics look fine\"; the message ends with one thing for the owner (decide tier 1 or confirm the plan); (c) each of the two requirement sentences has an observation point on the new path (hits, sampled results checked against the examples, exceptions), and the old path is watched through the four golden signals — latency, traffic, errors, saturation — mapped onto the available p99, QPS, error rate and thread-pool metrics; (d) after tier 1 a smoke check fires a requirement example with its expected value (模板 1032 新疆 3.2kg vip → 26).\n\nFAIL if tiers lack who or how long, if the agent advances tiers itself or by rule, if a requirement sentence has no observation point, or if the smoke check has no expected value.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.222335,
+            "judgeCostUsd": 0.008724000000000003,
+            "durationSeconds": 62,
+            "startedAt": "2026-09-19T09:11:44.347Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-omOc14\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "tiers-observation-owner",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "用的是金丝雀发布（canary release，Humble & Farley《持续交付》/ Fowler bliki），观测按 Google SRE 的四个黄金信号（four golden signals）。\n\n## 发布方案\n\n```\n改动｜偏远附加按省份查表（分流条件：模板配置了偏远省份表；开关：remote_fee_by_province）\n放量｜档 1 白名单只放测试模板 9001，停半天 ｜ 档 2 白名单加 1032 + 另一张省份表的模板，或分流类别 5%，停一天 ｜ 档 3 全量\n回滚｜任一档异常，关 remote_fee_by_province，不回滚代码；前提：老路径 diff 为零已静态验过\n观测｜「省份在表中时加该省附加」→ 新路径命中数 > 0，抽 20 条比对附加额与省份表一致 ｜「省份不在表中时不加附加」→ 新路径「未命中省份表」分支计数 > 0，抽 20 条比对总价 = 不含附加的基准价；两条共用：新路径异常数 = 0 ｜ 老路径四个黄金信号：p99 延迟、QPS、错误率、线程池占用与放开前持平\n冒烟｜档 1 放开后用模板 9001、新疆、3.2kg、vip 打一条，期望 26\n```\n\n## 几点要说清楚\n\n- **冒烟用 9001 不用 1032。** 档 1 白名单里只有 9001，拿 1032 打根本进不了新路径，冒烟就成了空跑。你说过 9001 与 1032 配置相同、两条例子换成 9001 也成立，所以期望值仍是 26。\n- **档 1 覆盖不到「省份表本身配错」。** 9001 和 1032 共用同一张表，档 1 只能证明查表逻辑对，证明不了别的模板的表配得对。所以档 2 我建议不只加 1032，而是挑一个用**另一张**省份表的模板一起放。\n- **档 1 没有自然流量。** 内部模板的信号来自冒烟那一条加你们手工下的单，不是流量统计；「停半天」是给你留看日志的时间，不是等指标样本攒够。\n- **百分比的分母我查不了**（仓库不在这个工作目录，Bash 也不可用）。我按「5% 落在分流类别（配了偏远省份表的模板）上」写的。如果配置中心的百分比是全量请求的百分比，那档 2 的实际命中量会小很多，进档 3 的判断要看新路径命中数而不是看时钟。\n\n每档放开、停多久后看、进不进下一档，都等你说；我不拨开关、不改配置、不发公告。\n\n请你定档 1 放谁 —— 我建议就是白名单只放 9001，可以吗？"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.15877400000000003,
+            "judgeCostUsd": 0.007674,
+            "durationSeconds": 25,
+            "startedAt": "2026-09-19T09:11:44.347Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-rEnaLg\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "tiers-observation-owner",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "按 `canary-release`（金丝雀发布，Humble & Farley《持续交付》；观测按 Google SRE 四个黄金信号）出的方案：\n\n```\n改动｜偏远附加按省份查表（分流条件：模板配置了偏远省份表；开关：remote_fee_by_province）\n放量｜档 1 白名单只放测试模板 9001，停半天 ｜ 档 2 百分比 5%，停一天 ｜ 档 3 全量\n回滚｜任一档异常，关 remote_fee_by_province；前提：老路径 diff 为零已静态验\n观测｜「省份在表中时加该省附加」→ 新路径命中数 > 0、抽 20 条与例子比对一致 ｜「省份不在表中时不加附加」→ 新路径异常数 = 0、这类请求金额与老路径一致 ｜ 老路径四个黄金信号：p99 延迟、QPS、错误率、线程池占用不变\n冒烟｜档 1 放开后用模板 9001、新疆、3.2kg、vip 打一条，期望 26\n```\n\n两点说明：\n\n- **冒烟用 9001 而不是 1032**。档 1 白名单里只有 9001，拿 1032 打过去会走老路径、返回老金额，验不到新路径。你说过 9001 与 1032 配置相同、同一张偏远省份表，两条例子换成 9001 成立，所以期望值仍是 26；档 2 放到 5% 之后再用 1032、广东、3.2kg 期望 18 复核一次不加附加的那条。\n- **留档**：我碰不到仓库，这份方案请贴进 PR 或工单，每档的观测结果跟着记在同一处。\n\n每档放开、停多久后看、进不进下一档，都等你说；我不拨开关、不改比例、不发公告。\n\n请你定档 1 放谁——是就按上面只放测试模板 9001，还是再捎上几个内部账号？"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.190674,
+            "judgeCostUsd": 0.009581999999999997,
+            "durationSeconds": 44,
+            "startedAt": "2026-09-19T09:11:44.347Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-tMx6By\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "tiers-observation-owner",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: PASS FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  false,
+                  false
+                ],
+                "evidence": "按 `canary-release`（canary release，Humble & Farley《持续交付》；观测按 Google SRE 四个黄金信号 four golden signals）出的方案。开关支持白名单和百分比，所以三档不用退化成开／关。\n\n```\n改动｜偏远附加按省份查表（分流条件：模板配置了偏远省份表；开关：remote_fee_by_province）\n放量｜档 1 白名单只放测试模板 9001，停半天 ｜ 档 2 百分比 5%，停一天 ｜ 档 3 全量\n回滚｜任一档异常，关 remote_fee_by_province；前提：calc 老路径 diff 为零已静态验过\n观测｜「配了表且省份在表中 → 加该省附加」→ 新路径命中数 > 0，抽 20 条与例子期望比对 ｜「省份不在表中 → 不加附加」→ 抽 20 条非偏远请求，运费与不加附加的期望一致（如 3.2kg 广东 → 18），新路径异常数 = 0 ｜ 老路径四个黄金信号：p99 延迟、QPS、错误率、线程池占用不变\n冒烟｜档 1 放开后用模板 9001、新疆、3.2kg、vip 打一条，期望 26\n请你定档 1 放谁；每档放开、停多久后看、进下一档，我都等你说。\n```\n\n几点说明：\n\n- **冒烟用 9001 而不是 1032**：档 1 白名单里只有 9001，拿 1032 打会走老路径、拿不到 26，验不到东西。你说过 9001 与 1032 配置相同（同一张偏远省份表），两条例子换成 9001 也成立 —— 这是我采信你的话，仓库文件不在这个工作目录、Bash 也不可用，我没法自己核对配置。建议档 1 前你顺手确认一眼 9001 的偏远表里确实有新疆、且该省附加让结果正好是 26。\n- **两条需求句各一个观测点**，句 2 是「不变」类的断言，所以观测点落在「抽样结果等于不加附加的期望值」加「新路径异常数 = 0」，不然它没有可看的计数。\n- **老路径四个信号对上你现有的四个指标**：延迟 → p99、流量 → QPS、错误 → 错误率、饱和 → 线程池占用，不用新加埋点。\n- **档 2 的 5% 是建议值**，如果这条分流类别本身量很小，5% 一天可能攒不出足够样本，那档 2 改成白名单放 2～3 个真实模板更实际。\n- 方案和每档的观测结果记进 PR 或工单，回滚点写在同一处。你定之前我不拨开关、不改比例、不发公告。\n\n一个问题：档 1 就放测试模板 9001 一个，对吗？"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.1664365,
+            "judgeCostUsd": 0.010649999999999996,
+            "durationSeconds": 55,
+            "startedAt": "2026-09-19T09:12:09.671Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-xMcLPc\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "tiers-observation-owner",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说一件事实：这个环境里没有 `canary-release` 这个 skill（我查过可用技能列表和工作目录，都没有）。所以下面是我按业界通行做法出的方案，不是在执行你那个 skill —— 如果它有自己的阶段划分或模板，你把内容贴给我，我按它重出。\n\n## 发布方案\n\n依据的做法：**Deploy ≠ Release**（用开关把\"上线代码\"和\"放开功能\"拆开）、**Canary Release / Progressive Delivery**（分阶段放量）、**Kill Switch**（关开关即回滚，不走部署）。\n\n| 阶段 | 范围 | 停留 | 放行判据 |\n|---|---|---|---|\n| 0 | 代码上线，`remote_fee_by_province` 全关 | 24h | 四个黄金信号持平（老路径 diff 零已静态验过，这一步只是证明它在真实流量下也成立） |\n| 1 | 白名单 = 9001 | 1h | 两条例子跑通 + 边界用例 |\n| 2 | 白名单 = 1032（真实商户） | 24h | 业务指标见下 |\n| 3 | 百分比 1% → 5% → 25% → 50% | 每档 ≥ 一个完整日峰谷 | 同上 |\n| 4 | 100%，开关保留 | 2 周后清理开关 | —— |\n\n阶段 1 的用例，直接用你给的两条换模板：9001 + 新疆 + 3.2kg + vip → 26；9001 + 广东 + 3.2kg → 18。另外补三个边界：省份表为空、省份字段缺失、重量刚好卡在档位边界（确认附加是加在折扣前还是折扣后）。\n\n## 两个我觉得必须先解决的问题\n\n**一、你列的监控发现不了\"算错了\"。** p99 延迟、QPS、错误率、线程池占用正好是 Google SRE 的四个 **Golden Signals**，它们能告诉你服务是不是崩了，但一笔运费从 18 算成 26 或者从 26 算成 18，这四个指标全是绿的。金额类改动的标准做法是 **Shadow Comparison / Dual-Run**：新旧两条路径都算，线上只取老值，把 diff 打点。这样你在 0 流量风险的情况下就能拿到全量真实数据，等 diff 分布符合预期再开阶段 2。这个我强烈建议在阶段 0 就加上。\n\n配套要加的业务指标：偏远附加命中率（按省份分维度）、单均运费环比、\"省份在表中但附加为 0\"的反例计数。\n\n**二、这不是纯技术灰度，金额变化对客户可见。** 阶段 2 一放，1032 的真实买家看到的运费就涨了。这需要和业务、客服先对齐口径，别让客服在不知情的情况下接投诉。技术上没问题，流程上这是个前置条件。\n\n另外，9001 配置和 1032 相同这件事，只能让它当冒烟用例，不能当放量依据 —— 内部模板的流量形态和真实商户不一样，阶段 2 该走还得走。\n\n## 回滚\n\n关开关即回滚。但要确认一个数：配置中心的值在应用侧有没有本地缓存、TTL 多少 —— 这个数就是你的实际回滚耗时，要写进预案。\n\n---\n\n问你一题。假设同一个用户 10:00 进结算页命中了灰度，运费算 26；10:05 刷新一下没命中，变成 18 —— 这种情况会不会发生，取决于百分比是按什么分桶的。你们配置中心的百分比，是按订单号随机，还是按用户 id / 模板 id 做哈希？"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.2669185,
+            "judgeCostUsd": 0.019937999999999997,
+            "durationSeconds": 110,
+            "startedAt": "2026-09-19T09:12:28.571Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-KcoZcK\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "tiers-observation-owner",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`canary-release` 这个 skill 在当前可用列表里没有（可用的是 code-review / security-review / simplify / run 等），我没有去猜一个近似的。下面是我按业界实践自己出的方案。\n\n另外说明一下来源：Bash 不可用、仓库也不在工作目录，所以下面没有任何我实地查证的内容——全部基于你给的描述。凡是我推断的我都标出来了。\n\n---\n\n## 先讲三件会影响方案形状的事\n\n**1. 现有四个监控指标,一个都不能证明这次改动是对的**\n\np99、QPS、错误率、线程池占用是 guardrail metrics（护栏指标）——它们只能否决发布,不能通过发布。运费多收 8 块或者少收 8 块,这四条曲线全是绿的。这次改的是钱,没有金额类业务指标就等于裸奔。方案里补指标的部分是重点。\n\n**2.「老路径 diff 为零已静态验过」这句话比听起来弱**\n\n静态验证证明的是**代码**没变。但开关 `remote_fee_by_province` 和省份表都在**配置中心**,是运行时数据。线上真正的风险不是代码分支走错,是配置下发错、省份表内容错、或者省份名对不上。静态 diff 管不到这一层。所以方案的第一阶段是「代码上线但开关全关」,把静态结论升级成线上观察结果。\n\n**3. 用 9001 验证 ≠ canary**\n\n9001 是内部模板、且与 1032 同配置同一张表。跑通那两条例子,证明的是「这段代码 + 这张表」能跑,属于冒烟测试（smoke test）。它不覆盖:其他模板的其他省份表、没有配省份表的模板、真实 vip 人群、真实流量形态。所以 9001 我放在阶段 1,不算 canary 的量级档位。\n\n---\n\n## 发布方案\n\n### 阶段 0 — 代码上线,开关全关\n\n做法叫 **decouple deploy from release**（部署与发布解耦,feature flag 的标准用法）:先让代码进生产,开关 `remote_fee_by_province` 全局 off。\n\n- 停留:覆盖一个完整晚高峰,建议 24h。\n- 通过条件:运费金额分布、按模板分组的客单运费均值,与上线前逐日对比无偏移。\n- 这一步的目的只有一个——用线上数据确认「开关关着的时候行为完全没变」。\n\n### 阶段 1 — 白名单 9001(冒烟)\n\n- 白名单只放 9001,百分比 0。\n- 断言两条例子:`9001 + 新疆 + 3.2kg + vip = 26`、`9001 + 广东 + 3.2kg = 18`。\n- 再补一条你没给的分支(见下面「例子没覆盖到的」)。\n- 停留:跑通即可,不需要挂时间。\n\n### 阶段 2 — 白名单 1032,百分比 1%\n\n第一次碰真实用户和真实钱。\n\n- 停留:覆盖一个晚高峰。\n- 这一档看的是业务指标,不是技术指标。\n\n### 阶段 3 — 扩量 1% → 5% → 25% → 50% → 100%\n\n- 每档停留覆盖一个高峰,至少 2h。\n- 每档之间必须有人看一眼指标再推下一档,不要串成自动化一路推到底(这次是钱,不适合全自动 ramp)。\n- 模板维度同步扩:1032 → 若干同类模板 → 全量。\n\n---\n\n## 门禁指标\n\n**护栏(已有,只用来叫停)**:p99、QPS、错误率、线程池占用。任一超阈值,立即回滚,不讨论。\n\n**业务(缺失,必须补,这是真正的通过条件)**:\n\n| 指标 | 预期 | 对应需求 |\n|---|---|---|\n| 表外省份的附加费命中率 | **恒等于 0** | 需求 2 |\n| 表内省份的附加费命中率 | > 0 且稳定 | 需求 1 |\n| 按模板分组的运费均值/中位数 | 只在开了开关的模板上抬升,幅度可解释 | — |\n| 新旧运费 diff 分布 | 表外省份 diff 全为 0 | 需求 2 |\n| 0 元运费 / 异常高运费离群计数 | 不增长 | 兜底 |\n| 下单转化率、弃单率 | 不劣化 | 运费算错最直接的业务反应 |\n| 运费与支付实收对账 | 每日无差 | — |\n\n「表外省份命中率恒等于 0」这条我建议做成硬断言告警,因为它是需求 2 的直接翻译,而且是唯一能自动抓到「省份名归一化错了」的信号。\n\n---\n\n## 回滚\n\n- **一个全局 kill switch,优先级高于白名单和百分比。** 出事的时候没人有心情去逐个摘模板 id。\n- **回滚生效时间要实测**,包含配置中心下发延迟 + 客户端本地缓存 TTL。这个数字决定你敢放多少量——如果生效要 5 分钟,1% 那一档就别按 2h 停留算,按\"5 分钟内能错多少单\"算。\n- **已下单锁价**:回滚不能改已生成订单的运费。下单时把运费快照进订单,不要在展示时重算。\n\n---\n\n## 上线前必须先定的四个实现细节\n\n这四条我建议在阶段 0 之前确认,任何一条没定都会在阶段 2 出事:\n\n1. **百分比的分桶键必须是稳定键**(订单号或用户 id),用一致性哈希做粘性分桶(consistent hashing on a stable unit of diversion)。如果按请求随机,同一个用户刷新一次报价从 18 跳到 26,这是投诉级的事故。\n2. **白名单与百分比的优先级**:是并集(白名单 OR 命中百分比),还是白名单内再按百分比?两种行为差别很大,得写死。\n3. **省份表缺失或为空时的兜底**:必须 fail-open 回老路径,不能抛异常,也不能当成 0 附加费走新路径——后者会让「新路径有 bug」伪装成「正常无附加费」。\n4. **省份名归一化**。「新疆」/「新疆维吾尔自治区」/ 行政区划代码,查表 key 对不上就静默不命中,结果是少收钱,而且四个技术指标全绿。这是查表类改动最常见的线上 bug。建议查表 key 用行政区划代码,不用中文名。\n\n---\n\n## 你给的例子没覆盖到的\n\n- **第三个分支没有例子**:模板**没有配**偏远省份表。这一支应该完全等同老路径,而且它是流量大头。建议补一条,比如「模板 2001(未配表)、新疆、3.2kg → 18」。\n- **两条例子同时变了两个变量**:例 1 是新疆 + vip,例 2 是广东 + 无 vip。26 和 18 差 8,但这 8 是附加费、还是附加费和 vip 折扣的合成,从这两条推不出来。做断言可以照抄,做对账口径就不行了。建议补一条「1032、新疆、3.2kg、**非 vip**」把 vip 这个变量隔离出来。\n\n---\n\n阶段 0 和阶段 2 的通过条件,我现在写的是「和历史数据对比无偏移」,这是个比较钝的判据。更好的做法是影子比对(shadow diff,类似 GitHub Scientist 那套):**比如一笔 1032 / 新疆 / 3.2kg / vip 的真实线上请求,在同一次调用里把老逻辑和新逻辑各算一遍,只把老值返给用户,把两个值的 diff 打到日志。** 这样阶段 0 就能拿到全量真实流量上的逐笔 diff,而不是等到阶段 2 用真实用户的钱去试。\n\n问题是:运费计算这条链路,现在能不能做到「同一次请求算两遍、只用其中一个值」?如果能,整个方案可以往前挪一大步、扩量也能更快;如果不能,那阶段 2 和 3 的停留时间我得再拉长一档。"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.27587649999999997,
+            "judgeCostUsd": 0.019530000000000006,
+            "durationSeconds": 117,
+            "startedAt": "2026-09-19T09:12:46.332Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-tIlbl3\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "tiers-observation-owner",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说一句：**这个环境里没有 `canary-release` 这个 skill**。我 Glob 查过工作目录和 skill 列表，都没有；可用 skill 只有 dataviz / code-review / simplify / run / security-review 等那一组。所以下面不是按你那套模板出的，是按通用的渐进式发布实践（progressive delivery / canary release）写的。如果那个 skill 在别的机器上，你把它的章节结构发我，我照着重排。\n\n另外 Bash 不可用、仓库也不在这儿，所以下面**没有任何一条是我实测的**，全部基于你给的信息。\n\n---\n\n## 一、先把事实和推断分开\n\n**你给的事实**\n- 改动：运费加「偏远附加按省份查表」。\n- 开关 `remote_fee_by_province` 在配置中心，支持白名单（模板 id）+ 百分比。\n- 老路径 diff 为零，**静态**验过。\n- 老路径已有监控：p99 延迟、QPS、错误率、线程池占用。\n- 验收例子：模板 1032 / 新疆 / 3.2kg / vip → 26；模板 1032 / 广东 / 3.2kg → 18。\n\n**我的推断（需要你确认或我后面去验）**\n1. **9001 的两条例子不是新증据。** 你说 9001 与 1032 配置相同、同一张偏远省份表 —— 那 9001 的「新疆→26 / 广东→18」是从「同配置」+ 上面两条需求推出来的，不是独立的验收点。它落在同一个等价类（equivalence class）里。所以：9001 可以用来验**链路通不通**（开关读取、查表调用、金额写入），**不能**用来当「省份表覆盖已验证」的证据。灰度阶段规划里我按这个处理。\n2. **「静态 diff 为零」只覆盖代码路径，不覆盖运行时。** 开关默认值、配置中心读取失败时的兜底、省份表拉不到时的行为，静态 diff 看不出来。所以阶段 0 必须有一次「开关全关 = 老行为」的线上实测。\n3. **现有 4 个监控指标一个都发现不了这次的主要故障。** p99/QPS/错误率/线程池都是系统指标（guardrail metrics），而这次最可能的故障是**金额算错但接口 200**——多收或少收，静悄悄的。必须补业务指标，见第三节。\n\n---\n\n## 二、发布阶段\n\n用的是 deploy ≠ release（dark launch）+ 分档灰度 + 秒级 kill switch。每档都有 bake time（观察期），不看「没报错」就往下走。\n\n| 阶段 | 开关状态 | 目的 | 观察期 | 放行条件 |\n|---|---|---|---|---|\n| 0 | 全关（代码已上线） | 证明新代码在关的状态下 = 老行为 | 24h | 4 个系统指标与发版前无差异；新代码分支的执行计数为 0 |\n| 1 | 白名单 = 9001 | 验链路：开关能读到、表能查到、金额能落库 | 2h（或够 50 单） | 新疆→26、广东→18 实跑对上；无 fallback 告警 |\n| 2 | 白名单 = 9001 + 1032 | **第一次产生真实金额** | 24h（跨一个完整业务日） | 补的业务指标全绿；T+1 抽样对账通过 |\n| 3 | 百分比 1% → 5% → 25% → 50% | 扩大范围 | 每档 ≥ 4h，1% 和 5% 各 ≥ 24h | 同上 + 灰度组 vs 对照组的运费均值差在预期区间内 |\n| 4 | 100%，白名单清空 | 全量 | 7 天 | —— |\n| 5 | 删开关、删老路径 | flag cleanup | —— | 别让这个开关变成永久开关 |\n\n阶段 1 单独拆出来，就是因为上面推断 1：9001 只值一个「链路 smoke test」，不值一个灰度档。别把它算进「已验证 X% 流量」。\n\n---\n\n## 三、必须补的监控（现有 4 个不够）\n\n按 guardrail metrics（防炸）和 business metrics（防算错）分开：\n\n**Guardrail（沿用现有 4 个，加阈值）**\n- p99、QPS、错误率、线程池占用：灰度组与对照组对比，不看绝对值。查表如果走了远程调用，p99 最可能在这儿劣化。\n\n**Business（新加，这是重点）**\n1. **偏远附加命中率**，按省份分桶。新疆命中率突然掉到 0 = 查表挂了但没报错。\n2. **附加金额总额 / 5min**，配突变告警。这是「多收钱」的第一道闸。\n3. **查表未命中率 + 配置中心读取失败率 + 走兜底的次数**。兜底次数 > 0 就该看，不该等到错误率涨。\n4. **新旧路径双跑金额差异（shadow compare / 双跑对账）**：灰度期间同时算新旧两个值，只用新值、把旧值和 diff 打日志。这是唯一能在出错前发现算错的手段。\n5. **报价金额 ≠ 下单金额的比例**。见第五节的问题。\n\n**对账**：阶段 2 起，每天 T+1 按省份抽样核对一次实际扣费，别只信监控曲线。\n\n---\n\n## 四、发布前的检查清单（我看到的风险点）\n\n- **省份名归一化**：查表 key 是「新疆」还是「新疆维吾尔自治区」？上游传的省份字段来源不止一个的话，这是最容易出的 bug。建议入口统一归一化 + 未匹配上时**不加附加**并打点（而不是抛异常）。\n- **省份为空 / 港澳台 / 海外**：要有明确行为，不能靠「表里没有所以不加」蒙混。\n- **省份表本身的变更也要走灰度**。表在配置中心，改表 = 改价格，风险不比改代码小。建议表走 config-as-code：有 review、有版本、有审计。\n- **回滚不是无状态的**。关开关只能停止「之后」的计算，已经按 26 成交并落库的订单不会自动变回 18。发布前先定好：回滚后这批订单是不追溯、还是补偿。这个口径得业务定，不能发布当天临时拍。\n\n---\n\n## 五、回滚\n\n- **手段**：关 `remote_fee_by_province`（秒级，不发版）。这是 kill switch，不是「回滚发版」。\n- **触发条件（任一即关，先关后查）**：附加金额总额 5min 环比突变超阈值；某省命中率归零；双跑 diff 非零；报价/下单不一致率 > 0。\n- **演练**：阶段 1 期间主动关一次开关，确认 9001 立刻回到旧金额。没演练过的 kill switch 不算 kill switch。\n\n---\n\n## 六、我需要你定一件事\n\n具体场景：同一个用户，10:00 询价，请求命中了灰度，新疆 3.2kg 算出 26；10:05 提交订单，同一批参数，这次没命中灰度，算出 18。用户看到的价格和实际扣的价格对不上——这在阶段 3 的百分比灰度里会真实发生。\n\n**百分比是按什么 key 分桶的？** 是每个请求独立随机，还是按订单号/用户 id 做稳定哈希（sticky bucketing）？\n\n- 如果是**按请求随机**，阶段 3 之前必须先加价格快照（询价时把运费冻结，下单直接用），否则百分比档位一开就会出不一致。\n- 如果是**稳定哈希**，阶段 3 可以直接开，我把上面第三节的第 5 个指标降级成兜底告警。\n\n你答完这个，我把阶段 3 的细节补实，顺带确认一下白名单和百分比的优先级是 OR（白名单恒开）还是 AND。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.3333333333333333,
+        "passRate": 0.3333333333333333,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0.3333333333333333
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 1,
+    "casesPassed": 0,
+    "overallScore": 0.3333333333333333,
+    "overallPassRate": 0.3333333333333333,
+    "meanDelta": 0.3333333333333333
+  }
+}

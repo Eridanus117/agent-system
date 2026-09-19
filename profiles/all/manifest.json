@@ -9,6 +9,10 @@
       "target": "plugins/workcoding/skills/architecture-design"
     },
     {
+      "name": "canary-release",
+      "target": "plugins/practices/skills/canary-release"
+    },
+    {
       "name": "clarify",
       "target": "plugins/clarify/skills/clarify"
     },
@@ -25,8 +29,16 @@
       "target": "plugins/workcoding/skills/evidence-regression"
     },
     {
+      "name": "feature-toggle",
+      "target": "plugins/practices/skills/feature-toggle"
+    },
+    {
       "name": "flow",
       "target": "plugins/flow/skills/flow"
+    },
+    {
+      "name": "golden-master",
+      "target": "plugins/practices/skills/golden-master"
     },
     {
       "name": "grilling",
@@ -53,6 +65,14 @@
       "target": "plugins/orchestrated-collaboration/skills/orchestrated-collaboration"
     },
     {
+      "name": "record-replay",
+      "target": "plugins/practices/skills/record-replay"
+    },
+    {
+      "name": "regression-evidence",
+      "target": "plugins/flow-steps/skills/regression-evidence"
+    },
+    {
       "name": "release-observe",
       "target": "plugins/workcoding/skills/release-observe"
     },
@@ -67,6 +87,10 @@
     {
       "name": "review-response",
       "target": "plugins/flow-steps/skills/review-response"
+    },
+    {
+      "name": "rollout-observe",
+      "target": "plugins/flow-steps/skills/rollout-observe"
     },
     {
       "name": "self-improvement",
