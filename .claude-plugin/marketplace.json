@@ -58,12 +58,12 @@
     },
     {
       "name": "flow",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "source": "./plugins/flow"
     },
     {
       "name": "flow-steps",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "source": "./plugins/flow-steps"
     },
     {

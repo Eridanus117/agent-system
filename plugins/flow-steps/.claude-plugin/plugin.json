@@ -1,7 +1,7 @@
 {
   "name": "flow-steps",
-  "version": "0.1.0",
-  "description": "flow 在第 4、6、7 段点名的四条步：建工作树加基线、验证取证、接审查意见、收尾。",
+  "version": "0.1.1",
+  "description": "flow 在第 4、6、7 阶段点名的四条活动：建工作树加基线、验证取证、接审查意见、收尾。",
   "author": {
     "name": "Eridanus117"
   },
