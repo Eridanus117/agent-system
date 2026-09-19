@@ -1,0 +1,296 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T08:57:11.213Z",
+  "durationSeconds": 183,
+  "costUsd": 1.7667950000000001,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as121-split-legacy\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "characterization-test-*",
+    "threshold": 1,
+    "concurrency": 4,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as121-split-legacy\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "characterization-test-new-behaviour",
+      "dir": "evals\\characterization-test-new-behaviour",
+      "source": "prose",
+      "promptMarkdown": "按 `characterization-test` 把新行为锁住：目的地是新疆或西藏时运费要加一笔偏远附加 8 元，所以模板 1032 新疆 3.2kg 那条应该是 41。Bash 不可用，先把测试写出来给我看就行。\n\n现在的方法（自足练习，没有别的文件）：\n\n```java\n// FreightCalc.java\n// 运费计算：首重 + 续重（按 0.5kg 进位），vip 免续重，再加区域加价\npublic class FreightCalc {\n    public int calc(Req r) {\n        int fee = tpl(r.tplId).first;                    // 首重价\n        if (r.weight > 1.0) {\n            int extra = (int) Math.ceil(r.weight - 1.0); // 向上取整到 1kg\n            int unit = tpl(r.tplId).next;\n            if (r.vip) unit = unit / 2;\n            fee += extra * unit;\n        }\n        if (region(r.province) != null) {\n            fee += region(r.province).surcharge;\n        } else {\n            fee += 0;\n        }\n        if (r.cod) fee += 2;\n        return fee;\n    }\n}\n```\n\n入参：模板 1032（first=18，next=4），新疆，weight=3.2，vip=false，cod=false；`region(\"新疆\")` 是西北大区，surcharge=3。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "pins-actual-not-desired",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether the agent kept the two kinds of test apart.\n\nPASS if the agent says a characterization test records what the code does now — for this input that is 33 — not the wanted 41, and then either writes the characterization test expecting 33 and names the 41 case as a new-behaviour test to be written test-first (TDD, red first) after the current behaviour is pinned, or declines to label a 41 expectation as a characterization test and offers the test-first route for it. Asking the owner one question about which they want first is fine.\n\nFAIL if the agent writes a \"characterization test\" that expects 41, or changes `calc` to make 41 happen, or does not tell the owner that 41 is new behaviour rather than current behaviour.",
+          "config": {
+            "criteria": "Judge whether the agent kept the two kinds of test apart.\n\nPASS if the agent says a characterization test records what the code does now — for this input that is 33 — not the wanted 41, and then either writes the characterization test expecting 33 and names the 41 case as a new-behaviour test to be written test-first (TDD, red first) after the current behaviour is pinned, or declines to label a 41 expectation as a characterization test and offers the test-first route for it. Asking the owner one question about which they want first is fine.\n\nFAIL if the agent writes a \"characterization test\" that expects 41, or changes `calc` to make 41 happen, or does not tell the owner that 41 is new behaviour rather than current behaviour.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.23173549999999998,
+            "judgeCostUsd": 0.0159,
+            "durationSeconds": 86,
+            "startedAt": "2026-09-19T08:57:11.276Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-h6BVNE\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "pins-actual-not-desired",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先把结论摆在最前面，因为它直接影响这份测试怎么写。\n\n**事实（读代码得出）**：现在这段 `calc` 里根本没有「新疆/西藏 +8」这条逻辑，只有 `region(...).surcharge`。按你给的入参走一遍：\n\n| 步骤 | 代码 | 值 | 累计 |\n|---|---|---|---|\n| 首重 | `tpl(1032).first` | 18 | 18 |\n| 进续重分支 | `3.2 > 1.0` | true | 18 |\n| 续重档数 | `ceil(3.2-1.0)` = `ceil(2.2)` | 3 | 18 |\n| 续重价 | `3 × 4`（vip=false，unit 不减半） | +12 | 30 |\n| 区域加价 | 西北大区 surcharge=3 | +3 | 33 |\n| 货到付款 | cod=false | +0 | **33** |\n\n所以这条现在的实际输出是 **33**，不是 41。41 是加上 8 元偏远附加之后的**目标值**。characterization test 的规矩是「期望值取代码实际吐出的值，不是想要的值」，所以下面这份先锁 33。\n\n## 测试\n\n```java\n// FreightCalcCharacterizationTest.java\n// 目的：锁住 FreightCalc.calc 的现状，不评判对错。\n// 期望值全部由逐行走读代码推出（Bash 不可用，没有真跑过），\n// 首次能跑时如与实际不符，以实际输出为准改这里，不要改实现。\nimport static org.junit.jupiter.api.Assertions.assertEquals;\nimport org.junit.jupiter.api.Test;\n\nclass FreightCalcCharacterizationTest {\n\n    private final FreightCalc calc = new FreightCalc();\n\n    // 【假设】Req 的构造方式未知，这里按字段顺序 (tplId, province, weight, vip, cod) 拼。\n    // 实际若是 setter / builder，只改这个 helper，测试主体不动。\n    private Req req(int tplId, String province, double weight, boolean vip, boolean cod) {\n        Req r = new Req();\n        r.tplId = tplId;\n        r.province = province;\n        r.weight = weight;\n        r.vip = vip;\n        r.cod = cod;\n        return r;\n    }\n\n    // —— 主锚点：主人给的那条真实入参 ——\n    @Test\n    void 模板1032_新疆_3kg2_非vip_非cod_当前是33() {\n        // 18 首重 + 3 档 × 4 续重 + 3 西北大区 = 33\n        // 注意：现状里没有「新疆/西藏 +8 偏远附加」，所以不是 41。\n        assertEquals(33, calc.calc(req(1032, \"新疆\", 3.2, false, false)));\n    }\n\n    // —— 下面每条只动一个变量，各锁住走读表里的一步 ——\n\n    // 锁「首重 + 区域加价」这条底线：weight 正好 1.0 时 `> 1.0` 为 false，不进续重分支。\n    @Test\n    void 恰好1kg_不计续重_只有首重加区域() {\n        assertEquals(21, calc.calc(req(1032, \"新疆\", 1.0, false, false))); // 18 + 0 + 3\n    }\n\n    // 锁续重的进位粒度：1.01kg 就跳满一整档 4 元。\n    // 【与注释不符】方法头注释写「续重（按 0.5kg 进位）」，\n    // 但 `Math.ceil(weight - 1.0)` 是按 1kg 进位，行内注释「向上取整到 1kg」才和实现一致。\n    // 若真按 0.5kg 进位，这里应是 18 + 1×4(半档?) + 3；现状就是整档 4。\n    @Test\n    void 超出1kg一点点_按整kg进位_跳满一档() {\n        assertEquals(25, calc.calc(req(1032, \"新疆\", 1.01, false, false))); // 18 + 1×4 + 3\n    }\n\n    // 锁 vip 分支。\n    // 【与注释不符】方法头注释写「vip 免续重」，但实现是 `unit = unit / 2` 续重减半。\n    // 免续重应得 21，现状是 27。\n    // 另：unit/2 是 int 除法，unit 为奇数时会截断（本模板 next=4，本例未触发）。\n    @Test\n    void vip_续重是减半而不是免除() {\n        assertEquals(27, calc.calc(req(1032, \"新疆\", 3.2, true, false))); // 18 + 3×2 + 3\n    }\n\n    // 锁 cod 固定加价 2 元。\n    @Test\n    void 货到付款_固定加2元() {\n        assertEquals(35, calc.calc(req(1032, \"新疆\", 3.2, false, true))); // 33 + 2\n    }\n}\n```\n\n## 单独标出来的三处\n\n1. **注释 vs 实现（续重粒度）**：头注释说「按 0.5kg 进位」，代码 `Math.ceil(r.weight - 1.0)` 是按 1kg 进位。以实现为准锁了。\n2. **注释 vs 实现（vip）**：头注释说「vip 免续重」，代码是 `unit / 2` 减半。以实现为准锁了。\n3. **`else { fee += 0; }`** 是空操作，`region()` 返回 null 时不加钱。本轮入参没走到这个分支，我没为它写断言 —— 需要一个「没有大区映射的省份」名字才能锁，而我手上没有 `region()` 的实现，编不出可信的例子。\n\n**标为假设的地方**：`Req` 的构造方式、`tpl()`/`region()` 的查表结果（18/4/3 是你口述的，我没有源文件可核）、以及全部期望值——它们是走读推出的，不是跑出来的观察结果。`ceil` 这一步我核过 IEEE754：`3.2 - 1.0` 落在 `2.2` 这个 double 上，没有浮点漂移，所以 3 档是稳的。\n\n## 我要问你一个问题\n\n上面这份锁的是 **33**。要把它变成 41，业界做法是先用 characterization test 把 33 钉死当安全网，再用 **Sprout Method** 把「新疆/西藏 +8」长在新方法里，最后才把主锚点那条的期望值从 33 改成 41（或者留着 33 那条测无附加路径、另加一条 41 的）。\n\n那么：**这轮你是要我按上面这样先锁 33（我推荐这条），还是你其实已经跳过安全网，想直接拿 41 当红测试走 TDD？**"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 6,
+            "costUsd": 0.49557100000000004,
+            "judgeCostUsd": 0.006461999999999999,
+            "durationSeconds": 144,
+            "startedAt": "2026-09-19T08:57:11.276Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-jQXPZ4\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "pins-actual-not-desired",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "三个文件：\n\n| 文件 | 作用 | 现在跑的结果（推算） |\n|---|---|---|\n| `FreightCalc.java` | 你的 `calc()` + 我补的最小脚手架（`Req`/`tpl`/`region`），只为能编译 | — |\n| `FreightCalcCharacterizationTest.java:1` | 钉住**改之前**的实际行为，7 条 | 全绿 |\n| `RemoteAreaSurchargeTest.java:1` | 新行为 +8，5 条 | 全红（正常，这是 red 步） |\n\ncharacterization test 那 7 条里，除了基准那条，我特意围着要动的代码路径撒了网：1.0kg 边界、1.01kg 刚过线、vip 的整数除法、cod、未知省份 region 返回 null。改 +8 的时候，只有带新疆的那几条允许变红；上海和 1kg 进位那两条要是也红了，就是碰坏了别的东西。\n\n有两处我没有事实依据，在代码里留了 `TODO`：`region(\"西藏\").surcharge` 我按新疆同样填了 3；附加费的叠加位置我按\"区域加价之后、cod 之前\"写。\n\n---\n\n一个问题，关于 41 这个数：\n\n`FreightCalc` 开头的注释写的是「续重**按 0.5kg 进位**」，但代码是 `Math.ceil(r.weight - 1.0)`，按整 kg 进位。这两种算法对 3.2kg 给出的结果不一样：\n\n- 整 kg 进位（代码现状）= 33，**+8 偏远 = 41**\n- 0.5kg 进位（注释说法）= 18 + 5 段 ×4 + 3 = 38 + 3 = **41**，一分偏远费没加\n\n也就是说 41 有两个来路完全不同的解释。你这个 41 是怎么来的——是拿 33 加 8 算出来的，还是从生产环境/对账单上抄的某单实际金额？如果是后者，那真正对不上的可能是进位规则，加了 +8 反而会变成 49。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    },
+    {
+      "name": "characterization-test-walkthrough",
+      "dir": "evals\\characterization-test-walkthrough",
+      "source": "prose",
+      "promptMarkdown": "按 `characterization-test` 给下面这个方法锁住现状。Bash 不可用，跑不了；工作区里没有别的文件，材料都在这里。\n\n要锁的方法（自足练习）：\n\n```java\n// FreightCalc.java\n// 运费计算：首重 + 续重（按 0.5kg 进位），vip 免续重，再加区域加价\npublic class FreightCalc {\n    public int calc(Req r) {\n        int fee = tpl(r.tplId).first;                    // 首重价\n        if (r.weight > 1.0) {\n            int extra = (int) Math.ceil(r.weight - 1.0); // 向上取整到 1kg\n            int unit = tpl(r.tplId).next;\n            if (r.vip) unit = unit / 2;\n            fee += extra * unit;\n        }\n        if (region(r.province) != null) {\n            fee += region(r.province).surcharge;\n        } else {\n            fee += 0;\n        }\n        if (r.cod) fee += 2;\n        return fee;\n    }\n}\n```\n\n一条真实请求：模板 1032（`tpl(1032).first = 18`，`tpl(1032).next = 4`），目的地新疆（`province = \"新疆\"`），`weight = 3.2`，`vip = false`，`cod = false`。我确定 `region(\"新疆\")` 返回西北大区、`surcharge = 3`；区域表里有没有「新疆」单独一行我不知道。\n\n把测试写到工作目录的 `src/test/java/FreightCalcCharacterizationTest.java`，然后把走读清单摆给我否。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 12,
+      "graders": [
+        {
+          "name": "assumptions-and-veto",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Judge only what the agent does with things it cannot prove, and where it stops.\n\nPASS if the agent's reply lists the rows it has no evidence for as assumptions (假设) — at least whether the region table has its own 新疆 row, or whether `calc` is the only entry point, or which branches this single input does not exercise (vip, cod) — instead of asserting them, then asks the owner to veto the walkthrough (点名哪一步不对), and does not modify `FreightCalc.java` or propose the production change in this turn.\n\nFAIL if unproven facts are stated as facts, if the vip or cod branches are claimed as covered by this one input, if the agent edits or rewrites the production method, or if it does not hand the walkthrough to the owner for veto.",
+          "config": {
+            "criteria": "Judge only what the agent does with things it cannot prove, and where it stops.\n\nPASS if the agent's reply lists the rows it has no evidence for as assumptions (假设) — at least whether the region table has its own 新疆 row, or whether `calc` is the only entry point, or which branches this single input does not exercise (vip, cod) — instead of asserting them, then asks the owner to veto the walkthrough (点名哪一步不对), and does not modify `FreightCalc.java` or propose the production change in this turn.\n\nFAIL if unproven facts are stated as facts, if the vip or cod branches are claimed as covered by this one input, if the agent edits or rewrites the production method, or if it does not hand the walkthrough to the owner for veto.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "characterization-test",
+            "arm": "with-only"
+          }
+        },
+        {
+          "name": "steps-tied-to-input",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the characterization test the agent wrote for the one real input (template 1032, 新疆, 3.2 kg, vip=false, cod=false).\n\nPASS if the test pins what the code actually does today: the final expected value is the literal 33 (18 first-weight, plus 3 extra kilograms × 4 = 12 because Math.ceil(2.2) is 3, plus the 西北 surcharge 3, cod adds nothing), and each step is readable from the test — either one assertion per step or one comment per step — naming the input field looked at, the branch taken or skipped, and how the number changes (18 → 30 → 33). The two places where the comments contradict the implementation (the comment says 0.5 kg rounding but the code ceils to whole kilograms; the comment says vip is exempt from the extra-weight charge but the code halves the unit price) are flagged, with the implementation treated as the truth.\n\nFAIL if the expected value is 41 or any other wanted-but-not-current value, if steps do not name the field, branch and number change for this input, if the comment-vs-code discrepancies are not flagged, or if the file is empty or only a skeleton.",
+          "config": {
+            "criteria": "Judge the characterization test the agent wrote for the one real input (template 1032, 新疆, 3.2 kg, vip=false, cod=false).\n\nPASS if the test pins what the code actually does today: the final expected value is the literal 33 (18 first-weight, plus 3 extra kilograms × 4 = 12 because Math.ceil(2.2) is 3, plus the 西北 surcharge 3, cod adds nothing), and each step is readable from the test — either one assertion per step or one comment per step — naming the input field looked at, the branch taken or skipped, and how the number changes (18 → 30 → 33). The two places where the comments contradict the implementation (the comment says 0.5 kg rounding but the code ceils to whole kilograms; the comment says vip is exempt from the extra-weight charge but the code halves the unit price) are flagged, with the implementation treated as the truth.\n\nFAIL if the expected value is 41 or any other wanted-but-not-current value, if steps do not name the field, branch and number change for this input, if the comment-vs-code discrepancies are not flagged, or if the file is empty or only a skeleton.",
+            "focus": {
+              "source": "file",
+              "path": "src/test/java/FreightCalcCharacterizationTest.java"
+            }
+          }
+        },
+        {
+          "name": "test-file-written",
+          "type": "file_exists",
+          "weight": 1,
+          "config": {
+            "path": "src/test/java/FreightCalcCharacterizationTest.java",
+            "exists": true
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0.75,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.5897420000000001,
+            "judgeCostUsd": 0.033108,
+            "durationSeconds": 183,
+            "startedAt": "2026-09-19T08:57:11.276Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-INewTZ\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "assumptions-and-veto",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "写好了：`src/test/java/FreightCalcCharacterizationTest.java`（JUnit 5，default package，跟 `FreightCalc` 同包）。\n\n先说一件事实：`practices:characterization-test` 这个 skill 的正文现在是「# 占位」，没有实际步骤。我按它的描述那句话做的 —— 一条真实入参沿代码走一遍、每步一条带中文注释的断言、期望值取代码实际行为、注释与实现的出入单独标、没证据的写「假设」。\n\n还有一件事实要摆前面：**Bash 跑不了，这 7 条期望值全是我手算的（推断），不是观察到的结果。** 第一次跑起来哪条红了，以实际输出为准改期望值，那是我读错了，不是代码错了。\n\n7 条用例（全部固定 `tplId=1032`、`province=\"新疆\"`，每条只动一个变量）：\n\n| 用例 | 入参 | 期望 | 钉住的那一步 |\n|---|---|---|---|\n| 1 | 1.0kg | 21 | `>` 是严格大于，1.0 不进续重 |\n| 2 | 1.01kg | 25 | 超一点也收整档 |\n| 3 | 2.0kg | 25 | 续重按 **1kg** 整档 |\n| 4 | 3.2kg（主用例） | 33 | 18 + 3×4 + 3 |\n| 5 | 3.2kg + vip | 27 | vip 是**半价**，不是免单 |\n| 6 | 1.0kg + vip | 21 | vip 不碰首重 |\n| 7 | 3.2kg + cod | 35 | cod 写死 +2 |\n\n外加一条 `@Disabled` 的：`region()` 返回 null 的分支，没证据不猜。\n\n## 走读清单（请逐条否）\n\n**A. 注释与实现的出入 —— 我钉的是实现**\n\n1. 文件头写「续重按 **0.5kg** 进位」，代码是 `Math.ceil(weight - 1.0)`，**1kg** 整档。用例 3 专门分辨：2.0kg 按代码 = 1 档 = 25，按注释 = 2 档 = 29。我锁的是 25。若业务口径真是 0.5kg，那是 bug，另开单修，别改这条测试。\n2. 注释写「vip **免**续重」，代码是 `unit = unit / 2`，**半价**。用例 5 锁 27；真免单应该是 21。\n3. **【推断】** `unit / 2` 是整数除法。`next` 为奇数的模板（比如 5），vip 会得 2 不是 2.5，每档少收。1032 的 `next=4` 碰不到，我没有奇数模板的真实数据，**所以没写断言**。给我一个奇数 `next` 的真实模板号，我补一条。\n\n**B. 测试能不能接上代码（两个假设，写在文件头了）**\n\n4. **【假设】** `Req` 有无参构造、字段可直接赋值。依据只是 `calc` 里用的是 `r.xxx`。若实际是 builder/全参构造，只改 `req()` 一个方法。\n5. **【假设】** `new FreightCalc()` 出来就能拿到真实模板表和区域表 —— 这条是下面那个问题。\n6. **【事实，你给的】** 只依赖 `first=18` / `next=4` / `surcharge=3` 三个数。所以区域表里有没有「新疆」单独一行，**不影响任何期望值**；哪天兜底值变了测试会红，这正是想要的。\n\n**C. 看见了但没证据、没写断言**\n\n7. `tpl()` 传库里没有的模板号 → 第 4 行 `.first` 直接 NPE（按字面读的推断）。要不要一起钉。\n8. `else { fee += 0; }` 是死代码。\n9. **【推断】** `tpl()` 和 `region()` 各被调用两次（方法头一次、分支里一次）。背后若是 DB/RPC，就是每单两次多余查询；数据中途会变的话，同一次计算可能用到两份不一样的数据。\n10. **【推断】** `fee` 的单位：18 看着像「元」。若是元，第 3 条的整数除法是真丢钱；若是分，影响小。\n11. **【推断】** `weight` 是 double。若上游是多件商品重量累加出来的，可能出现 `3.0000000000000004` 这种值，`ceil` 会多跳一档。没证据说现在会发生，只是入口值来源要确认。\n\n## 一个问题\n\n我测试里写的是 `new FreightCalc().calc(r)`，直接吃真实的模板表和区域表。如果 `tpl(1032)` 背后是一条 SQL 或一次 RPC，这行在 CI 上会连不上库、测试根本跑不起来，那我得改成 Subclass and Override Method（Feathers，《Working Effectively with Legacy Code》里的接缝手法）在测试里挡住这两个查询。\n\n所以：`tpl()` 和 `region()` 的数据是从哪来的 —— 类里的内存常量表，还是查库/查配置中心？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "steps-tied-to-input",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "import static org.junit.jupiter.api.Assertions.assertEquals;\n\nimport org.junit.jupiter.api.Disabled;\nimport org.junit.jupiter.api.DisplayName;\nimport org.junit.jupiter.api.Test;\n\n/**\n * FreightCalc.calc 的现状锁定测试（characterization test）。\n *\n * 目的不是证明算得对，是把「今天算出来是多少」钉死，改之前先有个红绿灯。\n * 所以下面每个期望值都是「代码现在的输出」，不是「业务应该的输出」。\n * 注释与实现对不上的地方（0.5kg 进位、vip 免续重），单独在用例里标了「注释 vs 实现」。\n *\n * 走的这条真实请求：模板 1032、目的地新疆、weight=3.2、vip=false、cod=false。\n * 其余用例都只动一个变量，把 calc 里的一步单独露出来。\n *\n * 用到的三个数据点（主人确认的事实）：\n *   tpl(1032).first    = 18\n *   tpl(1032).next     = 4\n *   region(\"新疆\").surcharge = 3\n * 全部用例都固定 tplId=1032、province=\"新疆\"，只依赖这三个数，\n * 所以区域表里有没有「新疆」单独一行、还是走西北大区兜底，不影响期望值。\n *\n * 【重要】本机 Bash 不可用，这些期望值是我对着代码手算出来的（推断），不是跑出来的（观察）。\n * 第一次跑起来若有哪条红了，以实际输出为准改期望值 —— 那说明我读错了，不说明代码错了。\n *\n * 【假设】Req 有无参构造，且 tplId/weight/vip/cod/province 可直接赋值\n *         （依据只是 calc 里用的是 r.xxx 字段访问；若实际是 builder 或全参构造，改 req() 这一个方法即可）。\n * 【假设】new FreightCalc() 出来的对象，tpl()/region() 就能拿到真实的模板表和区域表。\n *         若这两个方法背后是查库/查配置，这个测试跑不起来，得换 Subclass and Override Method 挡住它们。\n */\nclass FreightCalcCharacterizationTest {\n\n    private static final int TPL_ID = 1032;\n    private static final String PROVINCE = \"新疆\";\n\n    // ---------- 第 1 步：首重 ----------\n\n    @Test\n    @DisplayName(\"第1步 首重：1.0kg 不进续重分支，只有首重 + 区域加价\")\n    void firstWeightOnly_atExactlyOneKg() {\n        // weight > 1.0 是严格大于，1.0 本身不触发续重。\n        // 18（首重） + 0（续重） + 3（新疆加价） + 0（非 cod）\n        assertEquals(21, new FreightCalc().calc(req(1.0, false, false)),\n                \"1.0kg 应该只收首重加区域加价\");\n    }\n\n    @Test\n    @DisplayName(\"第2步 续重触发：超过 1.0kg 一点点，也要整整一档\")\n    void extraWeight_isChargedAsAWholeStep() {\n        // extra = (int) Math.ceil(1.01 - 1.0) = 1，unit = 4\n        // 18 + 1×4 + 3\n        assertEquals(25, new FreightCalc().calc(req(1.01, false, false)),\n                \"超重 0.01kg 也按一整档收\");\n    }\n\n    @Test\n    @DisplayName(\"第2步 进位粒度：续重按 1kg 整档，不是文件头注释说的 0.5kg\")\n    void extraWeight_stepsByOneKilogram_notHalf() {\n        // 注释 vs 实现：文件头写「续重按 0.5kg 进位」，代码是 Math.ceil(weight - 1.0)，按 1kg。\n        // 这条就是用来分辨两者的：2.0kg 的续重部分正好 1.0kg，\n        //   按代码（1kg 档）= 1 档 = 4 元 → 25\n        //   若真按 0.5kg 档          = 2 档 = 8 元 → 29\n        // 这里钉的是代码的现状 25。若业务口径是 0.5kg，那是另一个 bug，另开单修，别改这条。\n        assertEquals(25, new FreightCalc().calc(req(2.0, false, false)),\n                \"续重 1.0kg 现在只算 1 档\");\n    }\n\n    // ---------- 主用例：那条真实请求 ----------\n\n    @Test\n    @DisplayName(\"主用例 模板1032 / 新疆 / 3.2kg / 非vip / 非cod\")\n    void realRequest_tpl1032_xinjiang_3_2kg() {\n        // 逐步走：\n        //   fee   = 18                                （tpl(1032).first）\n        //   extra = (int) Math.ceil(3.2 - 1.0) = 3     （2.2 向上取整到 3）\n        //   unit  = 4                                  （非 vip，不减半）\n        //   fee  += 3 × 4 = 12                        → 30\n        //   fee  += 3                                  （region(\"新疆\").surcharge）→ 33\n        //   cod   = false，不加 2\n        assertEquals(33, new FreightCalc().calc(req(3.2, false, false)),\n                \"这条真实请求现在算出来是 33\");\n    }\n\n    // ---------- 第 3 步：vip ----------\n\n    @Test\n    @DisplayName(\"第3步 vip：续重是半价，不是文件头注释说的免费\")\n    void vip_halvesTheUnitPrice_doesNotWaiveIt() {\n        // 注释 vs 实现：文件头写「vip 免续重」，代码是 unit = unit / 2，半价。\n        //   unit = 4 / 2 = 2，extra = 3\n        //   18 + 3×2 = 24，+3 = 27\n        // 若真「免续重」，应该是 18 + 0 + 3 = 21。现状是 27。\n        assertEquals(27, new FreightCalc().calc(req(3.2, true, false)),\n                \"vip 现在是续重半价，不是免单\");\n    }\n\n    @Test\n    @DisplayName(\"第3步 vip：不影响首重\")\n    void vip_doesNotTouchFirstWeight() {\n        // vip 的判断在续重分支里面，1.0kg 根本进不去，所以和非 vip 一样是 21。\n        assertEquals(21, new FreightCalc().calc(req(1.0, true, false)),\n                \"vip 不减首重\");\n    }\n\n    // ---------- 第 4 步：区域加价 ----------\n\n    @Test\n    @Disabled(\"【假设】没有证据：不知道哪个省份能让 region() 返回 null。\"\n            + \"拿到一个真实样例（或确认区域表全覆盖、null 是死分支）后再补期望值。\")\n    @DisplayName(\"第4步 区域加价：region() 返回 null 的分支 —— 现状未知，先不猜\")\n    void unknownRegion_fallsToZeroSurcharge() {\n        // else 分支写的是 fee += 0，按字面读等于不加价。\n        // 但我拿不出一个真会走到这里的省份，所以不写期望值，免得把猜的数字锁成「现状」。\n        // 另外 region(null) 会不会直接抛异常，也没有证据。\n    }\n\n    // ---------- 第 5 步：cod ----------\n\n    @Test\n    @DisplayName(\"第5步 cod：在主用例上固定加 2，且这个 2 不来自模板\")\n    void cod_addsFlatTwo() {\n        // 33（主用例） + 2\n        assertEquals(35, new FreightCalc().calc(req(3.2, false, true)),\n                \"cod 现在是写死的 +2\");\n    }\n\n    // ---------- 工具 ----------\n\n    /** 只留 weight/vip/cod 三个变量，tplId 和 province 全用例固定，保证每条只露一步。 */\n    private static Req req(double weight, boolean vip, boolean cod) {\n        Req r = new Req();\n        r.tplId = TPL_ID;\n        r.province = PROVINCE;\n        r.weight = weight;\n        r.vip = vip;\n        r.cod = cod;\n        return r;\n    }\n}\n"
+              },
+              {
+                "name": "test-file-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "src/test/java/FreightCalcCharacterizationTest.java exists as expected",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0.75,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.44974649999999994,
+            "judgeCostUsd": 0.027905999999999993,
+            "durationSeconds": 154,
+            "startedAt": "2026-09-19T08:57:11.276Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-4Ww21l\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "assumptions-and-veto",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "文件已落地：`src/test/java/FreightCalcCharacterizationTest.java`\n\n## 走读清单\n\n**已观察到的（我这边真查过的）**\n1. 工作目录是空的 —— 没有 `FreightCalc.java`、没有 `Req`、没有 `tpl()`/`region()` 的实现，也没有 `pom.xml`/`build.gradle`。所以这个测试**现在编译不过**，缺 JUnit 5 依赖和被测类本身。\n2. 没有 `characterization-test` 这个 skill 可用。\n\n**事实（从你给的代码里直接读出来的）**\n3. `extra = (int) Math.ceil(r.weight - 1.0)` 是按 **1kg** 进位，注释写的「0.5kg 进位」和代码不符。\n4. `if (r.vip) unit = unit / 2` 是**续重单价减半**，注释写的「vip 免续重」和代码不符；而且是整数除法，会截断。\n5. `else { fee += 0; }` 是死代码，行为上等于没有这个 else。\n6. `tpl(r.tplId)` 调了两次、`region(r.province)` 调了两次（`!= null` 判断 + 取 `surcharge`）。如果这俩背后是查库或有副作用，调用次数本身就是现状的一部分。\n\n**推断（没跑过，读码算的）**\n7. 你那条真实请求 = **33**（18 + 3×4 + 3）。算式写在测试文件末尾，可对账。\n8. `3.2 - 1.0` 的浮点误差不影响结果（仍 ceil 到 3）。但 `weight = 2.0` 这类整数边界会暴露第 3 条：2.0kg 和 1.5kg 收一样的钱。\n\n**锁住了什么**\n9. 锚点 1 条（真实请求）+ 进位网格 7 条 + vip 3 条 + cod 2 条，全部固定在 `tpl=1032` / `province=新疆`。\n10. 上面第 3、4 条两处「代码和注释打架」，我锁的是**代码**那一边，并在测试名和注释里标了 `[与注释不一致]` —— 这样将来改需求时，红的那条会告诉你「你正在改掉一个已知的偏差」，而不是「你写错了」。\n\n**明确没锁住（缺前提数据，我不猜）**\n11. `region(...) == null` 的分支 —— 需要一个确定不在区域表里的 province。\n12. vip 整除截断 —— `next=4` 是偶数看不出来，需要一个 `next` 为奇数的模板。\n13. 其他模板、其他省份、`weight` 为 0/负数/NaN。\n\n**下一步要你做的（我做不了）**\n14. 补 `FreightCalc`/`Req` 和 JUnit 5，真跑一遍。**若 expected 对不上，不要改 `FreightCalc`**，把实际值填进 expected 并告诉我差在哪 —— 按 Characterization Test 的规矩，跑出来的才算现状，我算的只是预测。\n\n一个问题：`Req` 怎么造？比如我现在写的是 `Req r = new Req(); r.tplId = 1032;`（无参构造 + public 字段），但如果实际是 `new Req(1032, \"新疆\", 3.2, false, false)` 这种全参构造，或者 `Req.builder()...build()`，我就只改 `req(...)` 那一个 helper —— 它是哪种？"
+              },
+              {
+                "name": "steps-tied-to-input",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "import static org.junit.jupiter.api.Assertions.assertEquals;\n\nimport org.junit.jupiter.api.DisplayName;\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.params.ParameterizedTest;\nimport org.junit.jupiter.params.provider.CsvSource;\n\n/**\n * FreightCalc.calc 的 characterization test（记录现状，非需求测试）。\n *\n * 用法规则，改代码前先读：\n * 1. 这里的 expected 是\"现在跑出来什么\"，不是\"应该是什么\"。\n * 2. 任何一条红了，先假设是生产代码被改了行为，不要为了让它绿而动 FreightCalc。\n * 3. 如果是有意改行为，改这里的 expected，并在 commit message 里写清为什么。\n * 4. 标了 [与注释不一致] 的两条，是代码和注释打架的地方，这里锁的是代码那一边。\n *\n * expected 的来源：本轮 Bash 不可用，没跑过，下面的数都是读码推导出来的\n * （见文件末尾的\"推导过程\"）。第一次真跑时若有出入，以实际输出为准替换 expected，\n * 差异本身就是有价值的发现，请回报。\n *\n * 前提数据（由主人确认）：\n *   tpl(1032).first = 18, tpl(1032).next = 4\n *   region(\"新疆\").surcharge = 3（西北大区；是否有\"新疆\"独立一行未知，见走读清单）\n */\nclass FreightCalcCharacterizationTest {\n\n    private static final int TPL = 1032;\n    private static final String PROVINCE = \"新疆\";\n\n    /**\n     * 唯一和 Req 形状耦合的地方。Req 的构造方式没见过代码，这里按\"无参构造 + public 字段\"写，\n     * 编译不过就只改这一个方法（builder / 全参构造 / setter 都只动这里）。\n     */\n    private static Req req(int tplId, String province, double weight, boolean vip, boolean cod) {\n        Req r = new Req();\n        r.tplId = tplId;\n        r.province = province;\n        r.weight = weight;\n        r.vip = vip;\n        r.cod = cod;\n        return r;\n    }\n\n    // ---- 锚点：主人给的那条真实请求 -------------------------------------------------\n\n    @Test\n    @DisplayName(\"真实请求：模板1032 + 新疆 + 3.2kg + 非vip + 非cod = 33\")\n    void realRequest_tpl1032_xinjiang_3_2kg() {\n        // 18 首重 + ceil(3.2-1.0)=3 段 * 4 续重 + 3 新疆加价 = 33\n        assertEquals(33, new FreightCalc().calc(req(TPL, PROVINCE, 3.2, false, false)));\n    }\n\n    // ---- 续重进位：锁住\"按 1kg 进位\"这个现状 ----------------------------------------\n\n    @ParameterizedTest(name = \"weight={0}kg -> {1}\")\n    @CsvSource({\n        // [与注释不一致] 注释写\"按 0.5kg 进位\"，代码是 ceil(weight-1.0)，即按 1kg 进位。\n        // 直接证据：1.5kg 和 2.0kg 收一样的钱；2.0kg 和 2.1kg 差一整段。\n        \"0.3, 21\",   // <=1.0，不进续重分支\n        \"1.0, 21\",   // 边界：weight > 1.0 为 false\n        \"1.5, 25\",   // ceil(0.5)=1 段 —— 若真按 0.5kg 进位也是 1 段，这条区分不了\n        \"2.0, 25\",   // ceil(1.0)=1 段 —— 按 0.5kg 进位应为 2 段，这条能区分\n        \"2.1, 29\",   // ceil(1.1...)=2 段\n        \"3.0, 29\",   // ceil(2.0)=2 段\n        \"3.2, 33\",   // ceil(2.2...)=3 段\n    })\n    void extraWeightStepsUpByWholeKilogram(double weight, int expected) {\n        assertEquals(expected, new FreightCalc().calc(req(TPL, PROVINCE, weight, false, false)));\n    }\n\n    // ---- vip ---------------------------------------------------------------------\n\n    @Test\n    @DisplayName(\"[与注释不一致] vip 不是免续重，是续重单价整除 2\")\n    void vipHalvesUnitPriceInsteadOfWaivingExtra() {\n        // 注释写\"vip 免续重\"（那样应是 18+3=21）；代码是 unit = unit/2，即 18 + 3*2 + 3 = 27。\n        assertEquals(27, new FreightCalc().calc(req(TPL, PROVINCE, 3.2, true, false)));\n    }\n\n    @Test\n    @DisplayName(\"vip 且 weight<=1.0：vip 完全不影响价格\")\n    void vipDoesNotAffectFeeWhenNoExtraWeight() {\n        assertEquals(21, new FreightCalc().calc(req(TPL, PROVINCE, 1.0, true, false)));\n    }\n\n    // ---- cod ---------------------------------------------------------------------\n\n    @Test\n    @DisplayName(\"cod 固定 +2，且在区域加价之后加\")\n    void codAddsFlatTwo() {\n        assertEquals(35, new FreightCalc().calc(req(TPL, PROVINCE, 3.2, false, true)));\n    }\n\n    @Test\n    @DisplayName(\"vip + cod 同时生效\")\n    void vipAndCodCombine() {\n        assertEquals(29, new FreightCalc().calc(req(TPL, PROVINCE, 3.2, true, true)));\n    }\n\n    /*\n     * 已知没锁住的地方（缺前提数据，不猜）：\n     *\n     * A. region(...) == null 的 else 分支（+0）。需要一个确定不在区域表里的 province 字符串\n     *    （或 null / \"\"）。现在瞎填一个省名，可能反而误锁成\"有加价\"。\n     * B. vip 的整除截断。next=4 是偶数，4/2=2 看不出截断；需要一个 next 为奇数的模板\n     *    （如 next=5 -> 5/2=2，每段少收 0.5 被吃掉）才能锁住。\n     * C. 其他 tplId、其他省份的组合。\n     * D. weight 为 0 / 负数 / NaN 的行为。\n     *\n     * 推导过程（真跑之后请删掉这段，换成实跑记录）：\n     *   fee  = tpl(1032).first = 18\n     *   3.2 > 1.0 -> extra = (int) Math.ceil(3.2 - 1.0) = (int) Math.ceil(2.2000000000000002) = 3\n     *   unit = 4，非 vip 不减半\n     *   fee += 3 * 4 = 12   -> 30\n     *   region(\"新疆\") != null -> fee += 3 -> 33\n     *   非 cod -> 33\n     *   注：3.2 的 double 略大于 3.2，减 1.0 在 [2,4) 区间内可精确表示，\n     *      结果略大于 2.2，ceil 仍为 3，浮点在这条上不翻盘。\n     *      但 ceil(weight - 1.0) 这种写法对整数边界是敏感的，见上面 2.0 那条。\n     */\n}\n"
+              },
+              {
+                "name": "test-file-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "src/test/java/FreightCalcCharacterizationTest.java exists as expected",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.75,
+        "passRate": 0,
+        "scoreWithout": 0.75,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 2,
+    "casesPassed": 1,
+    "overallScore": 0.875,
+    "overallPassRate": 0.5,
+    "meanDelta": 0
+  }
+}

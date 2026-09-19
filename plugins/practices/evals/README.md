@@ -116,6 +116,65 @@
 没到 1.0 的一条要说清：`canary-release-three-tiers` 0.33——第三次重跑三条回复的形状与 `references/release-plan.md` 的例子一致：三档各带放谁、停多久，回滚是关开关加 diff 为零的前提，两条需求句各一个观测点加四个黄金信号对上 p99、QPS、错误率、线程池占用，冒烟用 9001 新疆 3.2kg vip 期望 26，结尾只问档 1 放谁；同一份内容裁判三次分别投出 3/3 FAIL、3/3 PASS、1/3 PASS。这是裁判读法的抖动，不是行为缺口（第二次重跑三条同样形状的回复也被判 3/3 FAIL，那次是 grader 第 (d) 面写死了「模板 1032」而正确的冒烟该用 9001，已改）。主人已定不为 1.0 硬线重跑。
 
 迭代过程：第一轮门评测有 skill 组三条 0/3，逐条读回复后都不是行为缺口——`record-replay-sample-plan` 三次都给了带场景名的清单、规整规则、改前录、否过不录，结尾问的是一道覆盖问题（要不要加「模板没配表」那条），grader 把它数成「没请主人否」（改成「请否或问一道清单依赖的覆盖问题都算」，重跑 3/3）；`canary-release-three-tiers` 三次都指出提示词自身的矛盾（例子模板 1032 不在档 1 白名单里，冒烟打不出 26）并问主人怎么收（提示词补一句「9001 与 1032 配置相同」，重跑 1/3：另两次「档 3 全量」没写停多久，而这正是 `references/release-plan.md` 例子的写法，例子改成「档 3 全量，看满一个完整业务周期再收口」、grader 放宽到档 3 不要求停多久，再跑一次得 1/3，见上）。门评测之后正文只在审查（第 6 阶段）里改了几处，都没有重跑：golden-master 的两处出处措辞；record-replay 与 canary-release 各补一句主人定过的「纠偏留痕」（否了哪一行，原话记在那行下面）；两份 references 例子末尾与 SKILL.md 重复的禁令句删掉；「档」「规整」两个词补英文。
+## 0.1.1（2026-09-19，agent-system#121）：从 legacy-change、integration 拆出的四条实践
+
+跑法与上面相同，`--case '<skill>-*'` 四条各跑一次，结果在 `results/2026-09-19-as121-baseline/<skill>/` 与 `results/2026-09-19-as121-gate/<skill>/`（目录名带票号，因为同一天已有第一批的 `2026-09-19-baseline` 与 `-gate`）。用例的 `append_system_prompt` 沿用上面那份 mock 的常驻规则；材料是旧 `legacy-change`、`integration` 评测里那段运费计算（`FreightCalc.calc`、模板 1032 新疆 3.2kg），贴在提示词里，Bash 不可用。
+
+### 用例构成
+
+四条 skill 各一正一反：
+
+| 用例 | skill | 测什么 | 该怎么判 |
+|---|---|---|---|
+| `characterization-test-walkthrough` | characterization-test | 没有测试、注释与实现对不上的旧方法，一条真实入参 | 测试文件落盘，期望值是实际输出 33 不是想要的 41，每步注释写看哪个字段、进哪个分支、数怎么变，两处注释与实现的出入标出且以实现为准；没走到的分支写「本条未触发」而不是编入参去锁，查不到的写「假设」，请主人否，生产代码不动 |
+| `characterization-test-new-behaviour` | characterization-test | 主人要用特征化测试「锁住」还没写的新行为（41） | 指出特征化测试记的是现状 33，41 是新行为归测试先行；不写一条期望 41 的「特征化测试」 |
+| `sprout-method-build` | sprout-method | 走读与改法已否过，建 | 生产文件里旧方法的语句一句没变、没搬进新方法，唯一改动是入口一处分流，新方法不再进分流；测试三条字面值：关 33、开且新疆 41、开但广东 30 |
+| `sprout-method-greenfield` | sprout-method | 主人点名 `sprout-method` 从零写一个新类 | 直接写类，说明没有既有路径可分流，不造开关、分流、「旧路径」 |
+| `interface-contract-checklist-boundaries` | interface-contract-checklist | 三个调用方（一个绕过入口）、加列的表与读它的报表、模板配置、未注册的开关、同事同时在改同一文件 | 每个边界都有「不变」或「变了什么、谁要知道」；BatchCalc 绕过 `calc` 单独标出交主人定；同事的改动归配置管理；请主人否，不合不动表 |
+| `interface-contract-checklist-merge-conflict` | interface-contract-checklist | 合分支的冲突块，主人问要不要按清单列一遍 | 就冲突块作答（cod 2 还是 3 是业务规则，一题问主人），说明清单不是解冲突的工具 |
+| `incremental-integration-order` | incremental-integration | 带数据变更的接入：新表、老表还有报表在读、开关未注册、代码未合、共库 | 新表先建老表不动，删旧表放在放量之后另起一步；依赖在前每步带退法，合代码与开开关分开；联调跑否过的 26 例子加老路径 18，共库只读；请主人否，没合没写迁移 |
+| `incremental-integration-rollout` | incremental-integration | 接入与预发联调都做完，问灰度与回滚 | 不重列边界与顺序；直接答放量或交第 8 阶段 |
+
+每条 llm grader 判一个行为；判文件内容的用 `focus: {source: file, path: …}`（`steps-tied-to-input`、`old-body-untouched-one-branch`、`toggle-behaviour-tests`），其余看最后一条消息。四条正例各带一条 `tool_used: Skill` 的 with-only 指示器，不计分。
+
+### 基线观察（对照组，不装 skill）
+
+取自 `results/2026-09-19-as121-baseline/<skill>/`（SKILL.md 占位，每用例 1 次，两组，默认模型；四条合计 16 次运行、499 秒、4.43 美元）。没有这四条 skill 时 agent 实际是这样做的：
+
+- `characterization-test-walkthrough`：两组都写了测试、算对了 33、标出了两处注释与实现的出入，但都不满足于那一条真实入参——对照组编了 13 条入参（2.0kg、vip、cod 的网格）去锁 vip 折半、整数截断这些分支，有 skill 组（占位）编了 7 条；没有一组把没走到的分支写成「本条未触发」交主人否。这条 grader 基线时写的是「不把 vip、cod 当已锁」，看到这个行为后改成明写「编入参去锁没走到的分支算 FAIL」。真缺口是「只走主人给的那一条、其余标未触发」。
+- `characterization-test-new-behaviour`：两组都分得清 33 是现状、41 是新行为。只作回归守卫。
+- `sprout-method-build`：对照组把 `fee += calcRemoteFee(r.province)` 插进旧方法体末尾、开关判断藏在新方法里；有 skill 组（占位）旧语句没动，但分流放在方法末尾、把算好的 `fee` 传给新方法，不是入口。测试那条 grader 基线时把广东 3.2kg 的期望值写成了 18（应为 30），两组都因此被判败，门评测前改正。真缺口是「分流在入口、旧体不动」。
+- `sprout-method-greenfield`：对照组直接写类；有 skill 组（占位）因为描述里只有「入口分流」三件事，写完类还给了一段「示意」的分流。真缺口是「不用」那一段。
+- `interface-contract-checklist-boundaries`：对照组给的是一份建议书——把分流下移到 `calcInner`、`calcRemoteFee` 查不到省份该返回什么、开关注册前四件事——没有一行「不变」，BatchCalc 绕过入口被它自己决定了（下移分流）而不是交主人定；有 skill 组（占位）九条都有，但开关与数据两行写成注意事项没有变没变的判定，同事的改动写成「谁后合谁 rebase」。真缺口是「每个边界一个判定、绕过的交主人定、别人的代码归配置管理」。
+- `interface-contract-checklist-merge-conflict`：两组都就冲突块作答、一题问主人。只作回归守卫。
+- `incremental-integration-order`：对照组的顺序里有影子读（开关关着两条路都算）和生产打开，写操作直接落在共库上，没有停下等主人否；有 skill 组（占位）先扩后缩与联调都对，但把「灌镜像数据」「开开关」「灌真数据」排成连着的三步，其中开开关那步与数据变更绑在一起。真缺口是「合代码与开开关永远两步、共库只读、否过之前不动」。
+- `incremental-integration-rollout`：对照组直接答放量；有 skill 组（占位）也直接答，但先写了一段「上线前离线回放」，grader 的 FAIL 条款把它数成了「重做集成步骤」。基线后把条款收窄到「重列边界、重排顺序、坚持先重做联调」，离线回放这类发布阶段的准备不算。
+
+真缺口：characterization-test 的「只走那一条、其余标未触发」；sprout-method 的「分流在入口、旧体不动」与「从零新建不套萌芽」；interface-contract-checklist 的「每行一个判定、绕过的交主人定」；incremental-integration 的「合代码与开开关分开、共库只读、否过之前不动」。正文只针对这几处写。
+
+### 实跑记录（2026-09-19，agent-system#121）
+
+默认模型（`claude-opus-5`），裁判 sonnet，有 skill 组对对照组，每用例 3 次，阈值 1.0。八个用例的最终数字来自两份结果：门评测 `results/2026-09-19-as121-gate/<skill>/`（四条各跑一次，合计 48 次运行、1031 秒、12.09 美元），和之后改了 grader 或正文一句再按 skill 单跑的 `results/2026-09-19-as121-gate-rerun/<skill>/`（sprout-method、interface-contract-checklist、incremental-integration 各 12 次）。每条 skill 的评测花费都在 20 美元以内（含基线：characterization-test 6.19、sprout-method 7.41、interface-contract-checklist 7.16、incremental-integration 5.39）。
+
+| 用例 | 有 skill 组 | 对照组 | 差值 | 来源 |
+|---|---|---|---|---|
+| `characterization-test-walkthrough` | 1.0 | 0.42 | +0.58 | gate |
+| `characterization-test-new-behaviour` | 1.0 | 0.33 | +0.67 | gate |
+| `sprout-method-build` | 1.0 | 0.50 | +0.50 | rerun |
+| `sprout-method-greenfield` | 1.0 | 1.0 | 0 | rerun |
+| `interface-contract-checklist-boundaries` | 1.0 | 0.22 | +0.78 | rerun |
+| `interface-contract-checklist-merge-conflict` | 1.0 | 0.67 | +0.33 | rerun |
+| `incremental-integration-order` | 0.80 | 0.80 | 0 | rerun |
+| `incremental-integration-rollout` | 0.33 | 0.67 | −0.33 | rerun |
+
+平均差值 +0.32。`sprout-method-greenfield` 两组同分，只作回归守卫（基线时占位描述还会让 agent 给一段分流「示意」，正文的「不用」那段把它收掉了）。
+
+没到 1.0 的两条要说清，都是 incremental-integration 的：
+
+- `incremental-integration-order`：门评测 0.87（对照 0.67），改 grader 与正文一句（灌新表数据算扩展步、不算写生产）后重跑 0.80（对照 0.80）。重跑里失败的三次都是 `smoke-and-wait` 三票 FAIL，那三条回复的顺序、退法、两条例子、「预发与生产共库，只读」和「请否顺序」与实践 `references/order.md` 的例子逐字相同——裁判把「走 `OrderService` 全链联调」读成了往共库写单。对照组同一轮也过了两次：sonnet 裁判对这条实践的输出形状不敏感，opus 不装 skill 也能排出先扩后缩的顺序，真缺口只剩「合代码与开开关分开、否过之前不动」那一点，在门评测那一轮对照组两次失败上看得到。
+- `incremental-integration-rollout`：这是反例，判的是「不重列边界与顺序」。门评测 0.67、重跑 0.33，对照组 1.0 与 0.67。失败的回复都是纯放量方案（分档、bake time、回滚三层），没有一条重列了集成面或顺序；共同点是把「档 0：影子比对，只记日志不收费」排在第一档之前，裁判把它数成了「坚持先重做联调」，grader 已明写「离线回放、观测点、预设停止条件是答放量的一部分」仍没拦住，对照组同样中招。判断：裁判读法，不是正文让 agent 回到集成去了；再改 grader 或再跑只是换一组随机数，是否按 1.0 硬线重跑由主人在第 6 阶段的门上定（与第一批 `grilling-plan-one-question` 0.78 同一处理）。
+
+迭代过程：门评测第一轮暴露的多是 grader 问题——`sprout-method-build` 两组 0.50，有 skill 组三次都把分流放在旧语句全部之后、把老结果传给新方法，旧体一句没动，这是 Feathers 原本的萌芽形态，grader 只认「第一行」过严（放宽为第一行或旧语句全部之后，不许插在中间、开关判断必须在旧方法那一处；正文第 3 步同步写清），重跑 1.0 对 0.50，对照组三次都把开关判断藏进新方法或把新调用插进旧语句之间；`interface-contract-checklist-boundaries` 0.78，一次是有 skill 组把 BatchCalc 写成「变了、也可以说没变」，正文第 2 步改成绕过入口的调用方写「不变」再单独列到「待你定」、agent 可以说倾向，grader 同步（第一次重跑 0.33 之后再重跑 1.0 对 0.22）；`interface-contract-checklist-merge-conflict` 0.67，一次是有 skill 组问「把 conflictStyle 切成 zdiff3 看 base 那行是几」而不是问业务规则，grader 放宽到「问到能找回意图的地方也算」（重跑 1.0）。`characterization-test` 两条门评测一次过，对照组编入参去锁没走到的分支（0.42）、把想要的 41 写成「特征化测试」（0.33）。
 
 所有结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`。
 

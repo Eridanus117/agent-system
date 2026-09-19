@@ -13,6 +13,10 @@
       "target": "plugins/practices/skills/canary-release"
     },
     {
+      "name": "characterization-test",
+      "target": "plugins/practices/skills/characterization-test"
+    },
+    {
       "name": "clarify",
       "target": "plugins/clarify/skills/clarify"
     },
@@ -49,8 +53,16 @@
       "target": "plugins/practices/skills/grilling"
     },
     {
+      "name": "incremental-integration",
+      "target": "plugins/practices/skills/incremental-integration"
+    },
+    {
       "name": "integration",
       "target": "plugins/workcoding/skills/integration"
+    },
+    {
+      "name": "interface-contract-checklist",
+      "target": "plugins/practices/skills/interface-contract-checklist"
     },
     {
       "name": "knowledge-maintenance",
@@ -59,6 +71,10 @@
     {
       "name": "legacy-change",
       "target": "plugins/workcoding/skills/legacy-change"
+    },
+    {
+      "name": "legacy-code-change",
+      "target": "plugins/flow-steps/skills/legacy-code-change"
     },
     {
       "name": "note",
@@ -125,12 +141,20 @@
       "target": "plugins/practices/skills/specification-by-example"
     },
     {
+      "name": "sprout-method",
+      "target": "plugins/practices/skills/sprout-method"
+    },
+    {
       "name": "switch-interview",
       "target": "plugins/practices/skills/switch-interview"
     },
     {
       "name": "system-analysis",
       "target": "plugins/workcoding/skills/system-analysis"
+    },
+    {
+      "name": "system-integration",
+      "target": "plugins/flow-steps/skills/system-integration"
     },
     {
       "name": "tdd",

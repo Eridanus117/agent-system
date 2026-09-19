@@ -1,0 +1,658 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:24:29.330Z",
+  "durationSeconds": 219,
+  "costUsd": 2.2529075,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as121-split-legacy\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "incremental-integration-*",
+    "threshold": 1,
+    "concurrency": 4,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as121-split-legacy\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "incremental-integration-order",
+      "dir": "evals\\incremental-integration-order",
+      "source": "prose",
+      "promptMarkdown": "边界清单已经否过，现在按 `incremental-integration` 排接入顺序。你看不到代码，Bash 不可用，材料都在这里。\n\n改动：运费模板的「区域加价」从按大区改成按省份。新建 `province_surcharge` 表；老的 `region_surcharge` 表还有一个报表任务在读。调用方只有 `FreightCalc.calc` 一个。开关 `surcharge_by_province` 还没注册。代码在分支上还没合。\n\n已经否过的例子：模板 1032 新疆 3.2kg 走 `OrderService` 全链，期望 26；老路径：模板 2001 广东 走 `BatchCalc`，期望不变，18。预发和生产共库。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 8,
+      "graders": [
+        {
+          "name": "each-step-undoable",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the order as a whole.\n\nPASS if the steps run dependencies first — roughly: table expansion, then registering the toggle in the off position, then merging the code, then the smoke run — and every step carries its own undo (for example: leave the new table unused; delete the toggle registration; with the toggle off the merged code is the old path). Handing rollout tiers and rollback points to the release stage is fine.\n\nFAIL if any step has no undo, if one step bundles two things that could not be undone separately (such as merging code and enabling the toggle together), or if the toggle is registered on.",
+          "config": {
+            "criteria": "Judge the order as a whole.\n\nPASS if the steps run dependencies first — roughly: table expansion, then registering the toggle in the off position, then merging the code, then the smoke run — and every step carries its own undo (for example: leave the new table unused; delete the toggle registration; with the toggle off the merged code is the old path). Handing rollout tiers and rollback points to the release stage is fine.\n\nFAIL if any step has no undo, if one step bundles two things that could not be undone separately (such as merging code and enabling the toggle together), or if the toggle is registered on.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "expand-before-contract",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge only how the data change is sequenced.\n\nPASS if the new `province_surcharge` table is created first while `region_surcharge` stays in place and the report job keeps reading it unchanged, and dropping or renaming `region_surcharge` is either left out of this order or placed as a separate later step that happens only after the change has been rolled out and the report job has been moved.\n\nFAIL if the old table is dropped, renamed or emptied inside this integration order, if the report job is told to switch before the new path is live, or if the order starts with the code merge before the table exists.",
+          "config": {
+            "criteria": "Judge only how the data change is sequenced.\n\nPASS if the new `province_surcharge` table is created first while `region_surcharge` stays in place and the report job keeps reading it unchanged, and dropping or renaming `region_surcharge` is either left out of this order or placed as a separate later step that happens only after the change has been rolled out and the report job has been moved.\n\nFAIL if the old table is dropped, renamed or emptied inside this integration order, if the report job is told to switch before the new path is live, or if the order starts with the code merge before the table exists.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "incremental-integration",
+            "arm": "with-only"
+          }
+        },
+        {
+          "name": "smoke-and-wait",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Judge the smoke run and where the agent stops.\n\nPASS if the smoke plan runs the approved new example (template 1032, 新疆, expected 26 through OrderService) along the real call chain and the old-path example (template 2001, 广东, through BatchCalc, expected unchanged at 18), marks the smoke run itself read-only because staging shares the production database (seeding the new `province_surcharge` table as part of the expansion step is fine: nothing reads it while the toggle is off), and the agent then asks the owner to veto the order without having merged, written a migration script or registered the toggle.\n\nFAIL if either example is missing, if the smoke run writes to the shared database (orders, existing tables, or the old `region_surcharge` table), or if the agent presents the merge or DDL as done or proceeds past the veto.",
+          "config": {
+            "criteria": "Judge the smoke run and where the agent stops.\n\nPASS if the smoke plan runs the approved new example (template 1032, 新疆, expected 26 through OrderService) along the real call chain and the old-path example (template 2001, 广东, through BatchCalc, expected unchanged at 18), marks the smoke run itself read-only because staging shares the production database (seeding the new `province_surcharge` table as part of the expansion step is fine: nothing reads it while the toggle is off), and the agent then asks the owner to veto the order without having merged, written a migration script or registered the toggle.\n\nFAIL if either example is missing, if the smoke run writes to the shared database (orders, existing tables, or the old `region_surcharge` table), or if the agent presents the merge or DDL as done or proceeds past the veto.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0.8,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.17689200000000002,
+            "judgeCostUsd": 0.020537999999999997,
+            "durationSeconds": 44,
+            "startedAt": "2026-09-19T09:24:29.388Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-pW8iEF\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "each-step-undoable",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 `incremental-integration` 排的顺序。我看不到代码，下面全部基于你给的材料（表、调用方、开关、两条例子）。\n\n```\n顺序｜1 建 province_surcharge 表并灌好省份数据，region_surcharge 不动、报表任务照读（退：新表留着不用）\n    → 2 注册开关 surcharge_by_province，关（退：删注册）\n    → 3 合代码（退：开关关着即老路径）\n    → 4 预发联调\n联调｜模板 1032 新疆 3.2kg 走 OrderService 全链，期望 26；老路径：模板 2001 广东走 BatchCalc，期望不变 18；预发与生产共库，只读\n之后｜放量与回滚点归第 8 阶段；报表任务迁到新表、删 region_surcharge 各另起一步，放在放量之后\n请否顺序；哪步退不了直接说。\n```\n\n几处说明：\n\n- **为什么没有单独的「下游 / 上游」步**：材料里调用方只有 `FreightCalc.calc` 一个，改动就在它里面，跟着第 3 步一起合，不需要额外一步。这是推断，依据是你给的「调用方只有一个」。\n- **为什么表和数据算一步**：新表没人读，灌数不算写生产，所以「建表」和「灌省份数据」不用拆。依据是 Fowler 的并行修改（ParallelChange，expand/contract）——先扩后缩，新旧并存，`region_surcharge` 这一步一个字不动，报表任务不受影响。\n- **为什么合代码和开开关必须是两步**：合进去时开关关着，退法就是「不开」；一旦合并和打开并成一步，退的时候要动分支，就退不了了。这是增量集成（incremental integration）里「每步能单独退」的硬要求。\n- **要标一句风险**：第 4 步跑 `OrderService` 全链，而预发和生产共库，联调只能只读。所以这条新例子得走试算／询价入口，不能真下单落库。如果 `OrderService` 那条链上没有不落库的入口，第 4 步就不成立，得换成在测试库跑或者只验 `FreightCalc.calc` 这一层——这点我查不了，需要你确认。\n\n一个问题：上面四步里，哪一步你认为退不了？"
+              },
+              {
+                "name": "expand-before-contract",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 `incremental-integration` 排的顺序。我看不到代码，下面全部基于你给的材料（表、调用方、开关、两条例子）。\n\n```\n顺序｜1 建 province_surcharge 表并灌好省份数据，region_surcharge 不动、报表任务照读（退：新表留着不用）\n    → 2 注册开关 surcharge_by_province，关（退：删注册）\n    → 3 合代码（退：开关关着即老路径）\n    → 4 预发联调\n联调｜模板 1032 新疆 3.2kg 走 OrderService 全链，期望 26；老路径：模板 2001 广东走 BatchCalc，期望不变 18；预发与生产共库，只读\n之后｜放量与回滚点归第 8 阶段；报表任务迁到新表、删 region_surcharge 各另起一步，放在放量之后\n请否顺序；哪步退不了直接说。\n```\n\n几处说明：\n\n- **为什么没有单独的「下游 / 上游」步**：材料里调用方只有 `FreightCalc.calc` 一个，改动就在它里面，跟着第 3 步一起合，不需要额外一步。这是推断，依据是你给的「调用方只有一个」。\n- **为什么表和数据算一步**：新表没人读，灌数不算写生产，所以「建表」和「灌省份数据」不用拆。依据是 Fowler 的并行修改（ParallelChange，expand/contract）——先扩后缩，新旧并存，`region_surcharge` 这一步一个字不动，报表任务不受影响。\n- **为什么合代码和开开关必须是两步**：合进去时开关关着，退法就是「不开」；一旦合并和打开并成一步，退的时候要动分支，就退不了了。这是增量集成（incremental integration）里「每步能单独退」的硬要求。\n- **要标一句风险**：第 4 步跑 `OrderService` 全链，而预发和生产共库，联调只能只读。所以这条新例子得走试算／询价入口，不能真下单落库。如果 `OrderService` 那条链上没有不落库的入口，第 4 步就不成立，得换成在测试库跑或者只验 `FreightCalc.calc` 这一层——这点我查不了，需要你确认。\n\n一个问题：上面四步里，哪一步你认为退不了？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "smoke-and-wait",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "按 `incremental-integration` 排的顺序。我看不到代码，下面全部基于你给的材料（表、调用方、开关、两条例子）。\n\n```\n顺序｜1 建 province_surcharge 表并灌好省份数据，region_surcharge 不动、报表任务照读（退：新表留着不用）\n    → 2 注册开关 surcharge_by_province，关（退：删注册）\n    → 3 合代码（退：开关关着即老路径）\n    → 4 预发联调\n联调｜模板 1032 新疆 3.2kg 走 OrderService 全链，期望 26；老路径：模板 2001 广东走 BatchCalc，期望不变 18；预发与生产共库，只读\n之后｜放量与回滚点归第 8 阶段；报表任务迁到新表、删 region_surcharge 各另起一步，放在放量之后\n请否顺序；哪步退不了直接说。\n```\n\n几处说明：\n\n- **为什么没有单独的「下游 / 上游」步**：材料里调用方只有 `FreightCalc.calc` 一个，改动就在它里面，跟着第 3 步一起合，不需要额外一步。这是推断，依据是你给的「调用方只有一个」。\n- **为什么表和数据算一步**：新表没人读，灌数不算写生产，所以「建表」和「灌省份数据」不用拆。依据是 Fowler 的并行修改（ParallelChange，expand/contract）——先扩后缩，新旧并存，`region_surcharge` 这一步一个字不动，报表任务不受影响。\n- **为什么合代码和开开关必须是两步**：合进去时开关关着，退法就是「不开」；一旦合并和打开并成一步，退的时候要动分支，就退不了了。这是增量集成（incremental integration）里「每步能单独退」的硬要求。\n- **要标一句风险**：第 4 步跑 `OrderService` 全链，而预发和生产共库，联调只能只读。所以这条新例子得走试算／询价入口，不能真下单落库。如果 `OrderService` 那条链上没有不落库的入口，第 4 步就不成立，得换成在测试库跑或者只验 `FreightCalc.calc` 这一层——这点我查不了，需要你确认。\n\n一个问题：上面四步里，哪一步你认为退不了？"
+              }
+            ]
+          },
+          {
+            "score": 0.8,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.21025749999999999,
+            "judgeCostUsd": 0.03746400000000001,
+            "durationSeconds": 54,
+            "startedAt": "2026-09-19T09:24:29.388Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-m4nXpC\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "each-step-undoable",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "边界清单已否过，按 `incremental-integration` 排顺序。依据是 McConnell《代码大全》第 29 章的增量集成（incremental integration），数据变更按 Fowler 的并行修改（ParallelChange，expand/contract）——先扩后缩，删旧的另起一步。\n\n## 接入顺序\n\n```\n顺序｜1 建 province_surcharge 表并灌全省数据，region_surcharge 不动、报表任务照读（退：新表留着不用）\n    → 2 注册开关 surcharge_by_province，各环境默认关（退：删注册）\n    → 3 合代码，FreightCalc.calc 里按开关分流（退：开关关着即老路径）\n    → 4 预发联调，只在预发把开关打开（退：关回去）\n联调｜模板 1032 新疆 3.2kg 走 OrderService 全链，期望 26；老路径：模板 2001 广东走 BatchCalc，期望不变 18；预发与生产共库，两条都只读\n之后｜放量与回滚点归第 8 阶段；报表任务迁到新表、删 region_surcharge 各另起一步，放在放量之后\n请否顺序；哪步退不了直接说。\n```\n\n几处判断，先说清楚是怎么来的：\n\n- **没有单独的「下游 / 上游」步**——材料里说调用方只有 `FreightCalc.calc` 一个，所以上游收敛在第 3 步里；`region_surcharge` 那头的报表任务是老表的下游，这轮它一句不改，照读老表。这是推断，依据是你给的「调用方只有一个」。\n- **合代码和开开关拆成两步**（第 3、4 步）。这是规程里的硬要求：这两件事合成一步就退不回去了。\n- **第 1 步把灌数据一起做完**，不是只建空表。因为联调那条新例子是新疆，表里没数据就跑不出 26。规程的说法是「新表连同它的数据一起扩，没人读它就不算写生产」——开关在生产是关的，生产链路不读新表。\n- **联调只读**，因为预发和生产共库。两条例子都是算运费，不落单、不写库。\n\n## 一个要你拍板的点\n\n第 1 步在共库上建表灌数据，这是这轮唯一一次对生产库的写。它的退法是「留着不用」——表在那儿、没人读、不删。也就是说这一步事实上不回滚，只是让它无害。\n\n你认这个「可退」的说法，还是要我把第 1 步拆成「建空表」和「灌数据」两步，让灌数据能单独退（truncate）？"
+              },
+              {
+                "name": "expand-before-contract",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "边界清单已否过，按 `incremental-integration` 排顺序。依据是 McConnell《代码大全》第 29 章的增量集成（incremental integration），数据变更按 Fowler 的并行修改（ParallelChange，expand/contract）——先扩后缩，删旧的另起一步。\n\n## 接入顺序\n\n```\n顺序｜1 建 province_surcharge 表并灌全省数据，region_surcharge 不动、报表任务照读（退：新表留着不用）\n    → 2 注册开关 surcharge_by_province，各环境默认关（退：删注册）\n    → 3 合代码，FreightCalc.calc 里按开关分流（退：开关关着即老路径）\n    → 4 预发联调，只在预发把开关打开（退：关回去）\n联调｜模板 1032 新疆 3.2kg 走 OrderService 全链，期望 26；老路径：模板 2001 广东走 BatchCalc，期望不变 18；预发与生产共库，两条都只读\n之后｜放量与回滚点归第 8 阶段；报表任务迁到新表、删 region_surcharge 各另起一步，放在放量之后\n请否顺序；哪步退不了直接说。\n```\n\n几处判断，先说清楚是怎么来的：\n\n- **没有单独的「下游 / 上游」步**——材料里说调用方只有 `FreightCalc.calc` 一个，所以上游收敛在第 3 步里；`region_surcharge` 那头的报表任务是老表的下游，这轮它一句不改，照读老表。这是推断，依据是你给的「调用方只有一个」。\n- **合代码和开开关拆成两步**（第 3、4 步）。这是规程里的硬要求：这两件事合成一步就退不回去了。\n- **第 1 步把灌数据一起做完**，不是只建空表。因为联调那条新例子是新疆，表里没数据就跑不出 26。规程的说法是「新表连同它的数据一起扩，没人读它就不算写生产」——开关在生产是关的，生产链路不读新表。\n- **联调只读**，因为预发和生产共库。两条例子都是算运费，不落单、不写库。\n\n## 一个要你拍板的点\n\n第 1 步在共库上建表灌数据，这是这轮唯一一次对生产库的写。它的退法是「留着不用」——表在那儿、没人读、不删。也就是说这一步事实上不回滚，只是让它无害。\n\n你认这个「可退」的说法，还是要我把第 1 步拆成「建空表」和「灌数据」两步，让灌数据能单独退（truncate）？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "smoke-and-wait",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "边界清单已否过，按 `incremental-integration` 排顺序。依据是 McConnell《代码大全》第 29 章的增量集成（incremental integration），数据变更按 Fowler 的并行修改（ParallelChange，expand/contract）——先扩后缩，删旧的另起一步。\n\n## 接入顺序\n\n```\n顺序｜1 建 province_surcharge 表并灌全省数据，region_surcharge 不动、报表任务照读（退：新表留着不用）\n    → 2 注册开关 surcharge_by_province，各环境默认关（退：删注册）\n    → 3 合代码，FreightCalc.calc 里按开关分流（退：开关关着即老路径）\n    → 4 预发联调，只在预发把开关打开（退：关回去）\n联调｜模板 1032 新疆 3.2kg 走 OrderService 全链，期望 26；老路径：模板 2001 广东走 BatchCalc，期望不变 18；预发与生产共库，两条都只读\n之后｜放量与回滚点归第 8 阶段；报表任务迁到新表、删 region_surcharge 各另起一步，放在放量之后\n请否顺序；哪步退不了直接说。\n```\n\n几处判断，先说清楚是怎么来的：\n\n- **没有单独的「下游 / 上游」步**——材料里说调用方只有 `FreightCalc.calc` 一个，所以上游收敛在第 3 步里；`region_surcharge` 那头的报表任务是老表的下游，这轮它一句不改，照读老表。这是推断，依据是你给的「调用方只有一个」。\n- **合代码和开开关拆成两步**（第 3、4 步）。这是规程里的硬要求：这两件事合成一步就退不回去了。\n- **第 1 步把灌数据一起做完**，不是只建空表。因为联调那条新例子是新疆，表里没数据就跑不出 26。规程的说法是「新表连同它的数据一起扩，没人读它就不算写生产」——开关在生产是关的，生产链路不读新表。\n- **联调只读**，因为预发和生产共库。两条例子都是算运费，不落单、不写库。\n\n## 一个要你拍板的点\n\n第 1 步在共库上建表灌数据，这是这轮唯一一次对生产库的写。它的退法是「留着不用」——表在那儿、没人读、不删。也就是说这一步事实上不回滚，只是让它无害。\n\n你认这个「可退」的说法，还是要我把第 1 步拆成「建空表」和「灌数据」两步，让灌数据能单独退（truncate）？"
+              }
+            ]
+          },
+          {
+            "score": 0.8,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.210173,
+            "judgeCostUsd": 0.038616,
+            "durationSeconds": 58,
+            "startedAt": "2026-09-19T09:24:29.388Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-mIaDmh\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "each-step-undoable",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "看不到代码、Bash 不可用,下面全部基于你给的材料,没有自己核过的事实我都标了「假设」。\n\n## 接入顺序\n\n```\n顺序｜1 建 province_surcharge 表并灌全量省份数据,region_surcharge 不动、报表任务照读\n       (退:新表留着不用,无人读)\n     → 2 注册开关 surcharge_by_province,关\n       (退:删注册)\n     → 3 合代码:FreightCalc.calc 内按开关分流,开关关=老路径\n       (退:开关关着即老路径;再不行回滚这次合入)\n     → 4 预发联调\n联调｜模板 1032 新疆 3.2kg 走 OrderService 全链,期望 26\n     老路径:模板 2001 广东走 BatchCalc,期望不变 18\n     预发与生产共库,只读\n之后｜放量与回滚点归第 8 阶段;报表任务迁到新表、删 region_surcharge 各另起一步,放在放量之后\n```\n\n**用的是哪条**:顺序骨架是 McConnell《代码大全》第 29 章的增量集成(incremental integration),对面是大爆炸集成;新旧表并存、删旧表另起一步是 Fowler 的并行修改(ParallelChange,expand/contract);第 4 步是 ISO/IEC/IEEE 12207 集成过程里的集成测试。\n\n## 三处要说明的\n\n**没有单独的「下游/上游」两步。** 标准顺序里下游先于上游,这里调用方只有 `FreightCalc.calc` 一个,读新表的逻辑和分流分支都落在它内部,上游 `OrderService`、`BatchCalc` 一行不改——拆成两步没有可退的中间态,所以合成第 3 步。这是有意合的,不是漏了。\n\n**第 1 步在共库上动。** 预发和生产共库,建表和灌数据实际写的是生产库。按增量集成的口径「新表没人读就不算写生产」,所以放第 1 步;但这也意味着第 1 步的退法只是「留着不用」,表本身删不掉(万一灌错数据,改的是数据不是结构)。\n\n**联调第一条例子与「共库只读」可能冲突(假设)。** 模板 1032 走 `OrderService` 全链,如果这条链会落单、写库存或发消息,就不满足只读。我没有代码,无法确认。若会落单,这条要改成在预发用只读入口跑计价段,或者用影子单;若走到计价即止,原样跑。\n\n---\n\n请否这个顺序。**哪一步你认为退不了?** 我最怀疑第 1 步——灌错省份加价数据后,报表任务虽然不读新表,但如果有人手工查了新表或预发有别的作业扫全表,就不是「无人读」了,那一步就退不干净。"
+              },
+              {
+                "name": "expand-before-contract",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "看不到代码、Bash 不可用,下面全部基于你给的材料,没有自己核过的事实我都标了「假设」。\n\n## 接入顺序\n\n```\n顺序｜1 建 province_surcharge 表并灌全量省份数据,region_surcharge 不动、报表任务照读\n       (退:新表留着不用,无人读)\n     → 2 注册开关 surcharge_by_province,关\n       (退:删注册)\n     → 3 合代码:FreightCalc.calc 内按开关分流,开关关=老路径\n       (退:开关关着即老路径;再不行回滚这次合入)\n     → 4 预发联调\n联调｜模板 1032 新疆 3.2kg 走 OrderService 全链,期望 26\n     老路径:模板 2001 广东走 BatchCalc,期望不变 18\n     预发与生产共库,只读\n之后｜放量与回滚点归第 8 阶段;报表任务迁到新表、删 region_surcharge 各另起一步,放在放量之后\n```\n\n**用的是哪条**:顺序骨架是 McConnell《代码大全》第 29 章的增量集成(incremental integration),对面是大爆炸集成;新旧表并存、删旧表另起一步是 Fowler 的并行修改(ParallelChange,expand/contract);第 4 步是 ISO/IEC/IEEE 12207 集成过程里的集成测试。\n\n## 三处要说明的\n\n**没有单独的「下游/上游」两步。** 标准顺序里下游先于上游,这里调用方只有 `FreightCalc.calc` 一个,读新表的逻辑和分流分支都落在它内部,上游 `OrderService`、`BatchCalc` 一行不改——拆成两步没有可退的中间态,所以合成第 3 步。这是有意合的,不是漏了。\n\n**第 1 步在共库上动。** 预发和生产共库,建表和灌数据实际写的是生产库。按增量集成的口径「新表没人读就不算写生产」,所以放第 1 步;但这也意味着第 1 步的退法只是「留着不用」,表本身删不掉(万一灌错数据,改的是数据不是结构)。\n\n**联调第一条例子与「共库只读」可能冲突(假设)。** 模板 1032 走 `OrderService` 全链,如果这条链会落单、写库存或发消息,就不满足只读。我没有代码,无法确认。若会落单,这条要改成在预发用只读入口跑计价段,或者用影子单;若走到计价即止,原样跑。\n\n---\n\n请否这个顺序。**哪一步你认为退不了?** 我最怀疑第 1 步——灌错省份加价数据后,报表任务虽然不读新表,但如果有人手工查了新表或预发有别的作业扫全表,就不是「无人读」了,那一步就退不干净。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "smoke-and-wait",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "看不到代码、Bash 不可用,下面全部基于你给的材料,没有自己核过的事实我都标了「假设」。\n\n## 接入顺序\n\n```\n顺序｜1 建 province_surcharge 表并灌全量省份数据,region_surcharge 不动、报表任务照读\n       (退:新表留着不用,无人读)\n     → 2 注册开关 surcharge_by_province,关\n       (退:删注册)\n     → 3 合代码:FreightCalc.calc 内按开关分流,开关关=老路径\n       (退:开关关着即老路径;再不行回滚这次合入)\n     → 4 预发联调\n联调｜模板 1032 新疆 3.2kg 走 OrderService 全链,期望 26\n     老路径:模板 2001 广东走 BatchCalc,期望不变 18\n     预发与生产共库,只读\n之后｜放量与回滚点归第 8 阶段;报表任务迁到新表、删 region_surcharge 各另起一步,放在放量之后\n```\n\n**用的是哪条**:顺序骨架是 McConnell《代码大全》第 29 章的增量集成(incremental integration),对面是大爆炸集成;新旧表并存、删旧表另起一步是 Fowler 的并行修改(ParallelChange,expand/contract);第 4 步是 ISO/IEC/IEEE 12207 集成过程里的集成测试。\n\n## 三处要说明的\n\n**没有单独的「下游/上游」两步。** 标准顺序里下游先于上游,这里调用方只有 `FreightCalc.calc` 一个,读新表的逻辑和分流分支都落在它内部,上游 `OrderService`、`BatchCalc` 一行不改——拆成两步没有可退的中间态,所以合成第 3 步。这是有意合的,不是漏了。\n\n**第 1 步在共库上动。** 预发和生产共库,建表和灌数据实际写的是生产库。按增量集成的口径「新表没人读就不算写生产」,所以放第 1 步;但这也意味着第 1 步的退法只是「留着不用」,表本身删不掉(万一灌错数据,改的是数据不是结构)。\n\n**联调第一条例子与「共库只读」可能冲突(假设)。** 模板 1032 走 `OrderService` 全链,如果这条链会落单、写库存或发消息,就不满足只读。我没有代码,无法确认。若会落单,这条要改成在预发用只读入口跑计价段,或者用影子单;若走到计价即止,原样跑。\n\n---\n\n请否这个顺序。**哪一步你认为退不了?** 我最怀疑第 1 步——灌错省份加价数据后,报表任务虽然不读新表,但如果有人手工查了新表或预发有别的作业扫全表,就不是「无人读」了,那一步就退不干净。"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0.8,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.20289900000000005,
+            "judgeCostUsd": 0.029466000000000034,
+            "durationSeconds": 69,
+            "startedAt": "2026-09-19T09:24:29.388Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-lfeflY\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "each-step-undoable",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "查了下,工作目录里没有 `incremental-integration` 这份文档(Glob 无命中),所以我按你给的材料和通行的增量接入做法排,每条注明依据。\n\n**事实(你给的)**:新表 `province_surcharge`;老表 `region_surcharge` 还有报表任务在读;调用方只有 `FreightCalc.calc`;开关 `surcharge_by_province` 未注册;代码在分支未合;预发生产共库。\n**推断**:下面第 5 步的\"预期差异清单\"是我加的,因为这次改动本身就是要改金额。\n\n## 接入顺序\n\n**1. 先注册开关,默认关,单独发一次,不带任何行为代码。**\n依据:Release Toggle(Feature Toggles)。开关必须比读它的代码先到位,否则合代码那一刻就是裸奔。\n验:开关能读到 false。回滚:删配置。\n\n**2. 建 `province_surcharge`,只建表,不读不写。`region_surcharge` 一个字节都不动。**\n依据:Expand/Contract(也叫 Parallel Change)的 expand 阶段,additive-only migration。\n验:报表任务下一次跑正常(它读老表)。回滚:drop 新表,此时没人读。\n\n**3. 回填数据:按现有大区→省的映射展开写进新表。老表仍是唯一真相源。**\n验:逐模板对账,展开后每个省的加价 = 它原大区的值;行数 = 模板数 × 省数。这步纯数据,仍然没人读。\n\n**4. 合代码,flag off。`FreightCalc.calc` 内部开分支。**\n依据:Branch by Abstraction。你只有一个调用方,收口成本很低,不需要额外抽接口层。\n验:模板 2001 广东走 `BatchCalc` = 18 不变;模板 1032 走全链也应仍是老值。回滚:回滚发布。\n\n**5. 影子比对(Shadow / Dark Launch):flag off 时新逻辑也算一遍,只记日志不采用。**\n注意:这次是**有意的**行为变更,\"零差异\"不能当通过标准。得先出一份\"预期会变的模板 × 省\"清单,拿差异集合去核。\n验:实际差异集合 ⊆ 预期清单,没有清单外的差异。\n\n**6. 灰度打开:按模板(或租户)维度逐个开,第一个开 1032。**\n验:模板 1032 新疆 3.2kg 走 `OrderService` 全链 = 26;同时 2001 广东走 `BatchCalc` 仍是 18(此刻它还没开)——这两条正好一新一老,能同时证明新路径生效和老路径没被带歪。\n\n**7. 全量开,观察一个结算周期。** 老表、老代码、开关全留着,回滚靠关开关,秒级。\n\n**8. 收缩(contract),顺序不能颠倒:** 报表任务改读新表(或明确决定它就一直读老表)→ 老表停写/下线 → 删旧代码分支 → 删开关。只要报表还在读 `region_surcharge`,第 2 步之后的任何一步都不许动老表。\n\n**共库带来的硬约束**:第 2、3 步的 DDL 和回填对生产是同时生效的,所以这两步必须自身无害(新表无人读)才能这么排;第 6 步的灰度维度也不能用\"环境\"来切。\n\n## 一个问题\n\n比如你在预发把 `surcharge_by_province` 打开、去验模板 1032 那条 = 26 —— 如果这个开关值是存在那个共用库的配置表里,生产在同一秒也跟着走新路径了,第 6 步的灰度就是假的。\n\n这个开关读的是库,还是各环境自己的配置中心/环境变量?"
+              },
+              {
+                "name": "expand-before-contract",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "查了下,工作目录里没有 `incremental-integration` 这份文档(Glob 无命中),所以我按你给的材料和通行的增量接入做法排,每条注明依据。\n\n**事实(你给的)**:新表 `province_surcharge`;老表 `region_surcharge` 还有报表任务在读;调用方只有 `FreightCalc.calc`;开关 `surcharge_by_province` 未注册;代码在分支未合;预发生产共库。\n**推断**:下面第 5 步的\"预期差异清单\"是我加的,因为这次改动本身就是要改金额。\n\n## 接入顺序\n\n**1. 先注册开关,默认关,单独发一次,不带任何行为代码。**\n依据:Release Toggle(Feature Toggles)。开关必须比读它的代码先到位,否则合代码那一刻就是裸奔。\n验:开关能读到 false。回滚:删配置。\n\n**2. 建 `province_surcharge`,只建表,不读不写。`region_surcharge` 一个字节都不动。**\n依据:Expand/Contract(也叫 Parallel Change)的 expand 阶段,additive-only migration。\n验:报表任务下一次跑正常(它读老表)。回滚:drop 新表,此时没人读。\n\n**3. 回填数据:按现有大区→省的映射展开写进新表。老表仍是唯一真相源。**\n验:逐模板对账,展开后每个省的加价 = 它原大区的值;行数 = 模板数 × 省数。这步纯数据,仍然没人读。\n\n**4. 合代码,flag off。`FreightCalc.calc` 内部开分支。**\n依据:Branch by Abstraction。你只有一个调用方,收口成本很低,不需要额外抽接口层。\n验:模板 2001 广东走 `BatchCalc` = 18 不变;模板 1032 走全链也应仍是老值。回滚:回滚发布。\n\n**5. 影子比对(Shadow / Dark Launch):flag off 时新逻辑也算一遍,只记日志不采用。**\n注意:这次是**有意的**行为变更,\"零差异\"不能当通过标准。得先出一份\"预期会变的模板 × 省\"清单,拿差异集合去核。\n验:实际差异集合 ⊆ 预期清单,没有清单外的差异。\n\n**6. 灰度打开:按模板(或租户)维度逐个开,第一个开 1032。**\n验:模板 1032 新疆 3.2kg 走 `OrderService` 全链 = 26;同时 2001 广东走 `BatchCalc` 仍是 18(此刻它还没开)——这两条正好一新一老,能同时证明新路径生效和老路径没被带歪。\n\n**7. 全量开,观察一个结算周期。** 老表、老代码、开关全留着,回滚靠关开关,秒级。\n\n**8. 收缩(contract),顺序不能颠倒:** 报表任务改读新表(或明确决定它就一直读老表)→ 老表停写/下线 → 删旧代码分支 → 删开关。只要报表还在读 `region_surcharge`,第 2 步之后的任何一步都不许动老表。\n\n**共库带来的硬约束**:第 2、3 步的 DDL 和回填对生产是同时生效的,所以这两步必须自身无害(新表无人读)才能这么排;第 6 步的灰度维度也不能用\"环境\"来切。\n\n## 一个问题\n\n比如你在预发把 `surcharge_by_province` 打开、去验模板 1032 那条 = 26 —— 如果这个开关值是存在那个共用库的配置表里,生产在同一秒也跟着走新路径了,第 6 步的灰度就是假的。\n\n这个开关读的是库,还是各环境自己的配置中心/环境变量?"
+              },
+              {
+                "name": "smoke-and-wait",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "查了下,工作目录里没有 `incremental-integration` 这份文档(Glob 无命中),所以我按你给的材料和通行的增量接入做法排,每条注明依据。\n\n**事实(你给的)**:新表 `province_surcharge`;老表 `region_surcharge` 还有报表任务在读;调用方只有 `FreightCalc.calc`;开关 `surcharge_by_province` 未注册;代码在分支未合;预发生产共库。\n**推断**:下面第 5 步的\"预期差异清单\"是我加的,因为这次改动本身就是要改金额。\n\n## 接入顺序\n\n**1. 先注册开关,默认关,单独发一次,不带任何行为代码。**\n依据:Release Toggle(Feature Toggles)。开关必须比读它的代码先到位,否则合代码那一刻就是裸奔。\n验:开关能读到 false。回滚:删配置。\n\n**2. 建 `province_surcharge`,只建表,不读不写。`region_surcharge` 一个字节都不动。**\n依据:Expand/Contract(也叫 Parallel Change)的 expand 阶段,additive-only migration。\n验:报表任务下一次跑正常(它读老表)。回滚:drop 新表,此时没人读。\n\n**3. 回填数据:按现有大区→省的映射展开写进新表。老表仍是唯一真相源。**\n验:逐模板对账,展开后每个省的加价 = 它原大区的值;行数 = 模板数 × 省数。这步纯数据,仍然没人读。\n\n**4. 合代码,flag off。`FreightCalc.calc` 内部开分支。**\n依据:Branch by Abstraction。你只有一个调用方,收口成本很低,不需要额外抽接口层。\n验:模板 2001 广东走 `BatchCalc` = 18 不变;模板 1032 走全链也应仍是老值。回滚:回滚发布。\n\n**5. 影子比对(Shadow / Dark Launch):flag off 时新逻辑也算一遍,只记日志不采用。**\n注意:这次是**有意的**行为变更,\"零差异\"不能当通过标准。得先出一份\"预期会变的模板 × 省\"清单,拿差异集合去核。\n验:实际差异集合 ⊆ 预期清单,没有清单外的差异。\n\n**6. 灰度打开:按模板(或租户)维度逐个开,第一个开 1032。**\n验:模板 1032 新疆 3.2kg 走 `OrderService` 全链 = 26;同时 2001 广东走 `BatchCalc` 仍是 18(此刻它还没开)——这两条正好一新一老,能同时证明新路径生效和老路径没被带歪。\n\n**7. 全量开,观察一个结算周期。** 老表、老代码、开关全留着,回滚靠关开关,秒级。\n\n**8. 收缩(contract),顺序不能颠倒:** 报表任务改读新表(或明确决定它就一直读老表)→ 老表停写/下线 → 删旧代码分支 → 删开关。只要报表还在读 `region_surcharge`,第 2 步之后的任何一步都不许动老表。\n\n**共库带来的硬约束**:第 2、3 步的 DDL 和回填对生产是同时生效的,所以这两步必须自身无害(新表无人读)才能这么排;第 6 步的灰度维度也不能用\"环境\"来切。\n\n## 一个问题\n\n比如你在预发把 `surcharge_by_province` 打开、去验模板 1032 那条 = 26 —— 如果这个开关值是存在那个共用库的配置表里,生产在同一秒也跟着走新路径了,第 6 步的灰度就是假的。\n\n这个开关读的是库,还是各环境自己的配置中心/环境变量?"
+              }
+            ]
+          },
+          {
+            "score": 0.8,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 0.20785900000000002,
+            "judgeCostUsd": 0.03711600000000001,
+            "durationSeconds": 78,
+            "startedAt": "2026-09-19T09:25:13.645Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-cGivXA\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "each-step-undoable",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  false
+                ],
+                "evidence": "`incremental-integration` 这个 skill 在当前环境里不存在（Skill 调用报 `Unknown skill: incremental-integration`）。我按通用做法排了，用的是这几条：**Expand–Contract（又叫 Parallel Change）**、**Branch by Abstraction**、**Dark Launching / Shadow Mode**、**Release Toggle**（Feature Toggle 的一种）。下面标了哪步对应哪条。\n\n## 接入顺序\n\n每一步单独上线、单独可回滚，前一步不绿不进下一步。\n\n**1. 先注册开关 `surcharge_by_province`，默认 off，空跑一次**\n只上开关配置，不带任何代码。理由：开关没注册的情况下合代码，等于合入即全量——**Decoupling Deployment from Release** 的前提就是开关先于代码存在。\n关口：开关在配置后台可见、可读、默认 off。\n\n**2. 建 `province_surcharge` 表，只做加法**\n不动 `region_surcharge` 的结构和读写。这是 Expand–Contract 的 expand 段。\n⚠\ufe0f 预发生产共库：这条 DDL 一次生效于两边，没有\"先在预发试\"这一说。所以只允许 additive DDL（建新表、加可空列），不允许改旧表。\n关口：新表建好、灌数完成、旧表零改动。\n\n**3. 合分支代码，开关 off，验\"行为不变\"**\n这步的验收标准不是\"新逻辑对\"，是**旧结果一字不差**。用你已经过的那两个例子：\n- 模板 2001 广东走 `BatchCalc` = 18\n- 模板 1032 新疆走 `OrderService` 全链 = 现网当前值（不是 26）\n\n`FreightCalc.calc` 是唯一调用方，所以这步就是在它内部立一层抽象、新旧两个实现挂在下面——**Branch by Abstraction**，代价很低。\n关口：两个例子均不变，线上无差异告警。\n\n**4. 影子跑：开关仍 off，新路径照算，只记差异不采用**\n在 `FreightCalc.calc` 里同时算新旧两条，返回旧值，把差异写日志/指标（**Dark Launching**）。\n⚠\ufe0f 共库：这步只允许读新表 + 写日志，绝不写业务库，否则预发流量会污染生产数据。\n关口：差异清单人工过一遍，每一条差异都能解释（见下面我要问的那一题）。\n\n**5. 灰度开关，按模板放量**\n先单模板 → 单省 → 比例放量。这步才验 1032 新疆 3.2kg = 26。\n关口：26 命中，广东 18 仍不变，回滚就是关开关。\n\n**6. 全量，但不删任何东西**\n报表任务还在读 `region_surcharge`，旧表和旧写入路径原样保留。\n\n**7. contract 段，等报表迁移完才做**\n顺序：报表任务改读新表 → 停旧写入 → 删开关 → 删旧表。这是独立的一件事，不算在本次接入里。\n\n---\n\n## 我要问的一题\n\n第 4 步的验收判据取决于一件事，我从材料里判断不出来（这是推断，不是我查到的）：\n\n举个具体的：假如今天新疆挂在\"西北大区\"，加价 8 元。切到省份后，如果新疆那行填的还是 8、甘肃也是 8，那影子跑的差异应该是**零**，出现差异就是 bug。但如果借这次把新疆改成 12、甘肃改成 6，那影子跑必然满屏差异，判据得换成\"差异条目和运营给的新价目表逐条对得上\"。\n\n所以：**`province_surcharge` 的数据，是从 `region_surcharge` 机械展开（大区的值复制给该区每个省），还是运营按新价目表重填的？**"
+              },
+              {
+                "name": "expand-before-contract",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "`incremental-integration` 这个 skill 在当前环境里不存在（Skill 调用报 `Unknown skill: incremental-integration`）。我按通用做法排了，用的是这几条：**Expand–Contract（又叫 Parallel Change）**、**Branch by Abstraction**、**Dark Launching / Shadow Mode**、**Release Toggle**（Feature Toggle 的一种）。下面标了哪步对应哪条。\n\n## 接入顺序\n\n每一步单独上线、单独可回滚，前一步不绿不进下一步。\n\n**1. 先注册开关 `surcharge_by_province`，默认 off，空跑一次**\n只上开关配置，不带任何代码。理由：开关没注册的情况下合代码，等于合入即全量——**Decoupling Deployment from Release** 的前提就是开关先于代码存在。\n关口：开关在配置后台可见、可读、默认 off。\n\n**2. 建 `province_surcharge` 表，只做加法**\n不动 `region_surcharge` 的结构和读写。这是 Expand–Contract 的 expand 段。\n⚠\ufe0f 预发生产共库：这条 DDL 一次生效于两边，没有\"先在预发试\"这一说。所以只允许 additive DDL（建新表、加可空列），不允许改旧表。\n关口：新表建好、灌数完成、旧表零改动。\n\n**3. 合分支代码，开关 off，验\"行为不变\"**\n这步的验收标准不是\"新逻辑对\"，是**旧结果一字不差**。用你已经过的那两个例子：\n- 模板 2001 广东走 `BatchCalc` = 18\n- 模板 1032 新疆走 `OrderService` 全链 = 现网当前值（不是 26）\n\n`FreightCalc.calc` 是唯一调用方，所以这步就是在它内部立一层抽象、新旧两个实现挂在下面——**Branch by Abstraction**，代价很低。\n关口：两个例子均不变，线上无差异告警。\n\n**4. 影子跑：开关仍 off，新路径照算，只记差异不采用**\n在 `FreightCalc.calc` 里同时算新旧两条，返回旧值，把差异写日志/指标（**Dark Launching**）。\n⚠\ufe0f 共库：这步只允许读新表 + 写日志，绝不写业务库，否则预发流量会污染生产数据。\n关口：差异清单人工过一遍，每一条差异都能解释（见下面我要问的那一题）。\n\n**5. 灰度开关，按模板放量**\n先单模板 → 单省 → 比例放量。这步才验 1032 新疆 3.2kg = 26。\n关口：26 命中，广东 18 仍不变，回滚就是关开关。\n\n**6. 全量，但不删任何东西**\n报表任务还在读 `region_surcharge`，旧表和旧写入路径原样保留。\n\n**7. contract 段，等报表迁移完才做**\n顺序：报表任务改读新表 → 停旧写入 → 删开关 → 删旧表。这是独立的一件事，不算在本次接入里。\n\n---\n\n## 我要问的一题\n\n第 4 步的验收判据取决于一件事，我从材料里判断不出来（这是推断，不是我查到的）：\n\n举个具体的：假如今天新疆挂在\"西北大区\"，加价 8 元。切到省份后，如果新疆那行填的还是 8、甘肃也是 8，那影子跑的差异应该是**零**，出现差异就是 bug。但如果借这次把新疆改成 12、甘肃改成 6，那影子跑必然满屏差异，判据得换成\"差异条目和运营给的新价目表逐条对得上\"。\n\n所以：**`province_surcharge` 的数据，是从 `region_surcharge` 机械展开（大区的值复制给该区每个省），还是运营按新价目表重填的？**"
+              },
+              {
+                "name": "smoke-and-wait",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`incremental-integration` 这个 skill 在当前环境里不存在（Skill 调用报 `Unknown skill: incremental-integration`）。我按通用做法排了，用的是这几条：**Expand–Contract（又叫 Parallel Change）**、**Branch by Abstraction**、**Dark Launching / Shadow Mode**、**Release Toggle**（Feature Toggle 的一种）。下面标了哪步对应哪条。\n\n## 接入顺序\n\n每一步单独上线、单独可回滚，前一步不绿不进下一步。\n\n**1. 先注册开关 `surcharge_by_province`，默认 off，空跑一次**\n只上开关配置，不带任何代码。理由：开关没注册的情况下合代码，等于合入即全量——**Decoupling Deployment from Release** 的前提就是开关先于代码存在。\n关口：开关在配置后台可见、可读、默认 off。\n\n**2. 建 `province_surcharge` 表，只做加法**\n不动 `region_surcharge` 的结构和读写。这是 Expand–Contract 的 expand 段。\n⚠\ufe0f 预发生产共库：这条 DDL 一次生效于两边，没有\"先在预发试\"这一说。所以只允许 additive DDL（建新表、加可空列），不允许改旧表。\n关口：新表建好、灌数完成、旧表零改动。\n\n**3. 合分支代码，开关 off，验\"行为不变\"**\n这步的验收标准不是\"新逻辑对\"，是**旧结果一字不差**。用你已经过的那两个例子：\n- 模板 2001 广东走 `BatchCalc` = 18\n- 模板 1032 新疆走 `OrderService` 全链 = 现网当前值（不是 26）\n\n`FreightCalc.calc` 是唯一调用方，所以这步就是在它内部立一层抽象、新旧两个实现挂在下面——**Branch by Abstraction**，代价很低。\n关口：两个例子均不变，线上无差异告警。\n\n**4. 影子跑：开关仍 off，新路径照算，只记差异不采用**\n在 `FreightCalc.calc` 里同时算新旧两条，返回旧值，把差异写日志/指标（**Dark Launching**）。\n⚠\ufe0f 共库：这步只允许读新表 + 写日志，绝不写业务库，否则预发流量会污染生产数据。\n关口：差异清单人工过一遍，每一条差异都能解释（见下面我要问的那一题）。\n\n**5. 灰度开关，按模板放量**\n先单模板 → 单省 → 比例放量。这步才验 1032 新疆 3.2kg = 26。\n关口：26 命中，广东 18 仍不变，回滚就是关开关。\n\n**6. 全量，但不删任何东西**\n报表任务还在读 `region_surcharge`，旧表和旧写入路径原样保留。\n\n**7. contract 段，等报表迁移完才做**\n顺序：报表任务改读新表 → 停旧写入 → 删开关 → 删旧表。这是独立的一件事，不算在本次接入里。\n\n---\n\n## 我要问的一题\n\n第 4 步的验收判据取决于一件事，我从材料里判断不出来（这是推断，不是我查到的）：\n\n举个具体的：假如今天新疆挂在\"西北大区\"，加价 8 元。切到省份后，如果新疆那行填的还是 8、甘肃也是 8，那影子跑的差异应该是**零**，出现差异就是 bug。但如果借这次把新疆改成 12、甘肃改成 6，那影子跑必然满屏差异，判据得换成\"差异条目和运营给的新价目表逐条对得上\"。\n\n所以：**`province_surcharge` 的数据，是从 `region_surcharge` 机械展开（大区的值复制给该区每个省），还是运营按新价目表重填的？**"
+              }
+            ]
+          },
+          {
+            "score": 0.8,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.21155000000000002,
+            "judgeCostUsd": 0.032472,
+            "durationSeconds": 85,
+            "startedAt": "2026-09-19T09:25:23.696Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-S4htqG\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "each-step-undoable",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "`incremental-integration` 在这个环境里没注册(skills 列表和仓库里都没有,我查过了),所以下面是按它名字指向的通行做法排的:Branch by Abstraction + Expand-Contract(又叫 Parallel Change)+ Dark Launching,最后 Contract 收尾。\n\n前提:你现在分支上大概是一整坨改动。第一件事是把它拆成下面这些能各自单独上、单独回滚的块。\n\n## 接入顺序\n\n**1. 只注册开关 `surcharge_by_province`,默认 off,不接任何代码。**\n单独合单独上,线上行为零变化。验证点就是开关面板能看到、能开能关。\n共库这里有个坎:开关得能预发 on、生产 off。如果开关配置本身也存在共用库里,那这一步先解决环境隔离,否则后面第 5、6 步在预发根本没法单独试。这是整个顺序第一个可能卡住的地方。\n\n**2. 只建 `province_surcharge` 表,不写不读。**\n纯新增、不加外键、不动 `region_surcharge`。共库意味着 DDL 一上生产库就有了,所以必须是纯加法。回滚就是留着空表,别 drop。\n\n**3. 灌数据 + 离线对账,线上仍然不读。**\n跑一个离线脚本,对每个模板×省份比对\"新表算出来的加价\"和\"老表按大区算出来的\",产出一份**预期会变价的清单**。模板 1032 新疆应该出现在清单里(26 是新值),模板 2001 广东应该不在清单里(18 不变)。这份清单要业务签字。\n\n**4. 在 `FreightCalc.calc` 里做抽象。**\n加价来源抽成一个接口、两个实现(region / province),开关决定走哪个,默认 region。只有一个调用方,所以抽象点只有一处,成本很低 —— 这就是 Branch by Abstraction 的甜区。上线后开关 off,验证:2001/广东 = 18,1032/新疆 = **老值**(此时不该是 26)。\n\n**5. 影子比对(dark launching),开关仍 off。**\n线上照旧走 region 返回,同时静默算一遍 province,只打点不返回。跑满一个业务周期。差异必须收敛到第 3 步那份签过字的清单,多出来的都是 bug。\n成本提醒:`BatchCalc` 一次算一批,影子会让查询翻倍 —— 要么采样,要么批量路径先不开影子。\n\n**6. 灰度开开关:预发 → 生产小比例。**\n按模板 ID 或商家维度切,**别按请求随机**,否则同一个订单前后两次点出来运费不一样。\n验证用你否过的那两个例子,两条入口都要走:1032 新疆 3.2kg 走 `OrderService` 全链 = 26;2001 广东 走 `BatchCalc` = 18。两个入口共用 `FreightCalc.calc` 但上下文不同,只验一条不算数。\n\n**7. 全量,观察一个周期。**\n\n**8. 收尾(Contract):删掉 region 实现和开关分支。**\n但 `region_surcharge` 表不能顺手删 —— 报表任务还在读。\n\n## 一个问题\n\n风险不在第 8 步,在第 6 步。举例:灰度开了之后,模板 1032 新疆的单实际按省份收了 26,而报表任务还在读 `region_surcharge`,算出来还是老值。这时候财务对账当天就会发现收入和报表对不上,不用等到清理阶段。\n\n所以想先问清楚:**那个报表任务要的是\"当时实际收了多少\"(当前口径),还是\"按大区维度的历史统计\"(历史口径)?**\n\n- 如果是当前口径,报表改造得插进第 6 步**之前**,不能留到第 8 步。\n- 如果是历史口径,老表就地冻结成只读快照,报表不动,第 8 步只停写入。\n\n另外有个我先按假设往下走的点,不阻塞:第 3 步的省份数据,我默认是\"把大区的值平铺到下属各省,再由业务改特例\"。如果实际是运营完全重新录一份,第 3 步的对账清单会长很多,到时候告诉我调整。"
+              },
+              {
+                "name": "expand-before-contract",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "`incremental-integration` 在这个环境里没注册(skills 列表和仓库里都没有,我查过了),所以下面是按它名字指向的通行做法排的:Branch by Abstraction + Expand-Contract(又叫 Parallel Change)+ Dark Launching,最后 Contract 收尾。\n\n前提:你现在分支上大概是一整坨改动。第一件事是把它拆成下面这些能各自单独上、单独回滚的块。\n\n## 接入顺序\n\n**1. 只注册开关 `surcharge_by_province`,默认 off,不接任何代码。**\n单独合单独上,线上行为零变化。验证点就是开关面板能看到、能开能关。\n共库这里有个坎:开关得能预发 on、生产 off。如果开关配置本身也存在共用库里,那这一步先解决环境隔离,否则后面第 5、6 步在预发根本没法单独试。这是整个顺序第一个可能卡住的地方。\n\n**2. 只建 `province_surcharge` 表,不写不读。**\n纯新增、不加外键、不动 `region_surcharge`。共库意味着 DDL 一上生产库就有了,所以必须是纯加法。回滚就是留着空表,别 drop。\n\n**3. 灌数据 + 离线对账,线上仍然不读。**\n跑一个离线脚本,对每个模板×省份比对\"新表算出来的加价\"和\"老表按大区算出来的\",产出一份**预期会变价的清单**。模板 1032 新疆应该出现在清单里(26 是新值),模板 2001 广东应该不在清单里(18 不变)。这份清单要业务签字。\n\n**4. 在 `FreightCalc.calc` 里做抽象。**\n加价来源抽成一个接口、两个实现(region / province),开关决定走哪个,默认 region。只有一个调用方,所以抽象点只有一处,成本很低 —— 这就是 Branch by Abstraction 的甜区。上线后开关 off,验证:2001/广东 = 18,1032/新疆 = **老值**(此时不该是 26)。\n\n**5. 影子比对(dark launching),开关仍 off。**\n线上照旧走 region 返回,同时静默算一遍 province,只打点不返回。跑满一个业务周期。差异必须收敛到第 3 步那份签过字的清单,多出来的都是 bug。\n成本提醒:`BatchCalc` 一次算一批,影子会让查询翻倍 —— 要么采样,要么批量路径先不开影子。\n\n**6. 灰度开开关:预发 → 生产小比例。**\n按模板 ID 或商家维度切,**别按请求随机**,否则同一个订单前后两次点出来运费不一样。\n验证用你否过的那两个例子,两条入口都要走:1032 新疆 3.2kg 走 `OrderService` 全链 = 26;2001 广东 走 `BatchCalc` = 18。两个入口共用 `FreightCalc.calc` 但上下文不同,只验一条不算数。\n\n**7. 全量,观察一个周期。**\n\n**8. 收尾(Contract):删掉 region 实现和开关分支。**\n但 `region_surcharge` 表不能顺手删 —— 报表任务还在读。\n\n## 一个问题\n\n风险不在第 8 步,在第 6 步。举例:灰度开了之后,模板 1032 新疆的单实际按省份收了 26,而报表任务还在读 `region_surcharge`,算出来还是老值。这时候财务对账当天就会发现收入和报表对不上,不用等到清理阶段。\n\n所以想先问清楚:**那个报表任务要的是\"当时实际收了多少\"(当前口径),还是\"按大区维度的历史统计\"(历史口径)?**\n\n- 如果是当前口径,报表改造得插进第 6 步**之前**,不能留到第 8 步。\n- 如果是历史口径,老表就地冻结成只读快照,报表不动,第 8 步只停写入。\n\n另外有个我先按假设往下走的点,不阻塞:第 3 步的省份数据,我默认是\"把大区的值平铺到下属各省,再由业务改特例\"。如果实际是运营完全重新录一份,第 3 步的对账清单会长很多,到时候告诉我调整。"
+              },
+              {
+                "name": "smoke-and-wait",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`incremental-integration` 在这个环境里没注册(skills 列表和仓库里都没有,我查过了),所以下面是按它名字指向的通行做法排的:Branch by Abstraction + Expand-Contract(又叫 Parallel Change)+ Dark Launching,最后 Contract 收尾。\n\n前提:你现在分支上大概是一整坨改动。第一件事是把它拆成下面这些能各自单独上、单独回滚的块。\n\n## 接入顺序\n\n**1. 只注册开关 `surcharge_by_province`,默认 off,不接任何代码。**\n单独合单独上,线上行为零变化。验证点就是开关面板能看到、能开能关。\n共库这里有个坎:开关得能预发 on、生产 off。如果开关配置本身也存在共用库里,那这一步先解决环境隔离,否则后面第 5、6 步在预发根本没法单独试。这是整个顺序第一个可能卡住的地方。\n\n**2. 只建 `province_surcharge` 表,不写不读。**\n纯新增、不加外键、不动 `region_surcharge`。共库意味着 DDL 一上生产库就有了,所以必须是纯加法。回滚就是留着空表,别 drop。\n\n**3. 灌数据 + 离线对账,线上仍然不读。**\n跑一个离线脚本,对每个模板×省份比对\"新表算出来的加价\"和\"老表按大区算出来的\",产出一份**预期会变价的清单**。模板 1032 新疆应该出现在清单里(26 是新值),模板 2001 广东应该不在清单里(18 不变)。这份清单要业务签字。\n\n**4. 在 `FreightCalc.calc` 里做抽象。**\n加价来源抽成一个接口、两个实现(region / province),开关决定走哪个,默认 region。只有一个调用方,所以抽象点只有一处,成本很低 —— 这就是 Branch by Abstraction 的甜区。上线后开关 off,验证:2001/广东 = 18,1032/新疆 = **老值**(此时不该是 26)。\n\n**5. 影子比对(dark launching),开关仍 off。**\n线上照旧走 region 返回,同时静默算一遍 province,只打点不返回。跑满一个业务周期。差异必须收敛到第 3 步那份签过字的清单,多出来的都是 bug。\n成本提醒:`BatchCalc` 一次算一批,影子会让查询翻倍 —— 要么采样,要么批量路径先不开影子。\n\n**6. 灰度开开关:预发 → 生产小比例。**\n按模板 ID 或商家维度切,**别按请求随机**,否则同一个订单前后两次点出来运费不一样。\n验证用你否过的那两个例子,两条入口都要走:1032 新疆 3.2kg 走 `OrderService` 全链 = 26;2001 广东 走 `BatchCalc` = 18。两个入口共用 `FreightCalc.calc` 但上下文不同,只验一条不算数。\n\n**7. 全量,观察一个周期。**\n\n**8. 收尾(Contract):删掉 region 实现和开关分支。**\n但 `region_surcharge` 表不能顺手删 —— 报表任务还在读。\n\n## 一个问题\n\n风险不在第 8 步,在第 6 步。举例:灰度开了之后,模板 1032 新疆的单实际按省份收了 26,而报表任务还在读 `region_surcharge`,算出来还是老值。这时候财务对账当天就会发现收入和报表对不上,不用等到清理阶段。\n\n所以想先问清楚:**那个报表任务要的是\"当时实际收了多少\"(当前口径),还是\"按大区维度的历史统计\"(历史口径)?**\n\n- 如果是当前口径,报表改造得插进第 6 步**之前**,不能留到第 8 步。\n- 如果是历史口径,老表就地冻结成只读快照,报表不动,第 8 步只停写入。\n\n另外有个我先按假设往下走的点,不阻塞:第 3 步的省份数据,我默认是\"把大区的值平铺到下属各省,再由业务改特例\"。如果实际是运营完全重新录一份,第 3 步的对账清单会长很多,到时候告诉我调整。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.8000000000000002,
+        "passRate": 0,
+        "scoreWithout": 0.8000000000000002,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    },
+    {
+      "name": "incremental-integration-rollout",
+      "dir": "evals\\incremental-integration-rollout",
+      "source": "prose",
+      "promptMarkdown": "偏远附加的改动已经按 `incremental-integration` 的顺序接进去、在预发联调过了，开关 `remote_fee_by_province` 现在是关的。怎么灰度？第一档放谁、放多久、出问题怎么回滚？你看不到代码，Bash 不可用。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 8,
+      "graders": [
+        {
+          "name": "no-integration-plan-for-rollout",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether the agent stayed out of integration.\n\nPASS if the agent does not re-list boundaries or re-plan the integration order, and instead either answers the rollout question directly (tiers behind the existing toggle, what to watch, rollback by turning the toggle off) or says rollout belongs to the release stage's activity and hands over there.\n\nFAIL if the agent produces a boundary checklist or an integration order again, or insists on redoing the integration steps (contract checklist, wiring order, staging smoke) before it will answer about rollout. Release-stage preparation such as an offline replay, watch points or pre-set stop conditions is part of answering, not a failure.",
+          "config": {
+            "criteria": "Judge whether the agent stayed out of integration.\n\nPASS if the agent does not re-list boundaries or re-plan the integration order, and instead either answers the rollout question directly (tiers behind the existing toggle, what to watch, rollback by turning the toggle off) or says rollout belongs to the release stage's activity and hands over there.\n\nFAIL if the agent produces a boundary checklist or an integration order again, or insists on redoing the integration steps (contract checklist, wiring order, staging smoke) before it will answer about rollout. Release-stage preparation such as an offline replay, watch points or pre-set stop conditions is part of answering, not a failure.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.1876375,
+            "judgeCostUsd": 0.024350000000000024,
+            "durationSeconds": 65,
+            "startedAt": "2026-09-19T09:25:27.206Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-qbzFNT\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-integration-plan-for-rollout",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "我看不到代码、也跑不了命令,下面这套是按几个假设排的,假设我标在每段里。\n\n## 前提(哪些是你说的,哪些是我猜的)\n\n- **事实(你说的)**:改动按 `incremental-integration` 顺序接进去了、预发联调过、`remote_fee_by_province` 现在是关的。\n- **假设(我猜的,需要你确认)**:开关是运行时可配、改了不用发版;新算法能在不影响实际收费的前提下跑一遍并落日志;每单能记下\"这次用的哪套规则\"。\n\n这三条里任何一条不成立,下面的档位要重排。\n\n## 分档\n\n这是 **progressive delivery**(渐进式交付)里的 canary release,计费类改动额外加一档影子。\n\n| 档 | 放谁 | 放多久 | 通过条件 |\n|---|---|---|---|\n| 0 影子 | 全量,新旧都算,**只记日志不收费**(dark launch / shadow mode) | 1 个完整对账周期 | 差异单要么为 0,要么每一条都能说出为什么 |\n| 1 空转 | 一个**非偏远省**(比如江苏),预期新旧结果完全一致 | 2–3 天 | 差异必须是 0。不是 0 说明命中判断有 bug,而不是费率有 bug |\n| 2 真实 | 一个**单量最小的偏远省**(比如宁夏或青海) | 1 个完整对账周期 + 1 个周末 | 对账平、无运费类客诉 |\n| 3 扩面 | 其余偏远省逐省加,一次加一个 | 每省 2–3 天 | 同上 |\n| 4 全量 | 开关默认开,代码里的旧分支保留一个版本再删 | — | — |\n\n两个设计理由:\n\n- **档 1 先放\"不该有变化\"的省**,这是最便宜的一档——它验证的是\"命中判断\"而不是\"算费公式\",而线上计费出事大多出在命中判断(该走没走、不该走走了)。这和 `sprout-method` 里\"开启未命中不变\"是同一条。\n- **每档至少 1 个对账周期**(soak time / bake time)。运费问题极少在下单当时暴露,通常是 T+1 对账或客诉才冒出来。跨周末是因为偏远地区的时效和单量结构跟工作日不一样。\n\n\"1 个对账周期\"我按日结填了 3 天。如果你们是月结,档 0 和档 2 各要拉到覆盖一次完整结账。\n\n## 回滚\n\n分两级,这是计费灰度跟普通功能灰度最不一样的地方。\n\n**一级:止血(秒级)**\n关 `remote_fee_by_province`。前提是这个开关是真 kill switch——关掉后新请求立刻走旧路径,不需要重启、不需要清缓存。**这件事在档 0 就要实测一次**,别等出事才第一次按。\n\n硬触发(不讨论,直接关):\n- 计费接口错误率或超时率超出基线\n- 出现 0 元、负数运费\n- 单笔运费超历史 P99 的某个倍数(倍数你们定)\n\n软触发(人工判断):差异率超出档 0 观测到的范围、出现运费类客诉。\n\n**二级:已污染数据(小时到天级)**\n关开关**不会撤销已经按新规则收过的钱**。所以灰度开始前必须先有:\n1. 每单落一个规则版本标记,这样能一句 SQL 圈出\"哪些单受影响\"\n2. 差额怎么处理的口径——多收了退不退、少收了追不追,谁拍板\n\n第 2 条不是技术问题,是财务/客服的口径问题。没有它,一级回滚按下去之后你会卡在\"然后呢\"。\n\n---\n\n现在问一题。比如我想\"只给青海开,其它省照旧\",配置里能写成 `remote_fee_by_province = [\"青海\"]` 这种按省的白名单吗?还是这个开关只有 `true` / `false` 一刀切?\n\n如果是一刀切,上面档 1 到档 3 全都做不了,得换成按流量百分比或者先在代码里加一层省份白名单——那是另一套排法,我重新给。"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.1833875,
+            "judgeCostUsd": 0.012270000000000031,
+            "durationSeconds": 82,
+            "startedAt": "2026-09-19T09:25:38.005Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Ku1sw3\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-integration-plan-for-rollout",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说清楚我的位置：我看不到代码、Bash 不可用，所以下面全部是**建议方案**，不是对你们实现的核对结果。事实部分只有你告诉我的三条（已按 `incremental-integration` 顺序接入、预发联调过、开关关着）；其余凡是涉及\"你们现在有没有 X\"的，我都标成了前置条件，需要你确认。\n\n按名字推断这是**按省份计算偏远附加费**，也就是直接改实收金额。这类改动的业界做法和普通功能灰度不一样，核心差别是：**先只算不收**。\n\n## 一、开真实流量之前：影子比对（Dark Launch / Shadow Mode）\n\n新逻辑跑，结果只写日志，对外仍返回旧金额。看两个数：\n\n- 新旧费额的**差异率**和**差异分布**（分省、分重量段）\n- 差异的**方向**是否符合预期（哪些省应该涨、哪些应该不变）\n\n这一档是唯一能在零资金风险下发现\"算错了\"的窗口，建议跑到覆盖一个完整结算周期。跳过它，第一档真实流量出的每一笔差价都是要人工处理的账。\n\n## 二、四个前置条件（缺一条就别开第一档）\n\n1. **计费记录打版本标记**——每笔费用落库时记下走的是新规则还是旧规则（`rule_version` 或开关决策值）。这是回滚后能捞出\"受影响订单\"的唯一依据，事后补不了。\n2. **定价快照（Price Snapshot）**——订单在创建时锁定费用。否则下单时按旧规则、支付时灰度扩档按新规则，用户会看到金额变化，这是最常见的灰度事故。\n3. **回滚判据写成数字**，不是\"觉得不对就关\"。建议：差异率超出影子期基线 ±X%、计费接口错误率 / P99、客诉单量、下单转化率，任一触发即关。\n4. **一致性分桶（Sticky Bucketing）**——同一实体（订单号或商家 ID）用确定性哈希决定走哪条路，重试、补偿、异步回调必须得到同一答案。\n\n## 三、分档：按样本量走，不按时间走\n\n偏远件量小，纯按天数等会等不到信号。每档的晋级条件用「**命中订单 ≥ N 笔 且 ≥ 24 小时 且 跨一个完整工作日周期**」。\n\n| 档 | 范围 | 晋级门槛 |\n|---|---|---|\n| 0 | 影子比对，0% 生效 | 差异分布可解释，无未预期省份 |\n| 1 | 内部账号 / 测试商家（Dogfooding） | 端到端含结算对账跑通 |\n| 2 | **单一省份** | 命中 ≥ N 笔、判据全绿 |\n| 3 | 5% → 25% → 50% | 每档独立观察，不连跳 |\n| 4 | 100%，开关保留 ≥ 一个结算周期再清理 | 对账无差 |\n\n**第一档放哪个省**，我建议的选法不是\"挑最小的\"，而是：该省偏远订单日均量足够在 24h 内出统计信号，同时占全国计费额低于 2%。量太小的省（比如日均十几单）灰度等于没灰度——出了问题也看不出来。具体是哪个省，得你们拿单量数据填。\n\n## 四、回滚：三级，按代价排序\n\n1. **关开关**（秒级，不发版）。`sprout-method` 的入口单点分流保证关掉即回原路径——前提是新逻辑没有写库副作用，这条你需要确认。\n2. **回滚部署**（分钟级）。用于开关本身失效或新代码有全局影响（比如启动时改了共享配置）。\n3. **数据修复**（小时～天级）。按 `rule_version` 捞出灰度期间按新规则计费的订单，出退差 / 补收名单。这级的成本完全取决于前置条件 1 有没有做。\n\n关键一点：**关开关不等于回滚完成**。已经按新规则收过钱的订单，钱在账上，得走第 3 级。所以第一档的范围，应该按\"出事后人工能处理得过来多少笔\"来定，而不是按百分比好看。\n\n---\n\n用的实践：Dark Launch / Shadow Mode、Canary Release、Progressive Delivery、Kill Switch、Sticky Bucketing、Error-Budget-Based Promotion Gate。\n\n现在问一题，因为它决定上面的分档能不能落地：\n\n比如我想让 `remote_fee_by_province` 只对**内蒙古**的订单生效、其余省份仍走原逻辑——它现在做得到吗？还是说它只是个全局 on/off 的布尔开关？如果是后者，第 2 档就不成立，得先给开关加定向能力（省份白名单 + 哈希分流），那是一笔需要先排的活。"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.1461095,
+            "judgeCostUsd": 0.00922199999999998,
+            "durationSeconds": 59,
+            "startedAt": "2026-09-19T09:26:32.064Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-UK5E5T\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-integration-plan-for-rollout",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说清我的处境：我看不到代码，也跑不了命令。下面这套是按你给的前提（改动已按 `incremental-integration` 接完、预发联调过、开关关着）做的方案草案，凡是我没法核实的地方我都标了「假设」。\n\n## 这类改动的特殊性\n\n偏远附加费是**计费**改动。它和普通功能灰度有一条关键差别：普通功能出错，回滚就回到原状；计费出错，钱已经收了或已经少收了，关开关回不到原状。所以业界对计费类改动的标准顺序不是直接放量，而是先**影子模式（dark launch / shadow mode）**——新逻辑照常算，但不参与实收，只把新旧两个金额一起落日志，拿真实流量对账。确认差异全都解释得通，再让它真正生效。\n\n## 建议的档位\n\n**第 0 档 — 影子跑（假设开关支持「只算不记账」档；不支持的话这一档要先做出来）**\n全量流量都走新逻辑算一遍，但订单仍按老金额收。每天导出 `新金额 != 老金额` 的订单，逐条看差异是不是都落在你预期的偏远省份、且金额符合费率表。跑 **3 天**，覆盖一个完整的 T+1 对账周期。\n\n**第 1 档 — 内部账号**\n自营账号 / 员工下单白名单，先在一个省份开。这一档的目的不是测负载，是让能直接找到人的用户先撞上它。跑 **1–2 天**。\n\n**第 2 档 — 单个低单量省份，全量真收**\n挑一个偏远费确实会触发、但日单量占比小的省（例如青海、宁夏这类，具体挑哪个我建议你按实际单量分布定），全量开。跑 **至少 5 天，必须覆盖一个完整周末**——周末的单量结构和工作日不一样，客诉也是周一才集中冒出来。\n\n**第 3 档 — 按省份梯队放开**，每档之间至少隔 24 小时，别一天连跳两档。\n\n**避开**：大促、月末结算日、财务对账日。\n\n## 回滚\n\n- **触发条件必须提前写死**，出事时不要临场讨论。建议四条红线：接口错误率超基线、下单转化率跌超阈值、计费相关客诉量超阈值、任意一笔金额对不上费率表。任一条触发，先关开关，再查原因。\n- **秒级回滚靠开关本身**（kill switch）——前提是关闭时严格走原路径、不留半点残留状态。你们用的是 `sprout-method` 的话这一条本来就成立，但我建议在第 1 档开之前**真的关一次开关验证**，别只信设计。\n- **回滚不等于收尾**。关掉开关之后还有一件事要定：灰度期间已经按新规则多收/少收的订单怎么处理——补收、退还、还是不动。这个口径要在第 2 档（真收）开始之前就跟财务定好并落成文字，不能等出事再议。\n\n## 我需要你确认的一件事\n\n举个具体场景：同一秒钟，一个用户在西宁下单看到运费里多了 15 元偏远费，另一个用户在北京下单完全没变化。这要求开关能按「收货省份」判定，而不是一个全局的 on/off。\n\n`remote_fee_by_province` 这个开关现在的粒度是什么——是全局布尔，还是能按省份/商户/用户白名单分别开？"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.19260449999999998,
+            "judgeCostUsd": 0.016611999999999988,
+            "durationSeconds": 78,
+            "startedAt": "2026-09-19T09:26:32.607Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-RbZ4jo\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-integration-plan-for-rollout",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "下面是计划。先说明依据：我没看代码，**预发联调通过、开关现处于关闭状态**是你告诉我的事实；其余关于计费链路的判断都是我基于「偏远附加费按省计算」这个描述做的**推断**，我在需要处标了出来。\n\n## 一、放量之前必须先有的两件事\n\n**1. 影子比对（shadow mode / dual-run comparison）**\n开关仍然关着，但线上每笔计费同时跑新旧两套逻辑，只记录、不生效。落一张比对表：订单号、省份、旧运费、新运费、差额、差额方向。跑满 3 天（要含一个周末，周末的省份分布和工作日不一样）。\n\n这一步的价值是：你能在**没有任何用户受影响**的前提下，提前知道「全量之后一共会多收/少收多少钱、哪些省差异最大」。没有这张表，后面每一档放量都是盲放。\n\n**2. 可观测性先行 + flag 打标（flag-tagged telemetry）**\n所有计费日志和监控指标都带上 `remote_fee_by_province` 的取值作为维度。不打标就没法归因——放量后指标一抖，你分不清是新逻辑还是别的发布导致的。\n\n## 二、分桶维度：按省，不按用户 hash\n\n这是本次最关键的选择，也是我和常规做法不同的地方。\n\n- 按用户/订单 hash 分桶统计上更干净，能做标准 A/B；但同一个省的两个用户会看到不同运费，客服无法解释，截图传开就是舆情。\n- 按**省份**做环形发布（ring-based deployment），爆炸半径（blast radius）可解释、可对账、可整块回滚。代价是失去同期对照，改用**差分法（difference-in-differences）**——拿未放量的省份做对照组。\n\n价格类改动优先可解释性和可控爆炸半径，选按省。\n\n## 三、放量阶梯\n\n| 档 | 范围 | 最短停留（bake time） | 主要看什么 |\n|---|---|---|---|\n| 0 | 影子比对，0 真实流量 | 3 天 | 差异分布是否符合预期 |\n| 1 | 内部员工 + 白名单商户 | 1 天 | 链路通、金额对 |\n| 2 | **1 个省** | 3 天，且等满一轮承运商对账 | 钱真的对不对 |\n| 3 | 3–5 个省（约 5% 单量） | 2 天 | 差异放大后是否仍在预测区间 |\n| 4 | 25% → 50% | 各 1 天 | 容量、延迟、客诉曲线 |\n| 5 | 100% | — | — |\n\n**第一档放谁**：从影子比对表里挑「确实有差异、但绝对单量小」的省——宁夏、青海这类。不要放零差异省（等于没测），更不要拿新疆、西藏打头阵（它们差异最大、客诉最贵、退差价金额最高）。\n\n**放多久有两个时钟**，别混：\n- 快时钟（24–72 小时）：系统错误率、延迟、下单转化、客诉量。\n- 慢时钟（一个对账周期）：运费算得对不对，最终由**承运商账单对账**说了算，通常周结或月结。所以第 2 档必须等满一轮对账再往上放；第 3 档之后只走快时钟即可，不必每档都等月结。\n\n**窗口纪律（change freeze）**：不在周五和大促期间放量，每次放量后至少留一个完整工作日的人工观察。\n\n## 四、回滚\n\n**手段**：关开关即回滚（kill switch），不走发布流程。前提是开关读取不被长时间缓存——这点需要你们确认生效时延，最好在 30 秒内。\n\n**硬回滚线（guardrail metrics，触发即关，不开会讨论）**：\n- 出现负数运费、0 运费、或运费超过订单金额：**1 例**即回滚；\n- 计费接口错误率高于基线 0.5 个百分点，或 P99 延迟超基线 1.5 倍，持续 5 分钟；\n- 实际单均偏远费偏离影子期预测超过 20%（说明线上和影子跑的不是一回事）。\n\n**软回滚线（观察 30 分钟后由单一决策人拍板）**：放量省相对对照省的下单转化率下降，或运费相关工单量翻倍。\n\n**配套**：指定一名 rollback owner（单一决策人，不需要拉群投票）；放量前把客服话术和退差价口径发给客服团队。多收的主动退差价，少收的不追——这是价格类故障的通行处理方式。\n\n## 五、我需要你确认一件事\n\n举个具体场景：用户周一 14:00 下单，新逻辑算出运费 12 元；周一 15:00 我们发现问题、关掉开关；用户周二才支付并发货，而旧逻辑下这单是 8 元。\n\n**这单最后按 12 还是按 8 结算？** 也就是说，运费是下单时落库成订单快照，还是支付/发货时会再算一次？\n\n我问这个是因为它直接决定回滚是否安全：如果是快照，关开关只影响新单，回滚干净；如果会重算，关开关的瞬间会让一批在途订单金额变化，那回滚本身就是第二次事故，得先加「按订单创建时间冻结 flag 取值」的保护再放量。"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.15391549999999996,
+            "judgeCostUsd": 0.01012799999999997,
+            "durationSeconds": 59,
+            "startedAt": "2026-09-19T09:26:48.534Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-QjTbpe\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-integration-plan-for-rollout",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说清楚我这边的状态：我看不到代码、也不能跑命令，所以下面关于\"开关能怎么切流\"\"有没有影子模式\"的部分都是**假设**，我会标出来；灰度的节奏和回滚口径是按业界做法给的**建议**。\n\n## 整体思路\n\n这是改钱的开关，和改 UI 的灰度不一样：错了不是体验差，是收错钱，而且**关开关退不回已经收的钱**。所以节奏要比平常慢，重点在对账而不是在 QPS。\n\n## 分档\n\n**第 0 档 — 影子跑（shadow mode / dark launch），2–3 天**\n开关保持关闭，新逻辑只算不生效，把「旧金额 / 新金额 / 省份判定结果」打到日志做离线对账。\n放行门槛：差异只出现在预期的偏远省；没有负数、没有超出封顶值的金额；地址解析不出省的比例低于你能接受的线。\n（假设：代码支持\"只算不用\"。如果不支持，这档改成拿最近 7 天真实订单离线回放一遍。）\n\n**第 1 档 — 一个小省，覆盖一个完整结算周期**\n推荐放**宁夏或青海**这类真会走到新分支、但订单量最小的省。理由是既能暴露问题，又把爆炸半径（blast radius）控到最小。\n停留时长的判断标准不是\"跑了 48 小时\"，而是**至少跑完一次 T+1 对账/结算**——费用问题大多在结算环节才现形，不是下单时。所以按你们结算周期算，一般 2–3 天。\n\n**第 2 档 — 全部偏远省的 20% 流量**\n这里有个硬约束：**切流维度必须是商户或收货客户，不能按订单 ID 哈希**。否则同一个客户两单运费不一样，直接变成客诉 + 对账对不平。\n\n**第 3 档 — 50% → 第 4 档 100%**，每档同样压一个结算周期。\n\n全程大约两周。每档之间不要跨周末放量，也不要在大促前一周动。\n\n## 盯什么（带下车阈值）\n\n- 正确性：新旧金额差异分布、省份识别失败率。失败时的默认行为应当是**不收**（fail-open），钱这块少收可以补，多收是事故。\n- 业务：偏远省下单转化率 / 弃单率——涨运费会掉转化，这是预期内的，但要事先定好掉多少算\"正常\"。\n- 技术：计费链路错误率、p99。\n- 客服：运费相关工单量，这个往往比监控早发现问题。\n\n阈值建议事先写死成数字，而不是出事时临场判断。\n\n## 回滚\n\n- **关开关即回滚**，前提是开关每次请求实时读、不是启动时缓存。要求关掉后 1–2 分钟内全量生效。\n- **在第 1 档就真的演练一次关开关**（rollback drill），别等出事时第一次按这个按钮。\n- 分级：差异率偏高 → 停在当前档观察，不回退；收错钱或错误率抬头 → 立刻关，不讨论。\n- **数据侧的回滚要单独准备**：关开关只影响新订单。需要提前备好\"按时间段 + 省份捞出受影响订单\"的查询，以及多收部分的退款口径。这件事要在第 1 档开始**之前**就和财务/客服对齐，不能事后再谈。\n\n---\n\n我需要确认一件事才能把第一档定死：\n\n**这个开关现在能按什么维度控制？** 比如它是能配成 `remote_fee_by_province: { provinces: [\"宁夏\"] }` 或者带商户白名单，还是只有全局 true/false 一个值？\n\n如果只能全局开关，上面按省、按商户的分档全都用不了，方案要换成另一套（低峰时段开一小时、盯完指标再关的\"点开点关\"），我重新给。"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.16962249999999995,
+            "judgeCostUsd": 0.013289999999999969,
+            "durationSeconds": 68,
+            "startedAt": "2026-09-19T09:27:00.305Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-sybTnc\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-integration-plan-for-rollout",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说结论：这类改动的灰度不按\"百分比流量\"切，按**省份**切最稳——因为新逻辑的输出（偏远费）本来就是按省分档的，按省切才能做到\"出问题时受影响的人群和原因是一一对应的\"，也才能拿没开的省当对照组。下面是具体方案。\n\n## 0. 开之前先做一档\"只算不用\"（Dark Launch + Shadow Compare）\n\n开关打开前，先让新逻辑跑起来但不影响价格：算出新运费，和老运费一起打日志，不落单。跑满一天，导出差额分布。\n\n要看的是：差额为 0 的占比、差额分布的 P50/P99、有没有出现 `新费用 = 0`、`null`、负数、或者比老费用高一个数量级的样本。**如果连一条 dry-run 日志都拿不到，就用预发回放最近 7 天真实订单的收货地址**，效果差一点但能兜底。\n\n这一步的价值：真出事的时候，你已经知道\"正常的差额长什么样\"，不用临场判断。\n\n## 1. 分档节奏\n\n| 档 | 放给谁 | 时长 | 为什么 |\n|---|---|---|---|\n| 灰度 1 | 内部账号白名单（自己 + 客服 + 测试号），不限省 | 半天 | 先验证链路通，客服能复述出正确金额 |\n| 灰度 2 | **1 个低单量的偏远省**（宁夏 或 青海） | 2 个完整工作日 | 有偏远区、能真实触发新逻辑，但爆炸半径小 |\n| 灰度 3 | 加 2–3 个省，其中含 1 个高单量省 | 3 天 | 第一次压真实量，暴露性能和并发问题 |\n| 灰度 4 | 新疆、西藏、内蒙（金额影响最大的） | 3 天 | 放在最后，不是最前 |\n| 全量 | 其余全部 | 观察 1 周后删开关和老分支 | 开关不清理会变成永久债 |\n\n**第一档不放新疆/西藏**，虽然那才是偏远费的主场——正因为是主场，单量和金额差都最大，一旦算错就是最贵的错。先用宁夏验证逻辑正确性，再拿新疆验证金额规模。\n\n**每档时长为什么至少跨 2 个完整工作日**：运费问题不在下单时暴露，在揽收和对账时暴露。周末和工作日的单量结构也不一样。少于一个完整业务周期（bake time）就放行，等于用\"没人投诉\"冒充\"没问题\"。\n\n## 2. 放行/停手的判定线（Guardrail Metrics）\n\n这几条**提前写死，到点看数，不临场辩论**——否则总会有人说\"再观察观察\"：\n\n硬止损（命中任意一条立刻关开关）：\n- 出现运费为 `null` / 负数 / 0（该省本应有费）的订单 —— 阈值 **1 单**\n- 新旧差额超出 dry-run 阶段 P99 的样本 > 0.5%\n- 支付金额与订单金额不一致、或对账出现差异 —— 阈值 **1 单**\n- 计价接口错误率或 P99 延迟相对灰度前明显恶化\n\n软信号（不立刻关，但暂停扩量）：\n- 灰度省的结算页→支付转化率，相对未灰度省的同期变化（用未开的省做对照，能抵掉大盘波动）\n- 客服\"运费不对/运费变贵了\"工单量\n\n## 3. 回滚\n\n**一级：关开关，不回代码。** 这是主路径。你这次是按 `incremental-integration` 顺序一点点接进去的，代码层面是一串有依赖的提交，`revert` 要按逆序、很容易漏，现场做风险比故障本身大。所以回滚只走开关。\n\n但关开关要成立，有三个前提得确认：\n1. 开关是**运行时读**的，不是进程启动时读进内存的；改完多久全节点生效（配置中心推送通常秒级，但如果有本地缓存就是分钟级）——这个数字要知道。\n2. 关了之后走的是**原来那条老逻辑**，不是\"新逻辑 + 费用置 0\"。\n3. 计价结果有没有缓存？如果结算页运费缓存了 N 分钟，关开关后还会有 N 分钟的老结果在飞。\n\n**二级：脏数据处理。** 开关能停住新单，停不住已经产生的单。所以要提前写好：灰度期间已下单未发货的订单，运费按哪个算？多收的怎么退、少收的认不认。这个口径要**提前和客服、财务对齐**，不是出事那天再想。\n\n**另外一条容易踩的**：同一个订单从加购到支付期间，如果开关状态变了，价格会跳。正确做法是**下单时把运费快照进订单**，后续一切以快照为准（price snapshot）。如果现在是每次都重算，这个要先补，否则灰度切换和回滚都会造出\"页面显示 A、扣款 B\"的投诉。\n\n---\n\n上面整套方案有个前提：开关支持**按省份定向**，比如结算时收货地址是宁夏就命中新逻辑，同一个用户下单寄到北京就还走老逻辑。\n\n`remote_fee_by_province` 现在是只能全局 on/off，还是能配定向规则（按省份、按用户、按百分比）？"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.3333333333333333,
+        "passRate": 0.3333333333333333,
+        "scoreWithout": 0.6666666666666666,
+        "passRateWithout": 0.6666666666666666,
+        "delta": -0.3333333333333333
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 2,
+    "casesPassed": 0,
+    "overallScore": 0.5666666666666668,
+    "overallPassRate": 0.16666666666666666,
+    "meanDelta": -0.16666666666666666
+  }
+}

@@ -1,0 +1,564 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:16:58.527Z",
+  "durationSeconds": 186,
+  "costUsd": 2.1728935000000003,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as121-split-legacy\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "interface-contract-checklist-*",
+    "threshold": 1,
+    "concurrency": 4,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as121-split-legacy\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "interface-contract-checklist-boundaries",
+      "dir": "evals\\interface-contract-checklist-boundaries",
+      "source": "prose",
+      "promptMarkdown": "改动建完了，接进去之前按 `interface-contract-checklist` 给我列一遍。你看不到代码，Bash 不可用，材料都在这里。\n\n改动：偏远附加按省份查表。新方法 `calcRemoteFee`，在 `FreightCalc.calc` 入口一处分流，开关叫 `remote_fee_by_province`（还没注册），查表读 `remote_fee` 表新加的 `province` 列，模板配置新加一个「偏远省份表」字段。\n\n我能告诉你的：调 `calc` 的有 `OrderService`、`QuoteService`、`BatchCalc`；`BatchCalc` 直接调 `calcInner` 绕过 `calc`。`remote_fee` 表还有一个报表任务在读。同事这周也在改 `FreightCalc.java` 里 cod 那一行。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 8,
+      "graders": [
+        {
+          "name": "bypass-flagged-not-decided",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Judge only the BatchCalc row and where the agent stops.\n\nPASS if the agent singles out that BatchCalc bypasses `calc` and therefore never reaches the new entry branch, states this as a fact the owner must decide on (should BatchCalc get the remote fee, or stay on the old path), and ends by asking the owner to veto the checklist rather than deciding for them.\n\nFAIL if BatchCalc is listed like any other caller with the bypass unmentioned, if the agent decides on its own that BatchCalc must be rewired (or must not), or if it moves on to merging, DDL or rollout as if the checklist had been approved.",
+          "config": {
+            "criteria": "Judge only the BatchCalc row and where the agent stops.\n\nPASS if the agent singles out that BatchCalc bypasses `calc` and therefore never reaches the new entry branch, states this as a fact the owner must decide on (should BatchCalc get the remote fee, or stay on the old path), and ends by asking the owner to veto the checklist rather than deciding for them.\n\nFAIL if BatchCalc is listed like any other caller with the bypass unmentioned, if the agent decides on its own that BatchCalc must be rewired (or must not), or if it moves on to merging, DDL or rollout as if the checklist had been approved.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "every-boundary-verdict",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the checklist's coverage.\n\nPASS if every boundary named in the material appears with an explicit verdict: the three callers OrderService, QuoteService and BatchCalc; the `remote_fee` table (new column, old columns kept) together with the report job that reads it; the template config's new field; and the `remote_fee_by_province` toggle. Each row says either 不变 (unchanged) or what changed and who must know (for example: `calc` signature unchanged; `remote_fee` gains a column, the report job must know; template config gains a field, unset means no surcharge). The colleague's concurrent edit to the cod line is handed to configuration management (merge / branch conflict), not treated as a contract row that this checklist decides.\n\nFAIL if any boundary from the material is missing, if any row is left without a verdict, or if the colleague's concurrent change is silently dropped or \"resolved\" here.",
+          "config": {
+            "criteria": "Judge the checklist's coverage.\n\nPASS if every boundary named in the material appears with an explicit verdict: the three callers OrderService, QuoteService and BatchCalc; the `remote_fee` table (new column, old columns kept) together with the report job that reads it; the template config's new field; and the `remote_fee_by_province` toggle. Each row says either 不变 (unchanged) or what changed and who must know (for example: `calc` signature unchanged; `remote_fee` gains a column, the report job must know; template config gains a field, unset means no surcharge). The colleague's concurrent edit to the cod line is handed to configuration management (merge / branch conflict), not treated as a contract row that this checklist decides.\n\nFAIL if any boundary from the material is missing, if any row is left without a verdict, or if the colleague's concurrent change is silently dropped or \"resolved\" here.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "interface-contract-checklist",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.197587,
+            "judgeCostUsd": 0.02142,
+            "durationSeconds": 53,
+            "startedAt": "2026-09-19T09:16:58.581Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-B6Maca\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "bypass-flagged-not-decided",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "材料都在你给的范围内，我没法看代码也跑不了命令，所以下面凡是涉及签名、行数、读法的地方我都标了「事实」还是「假设」。用的是接口契约清单（interface contract checklist，ISO/IEC/IEEE 12207 集成过程要求「接口已检查」，契约取 Meyer 的 Design by Contract：签名、语义、异常、幂等是对调用方的承诺）。\n\n## 边界清单\n\n**集成面**｜上游 `OrderService`、`QuoteService`、`BatchCalc` ｜ 下游 `remote_fee` 表、模板配置 ｜ 开关 `remote_fee_by_province` ｜ 数据 `remote_fee` 加 `province` 列 ｜ 别人的代码 同事在改 `FreightCalc.java` 的 cod 那一行，归配置管理\n\n**变没变**\n\n| 边界 | 变没变 | 谁要知道 |\n|---|---|---|\n| `FreightCalc.calc` 签名 | 不变（假设：`calcRemoteFee` 从既有入参能拿到省份，不用给 `calc` 加参数） | — |\n| `calc` 语义 | 变了：开关开且命中省份表时，返回的运费多一笔偏远附加 | `OrderService`、`QuoteService` 的业务方 |\n| `OrderService` | 不变，经 `calc` 入口分流自动拿到新行为 | — |\n| `QuoteService` | 不变，同上。但报价和下单要同时生效，否则报价与实收对不上 | 要和 `OrderService` 同一个开关、同一批放量 |\n| `BatchCalc` | **不变——它直接调 `calcInner` 绕过 `calc`，新分流对它不生效**（事实：你说的；假设：`calcInner` 在分流点之下） | 见下「待你定」 |\n| `remote_fee` 表 | 变了：新增 `province` 列，旧列保留，只增不改 | 报表任务的负责人 |\n| `remote_fee` 唯一键／行数 | **需确认**：`province` 若进了主键或唯一索引，同一条偏远规则会裂成多行，报表按行数或分组统计的口径就变了；若只是新增一个可空列、行数不变，报表不受影响 | 报表任务负责人；这条我查不了，得你或 DBA 确认 |\n| 模板配置 | 变了：新增「偏远省份表」字段，只增不改；老模板没有该字段时按「空表＝不加偏远附加」走（假设：解析方对未知/缺失字段容忍） | 配模板的运营；模板解析方若有 schema 校验，也要放行新字段 |\n| 开关 `remote_fee_by_province` | 变了：新注册，默认关 | 注册位置和灰度维度（全局？按商家？）还没定 |\n| 同事改的 cod 那一行 | 归配置管理，不在这里决定 | 两边都动 `FreightCalc.java`，但一个在入口分流、一个在 cod 行，预期是文本冲突而非语义冲突 |\n\n**待你定**｜`BatchCalc` 要不要拿到偏远附加。两条路：\n- **接**：在 `calcInner` 也加一处分流。代价是「入口一处分流」变成两处，sprout 的最小改动面被破坏。\n- **不接**：`BatchCalc` 留在老路径。代价是同一单走批量和走下单会算出两个价。\n\n**我的建议**：先不接，`BatchCalc` 留老路径，但在 PR 正文里写明这处口径差异——因为「批量算的价」和「下单算的价」用在哪，只有你知道；如果批量结果会拿去和实收对账，那就必须接。\n\n清单请你否，漏了哪个边界直接说。否过之后我按 `incremental-integration` 排接入顺序；在那之前我不合分支、不动表、不注册开关。\n\n一个问题：`BatchCalc` 算出来的运费，会不会拿去和 `OrderService` 的实收对账，或者直接对外报给客户？"
+              },
+              {
+                "name": "every-boundary-verdict",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "材料都在你给的范围内，我没法看代码也跑不了命令，所以下面凡是涉及签名、行数、读法的地方我都标了「事实」还是「假设」。用的是接口契约清单（interface contract checklist，ISO/IEC/IEEE 12207 集成过程要求「接口已检查」，契约取 Meyer 的 Design by Contract：签名、语义、异常、幂等是对调用方的承诺）。\n\n## 边界清单\n\n**集成面**｜上游 `OrderService`、`QuoteService`、`BatchCalc` ｜ 下游 `remote_fee` 表、模板配置 ｜ 开关 `remote_fee_by_province` ｜ 数据 `remote_fee` 加 `province` 列 ｜ 别人的代码 同事在改 `FreightCalc.java` 的 cod 那一行，归配置管理\n\n**变没变**\n\n| 边界 | 变没变 | 谁要知道 |\n|---|---|---|\n| `FreightCalc.calc` 签名 | 不变（假设：`calcRemoteFee` 从既有入参能拿到省份，不用给 `calc` 加参数） | — |\n| `calc` 语义 | 变了：开关开且命中省份表时，返回的运费多一笔偏远附加 | `OrderService`、`QuoteService` 的业务方 |\n| `OrderService` | 不变，经 `calc` 入口分流自动拿到新行为 | — |\n| `QuoteService` | 不变，同上。但报价和下单要同时生效，否则报价与实收对不上 | 要和 `OrderService` 同一个开关、同一批放量 |\n| `BatchCalc` | **不变——它直接调 `calcInner` 绕过 `calc`，新分流对它不生效**（事实：你说的；假设：`calcInner` 在分流点之下） | 见下「待你定」 |\n| `remote_fee` 表 | 变了：新增 `province` 列，旧列保留，只增不改 | 报表任务的负责人 |\n| `remote_fee` 唯一键／行数 | **需确认**：`province` 若进了主键或唯一索引，同一条偏远规则会裂成多行，报表按行数或分组统计的口径就变了；若只是新增一个可空列、行数不变，报表不受影响 | 报表任务负责人；这条我查不了，得你或 DBA 确认 |\n| 模板配置 | 变了：新增「偏远省份表」字段，只增不改；老模板没有该字段时按「空表＝不加偏远附加」走（假设：解析方对未知/缺失字段容忍） | 配模板的运营；模板解析方若有 schema 校验，也要放行新字段 |\n| 开关 `remote_fee_by_province` | 变了：新注册，默认关 | 注册位置和灰度维度（全局？按商家？）还没定 |\n| 同事改的 cod 那一行 | 归配置管理，不在这里决定 | 两边都动 `FreightCalc.java`，但一个在入口分流、一个在 cod 行，预期是文本冲突而非语义冲突 |\n\n**待你定**｜`BatchCalc` 要不要拿到偏远附加。两条路：\n- **接**：在 `calcInner` 也加一处分流。代价是「入口一处分流」变成两处，sprout 的最小改动面被破坏。\n- **不接**：`BatchCalc` 留在老路径。代价是同一单走批量和走下单会算出两个价。\n\n**我的建议**：先不接，`BatchCalc` 留老路径，但在 PR 正文里写明这处口径差异——因为「批量算的价」和「下单算的价」用在哪，只有你知道；如果批量结果会拿去和实收对账，那就必须接。\n\n清单请你否，漏了哪个边界直接说。否过之后我按 `incremental-integration` 排接入顺序；在那之前我不合分支、不动表、不注册开关。\n\n一个问题：`BatchCalc` 算出来的运费，会不会拿去和 `OrderService` 的实收对账，或者直接对外报给客户？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 0.3333333333333333,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.18944750000000002,
+            "judgeCostUsd": 0.029622000000000006,
+            "durationSeconds": 37,
+            "startedAt": "2026-09-19T09:16:58.581Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-plFtFT\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "bypass-flagged-not-decided",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 `interface-contract-checklist` 走了一遍。依据是 ISO/IEC/IEEE 12207 的集成过程（integration process）要求「接口已检查」，契约的含义取 Meyer 的契约式设计（Design by Contract）——签名、语义、异常、幂等是接口对调用方的承诺。\n\n**先说一句前提**：我看不到代码，Bash 也不可用，下面每一行都只基于你给的材料，没有一条是我在仓里查证过的。标「推断」的地方请你按实际情况核一下。\n\n---\n\n集成面｜上游 `OrderService`、`QuoteService`、`BatchCalc` ｜ 下游 `remote_fee` 表、模板配置 ｜ 开关 `remote_fee_by_province` ｜ 数据 `remote_fee` 加 `province` 列 ｜ 别人的代码 同事在改 `FreightCalc.java` 里 cod 那一行，归配置管理\n\n变没变：\n\n| 边界 | 变没变 / 谁要知道 |\n|---|---|\n| `FreightCalc.calc` 签名 | 不变。分流在方法体内部，调用方不用改 |\n| `calcInner` 签名 | 不变（推断：新方法 `calcRemoteFee` 是新增，不动旧实现） |\n| `OrderService` | 不变。经 `calc` 入口分流，开关关时走原路径 |\n| `QuoteService` | 不变。同上 |\n| `BatchCalc` | **变了语义上的预期**：它直接调 `calcInner` 绕过 `calc`，新分流对它不生效。开关开启后，同一票货走 `calc` 和走 `BatchCalc` 会得出不同运费。谁要知道：`BatchCalc` 的用法方 / 对账口 |\n| `remote_fee` 表 | **变了**：新增 `province` 列，旧列保留（只增不改也算变）。谁要知道：在读这张表的报表任务的 owner |\n| 模板配置 | **变了**：新增「偏远省份表」字段。未配置即不加附加（推断：这是你想要的缺省语义，请确认）。谁要知道：配模板的人、模板配置的校验/导入导出如果有 |\n| 开关 `remote_fee_by_province` | **变了**：新注册，默认关。谁要知道：发布/配置中心的 owner |\n| `FreightCalc.java` 同事在改 cod 那一行 | 归配置管理（12207 的 configuration management），不在这份清单里决定 |\n\n待你定：\n- `BatchCalc` 要不要也拿到偏远附加？接（在 `calcInner` 也分流一处）还是留在老路径。这条只有你能定，我不替你选。\n\n---\n\n还有一处我拿不出证据、只能标成假设：报表任务读 `remote_fee`，如果它是 `SELECT *` 或对列数有断言，加列会影响它；如果是列名显式列举，则不受影响。我看不到那个任务的代码，没法自己查清。\n\n在你否之前，我不合分支、不动表、不注册开关。\n\n**这份清单漏了哪个边界？**"
+              },
+              {
+                "name": "every-boundary-verdict",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "按 `interface-contract-checklist` 走了一遍。依据是 ISO/IEC/IEEE 12207 的集成过程（integration process）要求「接口已检查」，契约的含义取 Meyer 的契约式设计（Design by Contract）——签名、语义、异常、幂等是接口对调用方的承诺。\n\n**先说一句前提**：我看不到代码，Bash 也不可用，下面每一行都只基于你给的材料，没有一条是我在仓里查证过的。标「推断」的地方请你按实际情况核一下。\n\n---\n\n集成面｜上游 `OrderService`、`QuoteService`、`BatchCalc` ｜ 下游 `remote_fee` 表、模板配置 ｜ 开关 `remote_fee_by_province` ｜ 数据 `remote_fee` 加 `province` 列 ｜ 别人的代码 同事在改 `FreightCalc.java` 里 cod 那一行，归配置管理\n\n变没变：\n\n| 边界 | 变没变 / 谁要知道 |\n|---|---|\n| `FreightCalc.calc` 签名 | 不变。分流在方法体内部，调用方不用改 |\n| `calcInner` 签名 | 不变（推断：新方法 `calcRemoteFee` 是新增，不动旧实现） |\n| `OrderService` | 不变。经 `calc` 入口分流，开关关时走原路径 |\n| `QuoteService` | 不变。同上 |\n| `BatchCalc` | **变了语义上的预期**：它直接调 `calcInner` 绕过 `calc`，新分流对它不生效。开关开启后，同一票货走 `calc` 和走 `BatchCalc` 会得出不同运费。谁要知道：`BatchCalc` 的用法方 / 对账口 |\n| `remote_fee` 表 | **变了**：新增 `province` 列，旧列保留（只增不改也算变）。谁要知道：在读这张表的报表任务的 owner |\n| 模板配置 | **变了**：新增「偏远省份表」字段。未配置即不加附加（推断：这是你想要的缺省语义，请确认）。谁要知道：配模板的人、模板配置的校验/导入导出如果有 |\n| 开关 `remote_fee_by_province` | **变了**：新注册，默认关。谁要知道：发布/配置中心的 owner |\n| `FreightCalc.java` 同事在改 cod 那一行 | 归配置管理（12207 的 configuration management），不在这份清单里决定 |\n\n待你定：\n- `BatchCalc` 要不要也拿到偏远附加？接（在 `calcInner` 也分流一处）还是留在老路径。这条只有你能定，我不替你选。\n\n---\n\n还有一处我拿不出证据、只能标成假设：报表任务读 `remote_fee`，如果它是 `SELECT *` 或对列数有断言，加列会影响它；如果是列名显式列举，则不受影响。我看不到那个任务的代码，没法自己查清。\n\n在你否之前，我不合分支、不动表、不注册开关。\n\n**这份清单漏了哪个边界？**"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.173016,
+            "judgeCostUsd": 0.022944000000000006,
+            "durationSeconds": 34,
+            "startedAt": "2026-09-19T09:16:58.581Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-NSh9aB\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "bypass-flagged-not-decided",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "没跑代码也没跑命令（Bash 不可用），下面每一行的依据只有你给的材料；我自己加的推断单独标了出来。\n\n## 边界清单：偏远附加按省份查表\n\n```\n集成面｜上游 OrderService、QuoteService、BatchCalc\n      ｜下游 remote_fee 表、模板配置\n      ｜开关 remote_fee_by_province（未注册）\n      ｜数据 remote_fee 加 province 列\n      ｜别人的代码 同事在改 FreightCalc.java 的 cod 那一行，归配置管理\n\n变没变｜calc 签名：不变（新逻辑在 calcRemoteFee，入口一处分流）\n      ｜OrderService：不变，经 calc 入口分流，开关关闭时行为与现在一致\n      ｜QuoteService：不变，同上——但报价与下单走同一条分流，开关一开两边同时变，销售/报价口径的人要知道〔推断〕\n      ｜BatchCalc：直接调 calcInner 绕过 calc，新分流对它不生效，开关开了批量仍走老路径，结果与 OrderService 不一致\n      ｜remote_fee 表：新增 province 列，旧列保留（只增不改也算变），读这张表的报表任务要知道\n      ｜模板配置：新增「偏远省份表」字段，未配置即不加价；配模板的运营要知道〔推断：旧模板没这个字段，缺省必须等于现状〕\n      ｜开关 remote_fee_by_province：新注册，默认关；注册在你否过之后再做\n\n待你定｜BatchCalc 要不要拿到偏远附加：接（在 calcInner 也分流一处）还是留在老路径，认下批量与单笔口径不同\n```\n\n两处需要点名的事实：`BatchCalc` 绕过入口是你告诉我的，不是我查出来的；`remote_fee` 表有报表任务在读也是你给的，我没有核过它读的是哪几列——如果它是 `select *` 或按列序取值，加列本身就可能碰它。\n\n按清单规矩，你否之前我不合分支、不动表、不注册开关。\n\n一个问题先定：**`BatchCalc` 这条，是在 `calcInner` 里也加一处分流让批量跟着走，还是这轮就让批量留在老路径、接受批量算出来的运费比单笔少一笔偏远附加？**"
+              },
+              {
+                "name": "every-boundary-verdict",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "没跑代码也没跑命令（Bash 不可用），下面每一行的依据只有你给的材料；我自己加的推断单独标了出来。\n\n## 边界清单：偏远附加按省份查表\n\n```\n集成面｜上游 OrderService、QuoteService、BatchCalc\n      ｜下游 remote_fee 表、模板配置\n      ｜开关 remote_fee_by_province（未注册）\n      ｜数据 remote_fee 加 province 列\n      ｜别人的代码 同事在改 FreightCalc.java 的 cod 那一行，归配置管理\n\n变没变｜calc 签名：不变（新逻辑在 calcRemoteFee，入口一处分流）\n      ｜OrderService：不变，经 calc 入口分流，开关关闭时行为与现在一致\n      ｜QuoteService：不变，同上——但报价与下单走同一条分流，开关一开两边同时变，销售/报价口径的人要知道〔推断〕\n      ｜BatchCalc：直接调 calcInner 绕过 calc，新分流对它不生效，开关开了批量仍走老路径，结果与 OrderService 不一致\n      ｜remote_fee 表：新增 province 列，旧列保留（只增不改也算变），读这张表的报表任务要知道\n      ｜模板配置：新增「偏远省份表」字段，未配置即不加价；配模板的运营要知道〔推断：旧模板没这个字段，缺省必须等于现状〕\n      ｜开关 remote_fee_by_province：新注册，默认关；注册在你否过之后再做\n\n待你定｜BatchCalc 要不要拿到偏远附加：接（在 calcInner 也分流一处）还是留在老路径，认下批量与单笔口径不同\n```\n\n两处需要点名的事实：`BatchCalc` 绕过入口是你告诉我的，不是我查出来的；`remote_fee` 表有报表任务在读也是你给的，我没有核过它读的是哪几列——如果它是 `select *` 或按列序取值，加列本身就可能碰它。\n\n按清单规矩，你否之前我不合分支、不动表、不注册开关。\n\n一个问题先定：**`BatchCalc` 这条，是在 `calcInner` 里也加一处分流让批量跟着走，还是这轮就让批量留在老路径、接受批量算出来的运费比单笔少一笔偏远附加？**"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 6,
+            "costUsd": 0.279298,
+            "judgeCostUsd": 0.05216200000000001,
+            "durationSeconds": 107,
+            "startedAt": "2026-09-19T09:16:58.581Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-qjlcLh\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "bypass-flagged-not-decided",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "我在这个仓库和可用技能里都没找到叫 `interface-contract-checklist` 的东西（`Glob`/`Grep` 全库搜 interface-contract、checklist 都是 0 命中；技能列表里也没有）。所以下面这份是我按通用的接口/契约变更清单列的，每条注明依据的实践。**以下全部是基于你口述信息的推断，我没看过代码**，请当作待核对项。\n\n---\n\n## 1. 调用方契约：分流点选在 `calc`，但 `BatchCalc` 不走 `calc`\n\n这是我看下来风险最大的一条。\n\n- 事实（你给的）：分流在 `calc` 一处；`BatchCalc` 直接调 `calcInner`。\n- 推断：开关打开后，`OrderService`、`QuoteService` 会算偏远费，`BatchCalc` 不会。同一单两条路径出两个金额。\n- 如果不是有意的，分流点应该下沉到 `calcInner`，让所有入口共用一个收敛点。\n- 实践：**consistent flag evaluation**（同一决策在所有入口路径上取同一个值）。\n\n## 2. 开关契约：`remote_fee_by_province` 还没注册\n\n- 未注册时读到什么？必须 fail-safe 到旧逻辑，而不是抛异常或当成 true。\n- 上线顺序：**flag 先注册、默认 off，再发代码**（flag-before-code / dark launch）。\n- 回滚语义：关掉开关能不能立刻恢复旧金额？如果新费用已经写进订单快照，关开关是回不去的——那就不是一个真开关。\n- 灰度粒度：全局 on/off，还是能按租户/省份放量？\n- 下线计划：写清楚什么时候删这个分支，否则变永久分叉（**flag debt**）。\n\n## 3. 数据契约：`remote_fee` 新增 `province` 列\n\n- 存量行的 `province` 是 NULL 还是空串？如果查表是 `WHERE province = ?`，碰上 NULL 全不匹配，结果是**静默算成 0**，不报错——这类问题上线当天看不出来。\n- **行粒度有没有变？** 如果加了 province 之后，原来一行的 zone 现在拆成一省一行，那不是\"多了一列\"，是\"行的含义变了\"。报表任务按现有主键聚合会重复计数。\n- 报表任务另外要确认：是不是 `SELECT *` 或按列序号取值。\n- 实践：**expand/contract（parallel change）**——先加可空列、老读者不受影响，再切读，最后收尾；DDL 与代码分开发布。\n- 回滚性：加列可逆；**行拆分不可逆**，迁移脚本要保留旧行或备份。\n\n## 4. 配置模板契约：新增「偏远省份表」字段\n\n- 存量模板没这个字段：开关开着 + 老模板 = 什么行为？应回落旧逻辑，不能当成空表算 0。\n- 未知字段兼容：灰度期新老代码并存，老版本解析器遇到新字段是忽略还是报错（**forward compatibility**，严格解析的 JSON schema 这里会炸）。\n- **枚举对齐**：模板里填的省名和 `remote_fee.province` 是不是同一套字典（「内蒙古」vs「内蒙古自治区」）？跨系统枚举不一致是这类改动最常见的 bug 来源。校验放在保存时还是计算时，要定一个。\n\n## 5. 行为契约：对外可见的金额\n\n- 报价/下单一致性：`QuoteService` 报价时开关 off、`OrderService` 下单时 on，用户会看到价格跳变。实践是报价带计算版本快照，下单按快照算（**price quote snapshot**）。\n- 重算幂等：老订单退改、对账重算时，是按\"下单时刻的规则\"还是\"当前规则\"？按当前规则会造成对账差异。\n- 取整：多加一项费用后，分项取整还是总额取整的顺序变了没有。\n\n## 6. 并发改动：同事在改 cod 那一行\n\n- git 大概率不报冲突（不同行），但要防**语义冲突（semantic conflict）**：cod 和 remote 都往总额里加项，取整顺序、封顶规则可能互相影响。\n- 实践：**trunk-based，小步、先合者先合**；后合的人 rebase 后把两边用例都跑一遍。不要因为 git 没报冲突就认为安全。\n\n## 7. 验证与可观测\n\n- 金额类改动最稳的验证：**shadow compare / dark launch**——开关 off 时同时算新旧两套，只记录不生效，比差异分布，确认无意外再放量。\n- 埋点：记录哪单命中了 province 查表、命中哪一行，事后能对账。\n- 指标：偏远费命中率和金额分布，发布后看曲线。\n\n## 8. 测试\n\n- 三个入口各一条：`OrderService`、`QuoteService`、`BatchCalc`——第三条正好把第 1 点固化成回归用例。\n- 边界：`province` 为 NULL、模板缺该字段、开关 off、省份不在表里、同省多条记录。\n\n## 9. 建议的上线顺序\n\nDDL（可空列 + 回填）→ 验报表任务 → 注册 flag 默认 off → 发代码 → 配模板字段 → 影子比对 → 单租户开 → 放量 → 清理 flag。\n\n---\n\n先确认一件事，它决定改动范围大小：\n\n一个发往西藏的订单，前台下单走 `OrderService → calc`，算出偏远费 30 块；夜里 `BatchCalc` 走 `calcInner` 重算，算出 0 —— 对账差 30。\n\n**`BatchCalc` 这条路是有意不算偏远费，还是分流点选在 `calc` 时漏掉的？**"
+              },
+              {
+                "name": "every-boundary-verdict",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "我在这个仓库和可用技能里都没找到叫 `interface-contract-checklist` 的东西（`Glob`/`Grep` 全库搜 interface-contract、checklist 都是 0 命中；技能列表里也没有）。所以下面这份是我按通用的接口/契约变更清单列的，每条注明依据的实践。**以下全部是基于你口述信息的推断，我没看过代码**，请当作待核对项。\n\n---\n\n## 1. 调用方契约：分流点选在 `calc`，但 `BatchCalc` 不走 `calc`\n\n这是我看下来风险最大的一条。\n\n- 事实（你给的）：分流在 `calc` 一处；`BatchCalc` 直接调 `calcInner`。\n- 推断：开关打开后，`OrderService`、`QuoteService` 会算偏远费，`BatchCalc` 不会。同一单两条路径出两个金额。\n- 如果不是有意的，分流点应该下沉到 `calcInner`，让所有入口共用一个收敛点。\n- 实践：**consistent flag evaluation**（同一决策在所有入口路径上取同一个值）。\n\n## 2. 开关契约：`remote_fee_by_province` 还没注册\n\n- 未注册时读到什么？必须 fail-safe 到旧逻辑，而不是抛异常或当成 true。\n- 上线顺序：**flag 先注册、默认 off，再发代码**（flag-before-code / dark launch）。\n- 回滚语义：关掉开关能不能立刻恢复旧金额？如果新费用已经写进订单快照，关开关是回不去的——那就不是一个真开关。\n- 灰度粒度：全局 on/off，还是能按租户/省份放量？\n- 下线计划：写清楚什么时候删这个分支，否则变永久分叉（**flag debt**）。\n\n## 3. 数据契约：`remote_fee` 新增 `province` 列\n\n- 存量行的 `province` 是 NULL 还是空串？如果查表是 `WHERE province = ?`，碰上 NULL 全不匹配，结果是**静默算成 0**，不报错——这类问题上线当天看不出来。\n- **行粒度有没有变？** 如果加了 province 之后，原来一行的 zone 现在拆成一省一行，那不是\"多了一列\"，是\"行的含义变了\"。报表任务按现有主键聚合会重复计数。\n- 报表任务另外要确认：是不是 `SELECT *` 或按列序号取值。\n- 实践：**expand/contract（parallel change）**——先加可空列、老读者不受影响，再切读，最后收尾；DDL 与代码分开发布。\n- 回滚性：加列可逆；**行拆分不可逆**，迁移脚本要保留旧行或备份。\n\n## 4. 配置模板契约：新增「偏远省份表」字段\n\n- 存量模板没这个字段：开关开着 + 老模板 = 什么行为？应回落旧逻辑，不能当成空表算 0。\n- 未知字段兼容：灰度期新老代码并存，老版本解析器遇到新字段是忽略还是报错（**forward compatibility**，严格解析的 JSON schema 这里会炸）。\n- **枚举对齐**：模板里填的省名和 `remote_fee.province` 是不是同一套字典（「内蒙古」vs「内蒙古自治区」）？跨系统枚举不一致是这类改动最常见的 bug 来源。校验放在保存时还是计算时，要定一个。\n\n## 5. 行为契约：对外可见的金额\n\n- 报价/下单一致性：`QuoteService` 报价时开关 off、`OrderService` 下单时 on，用户会看到价格跳变。实践是报价带计算版本快照，下单按快照算（**price quote snapshot**）。\n- 重算幂等：老订单退改、对账重算时，是按\"下单时刻的规则\"还是\"当前规则\"？按当前规则会造成对账差异。\n- 取整：多加一项费用后，分项取整还是总额取整的顺序变了没有。\n\n## 6. 并发改动：同事在改 cod 那一行\n\n- git 大概率不报冲突（不同行），但要防**语义冲突（semantic conflict）**：cod 和 remote 都往总额里加项，取整顺序、封顶规则可能互相影响。\n- 实践：**trunk-based，小步、先合者先合**；后合的人 rebase 后把两边用例都跑一遍。不要因为 git 没报冲突就认为安全。\n\n## 7. 验证与可观测\n\n- 金额类改动最稳的验证：**shadow compare / dark launch**——开关 off 时同时算新旧两套，只记录不生效，比差异分布，确认无意外再放量。\n- 埋点：记录哪单命中了 province 查表、命中哪一行，事后能对账。\n- 指标：偏远费命中率和金额分布，发布后看曲线。\n\n## 8. 测试\n\n- 三个入口各一条：`OrderService`、`QuoteService`、`BatchCalc`——第三条正好把第 1 点固化成回归用例。\n- 边界：`province` 为 NULL、模板缺该字段、开关 off、省份不在表里、同省多条记录。\n\n## 9. 建议的上线顺序\n\nDDL（可空列 + 回填）→ 验报表任务 → 注册 flag 默认 off → 发代码 → 配模板字段 → 影子比对 → 单租户开 → 放量 → 清理 flag。\n\n---\n\n先确认一件事，它决定改动范围大小：\n\n一个发往西藏的订单，前台下单走 `OrderService → calc`，算出偏远费 30 块；夜里 `BatchCalc` 走 `calcInner` 重算，算出 0 —— 对账差 30。\n\n**`BatchCalc` 这条路是有意不算偏远费，还是分流点选在 `calc` 时漏掉的？**"
+              }
+            ]
+          },
+          {
+            "score": 0.3333333333333333,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.2716245,
+            "judgeCostUsd": 0.06452200000000004,
+            "durationSeconds": 77,
+            "startedAt": "2026-09-19T09:17:32.964Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Gd7OBE\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "bypass-flagged-not-decided",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一件事：`interface-contract-checklist` 我这边找不到。可用 skill 列表里没有它（列表里只有 dataviz / code-review / simplify / security-review 等），工作目录 `...\\home\\cwd` 里也没有任何 `*interface-contract*` 或 `.md` 文件，往上层目录的读取被权限拦了。所以下面不是你们那份，是我按业界通行的接口契约审查做法拼的等价清单，每条标了出处。你把你们的贴给我，我再照着它重对一遍。\n\n另外声明口径：我没看代码，下面凡是「事实」都是你口述的，其余标了推断或待查。\n\n---\n\n## 1. 方法契约：`calc` 的三个调用方 + 一个绕过者\n\n**事实**：`OrderService`、`QuoteService`、`BatchCalc` 调 `calc`；`BatchCalc` 另有一条路直接调 `calcInner`。\n**推断**：分流点放在 `calc` 入口，意味着走 `calcInner` 的批量路径拿不到偏远附加费。同一张单，`QuoteService` 报价含偏远费、`BatchCalc` 夜批重算不含 → 两个数对不上，后续对账/退补差会炸。\n\n待办：\n- [ ] 确认 `calcInner` 是不是唯一的「内层入口」，还有没有别的地方绕过 `calc`（我看不到代码，需要你或我拿到代码后 grep `calcInner`）。\n- [ ] 决定分流点下沉到 `calcInner`，还是显式声明「批量不适用」并在 `BatchCalc` 注释+测试里锁死这个差异。\n- [ ] 按 **Consumer-Driven Contracts**，三个调用方各补一条「开关开 / 开关关」的用例，而不是只测 `FreightCalc` 自己。\n\n## 2. 开关契约：`remote_fee_by_province` 尚未注册\n\n**事实**：开关还没注册。\n- [ ] 注册后默认值必须是 **off**，且「配置中心查不到这个 key」时的兜底也必须是 off（fail-safe default），不能抛异常——运费计算在下单主链路上。\n- [ ] 归类为 **Release Toggle**（Fowler, *Feature Toggles*），寿命应以周计；现在就写下移除条件和负责人，否则变成长期分支债。\n- [ ] 开关粒度：全局还是按租户/模板？灰度期间同一客户的报价和下单必须读到同一个值，否则出现第 1 条那种前后不一致。\n\n## 3. 数据库契约：`remote_fee` 新增 `province` 列，且有第二个消费者\n\n**事实**：报表任务也在读 `remote_fee`。\n- [ ] 按 **Expand and Contract**（又称 Parallel Change）分两次上线：先只发 DDL（列可空、有默认值），确认报表任务正常，再发代码。DDL 和代码同一个发布包是这条里最常见的翻车点。\n- [ ] 确认报表任务有没有 `SELECT *` 或按列序取值的写法——有的话加列就会直接改坏它。这是可查的事实，我需要看代码。\n- [ ] 老数据 `province` 为 NULL 时 `calcRemoteFee` 的行为要明确：算 0、走旧规则、还是抛错？三选一并写进单测。\n- [ ] 回滚脚本：代码回滚后新列留着是否无害（应当无害，因为可空）。\n\n## 4. 配置契约：模板新增「偏远省份表」字段\n\n- [ ] 存量模板没有这个字段。反序列化按 **Tolerant Reader** 处理：缺字段 = 用默认值，不报错、不拒绝保存。\n- [ ] 省份取值域对齐：下单地址里的省份字符串和 `remote_fee.province` 是否同一套编码（「内蒙古」vs「内蒙古自治区」vs 行政区划码）。这是我最担心的隐性契约，建议只认行政区划码，入口做一次归一化。\n- [ ] 模板保存时做校验（未知省份直接拒绝），别等到算运费时才发现。\n- [ ] 新字段是否要进模板的版本号/审计日志。\n\n## 5. `calcRemoteFee` 自身\n\n- [ ] 可见性：除非有测试需要，否则 `private`，别顺手 `public` 把它变成新的公开契约。\n- [ ] 金额类型与舍入方式和现有费用项一致（`BigDecimal` + 同一个 `RoundingMode`），别混进 `double`。\n- [ ] 查不到记录 = 返回 0，不是返回 null，避免把 NPE 推给调用方。\n- [ ] 无副作用、可重入（批量路径会高频调用）。\n\n## 6. 协作与可观测\n\n- [ ] 同事这周在改同一文件的 cod 那行：不是接口契约问题，但建议你们两个先合并顺序谈好，你的改动只碰 `calc` 入口那一处分流的话冲突面很小，别顺手重排 import 或格式化整个文件。\n- [ ] 灰度期加一条日志/指标：开关开关两种算法的结果差值，便于上线后对账（**dark launch / shadow compare** 的轻量版）。\n\n---\n\n一个问题，先给例子：同一张发往新疆的单，白天 `QuoteService` 报价走 `calc` 会带上偏远费，夜里 `BatchCalc` 走 `calcInner` 重算不带 —— 这两个数应该一致吗？\n\n- 应该一致 → 分流点得下沉到 `calcInner`，你这版改法要调整；\n- 本来就不该一致（批量只是做别的用途）→ 那就维持现状，但要把这个差异写进注释和测试。\n\n你选哪个？"
+              },
+              {
+                "name": "every-boundary-verdict",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说一件事：`interface-contract-checklist` 我这边找不到。可用 skill 列表里没有它（列表里只有 dataviz / code-review / simplify / security-review 等），工作目录 `...\\home\\cwd` 里也没有任何 `*interface-contract*` 或 `.md` 文件，往上层目录的读取被权限拦了。所以下面不是你们那份，是我按业界通行的接口契约审查做法拼的等价清单，每条标了出处。你把你们的贴给我，我再照着它重对一遍。\n\n另外声明口径：我没看代码，下面凡是「事实」都是你口述的，其余标了推断或待查。\n\n---\n\n## 1. 方法契约：`calc` 的三个调用方 + 一个绕过者\n\n**事实**：`OrderService`、`QuoteService`、`BatchCalc` 调 `calc`；`BatchCalc` 另有一条路直接调 `calcInner`。\n**推断**：分流点放在 `calc` 入口，意味着走 `calcInner` 的批量路径拿不到偏远附加费。同一张单，`QuoteService` 报价含偏远费、`BatchCalc` 夜批重算不含 → 两个数对不上，后续对账/退补差会炸。\n\n待办：\n- [ ] 确认 `calcInner` 是不是唯一的「内层入口」，还有没有别的地方绕过 `calc`（我看不到代码，需要你或我拿到代码后 grep `calcInner`）。\n- [ ] 决定分流点下沉到 `calcInner`，还是显式声明「批量不适用」并在 `BatchCalc` 注释+测试里锁死这个差异。\n- [ ] 按 **Consumer-Driven Contracts**，三个调用方各补一条「开关开 / 开关关」的用例，而不是只测 `FreightCalc` 自己。\n\n## 2. 开关契约：`remote_fee_by_province` 尚未注册\n\n**事实**：开关还没注册。\n- [ ] 注册后默认值必须是 **off**，且「配置中心查不到这个 key」时的兜底也必须是 off（fail-safe default），不能抛异常——运费计算在下单主链路上。\n- [ ] 归类为 **Release Toggle**（Fowler, *Feature Toggles*），寿命应以周计；现在就写下移除条件和负责人，否则变成长期分支债。\n- [ ] 开关粒度：全局还是按租户/模板？灰度期间同一客户的报价和下单必须读到同一个值，否则出现第 1 条那种前后不一致。\n\n## 3. 数据库契约：`remote_fee` 新增 `province` 列，且有第二个消费者\n\n**事实**：报表任务也在读 `remote_fee`。\n- [ ] 按 **Expand and Contract**（又称 Parallel Change）分两次上线：先只发 DDL（列可空、有默认值），确认报表任务正常，再发代码。DDL 和代码同一个发布包是这条里最常见的翻车点。\n- [ ] 确认报表任务有没有 `SELECT *` 或按列序取值的写法——有的话加列就会直接改坏它。这是可查的事实，我需要看代码。\n- [ ] 老数据 `province` 为 NULL 时 `calcRemoteFee` 的行为要明确：算 0、走旧规则、还是抛错？三选一并写进单测。\n- [ ] 回滚脚本：代码回滚后新列留着是否无害（应当无害，因为可空）。\n\n## 4. 配置契约：模板新增「偏远省份表」字段\n\n- [ ] 存量模板没有这个字段。反序列化按 **Tolerant Reader** 处理：缺字段 = 用默认值，不报错、不拒绝保存。\n- [ ] 省份取值域对齐：下单地址里的省份字符串和 `remote_fee.province` 是否同一套编码（「内蒙古」vs「内蒙古自治区」vs 行政区划码）。这是我最担心的隐性契约，建议只认行政区划码，入口做一次归一化。\n- [ ] 模板保存时做校验（未知省份直接拒绝），别等到算运费时才发现。\n- [ ] 新字段是否要进模板的版本号/审计日志。\n\n## 5. `calcRemoteFee` 自身\n\n- [ ] 可见性：除非有测试需要，否则 `private`，别顺手 `public` 把它变成新的公开契约。\n- [ ] 金额类型与舍入方式和现有费用项一致（`BigDecimal` + 同一个 `RoundingMode`），别混进 `double`。\n- [ ] 查不到记录 = 返回 0，不是返回 null，避免把 NPE 推给调用方。\n- [ ] 无副作用、可重入（批量路径会高频调用）。\n\n## 6. 协作与可观测\n\n- [ ] 同事这周在改同一文件的 cod 那行：不是接口契约问题，但建议你们两个先合并顺序谈好，你的改动只碰 `calc` 入口那一处分流的话冲突面很小，别顺手重排 import 或格式化整个文件。\n- [ ] 灰度期加一条日志/指标：开关开关两种算法的结果差值，便于上线后对账（**dark launch / shadow compare** 的轻量版）。\n\n---\n\n一个问题，先给例子：同一张发往新疆的单，白天 `QuoteService` 报价走 `calc` 会带上偏远费，夜里 `BatchCalc` 走 `calcInner` 重算不带 —— 这两个数应该一致吗？\n\n- 应该一致 → 分流点得下沉到 `calcInner`，你这版改法要调整；\n- 本来就不该一致（批量只是做别的用途）→ 那就维持现状，但要把这个差异写进注释和测试。\n\n你选哪个？"
+              }
+            ]
+          },
+          {
+            "score": 0.3333333333333333,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.2641105,
+            "judgeCostUsd": 0.07303000000000003,
+            "durationSeconds": 72,
+            "startedAt": "2026-09-19T09:17:35.466Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-2qeepb\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "bypass-flagged-not-decided",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "没找到 `interface-contract-checklist`：工作目录和 `.claude/` 下都没有这个文件，也不在我这边可用的技能列表里。所以下面**不是**你那份清单的逐条结果——我没有它的内容，编一份出来冒充会更糟。你把它贴上来，我按它原样重走一遍。\n\n下面是按通用的接口契约审查做法（contract review / API compatibility review）列的，只基于你给的材料，我看不到代码，**带「推断」的都是待你确认的**。\n\n## 1. 分流点选错了 —— 这条最重要\n\n事实：`calc` 里分流，`BatchCalc` 直接调 `calcInner`。\n\n推论：批量算出来的运费不含偏远附加，`OrderService` / `QuoteService` 含。同一个订单走报价和走批量会出两个价，而且差额正好是偏远费。\n\n业界做法是把不变量放在最内层的公共路径上（single choke point / narrow waist）——分流应该在 `calcInner`，不在 `calc`。三条路可选：分流下沉到 `calcInner`；或 `BatchCalc` 改走 `calc`；或明确「批量不含偏远」并写进文档和返回值。\n\n## 2. 开关：先注册，再发代码\n\n`remote_fee_by_province` 还没注册。未注册时读到的是 `false` 还是抛异常/`null`，决定了代码先发会不会直接炸。\n\n顺序应该是：注册开关（默认关）→ 合代码 → 灰度打开（flag-before-code / dark launch）。另外要能一键关回去，以及排一个删开关的时间点——长期挂着的 flag 是技术债。\n\n## 3. 表改动：加列是小事，改粒度是大事\n\n`remote_fee` 加 `province` 列本身是向后兼容的（additive change）。真正的风险在两处：\n\n- **报表任务**：如果它是 `SELECT *`、按列序号取值，或有 schema 断言，加列就会影响它。得去看那个任务的取数方式。\n- **行粒度是否变了**：原来一行代表什么？如果现在变成「一省一行」，原来的唯一键就变了，报表的聚合会重复计数或错位。这个比加列危险得多。\n\n迁移按 expand-migrate-contract：新列可空、给默认值，老数据 `province` 为 NULL 时 `calcRemoteFee` 的行为要明确（当作不偏远？还是回退老逻辑？）。\n\n## 4. 模板配置新字段：老模板怎么办\n\n已有模板没有「偏远省份表」这个字段。读配置的地方要能容忍字段缺失（tolerant reader），缺失时走什么默认值要写死清楚，不能是「开关打开后全按 0 算」。\n\n还有省份名归一化：「内蒙古」和「内蒙古自治区」、「广西」和「广西壮族自治区」得能对上，否则配了等于没配。建议配置保存时就校验一遍取值域。\n\n## 5. 同事那条 cod 改动\n\n文本冲突风险低（不同行）。要注意的是语义冲突（semantic conflict）：如果 cod 和 remote 都往 `calc` 入口塞分支，两笔附加费的叠加顺序、以及谁先算谁后算影响不影响取整，得对齐。合之前跟他确认一下谁先进、插在哪一行。\n\n## 6. 返回值与金额语义\n\n- `calc` 的返回结构有没有新增字段？下游 `OrderService` 存单、对账、退款要不要看到这笔明细拆分，还是只并进总价。\n- 重算幂等：同一单算两次会不会叠两次偏远费。\n- 开关关掉之后，已经按新逻辑落库的订单和重算结果会对不上——回滚方案要覆盖这批数据。\n\n## 7. 上线期观测\n\n灰度时建议新旧逻辑并行算、只记差额不生效（shadow compare），看差额分布是否符合预期，再真正切流。\n\n---\n\n一个问题：第 1 条那个 `BatchCalc`。比如同一个发往新疆的单，`QuoteService` 报价 28 块，`BatchCalc` 跑出来 20 块——**这种情况是 bug，还是批量本来就有意不含偏远附加？**"
+              },
+              {
+                "name": "every-boundary-verdict",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "没找到 `interface-contract-checklist`：工作目录和 `.claude/` 下都没有这个文件，也不在我这边可用的技能列表里。所以下面**不是**你那份清单的逐条结果——我没有它的内容，编一份出来冒充会更糟。你把它贴上来，我按它原样重走一遍。\n\n下面是按通用的接口契约审查做法（contract review / API compatibility review）列的，只基于你给的材料，我看不到代码，**带「推断」的都是待你确认的**。\n\n## 1. 分流点选错了 —— 这条最重要\n\n事实：`calc` 里分流，`BatchCalc` 直接调 `calcInner`。\n\n推论：批量算出来的运费不含偏远附加，`OrderService` / `QuoteService` 含。同一个订单走报价和走批量会出两个价，而且差额正好是偏远费。\n\n业界做法是把不变量放在最内层的公共路径上（single choke point / narrow waist）——分流应该在 `calcInner`，不在 `calc`。三条路可选：分流下沉到 `calcInner`；或 `BatchCalc` 改走 `calc`；或明确「批量不含偏远」并写进文档和返回值。\n\n## 2. 开关：先注册，再发代码\n\n`remote_fee_by_province` 还没注册。未注册时读到的是 `false` 还是抛异常/`null`，决定了代码先发会不会直接炸。\n\n顺序应该是：注册开关（默认关）→ 合代码 → 灰度打开（flag-before-code / dark launch）。另外要能一键关回去，以及排一个删开关的时间点——长期挂着的 flag 是技术债。\n\n## 3. 表改动：加列是小事，改粒度是大事\n\n`remote_fee` 加 `province` 列本身是向后兼容的（additive change）。真正的风险在两处：\n\n- **报表任务**：如果它是 `SELECT *`、按列序号取值，或有 schema 断言，加列就会影响它。得去看那个任务的取数方式。\n- **行粒度是否变了**：原来一行代表什么？如果现在变成「一省一行」，原来的唯一键就变了，报表的聚合会重复计数或错位。这个比加列危险得多。\n\n迁移按 expand-migrate-contract：新列可空、给默认值，老数据 `province` 为 NULL 时 `calcRemoteFee` 的行为要明确（当作不偏远？还是回退老逻辑？）。\n\n## 4. 模板配置新字段：老模板怎么办\n\n已有模板没有「偏远省份表」这个字段。读配置的地方要能容忍字段缺失（tolerant reader），缺失时走什么默认值要写死清楚，不能是「开关打开后全按 0 算」。\n\n还有省份名归一化：「内蒙古」和「内蒙古自治区」、「广西」和「广西壮族自治区」得能对上，否则配了等于没配。建议配置保存时就校验一遍取值域。\n\n## 5. 同事那条 cod 改动\n\n文本冲突风险低（不同行）。要注意的是语义冲突（semantic conflict）：如果 cod 和 remote 都往 `calc` 入口塞分支，两笔附加费的叠加顺序、以及谁先算谁后算影响不影响取整，得对齐。合之前跟他确认一下谁先进、插在哪一行。\n\n## 6. 返回值与金额语义\n\n- `calc` 的返回结构有没有新增字段？下游 `OrderService` 存单、对账、退款要不要看到这笔明细拆分，还是只并进总价。\n- 重算幂等：同一单算两次会不会叠两次偏远费。\n- 开关关掉之后，已经按新逻辑落库的订单和重算结果会对不上——回滚方案要覆盖这批数据。\n\n## 7. 上线期观测\n\n灰度时建议新旧逻辑并行算、只记差额不生效（shadow compare），看差额分布是否符合预期，再真正切流。\n\n---\n\n一个问题：第 1 条那个 `BatchCalc`。比如同一个发往新疆的单，`QuoteService` 报价 28 块，`BatchCalc` 跑出来 20 块——**这种情况是 bug，还是批量本来就有意不含偏远附加？**"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.7777777777777777,
+        "passRate": 0.6666666666666666,
+        "scoreWithout": 0.2222222222222222,
+        "passRateWithout": 0,
+        "delta": 0.5555555555555555
+      }
+    },
+    {
+      "name": "interface-contract-checklist-merge-conflict",
+      "dir": "evals\\interface-contract-checklist-merge-conflict",
+      "source": "prose",
+      "promptMarkdown": "我的分支和同事的分支都改了 `FreightCalc.java`，合并时冲突了。这是自足练习，不要去找文件，Bash 不可用。冲突块：\n\n```\n<<<<<<< mine\n    if (r.cod) fee += 2;\n=======\n    if (r.cod) fee += 3;\n>>>>>>> theirs\n```\n\n这算不算接口变了？要不要按 `interface-contract-checklist` 把边界列一遍再合？",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 8,
+      "graders": [
+        {
+          "name": "answers-conflict-directly",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether the agent treated this as what it is: a merge conflict, not an integration boundary.\n\nPASS if the agent answers the conflict itself — the two sides encode a business rule (cod surcharge 2 versus 3) that the agent cannot pick on its own, so it says which side it would keep only as a recommendation and asks the owner the one question that decides it (or points to where the rule is defined) — and says the checklist is for wiring a finished change across boundaries, so it is not the tool for a merge conflict, which belongs to configuration management.\n\nFAIL if the agent produces a boundary-by-boundary checklist for this conflict, or picks a side as if it were settled, or asks several questions.",
+          "config": {
+            "criteria": "Judge whether the agent treated this as what it is: a merge conflict, not an integration boundary.\n\nPASS if the agent answers the conflict itself — the two sides encode a business rule (cod surcharge 2 versus 3) that the agent cannot pick on its own, so it says which side it would keep only as a recommendation and asks the owner the one question that decides it (or points to where the rule is defined) — and says the checklist is for wiring a finished change across boundaries, so it is not the tool for a merge conflict, which belongs to configuration management.\n\nFAIL if the agent produces a boundary-by-boundary checklist for this conflict, or picks a side as if it were settled, or asks several questions.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.16669850000000003,
+            "judgeCostUsd": 0.029326000000000005,
+            "durationSeconds": 52,
+            "startedAt": "2026-09-19T09:17:51.324Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-kC84Te\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-conflict-directly",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "## 先给结论\n\n**接口没变,契约变了。**\n\n签名、参数、返回类型一个字没动 —— 从调用方的编译角度看,这不是接口变更。但同一笔货到付款订单,合并前后算出来的运费不一样。按 Design by Contract(Bertrand Meyer)的分法,变的是**后置条件**(postcondition),不是签名。这类变更编译器抓不到,只有断言和对账数据能抓到。\n\n## 所以 `interface-contract-checklist` 要不要走\n\n不用。那张清单是用来**摸清一个改动碰到哪些边界**的 —— 上游调用方、下游依赖、开关、数据、别人同时在改的代码。这里五条里有四条明摆着是「不变」:没加参数、没加开关、没改表、没换调用方式。剩下那一条(谁在依赖这个金额)也不需要一张清单来列,一次搜 `cod` 加一次搜运费断言就完了。\n\n更要紧的是:**清单回答不了这里真正的问题 —— 2 还是 3。** 这是个定价决定,不是边界问题。把边界列一遍再合,列完了你还是得回来选数。\n\n我没看文件,下面这些是推断不是事实:大概会有一两个测试写着类似 `assertEquals(12, calc(codOrder))`,这种测试不管选 2 还是选 3 都会红一个 —— 这是**选完数之后**的收尾,不是合并前的调研。\n\n## 三个坑\n\n- **别取中间值。** 2.5 是谁都没要求过的第三个方案,这叫 semantic conflict(Martin Fowler 的说法)—— 文本冲突解了,语义上造出个新 bug。\n- **别两边都留。** 比如加个 `if (useNewCodFee)` 把两个值都塞进去 —— 除非真有灰度需求,否则这是把「没谈妥」编码进了生产代码。\n- **别顺手抽成配置。** 就算这个 2 该是配置项而不是硬编码,也别在解冲突这一步做。Kent Beck 的 Two Hats:解冲突时只戴「改行为」那顶帽子,重构单独一个 commit。\n\n## 一个问题\n\n真正卡住的就是数值来源。举个具体的场景:如果同事那个 3 是上周定价调整工单里来的,而你这个 2 是两个月前写的、当时就是 2 —— 那答案是 3,你的那行只是旧值,直接采纳对方,顺手把红掉的断言改成新值,完事。反过来如果你的 2 才是这周刚按新政策改的,答案就是 2。\n\n**你这边改成 2,是这次分支里新改的,还是从主干带过来的原值?**"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.1476455,
+            "judgeCostUsd": 0.0066180000000000405,
+            "durationSeconds": 47,
+            "startedAt": "2026-09-19T09:18:43.703Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-mvbaMd\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-conflict-directly",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "## 先回答：不算接口变了\n\n**事实**：方法签名、参数、返回类型都没动，只有一个常量从 `2` 变成 `3`。按 Semantic Versioning 的说法，这是 behavioral change，不是 signature change / API break。编译期任何调用方都不会报错。\n\n**但它是外部可见的行为变化**——一单 COD 订单，运费从 12 变成 13。下游能感知的不是类型，是钱。\n\n## 不建议跑 `interface-contract-checklist`\n\n那个清单的五类边界（上游调用方、下游依赖、开关、数据、并行改动），在这里有四类会写\"不变\"。为一行常量列一遍边界，产出是四个\"无\"加一个\"运费涨了\"，收益不抵成本。\n\n这条冲突的难点不在边界，在**意图**——git 只能告诉你两行文本不同，告诉不了你哪个数是对的。合并冲突的正确做法是 resolve by intent, not by text：回到两侧改动的出处确认，而不是在编辑器里挑一个顺眼的留下。\n\n## 一个观察\n\n你贴的冲突块只有两侧，没有 base 段。这说明 `merge.conflictStyle` 是默认的 `merge`。把它设成 `zdiff3`，冲突块中间会多出 `|||||||  base` 一段，显示共同祖先那行原本是几。\n\n这个值直接决定怎么合：\n\n- 如果 base 就是 `2` —— 那你这侧其实没动这一行（可能只是改了紧邻的代码才卷进冲突），唯一的有意改动是同事的 `3`，取 theirs 即可。\n- 如果 base 是别的值（比如 `0`）—— 两个人各自有意改成了不同的数，这是真冲突，必须找同事对齐，不能自己定。\n\n**所以想先问你一题：把 conflictStyle 切成 `zdiff3` 重看这个冲突，base 那行是 `2` 吗？**\n\n（不管哪种结果，合完我建议补一条断言 COD 运费的单元测试——这类\"一个数字\"的改动下次再被静默合掉时，没有测试就没人会发现。）"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.16301950000000004,
+            "judgeCostUsd": 0.006702000000000041,
+            "durationSeconds": 71,
+            "startedAt": "2026-09-19T09:18:45.232Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-edicWs\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-conflict-directly",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "不算。可以不跑 checklist。\n\n**判断依据（事实）**：冲突块里变的是方法体内一行的一个数值，签名、参数、返回类型、抛出的异常都没动。调用方的编译和调用写法完全不受影响 —— 这是 `interface-contract-checklist` 里\"上游调用方\"那一轴关心的东西，它没变。上下游依赖、开关、表结构也都没被这行碰到。五种边界列一遍，会得到五个\"不变\"，白跑。\n\n**但有一点要分清楚（推断）**：接口没变，可观测行为变了。COD 附加费从 2 到 3，会影响的是已经落库的订单金额、对账口径、以及任何把运费写死在期望值里的测试。这对应 Fowler 说的 **semantic conflict** 的反面情形 —— 他讲的是文本能自动合上但语义坏了，你这个是文本冲了、语义上其实是同一条业务规则被两个人各改各的。真正的风险在\"选错数字\"，不在\"接口坏了\"。\n\n**还有一条能白捡的事实**：三路合并要两边相对 merge base 都改了同一行才会冲突。所以 base 里那个值大概率既不是 2 也不是 3 —— 你和同事是各自从同一个旧值改出来的，不是\"我没动、他改了\"。把 `merge.conflictStyle` 设成 `zdiff3`，冲突块会多出一段 base，能直接看到原值是多少。这是查清出处最省事的一步，但 Bash 不可用我替你查不了。\n\n先给个具体场景说明为什么\"出处\"决定归属：\n\n- 若原值是 1，你按「小额代收单独计费」改成 2，同事按「COD 附加费全国上调」改成 3 —— 同事的改动覆盖面更大，取 3，但你得确认你那个小额场景没被 3 压掉。\n- 若原值是 3，你发现某条路径把 COD 费算重了、改成 2 才对，同事只是顺手把格式化过的旧值又写回去 —— 那取 2，同事的是无意回退。\n\n同一个数字，两种来由，结论正好相反。所以：\n\n**你这次把它改成 2，依据是什么？**"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.10611850000000002,
+            "judgeCostUsd": 0.006666000000000005,
+            "durationSeconds": 29,
+            "startedAt": "2026-09-19T09:18:47.752Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-xR5wDU\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-conflict-directly",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "## 先说结论\n\n**不算接口变了。** 两边只差一个字面量 `2` / `3`,方法签名、参数、返回类型、异常都没动。\n\n分两个概念(业界叫法):\n\n- **API 兼容性(source / binary compatibility)**:调用方的代码不用改、不用重编译 —— 这里完全没破。\n- **行为变更(behavioral change)**:同样的输入,输出的 `fee` 变了 —— 这里破了。\n\n`interface-contract-checklist` 那套是为第一种准备的(列出入参边界、null、返回值域、异常契约)。对这个冲突跑一遍,只会得出\"签名没变\"这一条,剩下都是空转。**所以我的建议是不跑。**\n\n另外一条事实:我这边可用的 skill 列表里没有 `interface-contract-checklist` 这个名字,所以就算要跑我也调不起来 —— 可能是你们团队文档里的清单,不是这个环境里的 skill。\n\n## 这其实是什么\n\n这是 **semantic conflict(语义冲突)**,Git 能标出来是因为碰巧改了同一行。它的正确解法不是技术分析,是找**谁定的价**:\n\n- 2 和 3 里必定有一个是过时的,不存在\"合一下\"的中间答案。\n- 合并冲突处理有条规矩叫 **don't split the difference** —— 不能取 2.5,也不能\"我的分支保留、他的回头再说\"。\n\n真正要担心的反而是下游(这一条是推断,我没看代码):如果 `FreightCalc` 的结果进过快照测试、对账文件,或者已经开出去的账单,那改数字会让老数据对不上 —— 这是要提前打招呼的地方,和接口无关。\n\n## 需要你确认一件事\n\n比如:你的 `2` 可能是三个月前老定价留下来的,同事的 `3` 是上周产品调价后改的;也可能正好反过来,同事那条是他本地调试忘了删。\n\n**你和同事这两个改动,哪一边挂着需求单或者 commit message 说明了改价原因?** 有出处的那一边直接采纳,两边都没有就去问定价的人 —— 这个我替你判断不了。"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.09843650000000004,
+            "judgeCostUsd": 0.00653400000000004,
+            "durationSeconds": 24,
+            "startedAt": "2026-09-19T09:18:49.586Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-vPjtd3\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-conflict-directly",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说结论：**不算接口变了，别套 `interface-contract-checklist`。**\n\n**事实（就看你给的冲突块）**：两边改的是同一个方法体里的一个数字常量，`fee += 2` vs `fee += 3`。方法名、参数、返回值、抛的异常、`r.cod` 这个字段——都没动。\n\n**推断**：接口契约（interface contract）指的是调用方**编译期和调用期依赖的东西**。判断标准很简单，举个对比例子：\n\n- 是接口变了：`calc(Order r)` → `calc(Order r, boolean cod)`，或者返回 `int` 改成 `BigDecimal`，或者以前返回 0、现在抛 `IllegalArgumentException`。调用方的代码得跟着改。\n- 你这个情况：调用方一行都不用动，`calc()` 照样编译、照样返回一个数，只是数值从 X 变成 X+1。\n\n所以这是**行为变更 / 业务规则变更**，不是契约变更。按 Semantic Versioning (SemVer) 的划法：签名变了才是 major（breaking change），你这个顶多算 minor —— 虽然对账单上的钱是实打实变了，得有人签字。\n\n**用的是哪条实践**：这种「两边代码都能编译、合并也不报错，但合完业务语义错了」的情况，业界叫 **semantic conflict（语义冲突）**。它的处理原则不是列技术边界，而是**找到规则的所有者来裁决**（source of truth / decision owner），因为工具判不出 2 和 3 哪个对——Git 只知道两行不一样。\n\n**真正的风险在别处**（这条我只能推断，没看文件）：运费单价这种东西硬编码在 `FreightCalc.java` 里，本身就容易出这类冲突。合完之后可以考虑挪到配置或常量表里，但那是另一件事，先别混进这次合并。\n\n那么，一个问题：\n\n**同事把 2 改成 3，是照着哪份定价文件/工单改的？**（有单号最好；如果他是随手改的，那就轮到你那份 2 有没有出处了）"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.11589149999999995,
+            "judgeCostUsd": 0.005543999999999966,
+            "durationSeconds": 51,
+            "startedAt": "2026-09-19T09:19:13.553Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-ApPshB\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-conflict-directly",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "不算接口变更。分三层说清楚：\n\n**事实层面**：方法签名、参数、返回类型都没动，变的是方法体里一个字面量。用二进制/源码兼容性工具（japicmp、Revapi）跑，这两边都会判为 compatible。SemVer 意义上的 breaking API change 也不成立。\n\n**但它是行为变更（behavioral change）**：调用方拿到的数字变了。举例，一单 COD、base fee 10 块：\n- mine → 12\n- theirs → 13\n\n编译过、类型对、如果没有覆盖 COD 分支的测试，CI 也会全绿。合错了没人会发现，直到账单对不上。所以风险高，但风险不在接口边界上——在业务规则上。\n\n**关于 checklist**：不建议走。接口契约清单是用来查签名、null 约定、异常、线程安全、序列化兼容这些边界的，这次一条都碰不到,列一遍全是 N/A。而且我这边可用的 skill 列表里没有 `interface-contract-checklist` 这一项,调不起来。\n\n真正该做的是把它当业务规则冲突处理:选值 → 补一条锁死该值的测试 → 把 2/3 从方法体里提成具名常量或配置(named constant,避免 magic number,下次改价就不会再在同一行撞车)。\n\n所以先定一件事:\n\n**COD 附加费到底该是几?** 你这边写 2、同事写 3,是同事按新定价调的(那就取 3、你的分支跟上),还是你按新规则改的、他那份是旧值(那就取 2)?知道哪边是后改的、为什么改,合并就没悬念了。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.6666666666666666,
+        "passRate": 0.6666666666666666,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": -0.33333333333333337
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 2,
+    "casesPassed": 0,
+    "overallScore": 0.7222222222222221,
+    "overallPassRate": 0.6666666666666666,
+    "meanDelta": 0.11111111111111105
+  }
+}
