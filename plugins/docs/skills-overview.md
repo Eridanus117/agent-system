@@ -11,8 +11,8 @@
 | `adaptive-problem-solving` | adaptive-problem-solving | 0.2.14 | 9389 | 无 | 用于问题含糊、关键路径选择、波次／里程碑反思、高成本或难回退动作、范围／成本变化、停滞、恢复／交接／验收／长期收口，或检查方向、方法、ROI、模型、上下文、工具、环境与 Agent 组合。恢复原问题和主瓶颈，比较普通路径与方法后组合、换路或… |
 | `clarify` | clarify | 0.1.0 | 4241 | 有 | 主人冒出「想建 X／要不要搞一个／这个流程好烦」一类念头时，把「解」翻回「问题」，判断该不该做；只产出三行结论。不建则建一条 issue 写理由后以 wontfix 关闭，建则挂机会 issue。Turn an itch phrased a… |
 | `flow` | flow | 0.1.5 | 10417 | 有 | 判为常规变更、或主人开场直接敲了阶段里的 skill 时读：常规变更的路线——九个阶段的门与产物、每个阶段点名的活动、改旧代码时才开的活动、会话绑定、站会记录。The route for a normal change: nine stag… |
-| `architecture-decision` | flow-steps | 0.1.4 | 3045 | 有 | 常规变更改旧代码、要在既有系统上定一项新能力「系统成为什么样」时的活动：写清这轮决定什么，摆基线与未知，点名 tradeoff-analysis 出候选做两面，把暂定推荐交主人确认；确认前不实现。Architecture decision … |
-| `impact-analysis` | flow-steps | 0.1.4 | 3314 | 有 | 常规变更改旧代码、某个决定缺一个数或判断时的活动：把数挂到决定上，假设单列，effect-sketch 画两跳，只为拿不准的边取证，baseline-measurement 量数，出一行带置信度的结论进那个决定；限时两小时。Impact a… |
+| `architecture-decision` | flow-steps | 0.1.4 | 2999 | 有 | 常规变更改旧代码、要在既有系统上定一项新能力「系统成为什么样」时的活动：写清这轮决定什么，摆基线与未知，点名 tradeoff-analysis 出候选做两面，把暂定推荐交主人确认；确认前不实现。Architecture decision … |
+| `impact-analysis` | flow-steps | 0.1.4 | 3349 | 有 | 常规变更改旧代码、某个决定缺一个数或判断时的活动：把数挂到决定上，假设单列，effect-sketch 画两跳，只为拿不准的边取证，baseline-measurement 量数，出一行带置信度的结论进那个决定；限时两小时。Impact a… |
 | `legacy-code-change` | flow-steps | 0.1.4 | 2350 | 有 | 常规变更第 5 阶段、要改的旧代码没有测试或注释与实现对不上时用：先按特征化测试把现状摆给主人否，否过之后按萌芽方法在旁边加新逻辑，旧实现不动。Stage 5 activity for legacy code: characterize f… |
 | `regression-evidence` | flow-steps | 0.1.4 | 2377 | 有 | 改旧代码时才开的活动「证」：改完要证明老流程没变、新流程是对的。改代码之前按 record-replay 录母版，改完按 golden-master 回放比对，三样进同一个 PR。The legacy-code activity for p… |
 | `requirement-elicitation` | flow-steps | 0.1.4 | 2914 | 有 | 改旧代码时需求不清才开的活动，第 4 阶段门上定：外来需求还是一句「解」、提出方只能由主人去问时用，把解翻回问题、备好问提出方的问题、查现成，收口成三行加一句可观察的验收判据。Requirement elicitation as a sta… |
@@ -26,13 +26,13 @@
 | `knowledge-maintenance` | knowledge-maintenance | 0.1.3 | 6488 | 无 | 用于多来源调研、可重复实验、会影响权威／Agent 配置／重要决定的研究，或用户要求复用、复核、更新当前知识时：先找已认可知识和失效条件，只补变化、冲突与缺口，再经价值门和可信门更新。不用于低成本一次性事实、原始材料／研发过程留存、私域结构… |
 | `note` | note | 0.1.0 | 2696 | 无 | 把成熟结论沉淀进本地 Markdown 知识库，或找回以前记过的结论。当用户说「沉淀到知识库」「记到 KB」「/note」「以前记过」「找回笔记」时使用。 |
 | `orchestrated-collaboration` | orchestrated-collaboration | 0.2.7 | 21795 | 无 | 当用户明确要求多 Agent／多 Session／跨 Provider 协作、任务已授权委派，或活动 Session 发生共享写入碰撞时，建立目标来源、排他所有权、可追踪交付、独立验收与综合；按共享资源和 Issue 子树确定唯一协调者，只… |
-| `baseline-measurement` | practices | 0.1.3 | 2984 | 有 | 一个决定缺一个运行时的数（慢多少、占多大比例、多久跑完）时用：先在同样条件下量老路径当基线，再量新路径，只量决定要的那一个数，判定规则挂在数上，没量到就留空给主人跑。Baseline measurement for one decision… |
+| `baseline-measurement` | practices | 0.1.3 | 3068 | 有 | 一个决定缺一个运行时的数（慢多少、占多大比例、多久跑完）时用：先在同样条件下量老路径当基线，再量新路径，只量决定要的那一个数，判定规则挂在数上，没量到就留空给主人跑。Baseline measurement for one decision… |
 | `canary-release` | practices | 0.1.3 | 3671 | 有 | 改动要放出去时用：三档放量（内部账号或测试模板 → 分流类别的一小部分 → 全量），每档写清放谁、停多久，进下一档由主人定；每条需求句配一个观测点，老路径看四个黄金信号（延迟、流量、错误、饱和）；档 1 放开后拿需求例子打一条冒烟。Cana… |
 | `characterization-test` | practices | 0.1.3 | 3155 | 有 | 给一段没有测试的旧代码锁住现状时用：拿一条真实入参沿代码走一遍，每一步写成带中文注释的断言，期望值是实际输出不是想要的输出；注释与实现的出入单独标出，拿不出证据的行写「假设」，清单摆给主人否。Characterization test: p… |
 | `code-review` | practices | 0.1.3 | 5058 | 有 | 审一条分支、PR 或在制的改动时用：以主人给的固定点取 diff，分标准与 spec 两轴各派一个子代理审，违例与判断题分开标，两份报告并排给出、各轴各自小结。Two-axis code review of the diff since a… |
 | `domain-modeling` | practices | 0.1.3 | 3825 | 有 | 设计途中要敲定领域术语、建或改统一语言、记一条架构决定时用：对着词汇表挑战用词，用具体场景逼清边界，和代码对照，词一定下就写进 CONTEXT.md，只在难回头的取舍上提 ADR。Build and sharpen a project do… |
 | `ears` | practices | 0.1.3 | 2833 | 有 | 把一条已收口的需求写成可验证的句子时用：EARS 五种句式，一句只装一条规则，名词只用原话与词汇表里的，出手前过 ISO 29148 的四条属性。Write requirements in EARS (Easy Approach to Re… |
-| `effect-sketch` | practices | 0.1.3 | 2960 | 有 | 改动前要知道会波及谁时用：从改动点出发静态画两跳——谁调它、它调谁，连同绕过它直调更里面的——拿不准的边标出来，事实与假设分开；不画全图。Feathers' effect sketch: two static hops out from t… |
+| `effect-sketch` | practices | 0.1.3 | 3133 | 有 | 改动前要知道会波及谁时用：从改动点出发静态画两跳——谁调它、它调谁，连同绕过它直调更里面的——拿不准的边标出来，事实与假设分开；不画全图。Feathers' effect sketch: two static hops out from t… |
 | `feature-toggle` | practices | 0.1.3 | 2764 | 有 | 改动要能秒级放开、秒级收回时用：分流开关就是发布开关，初始关；回滚就是关开关，不回滚代码，前提是老路径 diff 为零；开关由主人拨，agent 不拨。Feature toggle (Hodgson, Fowler): the routin… |
 | `golden-master` | practices | 0.1.3 | 4139 | 有 | 要证明改完之后老路径一点没变、新路径是对的时用：以改动前的行为为母版（approved 文件），改后回放同一批请求逐字节比对；老类别比母版，新类别比需求例子的期望值，两类分开写；母版、回放测试、比对结果进同一个 PR。Golden mast… |
 | `grilling` | practices | 0.1.3 | 3167 | 有 | 主人拿一个计划、决定或想法来要压力测试时用：把决定画成一棵树，按前提顺序一轮一题地问到没有一处被默默假设；事实自己查，决定归主人。Grill the user about a plan, decision or idea: walk the… |
@@ -43,7 +43,7 @@
 | `sprout-method` | practices | 0.1.3 | 3578 | 有 | 走读与改法已确认、要在旧代码旁加新逻辑时用：新逻辑放新方法或新类，旧实现一句不动，唯一改动是入口一处分流；同一条入参验证开关关闭走原路径、开启且命中走新路径、开启未命中不变。Sprout method: put the new logic … |
 | `switch-interview` | practices | 0.1.3 | 3325 | 有 | 要弄清一条外来需求背后真正的问题、而提出方只能由主人去问时用：按 JTBD 的切换访谈备问题——只问过去发生过的事（上次怎么办的、现在怎么忍的、不做会怎样），答案回来后用四种力读出真正的问题。Prepare and read a Jobs-… |
 | `tdd` | practices | 0.1.3 | 4324 | 有 | 测试先行地做功能或修 bug 时用：先和主人定好要测的接缝，再红到绿一次一个切片；测试只穿公共接口，期望值用独立字面值，只在系统边界 mock。Test-driven development: agree the seams first, … |
-| `tradeoff-analysis` | practices | 0.1.3 | 3400 | 有 | 一件事有两条以上做法要选时用：出至少两个能落地的候选，每个各写支持、反对、最大风险、可逆性，说出什么证据会推翻推荐，暂定推荐交主人定。Trade-off analysis of design candidates: at least two… |
+| `tradeoff-analysis` | practices | 0.1.3 | 3523 | 有 | 一件事有两条以上做法要选时用：出至少两个能落地的候选，每个各写支持、反对、最大风险、可逆性，说出什么证据会推翻推荐，暂定推荐交主人定。Trade-off analysis of design candidates: at least two… |
 | `self-improvement` | self-improvement | 0.1.7 | 8987 | 无 | 当用户指出 Agent 漂移、误解、重复犯错，要求把任务经验固化为系统改进，或讨论只增概念却不减关键未知、形成决定或可检验资产时，只暂停依赖被推翻假设的路径，重锚原问题、持久记录纠正、诊断原因，并在授权内改进入口提示词或 Skill。最小实… |
 | `skill-appraisal` | skill-appraisal | 0.2.0 | 10450 | 无 | 判定一个 Skill 组该不该进当前装配、归哪些事项、与谁重叠，或对已判定过的组按节拍复核。三种进入：首次判定新候选、补判早已在用但从未判定过的组、按失效条件复核。判定单位是组不是单个 Skill；产出必须留下失效条件与下次最少复核步骤。用… |
 | `skill-authoring` | skill-authoring | 0.1.2 | 7296 | 有 | 写一条自建 skill 或改一条既有自建 skill 时用：从机会 issue 或反馈 issue 走到「PR 开了、上线待办建了」，先跑基线再动笔。Author or modify a self-built skill, from an … |

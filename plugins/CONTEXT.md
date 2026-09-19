@@ -79,7 +79,7 @@ _旧名_: 硬问题
 ### 方案：候选与证据
 
 **架构决定**（architecture decision；出处：Nygard 的 Architecture Decision Record）:
-在既有系统上加一项新能力时要定的「系统成为什么样」那件事：决定什么、不决定什么、基线与未知、候选与推荐；薄步 `architecture-decision`。
+在既有系统上加一项新能力时要定的「系统成为什么样」那件事：决定什么、不决定什么、基线与未知、候选与推荐；flow-steps 里的活动 `architecture-decision`。
 _旧名_: 架构设计
 
 **权衡分析**（trade-off analysis；出处：SEI 的 ATAM，Clements、Kazman、Klein《Evaluating Software Architectures》）:
@@ -90,7 +90,7 @@ _旧名_: 候选攻防、做攻防
 一个候选上线后改回去要付多大代价：双向门随时能回，单向门回不去。
 
 **影响分析**（impact analysis；出处：IEEE 14764 软件维护的修改分析）:
-一个决定缺一个数或判断时查一次、出一行带置信度的结论；薄步 `impact-analysis`。
+一个决定缺一个数或判断时查一次、出一行带置信度的结论；flow-steps 里的活动 `impact-analysis`。
 _旧名_: 系统分析
 
 **影响草图**（effect sketch；出处：Feathers《修改代码的艺术》第 11 章）:

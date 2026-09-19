@@ -1,5 +1,5 @@
 ---
-description: 反例（易混）：主人已经定了方案、明说别再比；agent 不重开候选攻防，按已定方案做被要求的事
+description: 反例（易混）：主人已经定了方案、明说别再比；agent 不重开候选比较，按已定方案做被要求的事
 tags: [tradeoff-analysis, negative]
 max_turns: 10
 timeout_seconds: 600

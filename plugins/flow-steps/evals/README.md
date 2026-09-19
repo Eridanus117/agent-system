@@ -191,3 +191,38 @@
 - `system-integration-run` 0.67：第三轮两次失败都在 `order-undoable-and-stops`，一次是联调那步没写「只读」，一次是多列了一条「前置调查，退法不适用」的步。清单那条 grader 三次都过，BatchCalc 绕过入口都交主人定了。判断：一次漏词、一次多步，不是顺序或停点错；再跑只是换一组随机数，是否按 1.0 硬线重跑由主人在第 6 阶段的门上定。
 
 三轮结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`。
+
+### 0.1.4（2026-09-19，agent-system#120）：两条改旧代码时才开的活动——architecture-decision、impact-analysis
+
+从旧 `workcoding` 的 `architecture-design`、`system-analysis` 拆出的两条活动（实践 `tradeoff-analysis`、`effect-sketch`、`baseline-measurement` 在 practices）。用例的 mock 规则副本与跑法同上（被测 sonnet、裁判 sonnet）；`architecture-decision-frame` 另授 Write 以便用 `tool_used: Write, max: 0` 断言没写文件。结果目录带 `-as120` 后缀，与并行的另外三票分开。
+
+| 用例 | skill | 测什么 | 该怎么判 |
+|---|---|---|---|
+| `architecture-decision-frame` | architecture-decision | 第 4 阶段开了它：spec 验收判据、`master` 现状、尝试分支、两条未知都贴了 | 写清这轮决定什么、不决定什么；事实与未知分开、未知不被猜成事实；尝试分支只当证据；至少两个候选各有两面、推荐带推翻条件；结尾只请主人确认一件事，不写代码与 DDL |
+| `architecture-decision-already-confirmed` | architecture-decision | 架构决定主人已确认，票要按它改代码，旧代码没测试 | 不重开候选；指向第 5 阶段与 `legacy-change`（先录旧行为），最多问一个具体问题 |
+| `impact-analysis-one-number` | impact-analysis | 开关放 `calc` 还是 `calcInner`，缺「有没有绕过 `calc` 的调用方」，`scheduler` 没贴 | 数挂到决定上、假设单列；草图认出 `BatchCalc` 绕过；证据只为 `scheduler` 这条拿不准的边、写成主人在工作机上跑的命令；一行结论带置信度与未验证假设，说明进哪里 |
+| `impact-analysis-requirement` | impact-analysis | 来的是一条未收口的需求 | 当需求处理（第 1、2 阶段的事），不起影响分析 |
+
+基线观察（对照组，不装 skill；取自 `results/2026-09-19-baseline-as120/<skill>/`，SKILL.md 占位，每用例 1 次，两组，被测 sonnet，8 次运行，0.86 美元）。没有这两条 skill 时 agent 实际是这样做的：
+
+- `architecture-decision-frame`：对照组找不到 `flow` 与 skill 就停下，列三个选项问主人「这个协议在哪」；有 skill 组（占位）给了一段 JSON 列对规范表的洞察，然后只问一题（表还有谁在读），没有摆决定、没有两个候选各写两面、没有请主人确认。真缺口：决定什么／不决定什么、事实与未知分开、候选两面、只请主人确认一件事。
+- `architecture-decision-already-confirmed`：两组都卡在「仓库不在这个目录、工具不可用」，反问主人仓库在哪，没有回答「下一步该做什么」——既没指向第 5 阶段，也没提旧代码没测试要先录旧行为。真缺口：决定已确认时不重开，指向实现与 `legacy-change`。
+- `impact-analysis-one-number`：两组都从贴的代码里认出 `BatchCalc` 绕过 `calc`，对照组的草图与取证那条过了；但两组都没把数挂到决定上、假设没有单列、结论没有置信度与未验证假设，有 skill 组（占位）还把 `scheduler` 的核实与其余边混在一起。真缺口：挂决定、假设单列、只为拿不准的边取证、一行带置信度的结论。
+- `impact-analysis-requirement`：两组都判为查询、按需求处理（先说业界叫什么、问一题粒度），没有起影响分析。只作回归守卫。
+
+真缺口三处：架构决定的框定与收口、已确认时的路由、影响分析的挂决定与置信度。正文只针对这三处写。
+
+实跑记录：2026-09-19，同一命令（被测 sonnet、裁判 sonnet、每用例 3 次、带对照组，`--case '<skill>-*'` 两条各跑一次），结果 `results/2026-09-19-gate-as120/<skill>/`（24 次运行，487 秒，2.63 美元）。
+
+| 用例 | 有 skill 组 | 对照组 | 差值 |
+|---|---|---|---|
+| `architecture-decision-frame` | 1.0 | 0.22 | +0.78 |
+| `architecture-decision-already-confirmed` | 0.67 | 0 | +0.67 |
+| `impact-analysis-one-number` | 0.83 | 0.17 | +0.67 |
+| `impact-analysis-requirement` | 1.0 | 0.67 | +0.33 |
+
+平均差值 +0.61。`impact-analysis-requirement` 基线时两组同分，门评测里对照组有一次跑去要仓库访问，差值来自那一次，仍按回归守卫看。
+
+没到 1.0 的两条要说清，都是单次运行三票 FAIL，读回复都做对了：`architecture-decision-already-confirmed` 那次开头就写「从第 5 阶段进，架构决定已确认不重开候选，`FreightCalc` 没测试属于 legacy-change 那支（特征化测试）」，然后只问了一题「仓库怎么拿到」并按常驻规则列了三个选项，裁判把选项面数成了多问；`impact-analysis-one-number` 那次六行齐全——`BatchCalc` 绕过写成静态事实「不必抓栈」，`scheduler` 是唯一待核实的边、给了 `grep` 与 Arthas `stack` 两种核实法、写明待主人在工作机跑，结论置信中并点名未验证假设——裁判仍判 `sketch-and-targeted-evidence` FAIL，评分噪声（与 agent-system#126 登记的同类）。主人在本会话开场预授权不为 1.0 硬线重跑（desk#152 的站会记录）。
+
+两份结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`。
