@@ -1,0 +1,362 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T06:31:15.186Z",
+  "durationSeconds": 337,
+  "costUsd": 1.8434089999999999,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as118-practices\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "tdd-seams-first",
+    "threshold": 1,
+    "concurrency": 2,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.0",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as118-practices\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "tdd-seams-first",
+      "dir": "evals\\tdd-seams-first",
+      "source": "prose",
+      "promptMarkdown": "按 `tdd` 给购物车加优惠码。\n\n要做的：`applyCoupon(cart, code)`。券 `SAVE10`：购物车满 100 减 10；过期的券要报错。\n\n模块在 `src/cart/`，对外导出 `createCart`、`add`、`total`；内部有 `pricing.ts` 算价、`couponRepo.ts` 读券（内存 map）。测试框架 vitest。Bash 不可用，先别跑任何东西。\n\n```ts\n// src/cart/index.ts\nexport type Cart = { items: Array<{ sku: string; price: number; qty: number }> };\nexport function createCart(): Cart { return { items: [] }; }\nexport function add(cart: Cart, sku: string, price: number, qty = 1): Cart {\n  return { items: [...cart.items, { sku, price, qty }] };\n}\nexport function total(cart: Cart): number {\n  return cart.items.reduce((sum, i) => sum + i.price * i.qty, 0);\n}\n```",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "public-seams-only",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Judge which seams the agent proposed.\n\nPASS if every proposed seam is a public interface (applyCoupon, createCart, add, total) and the agent does not propose testing pricing.ts or couponRepo.ts directly, nor mocking couponRepo to drive the tests.\n\nFAIL if the agent proposes tests against the internal modules, private helpers, or mocks of internal collaborators.",
+          "config": {
+            "criteria": "Judge which seams the agent proposed.\n\nPASS if every proposed seam is a public interface (applyCoupon, createCart, add, total) and the agent does not propose testing pricing.ts or couponRepo.ts directly, nor mocking couponRepo to drive the tests.\n\nFAIL if the agent proposes tests against the internal modules, private helpers, or mocks of internal collaborators.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "seams-confirmed-before-tests",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the order of events in the agent's reply.\n\nPASS if the agent's reply is a seam proposal, not an implementation: it names the public seam(s) it proposes to test (applyCoupon reached through the cart's public interface createCart/add, observed via total or the returned cart), puts exactly one question to the user to confirm the plan (confirming the list itself, or the one decision the list hinges on, such as what applyCoupon returns), and stops. Short illustrative snippets inside the proposal or the question are fine.\n\nFAIL if the agent delivers a test file, a test suite, or an implementation before the user has confirmed the seams, or asks the user to answer several questions at once, or asks no question and just starts coding.",
+          "config": {
+            "criteria": "Judge the order of events in the agent's reply.\n\nPASS if the agent's reply is a seam proposal, not an implementation: it names the public seam(s) it proposes to test (applyCoupon reached through the cart's public interface createCart/add, observed via total or the returned cart), puts exactly one question to the user to confirm the plan (confirming the list itself, or the one decision the list hinges on, such as what applyCoupon returns), and stops. Short illustrative snippets inside the proposal or the question are fine.\n\nFAIL if the agent delivers a test file, a test suite, or an implementation before the user has confirmed the seams, or asks the user to answer several questions at once, or asks no question and just starts coding.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "tdd",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 5,
+            "costUsd": 0.20694600000000002,
+            "judgeCostUsd": 0.01847,
+            "durationSeconds": 57,
+            "startedAt": "2026-09-19T06:31:15.223Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-9mEfLC\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "public-seams-only",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一个事实：当前工作目录 `C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-9mEfLC\\home\\cwd` 是空的 —— 没有 `src/cart/`，没有 `package.json`，也没有 `CONTEXT.md`。你贴的 `index.ts` 只存在于消息里。所以这轮我会连目录和文件一起建。\n\n按 `tdd` 第 1 步，接缝（seam）先定下来再动笔。我列的清单：\n\n**公共接口只有一个：`src/cart/index.ts`。`pricing.ts`、`couponRepo.ts` 是内部协作者，测试不直接引用、不 mock（mock 只在系统边界，这里没有系统边界）。**\n\n要测的接缝，都穿 `applyCoupon` + `total` 观察：\n\n| # | 行为 | 期望值（独立字面值） |\n|---|---|---|\n| 1 | 满 100：120 的车用 `SAVE10` | `total` → `110` |\n| 2 | 不满 100：99 的车用 `SAVE10` | `total` → `99`（不打折） |\n| 3 | 边界：正好 100 | `total` → `90` |\n| 4 | 过期券 | 抛错 |\n\n期望值全是写死的字面值，不会写成 `total(cart) - 10` —— 那就成同义反复了。\n\n清单里含两个我替你定的形状，一并确认：\n\n1. **`applyCoupon(cart, code): Cart`**，返回挂了券的新购物车，折扣在 `total` 里生效。理由：和现有 `add` 的不可变风格一致，`total` 仍是唯一的算钱入口。另一条路是直接返回折后金额 `number`，那样 `total` 和 `applyCoupon` 会各算一遍钱。\n2. **过期券用 `couponRepo` 里一张固定的过去日期的券**（比如 `SAVE10_OLD`，`expiresAt: 2020-01-01`），测试直接用它。这样不用注入时钟、不用扩大公共接口。代价：测不了「刚好过期那一秒」的临界 —— 你没提这个需求，我就不做。\n\n不在这轮的：不存在的 code 怎么办、同一辆车叠加多张券。你没说，我不猜。\n\n这份接缝清单（含上面两个形状）可以吗？说「对」我就开第一片：先写接缝 1 的失败测试。"
+              },
+              {
+                "name": "seams-confirmed-before-tests",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一个事实：当前工作目录 `C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-9mEfLC\\home\\cwd` 是空的 —— 没有 `src/cart/`，没有 `package.json`，也没有 `CONTEXT.md`。你贴的 `index.ts` 只存在于消息里。所以这轮我会连目录和文件一起建。\n\n按 `tdd` 第 1 步，接缝（seam）先定下来再动笔。我列的清单：\n\n**公共接口只有一个：`src/cart/index.ts`。`pricing.ts`、`couponRepo.ts` 是内部协作者，测试不直接引用、不 mock（mock 只在系统边界，这里没有系统边界）。**\n\n要测的接缝，都穿 `applyCoupon` + `total` 观察：\n\n| # | 行为 | 期望值（独立字面值） |\n|---|---|---|\n| 1 | 满 100：120 的车用 `SAVE10` | `total` → `110` |\n| 2 | 不满 100：99 的车用 `SAVE10` | `total` → `99`（不打折） |\n| 3 | 边界：正好 100 | `total` → `90` |\n| 4 | 过期券 | 抛错 |\n\n期望值全是写死的字面值，不会写成 `total(cart) - 10` —— 那就成同义反复了。\n\n清单里含两个我替你定的形状，一并确认：\n\n1. **`applyCoupon(cart, code): Cart`**，返回挂了券的新购物车，折扣在 `total` 里生效。理由：和现有 `add` 的不可变风格一致，`total` 仍是唯一的算钱入口。另一条路是直接返回折后金额 `number`，那样 `total` 和 `applyCoupon` 会各算一遍钱。\n2. **过期券用 `couponRepo` 里一张固定的过去日期的券**（比如 `SAVE10_OLD`，`expiresAt: 2020-01-01`），测试直接用它。这样不用注入时钟、不用扩大公共接口。代价：测不了「刚好过期那一秒」的临界 —— 你没提这个需求，我就不做。\n\n不在这轮的：不存在的 code 怎么办、同一辆车叠加多张券。你没说，我不猜。\n\n这份接缝清单（含上面两个形状）可以吗？说「对」我就开第一片：先写接缝 1 的失败测试。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 6,
+            "costUsd": 0.2009845,
+            "judgeCostUsd": 0.013493999999999999,
+            "durationSeconds": 52,
+            "startedAt": "2026-09-19T06:31:15.223Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-orj1iH\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "public-seams-only",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说两件查到的事实：\n\n1. 工作目录 `C:\\...\\home\\cwd` 是空的 —— `src/cart/` 下没有任何文件，`pricing.ts`、`couponRepo.ts` 也不在盘上（我用 Glob 扫了全目录）。所以这轮我得连模块一起建，不是往现成代码里加。\n2. Bash 不可用，`vitest` 跑不了。按 TDD 第 3 步的要求，红和绿我只能靠推理，不能实跑 —— 每一片我都会标「未验证」，你方便时再跑。\n\n## 我打算定的接缝\n\n测试只穿 `src/cart/index.ts` 的公共接口，`pricing.ts` 和 `couponRepo.ts` 是内部，不直接测也不 mock（Test through the public interface）。时间是系统边界，过期那条允许用 `vi.setSystemTime` 控制（Mock only at system boundaries）。\n\n| # | 接缝 | 一句话规格 |\n|---|---|---|\n| 1 | `applyCoupon` + `total` | 满 100 用 `SAVE10`，少付 10 |\n| 2 | `applyCoupon` + `total` | 不满 100，`SAVE10` 不减钱 |\n| 3 | `applyCoupon` | 过期的券报错 |\n\n## 先问一题：`applyCoupon` 返回什么\n\n这决定了每条测试的期望值怎么写。三种写法，同一个 120 元的购物车：\n\n```ts\n// A. 返回新 cart，折扣从现有的 total 看\nconst discounted = applyCoupon(cart, \"SAVE10\");\nexpect(total(discounted)).toBe(110);\n\n// B. 直接返回应付金额\nexpect(applyCoupon(cart, \"SAVE10\")).toBe(110);\n\n// C. 返回明细\nexpect(applyCoupon(cart, \"SAVE10\")).toEqual({ total: 110, discount: 10, code: \"SAVE10\" });\n```\n\n我推荐 **A**：现有的 `add` 就是「收一个 cart、返一个新 cart」，A 跟它一致（immutable value object）；而且折扣从 `total` 这个已有接缝观察，不用为测试新开一个观察点。代价是折扣信息藏在 cart 里，将来要在页面上显示「已省 10 元」得再加接口。\n\n选哪个？"
+              },
+              {
+                "name": "seams-confirmed-before-tests",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说两件查到的事实：\n\n1. 工作目录 `C:\\...\\home\\cwd` 是空的 —— `src/cart/` 下没有任何文件，`pricing.ts`、`couponRepo.ts` 也不在盘上（我用 Glob 扫了全目录）。所以这轮我得连模块一起建，不是往现成代码里加。\n2. Bash 不可用，`vitest` 跑不了。按 TDD 第 3 步的要求，红和绿我只能靠推理，不能实跑 —— 每一片我都会标「未验证」，你方便时再跑。\n\n## 我打算定的接缝\n\n测试只穿 `src/cart/index.ts` 的公共接口，`pricing.ts` 和 `couponRepo.ts` 是内部，不直接测也不 mock（Test through the public interface）。时间是系统边界，过期那条允许用 `vi.setSystemTime` 控制（Mock only at system boundaries）。\n\n| # | 接缝 | 一句话规格 |\n|---|---|---|\n| 1 | `applyCoupon` + `total` | 满 100 用 `SAVE10`，少付 10 |\n| 2 | `applyCoupon` + `total` | 不满 100，`SAVE10` 不减钱 |\n| 3 | `applyCoupon` | 过期的券报错 |\n\n## 先问一题：`applyCoupon` 返回什么\n\n这决定了每条测试的期望值怎么写。三种写法，同一个 120 元的购物车：\n\n```ts\n// A. 返回新 cart，折扣从现有的 total 看\nconst discounted = applyCoupon(cart, \"SAVE10\");\nexpect(total(discounted)).toBe(110);\n\n// B. 直接返回应付金额\nexpect(applyCoupon(cart, \"SAVE10\")).toBe(110);\n\n// C. 返回明细\nexpect(applyCoupon(cart, \"SAVE10\")).toEqual({ total: 110, discount: 10, code: \"SAVE10\" });\n```\n\n我推荐 **A**：现有的 `add` 就是「收一个 cart、返一个新 cart」，A 跟它一致（immutable value object）；而且折扣从 `total` 这个已有接缝观察，不用为测试新开一个观察点。代价是折扣信息藏在 cart 里，将来要在页面上显示「已省 10 元」得再加接口。\n\n选哪个？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 5,
+            "costUsd": 0.201653,
+            "judgeCostUsd": 0.014358000000000013,
+            "durationSeconds": 53,
+            "startedAt": "2026-09-19T06:32:06.903Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-TeH6BY\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "public-seams-only",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先报两个查到的事实：\n\n- 工作目录 `...\\TeH6BY\\home\\cwd` 是空的 —— 我扫了全目录，`src/cart/`、`package.json`、vitest 配置一个都没有。所以你贴的 `index.ts` 我会照原样落盘，`pricing.ts`、`couponRepo.ts` 也得我新建。\n- Bash 不能用，所以红和绿我只能写出来、跑不了。按规矩这两步我会标「未验证」，不会说\"测试通过了\"。\n\n## 接缝清单（待你确认）\n\n**唯一接缝**：`src/cart/index.ts` 的公共导出。测试只 `import { createCart, add, total, applyCoupon } from '../src/cart'`，不 import `pricing.ts` 和 `couponRepo.ts`，也不 mock 它们 —— 它们是内部协作者，mock 了测试就跟实现绑死，以后挪一下代码测试就红（testing through the public interface）。\n\n**唯一允许造假的地方**：时钟。\"过期\"要能在测试里控制，时间是系统边界，按 mocking 的边界规矩可以在这儿注入或 fake。\n\n**期望值来源**：手算好的字面值（120→110、99→99），不照着 `pricing.ts` 的算式重算一遍，否则就是同义反复。\n\n**竖切顺序**，一轮一个测试 + 一个最小实现（vertical slice）：\n\n1. 满 100：购物车 120 → 110\n2. 不满 100：99 → 99，不减也不报错\n3. 券码不存在 → 报错\n4. 券过期 → 报错\n\n一个我先替你假设掉的小事：「满 100」含等于，正好 100 也减 10。要是不对你说一声。\n\n## 一个问题\n\n先看两种写法长什么样：\n\n```ts\n// A 返回折后金额\nconst cart = add(createCart(), 'book', 120);\nexpect(applyCoupon(cart, 'SAVE10')).toBe(110);\n\n// B 返回带券的新 Cart，折扣由 total 体现\nconst cart = applyCoupon(add(createCart(), 'book', 120), 'SAVE10');\nexpect(total(cart)).toBe(110);\n```\n\n我推荐 B：跟现有的 `add` 一样\"收一个 Cart、吐一个新 Cart\"，可以接着往下串，而且 `total` 仍然是全模块唯一算总价的出口，不会出现两个地方各算一套。代价是 `Cart` 类型要多一个字段。\n\n**`applyCoupon` 选 A 还是 B？**"
+              },
+              {
+                "name": "seams-confirmed-before-tests",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先报两个查到的事实：\n\n- 工作目录 `...\\TeH6BY\\home\\cwd` 是空的 —— 我扫了全目录，`src/cart/`、`package.json`、vitest 配置一个都没有。所以你贴的 `index.ts` 我会照原样落盘，`pricing.ts`、`couponRepo.ts` 也得我新建。\n- Bash 不能用，所以红和绿我只能写出来、跑不了。按规矩这两步我会标「未验证」，不会说\"测试通过了\"。\n\n## 接缝清单（待你确认）\n\n**唯一接缝**：`src/cart/index.ts` 的公共导出。测试只 `import { createCart, add, total, applyCoupon } from '../src/cart'`，不 import `pricing.ts` 和 `couponRepo.ts`，也不 mock 它们 —— 它们是内部协作者，mock 了测试就跟实现绑死，以后挪一下代码测试就红（testing through the public interface）。\n\n**唯一允许造假的地方**：时钟。\"过期\"要能在测试里控制，时间是系统边界，按 mocking 的边界规矩可以在这儿注入或 fake。\n\n**期望值来源**：手算好的字面值（120→110、99→99），不照着 `pricing.ts` 的算式重算一遍，否则就是同义反复。\n\n**竖切顺序**，一轮一个测试 + 一个最小实现（vertical slice）：\n\n1. 满 100：购物车 120 → 110\n2. 不满 100：99 → 99，不减也不报错\n3. 券码不存在 → 报错\n4. 券过期 → 报错\n\n一个我先替你假设掉的小事：「满 100」含等于，正好 100 也减 10。要是不对你说一声。\n\n## 一个问题\n\n先看两种写法长什么样：\n\n```ts\n// A 返回折后金额\nconst cart = add(createCart(), 'book', 120);\nexpect(applyCoupon(cart, 'SAVE10')).toBe(110);\n\n// B 返回带券的新 Cart，折扣由 total 体现\nconst cart = applyCoupon(add(createCart(), 'book', 120), 'SAVE10');\nexpect(total(cart)).toBe(110);\n```\n\n我推荐 B：跟现有的 `add` 一样\"收一个 Cart、吐一个新 Cart\"，可以接着往下串，而且 `total` 仍然是全模块唯一算总价的出口，不会出现两个地方各算一套。代价是 `Cart` 类型要多一个字段。\n\n**`applyCoupon` 选 A 还是 B？**"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 11,
+            "costUsd": 0.5289514999999999,
+            "judgeCostUsd": 0.013890000000000007,
+            "durationSeconds": 137,
+            "startedAt": "2026-09-19T06:32:12.272Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-chKPy2\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "public-seams-only",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "写好的文件：\n\n- `src/cart/applyCoupon.test.ts` — 11 个用例（先写的）\n- `src/cart/couponRepo.ts` — 内存 map，`findCoupon` / `isExpired`\n- `src/cart/pricing.ts` — `subtotal` / `discountFor`\n- `src/cart/index.ts` — 加 `applyCoupon`、两个错误类，`total` 扣减\n- `package.json` / `tsconfig.json` — 目录本来是空的，没有它们跑不起来\n\n**没有运行任何东西**（你说 Bash 先别跑），所以“测试通过”这件事我没有观察到，只是按实现推断应该通过。你能跑的时候 `npm i && npm test`。\n\n我自己拍板的几处，都写进测试当文档了：\n\n- **满 100 含等于**：小计正好 100 也减。中文“满 100”通常含等于。\n- **时间注入**：`applyCoupon(cart, code, now = new Date())`，第三个参数默认取系统时间。这是 dependency injection，为的是过期用例不依赖真实时钟、不用 `vi.useFakeTimers()`，测试确定性更好。\n- **有效期边界含等于**：`expiresAt` 是最后一个有效时刻，晚于它才算过期。\n- **未知券码**也抛错（`UnknownCouponError`），和过期（`CouponExpiredError`）分开，调用方能区分处理。\n- **`Math.min(amount, sub)`** 兜底，总价不会变负数。\n\n有一个地方我按“贴券模型”做了，但它和另一种设计差别挺大，想跟你确认。现在的行为是这样：\n\n```ts\nconst c = applyCoupon(cartWorth(50), 'SAVE10');  // 小计 50，没到门槛\ntotal(c);                       // 50，不报错，券贴着但不生效\ntotal(add(c, 'SKU-2', 60));     // 100 —— 加了货跨过 110，券自动生效\n```\n\n也就是 `applyCoupon` 返回带券的新 `Cart`（和 `add` 一样的风格），折扣在 `total` 里实时算，**没到门槛不报错**。另一种做法是 `applyCoupon` 直接返回折后数字，并在小计不足 100 时当场抛 `CouponNotApplicableError`。\n\n你要哪种 —— 券贴在购物车上实时算，还是当场算完并对未达门槛报错？"
+              },
+              {
+                "name": "seams-confirmed-before-tests",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "写好的文件：\n\n- `src/cart/applyCoupon.test.ts` — 11 个用例（先写的）\n- `src/cart/couponRepo.ts` — 内存 map，`findCoupon` / `isExpired`\n- `src/cart/pricing.ts` — `subtotal` / `discountFor`\n- `src/cart/index.ts` — 加 `applyCoupon`、两个错误类，`total` 扣减\n- `package.json` / `tsconfig.json` — 目录本来是空的，没有它们跑不起来\n\n**没有运行任何东西**（你说 Bash 先别跑），所以“测试通过”这件事我没有观察到，只是按实现推断应该通过。你能跑的时候 `npm i && npm test`。\n\n我自己拍板的几处，都写进测试当文档了：\n\n- **满 100 含等于**：小计正好 100 也减。中文“满 100”通常含等于。\n- **时间注入**：`applyCoupon(cart, code, now = new Date())`，第三个参数默认取系统时间。这是 dependency injection，为的是过期用例不依赖真实时钟、不用 `vi.useFakeTimers()`，测试确定性更好。\n- **有效期边界含等于**：`expiresAt` 是最后一个有效时刻，晚于它才算过期。\n- **未知券码**也抛错（`UnknownCouponError`），和过期（`CouponExpiredError`）分开，调用方能区分处理。\n- **`Math.min(amount, sub)`** 兜底，总价不会变负数。\n\n有一个地方我按“贴券模型”做了，但它和另一种设计差别挺大，想跟你确认。现在的行为是这样：\n\n```ts\nconst c = applyCoupon(cartWorth(50), 'SAVE10');  // 小计 50，没到门槛\ntotal(c);                       // 50，不报错，券贴着但不生效\ntotal(add(c, 'SKU-2', 60));     // 100 —— 加了货跨过 110，券自动生效\n```\n\n也就是 `applyCoupon` 返回带券的新 `Cart`（和 `add` 一样的风格），折扣在 `total` 里实时算，**没到门槛不报错**。另一种做法是 `applyCoupon` 直接返回折后数字，并在小计不足 100 时当场抛 `CouponNotApplicableError`。\n\n你要哪种 —— 券贴在购物车上实时算，还是当场算完并对未达门槛报错？"
+              }
+            ]
+          },
+          {
+            "score": 0.3333333333333333,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.1899595,
+            "judgeCostUsd": 0.013092000000000006,
+            "durationSeconds": 168,
+            "startedAt": "2026-09-19T06:32:59.543Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-CHOswX\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "public-seams-only",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说两件我查到的事：\n\n**1. 没有 `tdd` 这个 skill。** 当前可调用的只有 `dataviz` / `code-review` / `simplify` / `run` / `init` 等那批，里面没有 tdd。我不猜名字硬调，直接按标准 TDD 流程走就行 —— red-green-refactor（先写失败测试 → 最小实现转绿 → 重构），不需要额外工具。\n\n**2. 工作目录是空的。** `C:\\...\\claude-eval-CHOswX\\home\\cwd` 下我只 Glob 到 `.git` 和 `.gitconfig`，没有 `src/cart/`、没有 `package.json`、没有 vitest 配置。你说的 `pricing.ts`、`couponRepo.ts` 也不在盘上，你贴的那段 `index.ts` 同理。\n\n这是事实，不是推断 —— 我没法确认你心里那份代码库长什么样，尤其是 `couponRepo` 的读券接口签名（它返回什么？有没有 `expiresAt`？）。\n\n按 TDD，我打算落的第一个红测试是这个形状（vitest + AAA 三段式 arrange-act-assert）：\n\n```ts\n// src/cart/coupon.test.ts\nimport { describe, it, expect } from 'vitest';\nimport { createCart, add, total } from './index';\nimport { applyCoupon } from './coupon';\n\ndescribe('applyCoupon', () => {\n  it('SAVE10: 满 100 减 10', () => {\n    const cart = add(createCart(), 'A', 100);\n    const result = applyCoupon(cart, 'SAVE10');\n    expect(total(result)).toBe(90);\n  });\n});\n```\n\n这里我已经替你定了两个假设：`applyCoupon` 返回一个新 `Cart`（跟 `add` 一样保持不可变），\"满 100\" 取 `>= 100`。实现时我会把这两条写进注释。过期券的分支我按字面取\"抛 Error\"。\n\n现在问一题：**这个空 repo 就是你要我动的地方（那我连 `package.json`、vitest 配置、`pricing.ts`、`couponRepo.ts` 一起从零建），还是 `src/cart/` 其实在别的路径、我该切过去？**"
+              },
+              {
+                "name": "seams-confirmed-before-tests",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说两件我查到的事：\n\n**1. 没有 `tdd` 这个 skill。** 当前可调用的只有 `dataviz` / `code-review` / `simplify` / `run` / `init` 等那批，里面没有 tdd。我不猜名字硬调，直接按标准 TDD 流程走就行 —— red-green-refactor（先写失败测试 → 最小实现转绿 → 重构），不需要额外工具。\n\n**2. 工作目录是空的。** `C:\\...\\claude-eval-CHOswX\\home\\cwd` 下我只 Glob 到 `.git` 和 `.gitconfig`，没有 `src/cart/`、没有 `package.json`、没有 vitest 配置。你说的 `pricing.ts`、`couponRepo.ts` 也不在盘上，你贴的那段 `index.ts` 同理。\n\n这是事实，不是推断 —— 我没法确认你心里那份代码库长什么样，尤其是 `couponRepo` 的读券接口签名（它返回什么？有没有 `expiresAt`？）。\n\n按 TDD，我打算落的第一个红测试是这个形状（vitest + AAA 三段式 arrange-act-assert）：\n\n```ts\n// src/cart/coupon.test.ts\nimport { describe, it, expect } from 'vitest';\nimport { createCart, add, total } from './index';\nimport { applyCoupon } from './coupon';\n\ndescribe('applyCoupon', () => {\n  it('SAVE10: 满 100 减 10', () => {\n    const cart = add(createCart(), 'A', 100);\n    const result = applyCoupon(cart, 'SAVE10');\n    expect(total(result)).toBe(90);\n  });\n});\n```\n\n这里我已经替你定了两个假设：`applyCoupon` 返回一个新 `Cart`（跟 `add` 一样保持不可变），\"满 100\" 取 `>= 100`。实现时我会把这两条写进注释。过期券的分支我按字面取\"抛 Error\"。\n\n现在问一题：**这个空 repo 就是你要我动的地方（那我连 `package.json`、vitest 配置、`pricing.ts`、`couponRepo.ts` 一起从零建），还是 `src/cart/` 其实在别的路径、我该切过去？**"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 11,
+            "costUsd": 0.5149144999999999,
+            "judgeCostUsd": 0.0040140000000000176,
+            "durationSeconds": 143,
+            "startedAt": "2026-09-19T06:34:29.489Z",
+            "error": "exit 1: Reached maximum number of turns (10)",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Ej8ZjY\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "public-seams-only",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "现在写实现（green 阶段）:"
+              },
+              {
+                "name": "seams-confirmed-before-tests",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "现在写实现（green 阶段）:"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 0.1111111111111111,
+        "passRateWithout": 0,
+        "delta": 0.8888888888888888
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 1,
+    "casesPassed": 1,
+    "overallScore": 1,
+    "overallPassRate": 1,
+    "meanDelta": 0.8888888888888888
+  }
+}

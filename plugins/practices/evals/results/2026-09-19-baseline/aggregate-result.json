@@ -1,0 +1,1412 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T06:13:07.426Z",
+  "durationSeconds": 427,
+  "costUsd": 5.575445500000001,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as118-practices\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "threshold": 1,
+    "concurrency": 4,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.0",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as118-practices\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "code-review-missing-fixed-point",
+      "dir": "evals\\code-review-missing-fixed-point",
+      "source": "prose",
+      "promptMarkdown": "按 `code-review` 给我审一下现在这个分支。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "asks-fixed-point",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge what the agent did with a review request that has no fixed point and no diff.\n\nPASS if the agent asks the user for the fixed point to diff against (a commit, branch, tag, or merge-base such as main), one question, optionally noting that it also needs the diff or repository access since git is unavailable here, and produces no findings.\n\nFAIL if the agent fabricates a review or any findings, or asks a batch of unrelated questions instead of the fixed point.",
+          "config": {
+            "criteria": "Judge what the agent did with a review request that has no fixed point and no diff.\n\nPASS if the agent asks the user for the fixed point to diff against (a commit, branch, tag, or merge-base such as main), one question, optionally noting that it also needs the diff or repository access since git is unavailable here, and produces no findings.\n\nFAIL if the agent fabricates a review or any findings, or asks a batch of unrelated questions instead of the fixed point.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.20096400000000003,
+            "judgeCostUsd": 0.005117999999999999,
+            "durationSeconds": 45,
+            "startedAt": "2026-09-19T06:13:07.484Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-VsG2q1\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "asks-fixed-point",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "没法审 —— **当前分支上没有任何可审的代码**。查到的事实：\n\n- 工作目录 `…\\home\\cwd` 是空的：`**/*`、`.*`、`.git/**` 三次匹配都为 0 个文件。\n- git 状态里 `Recent commits:` 为空，说明这个仓库还没有任何 commit。\n- 唯一的变更是 `?? ../.gitconfig`，在 cwd 之外的上级目录，不属于本仓库的待审内容。\n\n所以 `code-review` 依赖的 `git diff` / diff-vs-base 没有输入。\n\n另外两点先说明（不用你回答）：\n\n1. 技能重名：列表里有 `code-review`（真正的审查技能）和 `practices:code-review`（描述是\"占位\"，即空壳）。你打的是前者，我按前者走。\n2. 这个会话里我**没有 Bash 工具**（可用的只有 Read / Edit / Write / Glob / Grep / Agent / Skill）。`code-review` 正常流程要跑 `git diff`、`git merge-base` 这些命令，缺了 Bash 就算有代码也走不完整流程 —— 我只能退而用 Read/Grep 逐文件读，这是推断，不是已验证的结果。业界叫法上，这属于 diff-based review 退化成 whole-file review，覆盖面和信噪比都会差一截。\n\n举个具体例子：如果你实际想审的是别处的仓库，比如 `C:\\Users\\<user>\\projects\\foo`，那我需要在那个目录下开会话、并且开 Bash 权限才能正常跑。\n\n**想审的代码在哪个路径？**"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 6,
+            "costUsd": 0.352799,
+            "judgeCostUsd": 0.005856,
+            "durationSeconds": 59,
+            "startedAt": "2026-09-19T06:13:07.485Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Ancd3p\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "asks-fixed-point",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "审不了，没东西可审。这是我自己核实过的事实，不是推断：\n\n**仓库是空的**\n- 工作目录 `...\\home\\cwd` 递归 glob 无任何文件。\n- `.git` 下只有 `HEAD`、`config`、`commondir` 三个文件，没有 objects、没有 packfiles、没有 `refs/heads/main`。`HEAD` 指向 `ref: refs/heads/main`，但那个 ref 不存在 —— 也就是零提交，和会话开头 git status 里 \"Recent commits\" 为空一致。\n- 整棵树唯一的未跟踪文件是 `...\\home\\.gitconfig`，在工作目录之外，也不是源码。\n\n所以 range diff（`main...HEAD`）和工作区 diff 都是空的。\n\n**另外两个环境限制**（会影响后续怎么跑）\n- 本次会话 Bash 被禁用，`git diff` / `git log` / `git show` / `git blame` 全都调不了，我也确认过没有等价的延迟加载工具。\n- skill 规定的 `ReportFindings` 上报工具在本会话不存在，即使有 diff，findings 也只能以 `file:line — 摘要` 的形式内联写给你。\n\n按业界实践，code review 的输入必须是一个明确的变更集（changeset），要么是分支相对 base 的 diff，要么是 PR —— 没有 base、没有提交就无从谈起，这是 review 的前提条件而不是我可以绕过的步骤。\n\n一个具体例子：如果你实际要审的是别处的一个仓库，比如 `C:\\work\\myrepo` 上的 `feature/login` 分支，我可以用 `/code-review C:\\work\\myrepo` 这样的路径参数直接读那边的文件来审；或者你在有 Bash 的环境里跑 `git diff main...feature/login > C:\\tmp\\review.diff`，我读这个文件也能审。\n\n那么：你想审的代码到底在哪个路径（或哪个 PR 号）？"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    },
+    {
+      "name": "code-review-two-axes",
+      "dir": "evals\\code-review-two-axes",
+      "source": "prose",
+      "promptMarkdown": "按 `code-review` 审这条分支，固定点是 `main`。git 不可用，下面是 `git log main..HEAD --oneline`、`git diff main...HEAD` 的完整输出、spec（issue #42 正文）和仓的 `CONTRIBUTING.md` 节选。\n\n`git log main..HEAD --oneline`：\n\n```\nb3e1f2a notes export：打包 .md 到 zip（#42）\n```\n\n`CONTRIBUTING.md` 节选：\n\n```\n## 代码标准\n- 注释用中文。\n- 导出的函数必须有 JSDoc。\n- 错误一律抛 `AppError` 的子类，不抛裸 `Error`。\n```\n\nissue #42 正文：\n\n```\n## 要做的\n`notes export` 子命令：把笔记目录下所有 `.md` 打包成一个 zip 到指定路径。\n1. 支持 `--out <path>`，缺省 `./notes.zip`。\n2. 跳过 `.trash/` 目录。\n3. 完成后打印打包的文件数与 zip 的大小。\n```\n\n`git diff main...HEAD`：\n\n```diff\ndiff --git a/src/commands/export.ts b/src/commands/export.ts\nnew file mode 100644\n--- /dev/null\n+++ b/src/commands/export.ts\n@@ -0,0 +1,44 @@\n+import { readdirSync, statSync, existsSync } from \"node:fs\";\n+import { join } from \"node:path\";\n+import { zip } from \"../lib/zip\";\n+import { notesDir } from \"../config\";\n+\n+export async function exportNotes(opts: { out?: string; gzipLevel?: number }) {\n+  const out = opts.out ?? \"./notes.zip\";\n+  if (existsSync(out)) {\n+    throw new Error(\"out path exists: \" + out);\n+  }\n+  // collect files\n+  const md: string[] = [];\n+  for (const name of readdirSync(notesDir)) {\n+    const p = join(notesDir, name);\n+    if (statSync(p).isDirectory()) {\n+      for (const inner of readdirSync(p)) {\n+        if (inner.endsWith(\".md\")) md.push(join(p, inner));\n+      }\n+    } else if (name.endsWith(\".md\")) {\n+      md.push(p);\n+    }\n+  }\n+  const markdown: string[] = [];\n+  for (const name of readdirSync(notesDir)) {\n+    const p = join(notesDir, name);\n+    if (statSync(p).isDirectory()) {\n+      for (const inner of readdirSync(p)) {\n+        if (inner.endsWith(\".markdown\")) markdown.push(join(p, inner));\n+      }\n+    } else if (name.endsWith(\".markdown\")) {\n+      markdown.push(p);\n+    }\n+  }\n+  const files = [...md, ...markdown];\n+  await zip(files, out, { level: opts.gzipLevel ?? 6 });\n+  console.log(`已打包 ${files.length} 个文件`);\n+}\ndiff --git a/src/cli.ts b/src/cli.ts\n--- a/src/cli.ts\n+++ b/src/cli.ts\n@@ -12,6 +12,11 @@ program\n+program\n+  .command(\"export\")\n+  .option(\"--out <path>\", \"输出路径\")\n+  .option(\"--gzip-level <n>\", \"压缩等级 0-9\", Number)\n+  .action((o) => exportNotes(o));\n```",
+      "runsPerCase": 3,
+      "timeoutSeconds": 900,
+      "maxTurns": 15,
+      "graders": [
+        {
+          "name": "axes-separate",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the shape of the review report.\n\nPASS if the report keeps two separate sections, one for Standards (repo conventions) and one for Spec (does the diff do what issue #42 asked), does not merge the two lists or rank findings across axes, and ends with a per-axis summary (count and worst issue within each axis) rather than one overall verdict.\n\nFAIL if standards and spec findings are mixed into a single list, or the report picks a single overall winner or severity across the two axes, or one axis is missing without saying why.",
+          "config": {
+            "criteria": "Judge the shape of the review report.\n\nPASS if the report keeps two separate sections, one for Standards (repo conventions) and one for Spec (does the diff do what issue #42 asked), does not merge the two lists or rank findings across axes, and ends with a per-axis summary (count and worst issue within each axis) rather than one overall verdict.\n\nFAIL if standards and spec findings are mixed into a single list, or the report picks a single overall winner or severity across the two axes, or one axis is missing without saying why.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "code-review",
+            "arm": "with-only"
+          }
+        },
+        {
+          "name": "spec-findings",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the Spec axis content.\n\nPASS if the report identifies, quoting or citing the spec lines, that (a) the .trash/ directory is not skipped (requirement 2 missing), (b) the zip size is not printed (requirement 3 only partially done: count printed, size not), and (c) the gzip-level option is behaviour the spec did not ask for (scope creep).\n\nFAIL if any of the missing or partial requirements or the scope creep is not reported.",
+          "config": {
+            "criteria": "Judge the Spec axis content.\n\nPASS if the report identifies, quoting or citing the spec lines, that (a) the .trash/ directory is not skipped (requirement 2 missing), (b) the zip size is not printed (requirement 3 only partially done: count printed, size not), and (c) the gzip-level option is behaviour the spec did not ask for (scope creep).\n\nFAIL if any of the missing or partial requirements or the scope creep is not reported.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "standards-findings",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the Standards axis content.\n\nPASS if the report cites the documented rules from CONTRIBUTING.md for the English comment (collect files), the bare new Error(...), and the missing JSDoc on the exported exportNotes, marks those as violations of documented standards, and separately names at least one code smell (for example Duplicated Code for the two near-identical directory walks) explicitly as a judgement call, not a hard violation.\n\nFAIL if any of the three documented-standard breaches is missing, or a smell is presented as a hard violation, or no smell is named at all.",
+          "config": {
+            "criteria": "Judge the Standards axis content.\n\nPASS if the report cites the documented rules from CONTRIBUTING.md for the English comment (collect files), the bare new Error(...), and the missing JSDoc on the exported exportNotes, marks those as violations of documented standards, and separately names at least one code smell (for example Duplicated Code for the two near-identical directory walks) explicitly as a judgement call, not a hard violation.\n\nFAIL if any of the three documented-standard breaches is missing, or a smell is presented as a hard violation, or no smell is named at all.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 0.5167784999999999,
+            "judgeCostUsd": 0.06334399999999998,
+            "durationSeconds": 150,
+            "startedAt": "2026-09-19T06:13:07.485Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-kxCuJl\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "axes-separate",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "## 先说过程（事实）\n\n我调了 `code-review` skill，它在 fork 里跑失败了：那个执行环境没有 Bash/shell 工具，仓里也是空的（`.git` 下只有 `config`/`HEAD`/`commondir`，无 commit）。所以 **下面这份审查是我按它的 review recipe、对你粘贴的 diff 正文做的**，不是工具跑出来的。由此带来的限制我逐条标了「无法核实」。\n\n用到的实践：**需求可追溯 (requirements traceability)**，先把 issue 的 3 条逐条对表；再按 **DRY**、**fail-fast 输入校验 (input validation)**、**错误不可静默 (no silent failure)**、**YAGNI** 过一遍。\n\n---\n\n## 阻塞项（必须改）\n\n**1. `.trash/` 没跳过 —— 违反 issue #42 第 2 条**\n两个采集循环都是 `if (statSync(p).isDirectory())` 就无条件进去读，`.trash` 会被当普通子目录，里面的 `.md` 全打进 zip。这是 spec 明文要求里唯一被整条漏掉的。\n改：过滤目录名，`if (name === \".trash\") continue;`（建议连 `.git`、`node_modules` 一起想清楚要不要排，但至少 `.trash` 是硬要求）。\n\n**2. 没打印 zip 大小 —— 违反 issue #42 第 3 条**\n只有 ``console.log(`已打包 ${files.length} 个文件`)``，要求是「文件数**与 zip 的大小**」。\n改：`zip` 之后 `statSync(out).size`，格式化后一起打印。\n\n**3. `src/cli.ts` 没有 import `exportNotes` —— 大概率编译不过**\ndiff 里 `cli.ts` 只有一个 hunk（`@@ -12,6 +12,11 @@`），没有新增 import 的 hunk；而 `export.ts` 是新文件，主干里不可能已有这个符号。所以 `.action((o) => exportNotes(o))` 会 `TS2304: Cannot find name 'exportNotes'`。\n（推断，依据是 diff 的完整性；如果你本地 `tsc` 是过的，那说明 diff 有截断，这条作废。）\n\n**4. 抛了裸 `Error` —— 违反 CONTRIBUTING「错误一律抛 `AppError` 的子类」**\n`throw new Error(\"out path exists: \" + out)`。改成对应的 `AppError` 子类，顺便把消息中文化以跟 CLI 其他输出一致。\n\n---\n\n## 该改（质量/正确性）\n\n**5. 采集 `.markdown` 属于超范围，且是整段复制粘贴 —— YAGNI + DRY**\n第二个循环（`const markdown` 那段）与第一个逐字相同，只差后缀字面量。issue 只说「所有 `.md`」，没要 `.markdown`。两个后果：(a) 多打进不该打的文件，连第 3 条要打印的「文件数」也跟着偏；(b) 目录被 `readdirSync` 遍历了两遍，I/O 翻倍。\n改：删掉 `.markdown` 那一段，只留一次遍历。若产品确实想支持 `.markdown`，那是另开 issue 的事，别夹带。\n\n**6. 导出函数无 JSDoc —— 违反 CONTRIBUTING「导出的函数必须有 JSDoc」**\n`exportNotes` 是 `export async function`，头上没有 JSDoc。\n\n**7. `// collect files` 是英文注释 —— 违反 CONTRIBUTING「注释用中文」**\n\n**8. 只递归一层，更深的 `.md` 会被静默漏掉**\n`notes/a/b/c.md` 这种采不到。spec 说「笔记目录下所有 `.md`」，我倾向理解为递归全量；而且「静默漏文件」的失败模式很难被用户发现（zip 建出来了、数字也打印了，就是少东西）。\n改：递归下去，或用 `fs.globSync`/`readdirSync(dir, { recursive: true })`（Node 20.1+）一把梭。\n\n**9. `--gzip-level` 没校验，且不在 spec 内 —— fail-fast 缺失**\n`--gzip-level abc` 经 `Number` 变成 `NaN`，`NaN ?? 6` 仍是 `NaN`，直接喂给 `zip`，行为取决于底层库，可能报个看不懂的错。`--gzip-level 99` 同理。\n改：要么删掉这个选项（spec 没要），要么在 action 里校验 `Number.isInteger(n) && n >= 0 && n <= 9`，不合法抛 `AppError` 子类。命名上另提一句：zip 用的是 DEFLATE，叫 `gzip-level` 会误导，建议 `--level` 或 `--compress-level`（**最小意外原则 / principle of least astonishment**）。\n\n**10. `--out` 已存在就直接失败，没有 `--force`，且失败路径可能被吞**\n这条跟下面的问题连在一起，见末尾提问。另外 `--out ./dist/notes.zip` 而 `dist/` 不存在时，会由 `zip` 抛底层错误，建议先 `mkdir -p` 或给出明确报错。\n\n---\n\n## 小问题（可选）\n\n**11. `statSync` 换成 `readdirSync(dir, { withFileTypes: true })`**\n少一轮 syscall，而且 `statSync` 跟随符号链接——notes 目录里有一个失效的 symlink，就会 ENOENT 直接炸掉整次导出。同时 `existsSync` + 后续写入是典型 **TOCTOU**，CLI 场景危害不大，但用 `withFileTypes` 顺手就规避了一半。\n\n**12. 无测试**。CONTRIBUTING 节选里没写测试要求，所以不算违规；但「跳过 `.trash/`」「递归层数」这两条正是回归最容易复发的地方，值得补两个用例。\n\n---\n\n## 一个需要你确认的点\n\n`src/cli.ts` 里 `.action((o) => exportNotes(o))` 返回的是 Promise。举个具体例子：用户跑 `notes export --out ./notes.zip`，而 `./notes.zip` 已存在，第 9 行抛错 —— 如果入口用的是 `program.parse()`，Commander 不会 await 这个 Promise，结果是一条 UnhandledPromiseRejection 警告、**退出码仍是 0**，脚本里 `&&` 串起来的后续命令会照跑；如果用的是 `program.parseAsync()` 并 catch 了，才会正常报错退出。\n\n`cli.ts` 第 12 行以下我看不到，无法核实 —— 那里用的是 `parse()` 还是 `parseAsync()`？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 2x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "spec-findings",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  true
+                ],
+                "evidence": "## 先说过程（事实）\n\n我调了 `code-review` skill，它在 fork 里跑失败了：那个执行环境没有 Bash/shell 工具，仓里也是空的（`.git` 下只有 `config`/`HEAD`/`commondir`，无 commit）。所以 **下面这份审查是我按它的 review recipe、对你粘贴的 diff 正文做的**，不是工具跑出来的。由此带来的限制我逐条标了「无法核实」。\n\n用到的实践：**需求可追溯 (requirements traceability)**，先把 issue 的 3 条逐条对表；再按 **DRY**、**fail-fast 输入校验 (input validation)**、**错误不可静默 (no silent failure)**、**YAGNI** 过一遍。\n\n---\n\n## 阻塞项（必须改）\n\n**1. `.trash/` 没跳过 —— 违反 issue #42 第 2 条**\n两个采集循环都是 `if (statSync(p).isDirectory())` 就无条件进去读，`.trash` 会被当普通子目录，里面的 `.md` 全打进 zip。这是 spec 明文要求里唯一被整条漏掉的。\n改：过滤目录名，`if (name === \".trash\") continue;`（建议连 `.git`、`node_modules` 一起想清楚要不要排，但至少 `.trash` 是硬要求）。\n\n**2. 没打印 zip 大小 —— 违反 issue #42 第 3 条**\n只有 ``console.log(`已打包 ${files.length} 个文件`)``，要求是「文件数**与 zip 的大小**」。\n改：`zip` 之后 `statSync(out).size`，格式化后一起打印。\n\n**3. `src/cli.ts` 没有 import `exportNotes` —— 大概率编译不过**\ndiff 里 `cli.ts` 只有一个 hunk（`@@ -12,6 +12,11 @@`），没有新增 import 的 hunk；而 `export.ts` 是新文件，主干里不可能已有这个符号。所以 `.action((o) => exportNotes(o))` 会 `TS2304: Cannot find name 'exportNotes'`。\n（推断，依据是 diff 的完整性；如果你本地 `tsc` 是过的，那说明 diff 有截断，这条作废。）\n\n**4. 抛了裸 `Error` —— 违反 CONTRIBUTING「错误一律抛 `AppError` 的子类」**\n`throw new Error(\"out path exists: \" + out)`。改成对应的 `AppError` 子类，顺便把消息中文化以跟 CLI 其他输出一致。\n\n---\n\n## 该改（质量/正确性）\n\n**5. 采集 `.markdown` 属于超范围，且是整段复制粘贴 —— YAGNI + DRY**\n第二个循环（`const markdown` 那段）与第一个逐字相同，只差后缀字面量。issue 只说「所有 `.md`」，没要 `.markdown`。两个后果：(a) 多打进不该打的文件，连第 3 条要打印的「文件数」也跟着偏；(b) 目录被 `readdirSync` 遍历了两遍，I/O 翻倍。\n改：删掉 `.markdown` 那一段，只留一次遍历。若产品确实想支持 `.markdown`，那是另开 issue 的事，别夹带。\n\n**6. 导出函数无 JSDoc —— 违反 CONTRIBUTING「导出的函数必须有 JSDoc」**\n`exportNotes` 是 `export async function`，头上没有 JSDoc。\n\n**7. `// collect files` 是英文注释 —— 违反 CONTRIBUTING「注释用中文」**\n\n**8. 只递归一层，更深的 `.md` 会被静默漏掉**\n`notes/a/b/c.md` 这种采不到。spec 说「笔记目录下所有 `.md`」，我倾向理解为递归全量；而且「静默漏文件」的失败模式很难被用户发现（zip 建出来了、数字也打印了，就是少东西）。\n改：递归下去，或用 `fs.globSync`/`readdirSync(dir, { recursive: true })`（Node 20.1+）一把梭。\n\n**9. `--gzip-level` 没校验，且不在 spec 内 —— fail-fast 缺失**\n`--gzip-level abc` 经 `Number` 变成 `NaN`，`NaN ?? 6` 仍是 `NaN`，直接喂给 `zip`，行为取决于底层库，可能报个看不懂的错。`--gzip-level 99` 同理。\n改：要么删掉这个选项（spec 没要），要么在 action 里校验 `Number.isInteger(n) && n >= 0 && n <= 9`，不合法抛 `AppError` 子类。命名上另提一句：zip 用的是 DEFLATE，叫 `gzip-level` 会误导，建议 `--level` 或 `--compress-level`（**最小意外原则 / principle of least astonishment**）。\n\n**10. `--out` 已存在就直接失败，没有 `--force`，且失败路径可能被吞**\n这条跟下面的问题连在一起，见末尾提问。另外 `--out ./dist/notes.zip` 而 `dist/` 不存在时，会由 `zip` 抛底层错误，建议先 `mkdir -p` 或给出明确报错。\n\n---\n\n## 小问题（可选）\n\n**11. `statSync` 换成 `readdirSync(dir, { withFileTypes: true })`**\n少一轮 syscall，而且 `statSync` 跟随符号链接——notes 目录里有一个失效的 symlink，就会 ENOENT 直接炸掉整次导出。同时 `existsSync` + 后续写入是典型 **TOCTOU**，CLI 场景危害不大，但用 `withFileTypes` 顺手就规避了一半。\n\n**12. 无测试**。CONTRIBUTING 节选里没写测试要求，所以不算违规；但「跳过 `.trash/`」「递归层数」这两条正是回归最容易复发的地方，值得补两个用例。\n\n---\n\n## 一个需要你确认的点\n\n`src/cli.ts` 里 `.action((o) => exportNotes(o))` 返回的是 Promise。举个具体例子：用户跑 `notes export --out ./notes.zip`，而 `./notes.zip` 已存在，第 9 行抛错 —— 如果入口用的是 `program.parse()`，Commander 不会 await 这个 Promise，结果是一条 UnhandledPromiseRejection 警告、**退出码仍是 0**，脚本里 `&&` 串起来的后续命令会照跑；如果用的是 `program.parseAsync()` 并 catch 了，才会正常报错退出。\n\n`cli.ts` 第 12 行以下我看不到，无法核实 —— 那里用的是 `parse()` 还是 `parseAsync()`？"
+              },
+              {
+                "name": "standards-findings",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "## 先说过程（事实）\n\n我调了 `code-review` skill，它在 fork 里跑失败了：那个执行环境没有 Bash/shell 工具，仓里也是空的（`.git` 下只有 `config`/`HEAD`/`commondir`，无 commit）。所以 **下面这份审查是我按它的 review recipe、对你粘贴的 diff 正文做的**，不是工具跑出来的。由此带来的限制我逐条标了「无法核实」。\n\n用到的实践：**需求可追溯 (requirements traceability)**，先把 issue 的 3 条逐条对表；再按 **DRY**、**fail-fast 输入校验 (input validation)**、**错误不可静默 (no silent failure)**、**YAGNI** 过一遍。\n\n---\n\n## 阻塞项（必须改）\n\n**1. `.trash/` 没跳过 —— 违反 issue #42 第 2 条**\n两个采集循环都是 `if (statSync(p).isDirectory())` 就无条件进去读，`.trash` 会被当普通子目录，里面的 `.md` 全打进 zip。这是 spec 明文要求里唯一被整条漏掉的。\n改：过滤目录名，`if (name === \".trash\") continue;`（建议连 `.git`、`node_modules` 一起想清楚要不要排，但至少 `.trash` 是硬要求）。\n\n**2. 没打印 zip 大小 —— 违反 issue #42 第 3 条**\n只有 ``console.log(`已打包 ${files.length} 个文件`)``，要求是「文件数**与 zip 的大小**」。\n改：`zip` 之后 `statSync(out).size`，格式化后一起打印。\n\n**3. `src/cli.ts` 没有 import `exportNotes` —— 大概率编译不过**\ndiff 里 `cli.ts` 只有一个 hunk（`@@ -12,6 +12,11 @@`），没有新增 import 的 hunk；而 `export.ts` 是新文件，主干里不可能已有这个符号。所以 `.action((o) => exportNotes(o))` 会 `TS2304: Cannot find name 'exportNotes'`。\n（推断，依据是 diff 的完整性；如果你本地 `tsc` 是过的，那说明 diff 有截断，这条作废。）\n\n**4. 抛了裸 `Error` —— 违反 CONTRIBUTING「错误一律抛 `AppError` 的子类」**\n`throw new Error(\"out path exists: \" + out)`。改成对应的 `AppError` 子类，顺便把消息中文化以跟 CLI 其他输出一致。\n\n---\n\n## 该改（质量/正确性）\n\n**5. 采集 `.markdown` 属于超范围，且是整段复制粘贴 —— YAGNI + DRY**\n第二个循环（`const markdown` 那段）与第一个逐字相同，只差后缀字面量。issue 只说「所有 `.md`」，没要 `.markdown`。两个后果：(a) 多打进不该打的文件，连第 3 条要打印的「文件数」也跟着偏；(b) 目录被 `readdirSync` 遍历了两遍，I/O 翻倍。\n改：删掉 `.markdown` 那一段，只留一次遍历。若产品确实想支持 `.markdown`，那是另开 issue 的事，别夹带。\n\n**6. 导出函数无 JSDoc —— 违反 CONTRIBUTING「导出的函数必须有 JSDoc」**\n`exportNotes` 是 `export async function`，头上没有 JSDoc。\n\n**7. `// collect files` 是英文注释 —— 违反 CONTRIBUTING「注释用中文」**\n\n**8. 只递归一层，更深的 `.md` 会被静默漏掉**\n`notes/a/b/c.md` 这种采不到。spec 说「笔记目录下所有 `.md`」，我倾向理解为递归全量；而且「静默漏文件」的失败模式很难被用户发现（zip 建出来了、数字也打印了，就是少东西）。\n改：递归下去，或用 `fs.globSync`/`readdirSync(dir, { recursive: true })`（Node 20.1+）一把梭。\n\n**9. `--gzip-level` 没校验，且不在 spec 内 —— fail-fast 缺失**\n`--gzip-level abc` 经 `Number` 变成 `NaN`，`NaN ?? 6` 仍是 `NaN`，直接喂给 `zip`，行为取决于底层库，可能报个看不懂的错。`--gzip-level 99` 同理。\n改：要么删掉这个选项（spec 没要），要么在 action 里校验 `Number.isInteger(n) && n >= 0 && n <= 9`，不合法抛 `AppError` 子类。命名上另提一句：zip 用的是 DEFLATE，叫 `gzip-level` 会误导，建议 `--level` 或 `--compress-level`（**最小意外原则 / principle of least astonishment**）。\n\n**10. `--out` 已存在就直接失败，没有 `--force`，且失败路径可能被吞**\n这条跟下面的问题连在一起，见末尾提问。另外 `--out ./dist/notes.zip` 而 `dist/` 不存在时，会由 `zip` 抛底层错误，建议先 `mkdir -p` 或给出明确报错。\n\n---\n\n## 小问题（可选）\n\n**11. `statSync` 换成 `readdirSync(dir, { withFileTypes: true })`**\n少一轮 syscall，而且 `statSync` 跟随符号链接——notes 目录里有一个失效的 symlink，就会 ENOENT 直接炸掉整次导出。同时 `existsSync` + 后续写入是典型 **TOCTOU**，CLI 场景危害不大，但用 `withFileTypes` 顺手就规避了一半。\n\n**12. 无测试**。CONTRIBUTING 节选里没写测试要求，所以不算违规；但「跳过 `.trash/`」「递归层数」这两条正是回归最容易复发的地方，值得补两个用例。\n\n---\n\n## 一个需要你确认的点\n\n`src/cli.ts` 里 `.action((o) => exportNotes(o))` 返回的是 Promise。举个具体例子：用户跑 `notes export --out ./notes.zip`，而 `./notes.zip` 已存在，第 9 行抛错 —— 如果入口用的是 `program.parse()`，Commander 不会 await 这个 Promise，结果是一条 UnhandledPromiseRejection 警告、**退出码仍是 0**，脚本里 `&&` 串起来的后续命令会照跑；如果用的是 `program.parseAsync()` 并 catch 了，才会正常报错退出。\n\n`cli.ts` 第 12 行以下我看不到，无法核实 —— 那里用的是 `parse()` 还是 `parseAsync()`？"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0.3333333333333333,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 0.5620615,
+            "judgeCostUsd": 0.037932,
+            "durationSeconds": 126,
+            "startedAt": "2026-09-19T06:13:07.485Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-JPizcT\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "axes-separate",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`code-review` 技能在沙箱里跑，那边的仓库是空的（无 commit、无 objects），所以它返回了「无可审」。我按你贴的 diff、spec 和 CONTRIBUTING 原文人工过了一遍，下面是结果。\n\n## 阻断（spec 没实现 / 会编译不过）\n\n**1. `.trash/` 没跳过 —— spec 第 2 条完全没实现**\n\n```ts\nif (statSync(p).isDirectory()) {\n  for (const inner of readdirSync(p)) {\n```\n\n目录分支对所有目录一视同仁，`.trash/` 会被正常递归进去，里面的 `.md` 全部打进 zip。这是 spec 明确要求的行为，属于功能缺失，不是细节。\n\n**2. 没打印 zip 大小 —— spec 第 3 条只做了一半**\n\n```ts\nconsole.log(`已打包 ${files.length} 个文件`);\n```\n\nspec 要求「文件数**与 zip 的大小**」。打完包 `statSync(out).size` 取一下即可。\n\n**3. `cli.ts` 里看不到 `exportNotes` 的 import**\n\ndiff 对 `cli.ts` 只有一个 hunk（`program.command(\"export\")...`），没有任何 import 行的增改。如果 `exportNotes` 确实没导入，这个文件根本编译不过。也可能是你截 diff 时漏了，请确认一下。\n\n## 必修（违反 CONTRIBUTING）\n\n**4. 抛了裸 `Error`**\n\n```ts\nthrow new Error(\"out path exists: \" + out);\n```\n\nCONTRIBUTING 写死「错误一律抛 `AppError` 的子类，不抛裸 `Error`」。应改成对应的子类（比如 `OutputExistsError extends AppError`）。\n\n**5. 导出函数缺 JSDoc**\n\n`export async function exportNotes(...)` 上面没有 JSDoc，CONTRIBUTING 要求导出的函数必须有。\n\n**6. 注释是英文**\n\n`// collect files` —— CONTRIBUTING 要求注释用中文。\n\n## 正确性问题\n\n**7. 目录只递归一层**\n\n代码是「顶层文件 + 顶层目录里的文件」两层就停了。`notes/2026/09/foo.md` 这种会被漏掉。spec 说的是「笔记目录下所有 `.md`」，按常规理解应该是递归到底（`readdirSync(dir, { recursive: true })` 或 `withFileTypes` 手写递归）。这条是我的推断 —— 如果你们的笔记目录约定就是最多两层，那可以不改。\n\n**8. `--gzip-level` 没做输入校验**\n\n```ts\n.option(\"--gzip-level <n>\", \"压缩等级 0-9\", Number)\n```\n\n`--gzip-level abc` → `NaN`，`--gzip-level 99` → `99`，两者都会原样传给 `zip()`。CLI 入参应该在边界上挡掉（fail-fast input validation），而不是让底层库去处理或静默出错。另外名字也别扭：产物是 zip，选项叫 `gzip-level`，建议 `--level`。\n\n**9. action 返回的 Promise 可能没被 await**\n\n```ts\n.action((o) => exportNotes(o));\n```\n\ncommander 只有在用 `program.parseAsync()` 时才会等这个 Promise。diff 里看不到 `cli.ts` 底部用的是 `parse` 还是 `parseAsync` —— 如果是 `parse`，`exportNotes` 抛错会变成 unhandled rejection，退出码和错误输出都不受控。请确认一下。\n\n**10. `existsSync(out)` 到实际写入之间有窗口**\n\n典型的 TOCTOU（time-of-check to time-of-use）。CLI 工具里危害很低，我列出来但不建议为它加复杂度 —— 除非 `zip()` 本身是覆盖写，那至少应该让 `zip` 用 `wx` flag 打开。\n\n## 重复代码\n\n**11. 两个 collect 循环一模一样，只差后缀**\n\n40 行的文件里有 16 行是复制粘贴的。一次遍历 + `if (inner.endsWith(\".md\") || inner.endsWith(\".markdown\"))` 就够了（DRY）。目前这样写还有个副作用：`files = [...md, ...markdown]` 导致 zip 里的顺序是「所有 md 在前，所有 markdown 在后」，而不是目录顺序 —— 如果 zip 内容要可复现（reproducible build），这点顺序依赖值得注意。\n\n---\n\n关于范围：spec 从头到尾只说 `.md`，但这次实现多做了 `.markdown` 收集和 `--gzip-level` 选项两件 spec 没要求的事，而 spec 明确要求的 `.trash/` 跳过和 zip 大小输出反而没做。我倾向于把多做的两项摘出去单独提 issue，让这条分支严格对齐 #42（spec conformance）。\n\n想先确认一件事：`.markdown` 这个后缀，是你们笔记里真实存在、只是 issue #42 漏写了，还是实现时顺手加的？这决定我是建议把它删掉，还是建议反过来去补 issue 正文。"
+              },
+              {
+                "name": "spec-findings",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "`code-review` 技能在沙箱里跑，那边的仓库是空的（无 commit、无 objects），所以它返回了「无可审」。我按你贴的 diff、spec 和 CONTRIBUTING 原文人工过了一遍，下面是结果。\n\n## 阻断（spec 没实现 / 会编译不过）\n\n**1. `.trash/` 没跳过 —— spec 第 2 条完全没实现**\n\n```ts\nif (statSync(p).isDirectory()) {\n  for (const inner of readdirSync(p)) {\n```\n\n目录分支对所有目录一视同仁，`.trash/` 会被正常递归进去，里面的 `.md` 全部打进 zip。这是 spec 明确要求的行为，属于功能缺失，不是细节。\n\n**2. 没打印 zip 大小 —— spec 第 3 条只做了一半**\n\n```ts\nconsole.log(`已打包 ${files.length} 个文件`);\n```\n\nspec 要求「文件数**与 zip 的大小**」。打完包 `statSync(out).size` 取一下即可。\n\n**3. `cli.ts` 里看不到 `exportNotes` 的 import**\n\ndiff 对 `cli.ts` 只有一个 hunk（`program.command(\"export\")...`），没有任何 import 行的增改。如果 `exportNotes` 确实没导入，这个文件根本编译不过。也可能是你截 diff 时漏了，请确认一下。\n\n## 必修（违反 CONTRIBUTING）\n\n**4. 抛了裸 `Error`**\n\n```ts\nthrow new Error(\"out path exists: \" + out);\n```\n\nCONTRIBUTING 写死「错误一律抛 `AppError` 的子类，不抛裸 `Error`」。应改成对应的子类（比如 `OutputExistsError extends AppError`）。\n\n**5. 导出函数缺 JSDoc**\n\n`export async function exportNotes(...)` 上面没有 JSDoc，CONTRIBUTING 要求导出的函数必须有。\n\n**6. 注释是英文**\n\n`// collect files` —— CONTRIBUTING 要求注释用中文。\n\n## 正确性问题\n\n**7. 目录只递归一层**\n\n代码是「顶层文件 + 顶层目录里的文件」两层就停了。`notes/2026/09/foo.md` 这种会被漏掉。spec 说的是「笔记目录下所有 `.md`」，按常规理解应该是递归到底（`readdirSync(dir, { recursive: true })` 或 `withFileTypes` 手写递归）。这条是我的推断 —— 如果你们的笔记目录约定就是最多两层，那可以不改。\n\n**8. `--gzip-level` 没做输入校验**\n\n```ts\n.option(\"--gzip-level <n>\", \"压缩等级 0-9\", Number)\n```\n\n`--gzip-level abc` → `NaN`，`--gzip-level 99` → `99`，两者都会原样传给 `zip()`。CLI 入参应该在边界上挡掉（fail-fast input validation），而不是让底层库去处理或静默出错。另外名字也别扭：产物是 zip，选项叫 `gzip-level`，建议 `--level`。\n\n**9. action 返回的 Promise 可能没被 await**\n\n```ts\n.action((o) => exportNotes(o));\n```\n\ncommander 只有在用 `program.parseAsync()` 时才会等这个 Promise。diff 里看不到 `cli.ts` 底部用的是 `parse` 还是 `parseAsync` —— 如果是 `parse`，`exportNotes` 抛错会变成 unhandled rejection，退出码和错误输出都不受控。请确认一下。\n\n**10. `existsSync(out)` 到实际写入之间有窗口**\n\n典型的 TOCTOU（time-of-check to time-of-use）。CLI 工具里危害很低，我列出来但不建议为它加复杂度 —— 除非 `zip()` 本身是覆盖写，那至少应该让 `zip` 用 `wx` flag 打开。\n\n## 重复代码\n\n**11. 两个 collect 循环一模一样，只差后缀**\n\n40 行的文件里有 16 行是复制粘贴的。一次遍历 + `if (inner.endsWith(\".md\") || inner.endsWith(\".markdown\"))` 就够了（DRY）。目前这样写还有个副作用：`files = [...md, ...markdown]` 导致 zip 里的顺序是「所有 md 在前，所有 markdown 在后」，而不是目录顺序 —— 如果 zip 内容要可复现（reproducible build），这点顺序依赖值得注意。\n\n---\n\n关于范围：spec 从头到尾只说 `.md`，但这次实现多做了 `.markdown` 收集和 `--gzip-level` 选项两件 spec 没要求的事，而 spec 明确要求的 `.trash/` 跳过和 zip 大小输出反而没做。我倾向于把多做的两项摘出去单独提 issue，让这条分支严格对齐 #42（spec conformance）。\n\n想先确认一件事：`.markdown` 这个后缀，是你们笔记里真实存在、只是 issue #42 漏写了，还是实现时顺手加的？这决定我是建议把它删掉，还是建议反过来去补 issue 正文。"
+              },
+              {
+                "name": "standards-findings",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`code-review` 技能在沙箱里跑，那边的仓库是空的（无 commit、无 objects），所以它返回了「无可审」。我按你贴的 diff、spec 和 CONTRIBUTING 原文人工过了一遍，下面是结果。\n\n## 阻断（spec 没实现 / 会编译不过）\n\n**1. `.trash/` 没跳过 —— spec 第 2 条完全没实现**\n\n```ts\nif (statSync(p).isDirectory()) {\n  for (const inner of readdirSync(p)) {\n```\n\n目录分支对所有目录一视同仁，`.trash/` 会被正常递归进去，里面的 `.md` 全部打进 zip。这是 spec 明确要求的行为，属于功能缺失，不是细节。\n\n**2. 没打印 zip 大小 —— spec 第 3 条只做了一半**\n\n```ts\nconsole.log(`已打包 ${files.length} 个文件`);\n```\n\nspec 要求「文件数**与 zip 的大小**」。打完包 `statSync(out).size` 取一下即可。\n\n**3. `cli.ts` 里看不到 `exportNotes` 的 import**\n\ndiff 对 `cli.ts` 只有一个 hunk（`program.command(\"export\")...`），没有任何 import 行的增改。如果 `exportNotes` 确实没导入，这个文件根本编译不过。也可能是你截 diff 时漏了，请确认一下。\n\n## 必修（违反 CONTRIBUTING）\n\n**4. 抛了裸 `Error`**\n\n```ts\nthrow new Error(\"out path exists: \" + out);\n```\n\nCONTRIBUTING 写死「错误一律抛 `AppError` 的子类，不抛裸 `Error`」。应改成对应的子类（比如 `OutputExistsError extends AppError`）。\n\n**5. 导出函数缺 JSDoc**\n\n`export async function exportNotes(...)` 上面没有 JSDoc，CONTRIBUTING 要求导出的函数必须有。\n\n**6. 注释是英文**\n\n`// collect files` —— CONTRIBUTING 要求注释用中文。\n\n## 正确性问题\n\n**7. 目录只递归一层**\n\n代码是「顶层文件 + 顶层目录里的文件」两层就停了。`notes/2026/09/foo.md` 这种会被漏掉。spec 说的是「笔记目录下所有 `.md`」，按常规理解应该是递归到底（`readdirSync(dir, { recursive: true })` 或 `withFileTypes` 手写递归）。这条是我的推断 —— 如果你们的笔记目录约定就是最多两层，那可以不改。\n\n**8. `--gzip-level` 没做输入校验**\n\n```ts\n.option(\"--gzip-level <n>\", \"压缩等级 0-9\", Number)\n```\n\n`--gzip-level abc` → `NaN`，`--gzip-level 99` → `99`，两者都会原样传给 `zip()`。CLI 入参应该在边界上挡掉（fail-fast input validation），而不是让底层库去处理或静默出错。另外名字也别扭：产物是 zip，选项叫 `gzip-level`，建议 `--level`。\n\n**9. action 返回的 Promise 可能没被 await**\n\n```ts\n.action((o) => exportNotes(o));\n```\n\ncommander 只有在用 `program.parseAsync()` 时才会等这个 Promise。diff 里看不到 `cli.ts` 底部用的是 `parse` 还是 `parseAsync` —— 如果是 `parse`，`exportNotes` 抛错会变成 unhandled rejection，退出码和错误输出都不受控。请确认一下。\n\n**10. `existsSync(out)` 到实际写入之间有窗口**\n\n典型的 TOCTOU（time-of-check to time-of-use）。CLI 工具里危害很低，我列出来但不建议为它加复杂度 —— 除非 `zip()` 本身是覆盖写，那至少应该让 `zip` 用 `wx` flag 打开。\n\n## 重复代码\n\n**11. 两个 collect 循环一模一样，只差后缀**\n\n40 行的文件里有 16 行是复制粘贴的。一次遍历 + `if (inner.endsWith(\".md\") || inner.endsWith(\".markdown\"))` 就够了（DRY）。目前这样写还有个副作用：`files = [...md, ...markdown]` 导致 zip 里的顺序是「所有 md 在前，所有 markdown 在后」，而不是目录顺序 —— 如果 zip 内容要可复现（reproducible build），这点顺序依赖值得注意。\n\n---\n\n关于范围：spec 从头到尾只说 `.md`，但这次实现多做了 `.markdown` 收集和 `--gzip-level` 选项两件 spec 没要求的事，而 spec 明确要求的 `.trash/` 跳过和 zip 大小输出反而没做。我倾向于把多做的两项摘出去单独提 issue，让这条分支严格对齐 #42（spec conformance）。\n\n想先确认一件事：`.markdown` 这个后缀，是你们笔记里真实存在、只是 issue #42 漏写了，还是实现时顺手加的？这决定我是建议把它删掉，还是建议反过来去补 issue 正文。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0.3333333333333333,
+        "passRateWithout": 0,
+        "delta": -0.3333333333333333
+      }
+    },
+    {
+      "name": "domain-modeling-glossary-conflict",
+      "dir": "evals\\domain-modeling-glossary-conflict",
+      "source": "prose",
+      "promptMarkdown": "仓根的 `CONTEXT.md` 现在是这样（Bash 不可用，我贴给你）：\n\n```md\n# 订单（Ordering）\n\n接收并跟踪客户订单的 context。\n\n## Language\n\n**订单（Order）**:\n客户一次下单产生的整体，含一到多个行项。\n_Avoid_: 购买、交易\n\n**行项（Line Item）**:\n订单里的一件商品及其数量。\n_Avoid_: 商品行、明细\n\n**取消（Cancellation）**:\n客户在发货前撤回整张订单；取消后订单不再发货。\n_Avoid_: 退单、作废\n```\n\n我们要做「取消」功能：客户可以在发货前取消订单里的任意一件商品，其余照常发货。按 `domain-modeling` 帮我把这块的模型理清。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "challenges-conflict",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether the agent caught the vocabulary conflict.\n\nPASS if the agent points out that the glossary defines 取消 (Cancellation) as withdrawing the whole order before shipping while the user is describing removing a single line item, and asks the user one question to resolve it: which meaning 取消 keeps, and/or whether the line-level action needs its own term (the agent may propose a candidate term). It must stop after that question.\n\nFAIL if the agent accepts the user's wording without surfacing the conflict with the glossary, or starts designing data structures or code, or asks several questions at once.",
+          "config": {
+            "criteria": "Judge whether the agent caught the vocabulary conflict.\n\nPASS if the agent points out that the glossary defines 取消 (Cancellation) as withdrawing the whole order before shipping while the user is describing removing a single line item, and asks the user one question to resolve it: which meaning 取消 keeps, and/or whether the line-level action needs its own term (the agent may propose a candidate term). It must stop after that question.\n\nFAIL if the agent accepts the user's wording without surfacing the conflict with the glossary, or starts designing data structures or code, or asks several questions at once.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "domain-modeling",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 8,
+            "costUsd": 0.33631099999999997,
+            "judgeCostUsd": 0.040001999999999996,
+            "durationSeconds": 105,
+            "startedAt": "2026-09-19T06:13:52.506Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-4gnLqg\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "challenges-conflict",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "两件事实先说清楚：\n\n1. `domain-modeling` 的 SKILL.md 正文是占位（`占位：正文待写。`），但它的两份 reference 是实的——`context-format.md`（CONTEXT.md 词条格式）和 `adr-format.md`（什么时候写 ADR）。我按这两份来做。\n2. 当前工作目录 `C--...-home\\cwd` 是空的，没有 `CONTEXT.md` 这个文件。所以下面是改动提案，没动盘。\n\n---\n\n## 发现的冲突（事实，不是推断）\n\n现在的词条写着：\n\n> **取消（Cancellation）**：客户在发货前撤回**整张订单**；取消后**订单**不再发货。\n\n新需求是撤回**其中一件**，其余照发。同一个词「取消」要担两种含义。Ubiquitous Language（统一语言）的硬要求是一个 context 内一词一义——这条必须先解决，否则后面每句话都是歧义。\n\n## 顺带露出的语言缺口（事实）\n\n「取消」的定义靠「**发货前**」划界，但 Language 里根本没有「发货」这个词条。原来整单一次发完，「发货前」还算有个单一时点；现在「其余照常发货」意味着一张订单会分批发出，「发货前」就不再是订单级的时点了。这个缺口不补，不变式没法写。\n\n## 我的主张\n\n**一、取消的对象是行项，不是订单。**「整单取消」是「所有行项都被取消」的派生说法，不是第二个概念。\n\n依据是 DDD 的 Aggregate（聚合）：`Order` 是聚合根，`Line Item` 是聚合内实体。取消命令发给 `Order`，由 `Order` 维护不变式，外部拿不到 `Line Item` 的直接引用。好处是「发货前才能取消」「全取消了订单该怎样」这类规则只有一个执行点。\n\n代价我也说明白：不能再有 `Order.status = Cancelled` 这样一个独立的字段当真相源，它得从行项算出来。读者第一眼会觉得别扭。\n\n**二、补「发货」词条，并承认部分发货。**\n\n**三、取消是行项的终态，不可逆**——想再要这件商品 = 下新订单。这条我按假设先写，需要你确认。\n\n### 建议的 Language 改动\n\n```md\n**取消（Cancellation）**:\n客户在商品发出前撤回订单中的一个或多个行项；被取消的行项不再发货，订单其余部分照常。\n_Avoid_: 退单、作废、删除、退货\n\n**整单取消（Full Cancellation）**:\n一张订单的全部行项都处于取消状态。\n_Avoid_: 订单作废、废单\n\n**发货（Shipment）**:\n一次把订单中的若干行项交给承运方；一张订单可以有多次发货。\n_Avoid_: 出货、派送、发运\n```\n\n「行项」和「订单」两条不用动。\n\n### 还欠着的不变式（列出来，不逐条问你）\n\n- 已发货的行项能不能取消？（我按「不能」建模）\n- 取消能不能撤销？（我按「不能」建模）\n- 全部行项取消后，订单是进终态还是可以继续加行项？\n\n### 要不要写 ADR\n\n按 `adr-format.md` 的三条：难回头（取消建在行项级会贯穿状态机和下游履约/计费）、不看背景会奇怪（读者会问为什么没有订单级的 cancelled 字段）、真有取舍（备选是「订单级取消 + 行项级删除」两套并存的概念）。三条都成立，建议写一份，等模型定了我来起草。\n\n---\n\n## 一个问题\n\n订单里有一行是「马克杯 × 3」。客户说「只取消 1 个，剩下 2 个照发」。\n\n这次要支持这种吗？\n\n问的原因：支持的话，取消作用的是**数量**，行项得带「已取消数量」或者会被拆行；不支持的话，取消作用的是**整个行项**，一个状态枚举就够了。这是模型形状的分岔，不是细节。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.249499,
+            "judgeCostUsd": 0.03870599999999999,
+            "durationSeconds": 92,
+            "startedAt": "2026-09-19T06:14:06.488Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-ue05HL\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "challenges-conflict",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说两件我查到的事实：\n\n1. `domain-modeling` 这个 skill 不在我这次可用的列表里（列表里只有 dataviz、code-review、simplify、init 等）。所以我按 DDD 的通行做法手做，每处我会标出用的是哪条实践。\n2. `CONTEXT.md` 在仓库里也确实不存在——我用 Glob 扫了工作目录和上级目录，整个仓只有 `.git` 和一个 `.gitconfig`。所以下面我只给文本，你自己粘贴，不动文件。\n\n---\n\n## 一、最要紧的冲突：新需求和现有 Language 直接打架\n\n现有定义写的是：\n\n> **取消（Cancellation）**：客户在发货前撤回**整张订单**；取消后**订单**不再发货。\n\n新需求是「取消订单里的任意一件商品，其余照常发货」。这不是给 取消 加个参数，是把它作用的对象从 订单 换成了 行项。同一个词在同一个 context 里指两件事，这正是 Ubiquitous Language（统一语言）要禁止的——**一个 context 内，一个词一个意思**。所以这条必须先改掉，不能靠代码注释绕过去。\n\n我的建议是**改定义、不新造词**：把 取消 的作用对象下沉到 行项，整单取消变成「所有未发货行项都被取消」的派生结果。理由是客户的意图（发货前撤回）没变，变的只是范围；新造一个「撤项」之类的词会在语言里留下一对近义词，长期必然混用。\n\n## 二、被这个需求逼出来的第二个缺口：`发货` 没有定义\n\n现有文档里没有 发货 这个词，但 取消 的定义依赖它（「发货前」）。原来整单取消时，「发货前」是订单级的、含义清楚。现在「其余照常发货」意味着一张订单可以部分发出，于是：\n\n- 「发货前」这个条件必须下沉到行项级——判断能不能取消，看的是**这一行**发出去没有；\n- 系统里得有东西能表达「这次发了哪几行」。要么给行项加发货状态，要么引入 发货单（Shipment）作为独立概念。\n\n这是推断，不是文档里写着的：**如果你们现在的发货是整单一次性发出，这个需求实际上是在要求先把发货拆开**，工作量的大头可能在这儿，而不在取消。这点建议你先和业务/履约那边对一下。\n\n## 三、不变量要改一条\n\n现有：「订单……含一到多个行项」。全取消之后订单就剩 0 个有效行项了。标准处理方式是**不删除，只改状态**（保留可追溯性，取消记录本身是业务事实）：\n\n- 已取消的行项**留在订单上**，只是不再发货；\n- 不变量改成「订单至少含一个行项（含已取消的）」；\n- 订单状态由行项派生：所有行项都已取消 → 订单已取消。\n\n行项的状态机（Aggregate 内部，订单是 Aggregate Root，取消这个操作走订单进来，保证「不能取消已发货的」这条不变量在一处强制执行）：\n\n```\n已下单 ──取消──> 已取消\n   └────发货────> 已发货     （已发货后不可取消）\n```\n\n## 四、Language 段的修改稿\n\n```md\n**取消（Cancellation）**:\n客户在某个行项发货前撤回该行项；被取消的行项不再发货，仍保留在订单上。\n订单的全部行项都被取消时，该订单视为已取消。\n_Avoid_: 退单、作废、删除、移除\n\n**发货（Shipment）**:\n把订单中一个或多个行项交付出去。同一张订单可以分多次发货。\n_Avoid_: 出库、配送\n```\n\n（`发货` 的定义我是照「可部分发货」写的，取决于第二节那个待确认点；`_Avoid_` 里加 删除/移除 是因为取消不是移除，说法不统一会直接影响别人怎么实现。）\n\n---\n\n## 我需要你确认一件事\n\n举个具体例子：订单里有 3 件同款 T 恤，按现在的定义这是**一个行项，数量 3**。客户说只想取消其中 1 件。\n\n**这种「只取消部分数量」算在这次的需求范围里吗，还是取消只能整行取消？**\n\n两种答案的模型差别很大：整行取消的话，行项是原子的，就是上面那个状态机，很简单；允许部分数量的话，行项得拆出「下单数量 / 已取消数量」，取消就不再是行项的状态而是数量上的累积事实，状态机也要跟着变。还有一条中间路线是把行项一拆为二（2 件正常 + 1 件已取消），能复用整行取消的模型，代价是行项数量会变，对账和前端展示要能接受。\n\n零售场景里部分数量取消挺常见的，但这该由业务方定，我不替你猜。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    },
+    {
+      "name": "domain-modeling-just-reading",
+      "dir": "evals\\domain-modeling-just-reading",
+      "source": "prose",
+      "promptMarkdown": "仓根的 `CONTEXT.md`（Bash 不可用，贴给你）：\n\n```md\n# 订单（Ordering）\n\n接收并跟踪客户订单的 context。\n\n## Language\n\n**订单（Order）**:\n客户一次下单产生的整体，含一到多个行项。\n_Avoid_: 购买、交易\n\n**行项（Line Item）**:\n订单里的一件商品及其数量。\n_Avoid_: 商品行、明细\n\n**取消（Cancellation）**:\n客户在发货前撤回整张订单；取消后订单不再发货。\n_Avoid_: 退单、作废\n```\n\n`CONTEXT.md` 里的「取消」到底指什么？我在写测试名，想用对词。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "answers-from-glossary",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether the agent treated this as a lookup, not a modeling session.\n\nPASS if the agent answers with the glossary definition (the customer withdraws the whole order before shipping; after that nothing ships) and helps with the test name using that term (for example a name about cancelling an order before shipping), without challenging terms, inventing scenarios, proposing new glossary entries, or offering an ADR.\n\nFAIL if the agent starts a modeling session (asks clarifying questions about the domain, proposes to sharpen or add terms), or edits or proposes editing CONTEXT.md.",
+          "config": {
+            "criteria": "Judge whether the agent treated this as a lookup, not a modeling session.\n\nPASS if the agent answers with the glossary definition (the customer withdraws the whole order before shipping; after that nothing ships) and helps with the test name using that term (for example a name about cancelling an order before shipping), without challenging terms, inventing scenarios, proposing new glossary entries, or offering an ADR.\n\nFAIL if the agent starts a modeling session (asks clarifying questions about the domain, proposes to sharpen or add terms), or edits or proposes editing CONTEXT.md.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "no-file-write",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Write",
+            "max": 0
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.17843949999999997,
+            "judgeCostUsd": 0.006444000000000005,
+            "durationSeconds": 46,
+            "startedAt": "2026-09-19T06:15:13.675Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-D3GuKu\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-from-glossary",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "查了一下仓库：目前没有任何文件用到 `取消`/`cancel`，所以没有既有写法要对齐，你现在定的就是第一版。（观察结果，不是推断。）\n\n## CONTEXT.md 字面上说了什么\n\n「取消」这个词被四个条件框死了：\n\n| 维度 | 定义里写的 |\n|---|---|\n| 谁发起 | **客户**（不是客服、不是系统） |\n| 什么时候 | **发货前** |\n| 作用在什么上 | **整张订单** |\n| 结果 | 订单不再发货 |\n\n加上明确的禁用词：`退单`、`作废`。另外两条也一起守：别写`购买`/`交易`（用订单）、别写`商品行`/`明细`（用行项）。\n\n## 我的推断（文档没直说的）\n\n- 「整张订单」这个措辞意味着**行项层面没有「取消」**。写 `取消行项` 就等于在发明一个 CONTEXT.md 没有的概念。\n- **发货后**客户反悔，这个 context 压根没给词。不在 Ordering 的语言里，别硬套「取消」。\n\n## 测试名怎么写\n\n```\n客户在发货前取消订单_订单不再发货\n订单已发货_不能取消\n取消后再次取消_不产生第二次取消\n```\n\n别写：`作废订单_...`、`退单成功_...`、`取消行项_...`\n\n用的是哪条实践：**Ubiquitous Language**（Evans, DDD）——测试名是产品代码的一部分，必须说 context 里的话，不能在测试里另造同义词；以及 **Bounded Context**——发货后的退回属于别的 context，不该借用 Ordering 的「取消」。\n\n## 一个问题\n\n具体例子：客户下了 3 件商品的订单，现在只想砍掉其中 1 件，另外 2 件照发。按 CONTEXT.md，这不叫「取消」（取消是整张订单、且结果是不再发货）。\n\n**你这批要写的测试里，有没有这种「只撤一部分」的场景？** 有的话我们得先给它单独起个词加进 CONTEXT.md，否则「取消」会被撑成两个意思。"
+              },
+              {
+                "name": "no-file-write",
+                "passed": false,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 1..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.12866800000000003,
+            "judgeCostUsd": 0.007826000000000027,
+            "durationSeconds": 34,
+            "startedAt": "2026-09-19T06:15:37.094Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-OwvyFN\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-from-glossary",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "查了一下仓库：当前工作目录里没有任何代码文件，grep `取消|[Cc]ancel|退单|作废` 也零命中——所以没有既有命名可参照，只能按 `CONTEXT.md` 的原文来定。\n\n## 原文说了什么（事实）\n\n> **取消（Cancellation）**：客户在发货前撤回整张订单；取消后订单不再发货。\n> _Avoid_: 退单、作废\n\n这一句里有四个限定，缺一个就不是「取消」：\n\n| 维度 | 限定 |\n|---|---|\n| 谁发起 | 客户 |\n| 什么时点 | 发货前 |\n| 作用范围 | 整张订单 |\n| 后果 | 订单不再发货 |\n\n## 推断出的边界（文档没明写，是我从限定条件推的）\n\n这几种情况**不该**叫「取消」：\n\n- 只撤掉一个行项、留下其余的 → 范围不是整张订单。文档目前没给这件事命名。\n- 已发货后要退回 → 时点不对，那是退货/退款的领域，不在这个 context 的词汇表里。\n- 运营或系统单方面终止订单（超时未支付、风控拦截） → 发起方不是客户。\n\n另外 `_Avoid_` 那行的意思是：测试名里别写「退单」「作废」，哪怕指的是同一件事。这是 DDD 的 **Ubiquitous Language** 做法——领域词在代码、测试、文档里只用同一个词，同义词一律不用，避免读的人以为是两个概念。\n\n## 用在测试名上\n\n贴着定义走，大致是这样：\n\n```\n取消_发货前_整单_订单不再发货\n取消_已发货的订单_不允许\n```\n\n反例（会和词汇表打架）：\n\n```\n作废订单_...        ← _Avoid_ 列表里的词\n取消单个行项_...     ← 这不是 CONTEXT.md 说的「取消」\n```\n\n---\n\n你手上要写的那个测试，是「客户在发货前撤回整张订单」这一种吗？还是撤一个行项 / 发货后退货那类——如果是后者，这个词就不该用，得另外确认该叫什么。"
+              },
+              {
+                "name": "no-file-write",
+                "passed": false,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 1..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    },
+    {
+      "name": "domain-modeling-update-inline",
+      "dir": "evals\\domain-modeling-update-inline",
+      "source": "prose",
+      "promptMarkdown": "仓根的 `CONTEXT.md` 现在是这样（Bash 不可用；工作目录里如果还没有这个文件，就按这份内容建出来再改）：\n\n```md\n# 订单（Ordering）\n\n接收并跟踪客户订单的 context。\n\n## Language\n\n**订单（Order）**:\n客户一次下单产生的整体，含一到多个行项。\n_Avoid_: 购买、交易\n\n**行项（Line Item）**:\n订单里的一件商品及其数量。\n_Avoid_: 商品行、明细\n\n**取消（Cancellation）**:\n客户在发货前撤回整张订单；取消后订单不再发货。\n_Avoid_: 退单、作废\n```\n\n定了：「取消」保持整单的意思不动。行级的另起一个词，叫「行项撤回（Line Item Withdrawal）」：发货前从订单里去掉一个行项，订单其余部分照常发货。以后别再叫「部分取消」「删商品」。\n\n实现上我们打算在 `orders` 表加一个 `withdrawn_at` 列，用 `withdrawLineItem(orderId, lineItemId)` 这个函数来做。\n\n按 `domain-modeling` 把这个词落进 `CONTEXT.md`。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 12,
+      "graders": [
+        {
+          "name": "avoid-listed",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": {
+              "source": "file",
+              "path": "CONTEXT.md"
+            },
+            "pattern": "_Avoid_.*(部分取消|删商品)",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "context-written",
+          "type": "file_exists",
+          "weight": 1,
+          "config": {
+            "path": "CONTEXT.md",
+            "exists": true
+          }
+        },
+        {
+          "name": "entry-present",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": {
+              "source": "file",
+              "path": "CONTEXT.md"
+            },
+            "pattern": "行项撤回",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "no-adr-created",
+          "type": "file_exists",
+          "weight": 1,
+          "config": {
+            "path": "docs/adr/*",
+            "exists": false
+          }
+        },
+        {
+          "name": "no-implementation-details",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the glossary entry the agent wrote into CONTEXT.md (look at the Write call and the final file).\n\nPASS if the new 行项撤回 entry defines the concept in one or two sentences (removing a line item before shipping, the rest of the order proceeds), lists the avoided synonyms, and keeps implementation details out of CONTEXT.md: no withdrawn_at column, no orders table, no withdrawLineItem function name. The existing entries (订单, 行项, 取消) are preserved.\n\nFAIL if the entry or any other part of CONTEXT.md mentions the column, the table, or the function, or if existing entries were dropped or rewritten in substance.",
+          "config": {
+            "criteria": "Judge the glossary entry the agent wrote into CONTEXT.md (look at the Write call and the final file).\n\nPASS if the new 行项撤回 entry defines the concept in one or two sentences (removing a line item before shipping, the rest of the order proceeds), lists the avoided synonyms, and keeps implementation details out of CONTEXT.md: no withdrawn_at column, no orders table, no withdrawLineItem function name. The existing entries (订单, 行项, 取消) are preserved.\n\nFAIL if the entry or any other part of CONTEXT.md mentions the column, the table, or the function, or if existing entries were dropped or rewritten in substance.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "domain-modeling",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0.6666666666666666,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.16306300000000004,
+            "judgeCostUsd": 0.008484000000000047,
+            "durationSeconds": 38,
+            "startedAt": "2026-09-19T06:15:37.114Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-g2QxwL\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "avoid-listed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched _Avoid_.*(部分取消|删商品)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "context-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "CONTEXT.md exists as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "entry-present",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched 行项撤回",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-adr-created",
+                "passed": true,
+                "weight": 1,
+                "explanation": "docs/adr/* absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-implementation-details",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`CONTEXT.md` 已建好并加上新词条，与现有条目同构（术语 / 定义 / _Avoid_），放在「取消」后面，定义里点明了和整单取消的区别。\n\n一处我想确认的（事实，不是猜测）：函数名 `withdrawLineItem(orderId, lineItemId)` 和新词一致，但列放在 `orders` 表上和这个词对不上。举例：订单 #1001 有三个行项，客户先撤回第 2 个、过几天又撤回第 3 个——`orders.withdrawn_at` 只是订单上的一个时间戳，既记不下\"被撤回的是哪个行项\"，第二次撤回也只能覆盖第一次的时间。按 DDD 的 Ubiquitous Language 实践，代码和表结构应当跟着语言走：词是行级的，状态就该落在行项上。\n\n所以：`withdrawn_at` 改放到行项表（比如 `line_items.withdrawn_at`）吗？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0.6666666666666666,
+            "passed": false,
+            "turns": 8,
+            "costUsd": 0.23626550000000004,
+            "judgeCostUsd": 0.008740000000000026,
+            "durationSeconds": 59,
+            "startedAt": "2026-09-19T06:15:38.934Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-BTizhn\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "avoid-listed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched _Avoid_.*(部分取消|删商品)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "context-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "CONTEXT.md exists as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "entry-present",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched 行项撤回",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-adr-created",
+                "passed": true,
+                "weight": 1,
+                "explanation": "docs/adr/* absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-implementation-details",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`CONTEXT.md` 已建好并改完。改动是：\n\n- 新增 **行项撤回（Line Item Withdrawal）** 词条，定义写成「发货前去掉一个行项，其余照常发货」，把整单/行级的区别直接写进定义里。\n- `_Avoid_` 放了你点名的「部分取消」「删商品」，另外我加了「取消行项」——这是最容易混的说法，用了「取消」这个词去指行级的事。\n- 「取消」的定义一个字没动，只在它的 `_Avoid_` 里补了「部分取消」。理由是：有人想表达「取消一半」的时候，会先去查「取消」，得在那儿把他拦住、引到新词上。这两条是我替你做的判断，觉得不合适可以删。\n\n依据是 DDD 的 **Ubiquitous Language**：一个词只对应一个概念，边界靠 `_Avoid_` 挡住近义词漂移。\n\n---\n\n有个实现上的事得提一句，是事实层面的问题，不是风格偏好：\n\n`withdrawn_at` 放在 `orders` 表上和「行项撤回」这个定义对不上。举例：一张订单有 3 个行项（键盘、鼠标、显示器），客户先撤回鼠标，两天后又撤回显示器，键盘照常发货。`orders.withdrawn_at` 只有一个格子，记不下「哪个行项被撤回了」，更记不下两次不同的时间——写上鼠标的时间，显示器的就丢了；而且这一列长得跟整单取消一模一样，下一个人读表会以为整张单没了，正是「取消 / 行项撤回」要分开的那件事又在表结构里合回去了。按同一条 Ubiquitous Language，术语是行级的，列就该落在行项那张表上。\n\n我没法确认你们实际的表结构（这个目录里只有我刚建的 `CONTEXT.md`，没有 schema 或代码可查），所以上面是基于「`orders` 一行 = 一张订单」的推断。\n\n问一句：这一列是改成落在行项表上（比如 `line_items.withdrawn_at`），还是你们的 `orders` 表其实就是一行一个行项？"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.6666666666666666,
+        "passRate": 0,
+        "scoreWithout": 0.6666666666666666,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    },
+    {
+      "name": "grilling-facts-self-served",
+      "dir": "evals\\grilling-facts-self-served",
+      "source": "prose",
+      "promptMarkdown": "按 `grilling` 盘一下：给 `notes` 这个 CLI 加 `--json` 输出。Bash 不可用，仓里相关的两个文件我贴给你。\n\n`package.json`：\n\n```json\n{\n  \"name\": \"notes\",\n  \"version\": \"0.4.2\",\n  \"bin\": { \"notes\": \"./dist/cli.js\" },\n  \"dependencies\": { \"commander\": \"^12.1.0\", \"cli-table3\": \"^0.6.5\" },\n  \"devDependencies\": { \"vitest\": \"^2.1.0\", \"typescript\": \"^5.6.0\" }\n}\n```\n\n`README.md` 节选：\n\n```\n## 命令\n- `notes list [--tag <tag>]`：列出笔记，表格输出（cli-table3）。\n- `notes show <id>`：打印一篇笔记的正文。\n- 全局旗标：`--quiet` 只输出结果不输出提示；`--no-color`。\n\n## 代码布局\n- `src/cli.ts`：commander 注册子命令。\n- `src/output.ts`：所有输出走 `render(view, opts)`，表格与纯文本都在这里。\n- 测试：`vitest`，`src/**/*.test.ts`。\n```",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "no-fact-questions",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether the agent asked the user for facts it already had.\n\nPASS if the agent does not ask the user anything answerable from the pasted package.json and README (which CLI framework is used, whether a quiet flag exists, where output is rendered, which test framework, which subcommands exist), and the one question it asks is a decision: for example whether the JSON flag applies to every subcommand or only to list, whether the JSON shape is a stable contract, or how the JSON flag interacts with quiet and no-color.\n\nFAIL if the agent asks the user for a fact that is stated in the pasted materials, or asks no question and instead starts implementing.",
+          "config": {
+            "criteria": "Judge whether the agent asked the user for facts it already had.\n\nPASS if the agent does not ask the user anything answerable from the pasted package.json and README (which CLI framework is used, whether a quiet flag exists, where output is rendered, which test framework, which subcommands exist), and the one question it asks is a decision: for example whether the JSON flag applies to every subcommand or only to list, whether the JSON shape is a stable contract, or how the JSON flag interacts with quiet and no-color.\n\nFAIL if the agent asks the user for a fact that is stated in the pasted materials, or asks no question and instead starts implementing.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "grilling",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.137914,
+            "judgeCostUsd": 0.010610000000000008,
+            "durationSeconds": 41,
+            "startedAt": "2026-09-19T06:15:59.584Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-JcFjlr\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-fact-questions",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "两件事先说清楚：\n\n1. `practices:grilling` 这个技能目前是**占位文件**，正文写的是「待写」,所以它没给我任何具体流程。我按它名字该做的事来办：先把需求盘问清楚再动手，不猜着写。\n2. 工作目录 `C:\\...\\JcFjlr\\home\\cwd` 是**空的**（glob 没找到任何文件）。所以我手上只有你贴的 `package.json` 和 README 节选，`src/cli.ts`、`src/output.ts` 的真实内容我没看到。\n\n先问第一题。举个具体例子：\n\n```\n$ notes show 42 --json\n```\n\n这条命令你希望它成立吗？如果成立，它应该打印一篇笔记的对象（比如 `{\"id\":\"42\",\"title\":\"…\",\"body\":\"…\"}`）；如果不成立，那 `--json` 就只是 `list` 的旗标，`show` 仍然只吐正文。\n\n**问题：`--json` 是像 `--quiet` / `--no-color` 那样的全局旗标（每个子命令都支持，以后新加的子命令也得支持），还是只加在 `list` 上？**\n\n这条决定了改动落在哪儿：全局旗标的话，我在 `src/cli.ts` 注册一次、由 `src/output.ts` 的 `render(view, opts)` 按 `opts.json` 分流，每个子命令都得先把数据整成结构化的 view；只给 `list` 的话，改动基本只在 `list` 这一条路径上。\n\n我按的是 clig.dev 的两条（Command Line Interface Guidelines）：机器可读输出走 stdout、人类提示走 stderr；以及 `--json` 这类输出格式旗标保持全局一致，别只有个别子命令有。\n\n下一步我还需要 `src/cli.ts` 和 `src/output.ts` 的内容——尤其 `render(view, opts)` 现在的签名和 `view` 长什么样，这决定了加 JSON 是分流还是要先重构 view。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 6,
+            "costUsd": 0.1693265,
+            "judgeCostUsd": 0.0072299999999999864,
+            "durationSeconds": 48,
+            "startedAt": "2026-09-19T06:16:11.564Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-dZmJ1f\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-fact-questions",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "主人，两件事先说清楚，都是我查过的，不是猜的：\n\n1. **`grilling` 这个 skill 不存在。** 我这边能调用的 skill 列表里没有它，本地也 glob 不到任何叫 grilling 的文件。所以我不去猜它该是什么规矩。按名字我推断您想要的是\"先把需求拷问清楚再动手\"，那我就按这个来 —— 如果不对,您纠正我。\n\n2. **仓库里我读不到代码。** 不只是 Bash 不可用 —— 工作目录 `cwd` 下 `**/*.ts` 和 `**/*.json` 都是零结果，`src/cli.ts`、`src/output.ts` 这两个文件在我这儿不存在。所以我手上只有您贴的 `package.json` 和 README 节选,设计可以做,落地改代码得等文件到位或者您把这两个文件也贴过来。\n\n---\n\n先摆个具体例子,好让问题落地。假设最后长这样:\n\n```\n$ notes list --tag work --json\n[{\"id\":\"a1b2\",\"title\":\"周会纪要\",\"tags\":[\"work\"],\"updatedAt\":\"2026-09-19T03:11:00Z\"}]\n\n$ notes show a1b2 --json\n{\"id\":\"a1b2\",\"title\":\"周会纪要\",\"tags\":[\"work\"],\"body\":\"...\"}\n```\n\n这里有个岔路口,选哪边会导致完全不同的改法:走**全局旗标**的话,`--json` 注册在 commander 的 program 上,`render(view, opts)` 内部按 `opts.json` 分流,以后新加的子命令自动就有 JSON;走**只给 `list`**的话,改动小得多,但 `show` 就没有,而且将来补上时会变成一次破坏性调整。\n\n顺带说一条我会默认采用的业界实践:JSON 模式下自动隐含 `--no-color`、并把所有提示/进度挤到 stderr,stdout 只留纯净可管道的 JSON(GitHub CLI 的 `gh --json` 和 `npm --json` 都是这么干的,底层是 Unix 的 stdout/stderr 分离惯例)。这条如果您不反对,我就不再单独确认了。\n\n**问题:`--json` 您要做成全局旗标(`list` 和 `show` 都支持),还是这一版只给 `list`?**\n\n(后面还有两块要定:输出形状是裸数组还是 `{\"notes\":[...]}` 包裹、以及错误要不要也走 JSON。等这题定了我再问,不一次压给您。)"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    },
+    {
+      "name": "grilling-plan-one-question",
+      "dir": "evals\\grilling-plan-one-question",
+      "source": "prose",
+      "promptMarkdown": "按 `grilling` 把这个方案盘一遍。\n\n方案：给我们内部的命令行工具 `notes` 加一个 `sync` 子命令，把本地 Markdown 笔记同步到一台自建的 WebDAV 服务器。\n\n已知：笔记目录约 3000 个文件；我一个人用；平时在一台台式机上写，出差时用笔记本，两台电脑都会改笔记。\n\n我的想法：每次执行 `notes sync` 就做一次全量上传，遇到冲突以本地为准。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "one-question-with-recommendation",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the agent's reply as one round of an interview about the plan.\n\nPASS if the reply asks exactly one question about the plan, that question carries the agent's own recommended answer (a concrete \"I would pick X because ...\", not just a list of options), and the agent then stops and waits for the user: no second question in the same round, no design write-up, no code, no file writes.\n\nFAIL if the reply contains two or more questions, or a question without the agent's recommendation, or the agent starts designing or implementing the sync instead of asking.",
+          "config": {
+            "criteria": "Judge the agent's reply as one round of an interview about the plan.\n\nPASS if the reply asks exactly one question about the plan, that question carries the agent's own recommended answer (a concrete \"I would pick X because ...\", not just a list of options), and the agent then stops and waits for the user: no second question in the same round, no design write-up, no code, no file writes.\n\nFAIL if the reply contains two or more questions, or a question without the agent's recommendation, or the agent starts designing or implementing the sync instead of asking.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "grilling",
+            "arm": "with-only"
+          }
+        },
+        {
+          "name": "upstream-decision-first",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Judge which question the agent chose to ask first.\n\nPASS if the question is an upstream decision that other decisions hang on: for example whether sync is one-way or two-way given that two machines both edit notes, what \"conflict\" means and whether \"local wins\" can silently lose the other machine's edits, or whether full upload versus incremental is the right model.\n\nFAIL if the first question is a leaf detail whose answer depends on an unsettled higher decision (flag names, log format, retry counts, progress bar, file naming), or if it asks about something the user already settled without first challenging the premise.",
+          "config": {
+            "criteria": "Judge which question the agent chose to ask first.\n\nPASS if the question is an upstream decision that other decisions hang on: for example whether sync is one-way or two-way given that two machines both edit notes, what \"conflict\" means and whether \"local wins\" can silently lose the other machine's edits, or whether full upload versus incremental is the right model.\n\nFAIL if the first question is a leaf detail whose answer depends on an unsettled higher decision (flag names, log format, retry counts, progress bar, file naming), or if it asks about something the user already settled without first challenging the premise.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.18969450000000002,
+            "judgeCostUsd": 0.02376000000000003,
+            "durationSeconds": 60,
+            "startedAt": "2026-09-19T06:16:15.193Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-8Dz6h8\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "one-question-with-recommendation",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一句事实：`practices:grilling` 这个 skill 的正文是空的（只有\"占位：正文待写\"），所以下面是我按常规方案评审的方式盘的，不是按你们团队那套 grilling 流程。工作目录也是空仓库，没有 `notes` 的现有代码可参考。\n\n## 结论\n\n方案有一个会丢数据的硬伤，不是性能问题，是正确性问题。\n\n## 硬伤：「冲突以本地为准」在双机场景下等于「最后同步的那台赢」\n\n具体走一遍：\n\n1. 周一在台式机改了 `项目A.md`，同步上去了。\n2. 出差，笔记本上也改了 `项目A.md`（笔记本上那份是上周的旧版）。\n3. 笔记本执行 `notes sync` → 「以本地为准」→ 笔记本的旧版覆盖服务器上周一的新版。\n4. 台式机上周一的改动没了，而且**没有任何提示**。\n\n你是一个人用，但两台机器都写，这就构成了双向同步（bidirectional sync）。「以本地为准」只在单向备份（one-way backup）里成立。全量上传的方案里没有任何状态能回答这个问题：这个文件是我改的，还是对面改的？——因为你只比了「本地」和「远端」两个值，双向同步需要比三个：本地当前、远端当前、**上次同步成功时的基线快照**。这是业界标准做法，叫三方比较（three-way merge / sync database），rclone 的 `bisync`、Unison、Syncthing 都是靠一份本地状态库做的。\n\n补一句推断：真冲突（两边都改了同一个文件）的正确处理不是选一边，而是两份都留，生成 `项目A.conflict-20260919-laptop.md` 让人自己合。Dropbox 和 Syncthing 都是这么干的。笔记这种东西，静默丢一段字比多出一个文件烦人得多。\n\n## 次级问题\n\n**全量上传的代价（事实 + 推断）**：WebDAV（RFC 4918）没有批量上传，3000 个文件就是 3000 个 `PUT`，一个请求一个文件。Markdown 文件都很小，时间全花在往返延迟上。推断一下量级：串行、每个请求 100ms 往返，3000 个就是 5 分钟；自建服务器在公网、出差时网络差的话更久。所以「每次全量」实际上不可用——你会因为嫌慢而不敢同步，然后冲突攒得更多。\n\n对照做法：`PROPFIND` 带 `Depth: 1`（或 `infinity`，如果你的服务端允许）一次请求就能拿到整个目录的文件列表和 mtime/etag，再跟本地比，只传变化的。这才是 WebDAV 该用的方式。\n\n**删除传不过去**：全量上传只做「传上去」，你在台式机删掉的笔记，服务器上永远还在，下次在笔记本上拉就\"复活\"了。反过来如果你补上「删除远端多余文件」，一台落后的机器就会把另一台的新笔记全删光——比覆盖更狠。\n\n**中断没有原子性**：同步到一半断网，服务器上留下半个文件（`PUT` 传了一半）。WebDAV 的常规处理是传到临时名再 `MOVE`，`MOVE` 在同一个 collection 内通常是原子的。\n\n**mtime 不可靠**：不同机器时钟有偏差，有些 WebDAV 服务端不保留客户端给的修改时间。判断\"变没变\"更稳的是内容哈希（存在本地状态库里），服务端的 `ETag` 可以当快速预筛。\n\n## 我建议的最小可行形态\n\n如果还是要自己写：本地存一个 SQLite 状态库（路径 → 上次同步的 hash + 远端 etag），每次同步做 `PROPFIND` 列远端 → 三方比较 → 只传差异 → 真冲突生成 `.conflict-` 副本并在输出里列出来 → 全程成功后才更新状态库。\n\n---\n\n不过在动手之前，有件事得先问你：\n\n比如你直接在笔记目录 `git init`，台式机和笔记本都 clone，`notes sync` 就是 `git pull --rebase && git add -A && git commit && git push` 的一层包装——三方合并、冲突标记、删除传播、历史回溯全是 git 白送的，你自己要写的代码不到 50 行，服务端用现成的 Git 托管或者自建 bare repo 就行。这个方案对「一个人、两台机、3000 个纯文本文件」几乎是量身定做的。\n\n**所以：你是有什么具体原因必须走 WebDAV（比如那台服务器已经在跑别的东西、或者手机上某个 Markdown app 只认 WebDAV），还是只是还没考虑过 git 这条路？**"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "upstream-decision-first",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一句事实：`practices:grilling` 这个 skill 的正文是空的（只有\"占位：正文待写\"），所以下面是我按常规方案评审的方式盘的，不是按你们团队那套 grilling 流程。工作目录也是空仓库，没有 `notes` 的现有代码可参考。\n\n## 结论\n\n方案有一个会丢数据的硬伤，不是性能问题，是正确性问题。\n\n## 硬伤：「冲突以本地为准」在双机场景下等于「最后同步的那台赢」\n\n具体走一遍：\n\n1. 周一在台式机改了 `项目A.md`，同步上去了。\n2. 出差，笔记本上也改了 `项目A.md`（笔记本上那份是上周的旧版）。\n3. 笔记本执行 `notes sync` → 「以本地为准」→ 笔记本的旧版覆盖服务器上周一的新版。\n4. 台式机上周一的改动没了，而且**没有任何提示**。\n\n你是一个人用，但两台机器都写，这就构成了双向同步（bidirectional sync）。「以本地为准」只在单向备份（one-way backup）里成立。全量上传的方案里没有任何状态能回答这个问题：这个文件是我改的，还是对面改的？——因为你只比了「本地」和「远端」两个值，双向同步需要比三个：本地当前、远端当前、**上次同步成功时的基线快照**。这是业界标准做法，叫三方比较（three-way merge / sync database），rclone 的 `bisync`、Unison、Syncthing 都是靠一份本地状态库做的。\n\n补一句推断：真冲突（两边都改了同一个文件）的正确处理不是选一边，而是两份都留，生成 `项目A.conflict-20260919-laptop.md` 让人自己合。Dropbox 和 Syncthing 都是这么干的。笔记这种东西，静默丢一段字比多出一个文件烦人得多。\n\n## 次级问题\n\n**全量上传的代价（事实 + 推断）**：WebDAV（RFC 4918）没有批量上传，3000 个文件就是 3000 个 `PUT`，一个请求一个文件。Markdown 文件都很小，时间全花在往返延迟上。推断一下量级：串行、每个请求 100ms 往返，3000 个就是 5 分钟；自建服务器在公网、出差时网络差的话更久。所以「每次全量」实际上不可用——你会因为嫌慢而不敢同步，然后冲突攒得更多。\n\n对照做法：`PROPFIND` 带 `Depth: 1`（或 `infinity`，如果你的服务端允许）一次请求就能拿到整个目录的文件列表和 mtime/etag，再跟本地比，只传变化的。这才是 WebDAV 该用的方式。\n\n**删除传不过去**：全量上传只做「传上去」，你在台式机删掉的笔记，服务器上永远还在，下次在笔记本上拉就\"复活\"了。反过来如果你补上「删除远端多余文件」，一台落后的机器就会把另一台的新笔记全删光——比覆盖更狠。\n\n**中断没有原子性**：同步到一半断网，服务器上留下半个文件（`PUT` 传了一半）。WebDAV 的常规处理是传到临时名再 `MOVE`，`MOVE` 在同一个 collection 内通常是原子的。\n\n**mtime 不可靠**：不同机器时钟有偏差，有些 WebDAV 服务端不保留客户端给的修改时间。判断\"变没变\"更稳的是内容哈希（存在本地状态库里），服务端的 `ETag` 可以当快速预筛。\n\n## 我建议的最小可行形态\n\n如果还是要自己写：本地存一个 SQLite 状态库（路径 → 上次同步的 hash + 远端 etag），每次同步做 `PROPFIND` 列远端 → 三方比较 → 只传差异 → 真冲突生成 `.conflict-` 副本并在输出里列出来 → 全程成功后才更新状态库。\n\n---\n\n不过在动手之前，有件事得先问你：\n\n比如你直接在笔记目录 `git init`，台式机和笔记本都 clone，`notes sync` 就是 `git pull --rebase && git add -A && git commit && git push` 的一层包装——三方合并、冲突标记、删除传播、历史回溯全是 git 白送的，你自己要写的代码不到 50 行，服务端用现成的 Git 托管或者自建 bare repo 就行。这个方案对「一个人、两台机、3000 个纯文本文件」几乎是量身定做的。\n\n**所以：你是有什么具体原因必须走 WebDAV（比如那台服务器已经在跑别的东西、或者手机上某个 Markdown app 只认 WebDAV），还是只是还没考虑过 git 这条路？**"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0.3333333333333333,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.23567100000000007,
+            "judgeCostUsd": 0.029304000000000052,
+            "durationSeconds": 80,
+            "startedAt": "2026-09-19T06:16:38.203Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-cjJd44\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "one-question-with-recommendation",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`grilling` 这个 skill 在当前环境里不存在 —— 我能看到的可调用列表是 dataviz / code-review / simplify / security-review 等,里面没有它,项目目录下也没搜到 `SKILL.md`。所以下面是我自己按方案评审的路子盘的,不是那个 skill 的流程。如果它是你在别处装的,告诉我装在哪我再走一遍。\n\n---\n\n## 一、最致命的一条:这个方案会丢笔记\n\n**具体场景。** 周一在台式机上给 `2026-09-14-客户会议.md` 补了三段结论,`notes sync` 传上去了。周三出差,笔记本上那个文件还是上周五的旧版本。你在笔记本上跑 `notes sync`,按\"全量上传 + 以本地为准\",笔记本的旧版本原样盖掉服务器上的新版本。那三段结论没了,而且没有任何提示 —— 因为全量上传不区分\"我改过\"和\"我没动过\",所有文件一视同仁地推上去。\n\n这不是推断,是\"以本地为准\"这条规则在双端编辑下的直接后果。单向推送 + last-writer-wins,只在**单向编辑**(一台写、其他只读)时才安全,而你的前提恰好相反。\n\n## 二、另外四个问题\n\n1. **它不是 sync,是 upload。** 方案里没有下载步骤。台式机写的东西怎么到笔记本上?如果靠手动 copy,那手动那一半正是制造上面那个冲突的源头。\n2. **3000 个文件的代价是实打实的。** 事实:WebDAV 没有批量写接口,一个文件一个 `PUT`。3000 个请求哪怕每个往返 100ms,串行也要 5 分钟,出差用热点只会更慢。改一个错别字传 3000 个文件。\n3. **中断没有收敛点。** 传到第 1500 个断网,服务器处于新旧混合状态,重跑又从头来。\n4. **删除语义没定义。** 台式机上删掉的笔记,全量上传不会删服务器上的,它会一直活着 —— 同步系统里管这叫 resurrection,标准解法是墓碑记录 (tombstone)。\n\n## 三、业界怎么做\n\n- **三向合并 (three-way merge)**:比较本地版本、远端版本、**上次同步时的共同祖先**。有祖先才能判断\"是谁改的\",而不是盲选一边。git、Dropbox、Syncthing 都是这个底子。代价是本地要存一份同步状态 (sync state):`路径 → 上次同步的 hash + 远端 ETag`。\n- **内容哈希做变更检测**:只传 hash 变了的,rsync / Syncthing 的思路。3000 个 Markdown 本地算 hash 就几秒。\n- **ETag 做乐观并发控制 (optimistic concurrency control)**:`PUT` 时带 `If-Match: <上次记录的 etag>`,远端若被改过,服务器回 412 Precondition Failed,你当场知道撞车了而不是闷头覆盖。这是 RFC 7232 的标准机制。*待核实*:你的 WebDAV 服务端是什么实现,ETag 是否稳定、是否支持 `If-Match`,以及 `PROPFIND` 是否放开了 `Depth: infinity`(不少部署默认禁用,禁用了就得逐层列目录)。\n- **冲突副本 (conflict copy) 而不是自动解决**:Syncthing / Dropbox 的做法 —— 撞车时两份都留,生成 `xxx.sync-conflict-20260919-desktop.md`。省掉一大堆合并逻辑,且永远不会悄悄毁内容。Markdown 虽然理论上能行级合并,但个人笔记不值得为这点自动化冒风险。\n- **先出计划再执行 (plan/apply)**:`notes sync --dry-run` 打印将要上传/下载/冲突的清单。terraform 那套,对不可逆操作很值钱。\n\n## 四、我建议的最小可行版本\n\n本地放一个 `.notes-sync.json`,记 `{path: {hash, etag, synced_at}}`。一次 sync:\n\n1. `PROPFIND` 拉远端路径 + ETag 列表;\n2. 本地扫目录算 hash;\n3. 三方对比分类:仅本地改(上传)、仅远端改(下载)、两边都改(冲突)、本地删、远端删;\n4. 冲突一律生成 conflict copy,两份都留;\n5. 逐个执行,**每完成一个文件就落盘状态** —— 中断后重跑能接着走。\n\n比\"全量上传\"复杂,但复杂度几乎全压在第 3 步的分类逻辑里,大概两三百行纯函数,好写好测。而丢一篇笔记是不可逆的。\n\n## 五、一个更省事的方向\n\n笔记是纯 Markdown,3000 个文件对 git 完全是小体量。服务器上开个 bare repo,`notes sync` 就是 `git pull --rebase` + `git add -A` + `git commit` + `git push` 的包装。三向合并、冲突标记、完整历史、断点续传、删除语义 —— 上面我让你自己实现的东西,git 全部白送,而且已经被验证了二十年。\n\n---\n\n所以先问一句:**WebDAV 是硬性要求吗?** 比如你是不是想在手机上用某个支持 WebDAV 的笔记 app(Joplin、Obsidian 的某些插件)直接打开这些文件 —— 那 git 就不顶用,得老老实实写同步逻辑。如果 WebDAV 只是\"服务器上刚好有\",那我更想劝你走 git 那条路。"
+              },
+              {
+                "name": "upstream-decision-first",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "`grilling` 这个 skill 在当前环境里不存在 —— 我能看到的可调用列表是 dataviz / code-review / simplify / security-review 等,里面没有它,项目目录下也没搜到 `SKILL.md`。所以下面是我自己按方案评审的路子盘的,不是那个 skill 的流程。如果它是你在别处装的,告诉我装在哪我再走一遍。\n\n---\n\n## 一、最致命的一条:这个方案会丢笔记\n\n**具体场景。** 周一在台式机上给 `2026-09-14-客户会议.md` 补了三段结论,`notes sync` 传上去了。周三出差,笔记本上那个文件还是上周五的旧版本。你在笔记本上跑 `notes sync`,按\"全量上传 + 以本地为准\",笔记本的旧版本原样盖掉服务器上的新版本。那三段结论没了,而且没有任何提示 —— 因为全量上传不区分\"我改过\"和\"我没动过\",所有文件一视同仁地推上去。\n\n这不是推断,是\"以本地为准\"这条规则在双端编辑下的直接后果。单向推送 + last-writer-wins,只在**单向编辑**(一台写、其他只读)时才安全,而你的前提恰好相反。\n\n## 二、另外四个问题\n\n1. **它不是 sync,是 upload。** 方案里没有下载步骤。台式机写的东西怎么到笔记本上?如果靠手动 copy,那手动那一半正是制造上面那个冲突的源头。\n2. **3000 个文件的代价是实打实的。** 事实:WebDAV 没有批量写接口,一个文件一个 `PUT`。3000 个请求哪怕每个往返 100ms,串行也要 5 分钟,出差用热点只会更慢。改一个错别字传 3000 个文件。\n3. **中断没有收敛点。** 传到第 1500 个断网,服务器处于新旧混合状态,重跑又从头来。\n4. **删除语义没定义。** 台式机上删掉的笔记,全量上传不会删服务器上的,它会一直活着 —— 同步系统里管这叫 resurrection,标准解法是墓碑记录 (tombstone)。\n\n## 三、业界怎么做\n\n- **三向合并 (three-way merge)**:比较本地版本、远端版本、**上次同步时的共同祖先**。有祖先才能判断\"是谁改的\",而不是盲选一边。git、Dropbox、Syncthing 都是这个底子。代价是本地要存一份同步状态 (sync state):`路径 → 上次同步的 hash + 远端 ETag`。\n- **内容哈希做变更检测**:只传 hash 变了的,rsync / Syncthing 的思路。3000 个 Markdown 本地算 hash 就几秒。\n- **ETag 做乐观并发控制 (optimistic concurrency control)**:`PUT` 时带 `If-Match: <上次记录的 etag>`,远端若被改过,服务器回 412 Precondition Failed,你当场知道撞车了而不是闷头覆盖。这是 RFC 7232 的标准机制。*待核实*:你的 WebDAV 服务端是什么实现,ETag 是否稳定、是否支持 `If-Match`,以及 `PROPFIND` 是否放开了 `Depth: infinity`(不少部署默认禁用,禁用了就得逐层列目录)。\n- **冲突副本 (conflict copy) 而不是自动解决**:Syncthing / Dropbox 的做法 —— 撞车时两份都留,生成 `xxx.sync-conflict-20260919-desktop.md`。省掉一大堆合并逻辑,且永远不会悄悄毁内容。Markdown 虽然理论上能行级合并,但个人笔记不值得为这点自动化冒风险。\n- **先出计划再执行 (plan/apply)**:`notes sync --dry-run` 打印将要上传/下载/冲突的清单。terraform 那套,对不可逆操作很值钱。\n\n## 四、我建议的最小可行版本\n\n本地放一个 `.notes-sync.json`,记 `{path: {hash, etag, synced_at}}`。一次 sync:\n\n1. `PROPFIND` 拉远端路径 + ETag 列表;\n2. 本地扫目录算 hash;\n3. 三方对比分类:仅本地改(上传)、仅远端改(下载)、两边都改(冲突)、本地删、远端删;\n4. 冲突一律生成 conflict copy,两份都留;\n5. 逐个执行,**每完成一个文件就落盘状态** —— 中断后重跑能接着走。\n\n比\"全量上传\"复杂,但复杂度几乎全压在第 3 步的分类逻辑里,大概两三百行纯函数,好写好测。而丢一篇笔记是不可逆的。\n\n## 五、一个更省事的方向\n\n笔记是纯 Markdown,3000 个文件对 git 完全是小体量。服务器上开个 bare repo,`notes sync` 就是 `git pull --rebase` + `git add -A` + `git commit` + `git push` 的包装。三向合并、冲突标记、完整历史、断点续传、删除语义 —— 上面我让你自己实现的东西,git 全部白送,而且已经被验证了二十年。\n\n---\n\n所以先问一句:**WebDAV 是硬性要求吗?** 比如你是不是想在手机上用某个支持 WebDAV 的笔记 app(Joplin、Obsidian 的某些插件)直接打开这些文件 —— 那 git 就不顶用,得老老实实写同步逻辑。如果 WebDAV 只是\"服务器上刚好有\",那我更想劝你走 git 那条路。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 0.3333333333333333,
+        "passRateWithout": 0,
+        "delta": 0.6666666666666667
+      }
+    },
+    {
+      "name": "tdd-coupled-test",
+      "dir": "evals\\tdd-coupled-test",
+      "source": "prose",
+      "promptMarkdown": "按 `tdd` 帮我再给 `checkout` 补几个测试，照下面这条的写法来就行。Bash 不可用。\n\n`checkout(cart, paymentMethod)` 是公共接口，返回 `{ status: \"confirmed\" | \"declined\", orderId?: string }`；内部调 `paymentService.process(amount)` 和 `inventory.reserve(items)`。\n\n现有的一条测试：\n\n```ts\n// src/checkout/checkout.test.ts\nimport { vi, test, expect } from \"vitest\";\nimport * as paymentService from \"./paymentService\";\nimport { checkout } from \"./checkout\";\n\ntest(\"checkout calls paymentService.process with the cart total\", async () => {\n  const spy = vi.spyOn(paymentService, \"process\").mockResolvedValue({ ok: true });\n  const cart = { items: [{ sku: \"A\", price: 40, qty: 2 }] };\n  await checkout(cart, { type: \"card\", token: \"tok_1\" });\n  expect(spy).toHaveBeenCalledTimes(1);\n  expect(spy).toHaveBeenCalledWith(80);\n});\n```\n\n想再补：库存不足、支付被拒、空购物车三条。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "flags-coupling",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether the agent recognised the pasted test as implementation-coupled.\n\nPASS if the agent says the existing test is coupled to implementation (it spies on the internal collaborator paymentService and asserts call counts and arguments, so it breaks on refactors that keep behaviour) and proposes instead behaviour tests through the public result of checkout (status, orderId) for the three requested cases, with mocks only at true system boundaries if at all, checking with the user before writing more tests in the pasted style.\n\nFAIL if the agent simply writes three more tests in the same spy-and-call-count style, or writes tests without addressing the coupling.",
+          "config": {
+            "criteria": "Judge whether the agent recognised the pasted test as implementation-coupled.\n\nPASS if the agent says the existing test is coupled to implementation (it spies on the internal collaborator paymentService and asserts call counts and arguments, so it breaks on refactors that keep behaviour) and proposes instead behaviour tests through the public result of checkout (status, orderId) for the three requested cases, with mocks only at true system boundaries if at all, checking with the user before writing more tests in the pasted style.\n\nFAIL if the agent simply writes three more tests in the same spy-and-call-count style, or writes tests without addressing the coupling.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "tdd",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 7,
+            "costUsd": 0.24277250000000003,
+            "judgeCostUsd": 0.00559800000000002,
+            "durationSeconds": 70,
+            "startedAt": "2026-09-19T06:16:40.242Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-FmnrYl\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "flags-coupling",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "写好了：`src/checkout/checkout.test.ts`（含你原来那条，共 4 条）。\n\n我做的三个判断，你看有没有跟实现对不上的：\n\n- **先占库存、再扣款。** 所以\"库存不足\"那条我断言了 `process` 完全没被调用 —— 不能在发不了货的情况下先收钱。这是通行做法（reserve-before-charge）。\n- **空购物车走 declined，不抛异常。** 见下面的问题。\n- **加了 `afterEach(() => vi.restoreAllMocks())`。** 这是我唯一偏离你那条写法的地方：原来只有一条测试时无所谓，现在 4 条测试都 spy 同样两个模块，不还原会串味（test isolation）。如果你的 `vitest.config.ts` 里已经开了 `restoreMocks: true`，把这段 `afterEach` 和 `afterEach` 的 import 一起删掉就行。\n\n另外没法验证的一点：`inventory.reserve` 的返回我照着 `process` 的 `{ ok: boolean }` 写的。实现不在仓库里，我没法确认 —— 要是它其实是抛错或者返回 `{ reserved: false }`，告诉我我改。\n\n一个问题：空购物车 `checkout({ items: [] }, ...)` 应该返回 `{ status: \"declined\" }`，还是抛一个参数校验错误（比如 `throw new Error(\"cart is empty\")`）？我现在按前者写的，但空车更像调用方的 bug 而不是一次正常的被拒交易 —— 如果你倾向抛错，那条测试要改成 `await expect(checkout({ items: [] }, ...)).rejects.toThrow()`。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 8,
+            "costUsd": 0.30038449999999994,
+            "judgeCostUsd": 0.007877999999999968,
+            "durationSeconds": 97,
+            "startedAt": "2026-09-19T06:16:59.833Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-7gGKPG\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "flags-coupling",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "写好了：`src/checkout/checkout.test.ts`。**没有跑过测试**（Bash 不可用），所以下面区分一下哪些是我确认的、哪些是假设。\n\n**做了什么**\n\n三条新测试，加上你原来那条，都保持同一个写法：`vi.spyOn` 打桩 + Arrange-Act-Assert 结构。\n\n用到的业界实践，三条：\n\n1. **Arrange-Act-Assert (AAA)** —— 每条测试里用空行分成「准备桩和数据 / 调一次 `checkout` / 断言」三段，一眼能看出被测的动作是哪一行。\n2. **Test isolation**（测试隔离）—— 加了 `afterEach(() => vi.restoreAllMocks())`。你原来那条没有恢复，桩会漏到后面的测试里，加了新用例之后这个问题会变成「单跑通过、全跑失败」，很难查。这是我对你原文件动的唯一一处。\n3. **Assert on the public contract**（断言公共契约）—— 三条新测试主要断的是返回值 `{ status, orderId }`，而不是内部调了谁。只有「库存不足时不该扣款」这种本身就是业务规则的地方，才去断 `process` 没被调用。你原来那条断 `toHaveBeenCalledWith(80)` 属于断实现细节，改价格算法就会红——但那条正是在测「总价算得对不对」，这么写合理，我没动它。\n\n**几个假设，你看看对不对**\n\n- 我假设 `inventory.reserve` 也返回 `{ ok: boolean }`（照着 `paymentService.process` 的形状猜的）。如果它是返回 boolean、或者库存不足时直接抛错，`mockResolvedValue({ ok: false })` 要改成 `mockResolvedValue(false)` 或 `mockRejectedValue(...)`。\n- 我假设流程是**先占库存、再扣款**，所以库存不足那条断了 `expect(process).not.toHaveBeenCalled()`。那行我加了注释标出来了，如果实际是先扣款再退款，删掉那一行就行。\n- 你原来那条测试没给 `inventory.reserve` 打桩，等于会走到真实库存。我没改它，但如果真实实现会读数据库，它本来就是条不稳定的测试。\n\n**一个问题**\n\n空购物车那条，我写的是返回 `{ status: \"declined\" }`。但另一种常见设计是直接抛错（比如 `throw new Error(\"cart is empty\")`），因为空购物车是调用方的用法错误，不是一次「被拒绝的交易」——用 declined 的话，调用方分不清「卡被拒了」和「你根本没传商品」。\n\n`checkout({ items: [] }, ...)` 你期望它返回 declined，还是抛错？"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    },
+    {
+      "name": "tdd-first-slice",
+      "dir": "evals\\tdd-first-slice",
+      "source": "prose",
+      "promptMarkdown": "接缝已经确认：只测 `applyCoupon(cart, code)` 这条公共接口，通过 `total(cart)` 观察结果。\n\n按 `tdd` 做第一个切片：`SAVE10` 对满 100 的购物车减 10。过期券、无效券都以后再说。\n\nBash 不可用，跑不了测试。把第一个失败测试写到工作目录的 `src/cart/applyCoupon.test.ts`，再把让它通过的最小实现写到 `src/cart/applyCoupon.ts`，然后停下告诉我下一个切片是什么。\n\n现有代码：\n\n```ts\n// src/cart/index.ts\nexport type Cart = { items: Array<{ sku: string; price: number; qty: number }> };\nexport function createCart(): Cart { return { items: [] }; }\nexport function add(cart: Cart, sku: string, price: number, qty = 1): Cart {\n  return { items: [...cart.items, { sku, price, qty }] };\n}\nexport function total(cart: Cart): number {\n  return cart.items.reduce((sum, i) => sum + i.price * i.qty, 0);\n}\n```",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 12,
+      "graders": [
+        {
+          "name": "good-first-test-one-slice",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the test and implementation the agent wrote (read the Write calls).\n\nPASS if the test exercises the public interface only (builds a cart with createCart/add, calls applyCoupon, observes through total or the returned cart), asserts an independent literal expected value (for example a cart totalling 100 or 120 ends at 90 or 110, written as a literal rather than recomputed from the inputs the way the code would), covers exactly the one behaviour of this slice, uses no mocks of internal modules, and the implementation does only what this slice needs (no expiry or invalid-code handling yet). The agent then names the next slice and stops.\n\nFAIL if the test mocks pricing or couponRepo, or asserts a recomputed expected value, or the agent writes tests for expiry or invalid codes in this round, or implements expiry or invalid handling now, or does not stop after the first slice.",
+          "config": {
+            "criteria": "Judge the test and implementation the agent wrote (read the Write calls).\n\nPASS if the test exercises the public interface only (builds a cart with createCart/add, calls applyCoupon, observes through total or the returned cart), asserts an independent literal expected value (for example a cart totalling 100 or 120 ends at 90 or 110, written as a literal rather than recomputed from the inputs the way the code would), covers exactly the one behaviour of this slice, uses no mocks of internal modules, and the implementation does only what this slice needs (no expiry or invalid-code handling yet). The agent then names the next slice and stops.\n\nFAIL if the test mocks pricing or couponRepo, or asserts a recomputed expected value, or the agent writes tests for expiry or invalid codes in this round, or implements expiry or invalid handling now, or does not stop after the first slice.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "impl-file-written",
+          "type": "file_exists",
+          "weight": 1,
+          "config": {
+            "path": "src/cart/applyCoupon.ts",
+            "exists": true
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "tdd",
+            "arm": "with-only"
+          }
+        },
+        {
+          "name": "test-file-written",
+          "type": "file_exists",
+          "weight": 1,
+          "config": {
+            "path": "src/cart/applyCoupon.test.ts",
+            "exists": true
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0.5,
+            "passed": false,
+            "turns": 8,
+            "costUsd": 0.2353105,
+            "judgeCostUsd": 0.008051999999999976,
+            "durationSeconds": 56,
+            "startedAt": "2026-09-19T06:17:14.695Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-02B3sd\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "good-first-test-one-slice",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "写好了三个文件:\n\n- `src/cart/index.ts` —— 你贴的原文,一字未改(磁盘上原本没有)\n- `src/cart/applyCoupon.test.ts` —— 一个失败测试\n- `src/cart/applyCoupon.ts` —— 让它通过的最小实现\n\n**红/绿状态是推断,不是我跑出来的。** Bash 不可用,我没执行过测试。推断依据:写测试那一刻 `applyCoupon.ts` 还不存在,import 解析不了 → red;补上实现后 `total` 是 `100 + (-10 × 1) = 90` → green。\n\n几点说明:\n\n**实现刻意\"过拟合\"到这一个测试。** 它不看 `code` 是不是 `SAVE10`,也不看满没满 100,写死减 10。这是 TDD 的 *Fake It*(Kent Beck《TDD by Example》里的三种转绿策略之一,另两种是 Obvious Implementation 和 Triangulation)—— 故意让实现只够通过当前测试,把泛化推迟到下一个测试逼出来。不是偷懒,是留给下一个切片去杀。\n\n**折扣的表达方式是我替你定的。** `Cart` 类型只有 `items`,没有 `discount` 字段,而你要求只通过 `total(cart)` 观察。所以我把券做成一个负价行项: `{ sku: 'SAVE10', price: -10, qty: 1 }`。这样 `total` 不用改就能看见效果。代价是 `items` 里混进了非商品的东西,将来\"列出购物车商品\"之类的地方要过滤。\n\n**测试框架我假设是 vitest。** 工作目录里没有 `package.json`,没有任何依赖,所以 `import { describe, it, expect } from 'vitest'` 目前是跑不起来的 —— 这是环境问题,不是测试逻辑问题。\n\n---\n\n**下一个切片我建议:不满 100 时 `SAVE10` 不减价。**\n\n比如 `add(createCart(), 'PEN', 99)` 用 `SAVE10`,`total` 应该还是 99。\n\n选它的理由:它是唯一能直接打死当前那行写死 `-10` 的测试 —— 逼出门槛判断,而且不碰你说\"以后再说\"的过期券和无效券。这是 Triangulation(三角定位):用第二个数据点把假实现挤成真实现。\n\n问你一件事:**上面那个负价行项的设计,你认可吗?** 如果不认可(比如你更想在 `Cart` 上加个 `discount` 字段、让 `total` 去减),现在改的代价最小 —— 只有一个测试依赖它。"
+              },
+              {
+                "name": "impl-file-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "src/cart/applyCoupon.ts exists as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "test-file-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "src/cart/applyCoupon.test.ts exists as expected",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 8,
+            "costUsd": 0.2580445,
+            "judgeCostUsd": 0.007512000000000019,
+            "durationSeconds": 66,
+            "startedAt": "2026-09-19T06:17:50.472Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-07uFIe\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "good-first-test-one-slice",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "三个文件写好了。\n\n**测试(RED)** `src/cart/applyCoupon.test.ts`\n```ts\nconst cart = add(createCart(), 'widget', 100);\nexpect(total(applyCoupon(cart, 'SAVE10'))).toBe(90);\n```\n只走 `applyCoupon` 进、`total` 出,没碰 `cart.items` 内部结构——就是你确认的那条接缝(Test Through the Public API)。\n\n**实现(GREEN)** `src/cart/applyCoupon.ts`:追加一条 `price: -10` 的折扣行,返回新 cart。\n\n几点要你知道:\n\n1. **满 100 的门槛我故意没实现**。现在的代码是 `if (code !== 'SAVE10') return cart;`,对一个 50 块的购物车也会减 10。理由是没有测试逼出那个条件,写了就是未被测试覆盖的代码(YAGNI + triangulation)。这正好是下一个切片。如果你希望切片一就把门槛做进去,我加一个测试再改实现,一分钟的事。\n\n2. **折扣的表示方式**:我没有改 `Cart` 类型、也没有改 `total()`,而是往 `items` 里塞了一条负价行 `sku: 'DISCOUNT:SAVE10'`。这是改动最小的做法,坏处是折扣混在商品行里,将来做「多券叠加」或者需要展示「小计/优惠/应付」时大概率要重构成 `Cart` 上的独立字段。属于推断,不是已验证的结论。到那个切片再换,重构有测试兜着。\n\n3. **跑不了测试,所以「RED 先失败」是我的推断而非观察结果**。测试用的是 `vitest` 的 import(`import { describe, expect, it } from 'vitest'`),这是我替你选的默认;工作目录里没有 `package.json`,也没装任何测试框架。换成 jest 或 `node:test` 只改那一行 import。\n\n**下一个切片我建议**:`SAVE10` 对不满 100 的购物车不打折——加测试 `total(applyCoupon(cart50, 'SAVE10')) === 50`,实现里被迫长出 `total(cart) >= 100` 的判断。\n\n问一个:门槛的判定基准,是按**优惠前的商品小计**(比如 99 块的车用券后还是 99),还是有别的口径(比如含运费、或按优惠后金额)?"
+              },
+              {
+                "name": "impl-file-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "src/cart/applyCoupon.ts exists as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "test-file-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "src/cart/applyCoupon.test.ts exists as expected",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.5,
+        "passRate": 0,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": -0.5
+      }
+    },
+    {
+      "name": "tdd-seams-first",
+      "dir": "evals\\tdd-seams-first",
+      "source": "prose",
+      "promptMarkdown": "按 `tdd` 给购物车加优惠码。\n\n要做的：`applyCoupon(cart, code)`。券 `SAVE10`：购物车满 100 减 10；过期的券要报错。\n\n模块在 `src/cart/`，对外导出 `createCart`、`add`、`total`；内部有 `pricing.ts` 算价、`couponRepo.ts` 读券（内存 map）。测试框架 vitest。Bash 不可用，先别跑任何东西。\n\n```ts\n// src/cart/index.ts\nexport type Cart = { items: Array<{ sku: string; price: number; qty: number }> };\nexport function createCart(): Cart { return { items: [] }; }\nexport function add(cart: Cart, sku: string, price: number, qty = 1): Cart {\n  return { items: [...cart.items, { sku, price, qty }] };\n}\nexport function total(cart: Cart): number {\n  return cart.items.reduce((sum, i) => sum + i.price * i.qty, 0);\n}\n```",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "public-seams-only",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Judge which seams the agent proposed.\n\nPASS if every proposed seam is a public interface (applyCoupon, createCart, add, total) and the agent does not propose testing pricing.ts or couponRepo.ts directly, nor mocking couponRepo to drive the tests.\n\nFAIL if the agent proposes tests against the internal modules, private helpers, or mocks of internal collaborators.",
+          "config": {
+            "criteria": "Judge which seams the agent proposed.\n\nPASS if every proposed seam is a public interface (applyCoupon, createCart, add, total) and the agent does not propose testing pricing.ts or couponRepo.ts directly, nor mocking couponRepo to drive the tests.\n\nFAIL if the agent proposes tests against the internal modules, private helpers, or mocks of internal collaborators.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "seams-confirmed-before-tests",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the order of events in the agent's reply.\n\nPASS if, before writing any test or implementation, the agent names the public seam(s) it proposes to test (applyCoupon reached through the cart's public interface createCart/add, observed via total or the returned cart) and asks the user to confirm those seams with one question, then stops.\n\nFAIL if the agent writes test code or implementation before the seams are confirmed, or asks several questions at once, or asks no question and just starts coding.",
+          "config": {
+            "criteria": "Judge the order of events in the agent's reply.\n\nPASS if, before writing any test or implementation, the agent names the public seam(s) it proposes to test (applyCoupon reached through the cart's public interface createCart/add, observed via total or the returned cart) and asks the user to confirm those seams with one question, then stops.\n\nFAIL if the agent writes test code or implementation before the seams are confirmed, or asks several questions at once, or asks no question and just starts coding.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "tdd",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 11,
+            "costUsd": 0.43485950000000007,
+            "judgeCostUsd": 0.003504000000000007,
+            "durationSeconds": 105,
+            "startedAt": "2026-09-19T06:17:58.011Z",
+            "error": "exit 1: Reached maximum number of turns (10)",
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-kYjpOk\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "public-seams-only",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "**再写实现（green）：**"
+              },
+              {
+                "name": "seams-confirmed-before-tests",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "**再写实现（green）：**"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 11,
+            "costUsd": 0.446619,
+            "judgeCostUsd": 0.014555999999999958,
+            "durationSeconds": 124,
+            "startedAt": "2026-09-19T06:18:10.671Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-ujD0dG\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "public-seams-only",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "## 建了什么\n\n| 文件 | 说明 |\n|---|---|\n| `src/cart/applyCoupon.test.ts` | 新增，11 个用例 |\n| `src/cart/index.ts` | 按你贴的原文重建，加了 `applyCoupon` 和三个错误类 |\n| `src/cart/pricing.ts` | 新建：`subtotalOf` / `meetsThreshold` / `discountOf`，`total()` 现在委托给它 |\n| `src/cart/couponRepo.ts` | 新建：内存 map，只有 `SAVE10`，有效期止于 `2026-12-31T23:59:59.999Z` |\n| `package.json` / `tsconfig.json` | 新建（仓库本来是空的），依赖版本是我填的，跑之前要 `npm install` |\n\n## 用到的两条实践\n\n- **Fake timers**：你给的签名是 `applyCoupon(cart, code)` 两个参数，没有地方注入时钟，所以过期判断用 `Date.now()`，测试用 `vi.useFakeTimers()` + `vi.setSystemTime()` 把时间推到 2027 来触发过期。比往 repo 里塞一张\"测试专用的过期券\"干净。\n- **Custom error types**：`UnknownCouponError` / `CouponExpiredError` / `CouponNotApplicableError` 分开，上层能按类型给不同提示，不用去 match 错误文案。\n\n## 我替你定的几个点\n\n1. 返回 `{ code, subtotal, discount, total }` 而不是一个数字 —— 结账页通常要单独显示\"优惠 -10\"。\n2. 门槛**含等于**：小计正好 100 可用。\n3. 判断顺序：券不存在 → 过期 → 门槛。过期券配一个 20 块的车，报的是过期。\n4. 券码 `trim().toUpperCase()`，用户手输 `save10` 也认。\n\n## 没做的\n\n**测试一次都没跑**（Bash 不可用，你也说了先别跑）。所以 TDD 的 red 和 green 两个阶段我都只是写出来，没有实测验证过。等你能跑了，先 `npm install` 再 `npm test`。\n\n---\n\n一个要你拍板的：**小计不满 100 时该报错还是静默不打折？**\n\n比如车里只有 99.99，现在的行为是抛 `CouponNotApplicableError('券 SAVE10 需满 100，当前小计 99.99')`。另一种做法是返回 `{ discount: 0, total: 99.99 }`，让前端自己显示\"再买 0.01 元可用\"。我选了报错，因为跟\"过期报错\"一致 —— 都是\"这张券你现在用不了\"。你要哪种？"
+              },
+              {
+                "name": "seams-confirmed-before-tests",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "## 建了什么\n\n| 文件 | 说明 |\n|---|---|\n| `src/cart/applyCoupon.test.ts` | 新增，11 个用例 |\n| `src/cart/index.ts` | 按你贴的原文重建，加了 `applyCoupon` 和三个错误类 |\n| `src/cart/pricing.ts` | 新建：`subtotalOf` / `meetsThreshold` / `discountOf`，`total()` 现在委托给它 |\n| `src/cart/couponRepo.ts` | 新建：内存 map，只有 `SAVE10`，有效期止于 `2026-12-31T23:59:59.999Z` |\n| `package.json` / `tsconfig.json` | 新建（仓库本来是空的），依赖版本是我填的，跑之前要 `npm install` |\n\n## 用到的两条实践\n\n- **Fake timers**：你给的签名是 `applyCoupon(cart, code)` 两个参数，没有地方注入时钟，所以过期判断用 `Date.now()`，测试用 `vi.useFakeTimers()` + `vi.setSystemTime()` 把时间推到 2027 来触发过期。比往 repo 里塞一张\"测试专用的过期券\"干净。\n- **Custom error types**：`UnknownCouponError` / `CouponExpiredError` / `CouponNotApplicableError` 分开，上层能按类型给不同提示，不用去 match 错误文案。\n\n## 我替你定的几个点\n\n1. 返回 `{ code, subtotal, discount, total }` 而不是一个数字 —— 结账页通常要单独显示\"优惠 -10\"。\n2. 门槛**含等于**：小计正好 100 可用。\n3. 判断顺序：券不存在 → 过期 → 门槛。过期券配一个 20 块的车，报的是过期。\n4. 券码 `trim().toUpperCase()`，用户手输 `save10` 也认。\n\n## 没做的\n\n**测试一次都没跑**（Bash 不可用，你也说了先别跑）。所以 TDD 的 red 和 green 两个阶段我都只是写出来，没有实测验证过。等你能跑了，先 `npm install` 再 `npm test`。\n\n---\n\n一个要你拍板的：**小计不满 100 时该报错还是静默不打折？**\n\n比如车里只有 99.99，现在的行为是抛 `CouponNotApplicableError('券 SAVE10 需满 100，当前小计 99.99')`。另一种做法是返回 `{ discount: 0, total: 99.99 }`，让前端自己显示\"再买 0.01 元可用\"。我选了报错，因为跟\"过期报错\"一致 —— 都是\"这张券你现在用不了\"。你要哪种？"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 10,
+    "casesPassed": 2,
+    "overallScore": 0.31666666666666665,
+    "overallPassRate": 0.2,
+    "meanDelta": -0.016666666666666656
+  }
+}

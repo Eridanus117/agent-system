@@ -53,7 +53,7 @@
     },
     {
       "name": "skill-authoring",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "source": "./plugins/skill-authoring"
     },
     {
@@ -65,6 +65,11 @@
       "name": "flow-steps",
       "version": "0.1.0",
       "source": "./plugins/flow-steps"
+    },
+    {
+      "name": "practices",
+      "version": "0.1.0",
+      "source": "./plugins/practices"
     }
   ]
 }

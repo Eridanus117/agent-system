@@ -1,0 +1,268 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T06:30:49.027Z",
+  "durationSeconds": 204,
+  "costUsd": 1.2993204999999999,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as118-practices\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "domain-modeling-glossary-conflict",
+    "threshold": 1,
+    "concurrency": 2,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.0",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as118-practices\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "domain-modeling-glossary-conflict",
+      "dir": "evals\\domain-modeling-glossary-conflict",
+      "source": "prose",
+      "promptMarkdown": "仓根的 `CONTEXT.md` 现在是这样（Bash 不可用，我贴给你）：\n\n```md\n# 订单（Ordering）\n\n接收并跟踪客户订单的 context。\n\n## Language\n\n**订单（Order）**:\n客户一次下单产生的整体，含一到多个行项。\n_Avoid_: 购买、交易\n\n**行项（Line Item）**:\n订单里的一件商品及其数量。\n_Avoid_: 商品行、明细\n\n**取消（Cancellation）**:\n客户在发货前撤回整张订单；取消后订单不再发货。\n_Avoid_: 退单、作废\n```\n\n我们要做「取消」功能：客户可以在发货前取消订单里的任意一件商品，其余照常发货。按 `domain-modeling` 帮我把这块的模型理清。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "challenges-conflict",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether the agent caught the vocabulary conflict.\n\nPASS if the agent points out that the glossary defines 取消 (Cancellation) as withdrawing the whole order before shipping while the user is describing removing a single line item, and puts exactly one question to the user that resolves that conflict (for example: which meaning 取消 keeps; whether the line-level action needs its own term; or whether withdrawing every item and cancelling the order are the same business event). The agent may recommend an answer and may list what it will ask later. It must stop after that question and not write CONTEXT.md before the user answers.\n\nFAIL if the agent accepts the user's wording without surfacing the conflict with the glossary, or writes CONTEXT.md or code before the user decides, or asks the user to answer several questions at once.",
+          "config": {
+            "criteria": "Judge whether the agent caught the vocabulary conflict.\n\nPASS if the agent points out that the glossary defines 取消 (Cancellation) as withdrawing the whole order before shipping while the user is describing removing a single line item, and puts exactly one question to the user that resolves that conflict (for example: which meaning 取消 keeps; whether the line-level action needs its own term; or whether withdrawing every item and cancelling the order are the same business event). The agent may recommend an answer and may list what it will ask later. It must stop after that question and not write CONTEXT.md before the user answers.\n\nFAIL if the agent accepts the user's wording without surfacing the conflict with the glossary, or writes CONTEXT.md or code before the user decides, or asks the user to answer several questions at once.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "domain-modeling",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 7,
+            "costUsd": 0.18823,
+            "judgeCostUsd": 0.011609999999999999,
+            "durationSeconds": 45,
+            "startedAt": "2026-09-19T06:30:49.068Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-RPj8jX\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "challenges-conflict",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先报一件观察到的事：我在工作目录 `C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-RPj8jX\\home\\cwd` 下用 Glob 扫了一遍，**一个文件都没有** —— 没有 `CONTEXT.md`，没有 `CONTEXT-MAP.md`，也没有 `docs/adr/`。所以：\n\n- 事实：我手上只有你贴的这段文本，按它是**单 context**（仓根一份 `CONTEXT.md`，话题就是「订单」）。\n- 推断：仓里应该是有文件的，只是我这边读不到。等会儿要跟代码对照（第 4 步）时，得麻烦你把取消相关的代码贴给我。\n\n先说冲突在哪。词汇表里白纸黑字写着：\n\n> **取消（Cancellation）**：客户在发货前**撤回整张订单**；取消后订单不再发货。\n\n你要做的是「去掉其中一件，其余照常发货」。这两件事在现在的词汇表里对不上 —— 后面这个动作，按现有定义根本叫不出名字。\n\n举个具体的：客户一张订单三个行项 —— 2 台键盘、1 台显示器、1 根线。他打电话来说「显示器我不要了，别的照发」。这通电话在系统里该记成什么？\n\n两条路：\n\n- **A：「取消」扩宽**，让它有一个作用对象 —— 可以取消整张订单，也可以取消某个行项；整单取消就是「所有行项都取消」。\n- **B：「取消」守住原义**（只对整单），单件另起一个词，比如「撤项」，两个词两套流程。\n\n我倾向 **A**。理由是统一语言（ubiquitous language）要求术语跟业务人员嘴里的说法一致 —— 客服和客户实际说的就是「取消那台显示器」，硬造一个「撤项」，词汇表和真实对话就脱节了，以后每次沟通都要翻译一遍。B 的好处是旧定义一个字不用改，但代价是造了一个只有你们内部懂的词。\n\n（A 会牵出「行项全取消了，订单算不算取消」这个问题，我下一轮再问，先别管。）\n\n**这一题：「取消」是扩宽成可作用于行项（A），还是守住整单、另起新词（B）？**"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 8,
+            "costUsd": 0.202875,
+            "judgeCostUsd": 0.013836,
+            "durationSeconds": 46,
+            "startedAt": "2026-09-19T06:30:49.069Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-4bdhTA\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "challenges-conflict",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "## 已查的事实\n\n- 我在仓里用 Glob 找过 `**/CONTEXT*.md`、`docs/adr/**`、以及所有常见代码后缀，**一个文件都没有**——工作目录 `...\\home\\cwd` 是空的。所以「和代码对照」这一步没东西可对，我只能按你贴的这份词汇表来。等词定下来要落盘时，我再问你 `CONTEXT.md` 的实际路径。\n- 词汇表里只有仓根一份，没有 `CONTEXT-MAP.md`，按单 context 处理。\n\n## 挑战用词（一条正面冲突）\n\n你贴的词汇表里：\n\n> **取消（Cancellation）**：客户在发货前撤回**整张订单**；取消后订单不再发货。\n\n你要做的功能是：取消**任意一件商品**，其余照常发货。这两个说法在同一个词上打架，得先定哪个算数。\n\n具体例子：客户一张订单，1 台咖啡机 + 2 包咖啡豆。客户说「把咖啡机取消掉，豆子照发」。用现在的词汇表，这句话说不出来——「取消」一出口就意味着整张单都不发了。\n\n我的建议是把「取消」的对象降到**行项**这一级：取消的是行项，整张订单的行项全被取消了，订单自然就不发货了，不用再单独立一个「整单取消」的概念。理由是统一语言（ubiquitous language）的一词一义：同一个词在两个粒度上来回漂，代码里、对话里都得靠上下文猜「取消了吗」问的是哪个，而把词钉在最小的作用单位上，大粒度是它的自然推论。\n\n**一题**：「取消」你要哪个——\n\n- **A（我推荐）**：取消 = 撤回一个行项；全部行项取消即整单不发货。\n- **B**：「取消」保留整单含义，行项这级另起一个词（比如「撤项」）。\n\n选 A 还是 B？定了我接着用边界场景往下逼（比如「3 包豆子只撤 1 包」算不算取消，这是下一题）。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 7,
+            "costUsd": 0.177908,
+            "judgeCostUsd": 0.0067680000000000014,
+            "durationSeconds": 47,
+            "startedAt": "2026-09-19T06:31:33.925Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-qKkgdJ\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "challenges-conflict",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "## 步骤 1：词汇表在哪（已查）\n\n- 仓里没有 `CONTEXT-MAP.md`，只有你贴的仓根 `CONTEXT.md` → **单 context**，订单就是这一个词汇表。\n- 没有 `docs/adr/` 目录。\n- 事实：这个仓当前**没有任何代码文件**（`git` 元数据之外只有一个 `.gitconfig`）。所以步骤 4「和代码对照」这轮无从做起 —— 等有实现了我再回头对一遍，现在只能拿你的说法当唯一来源。\n\n## 步骤 2：先摆冲突\n\n你说的和词汇表打架，而且是硬冲突，不是措辞问题：\n\n> **取消（Cancellation）**：客户在发货前撤回**整张订单**；取消后订单不再发货。\n\n而新功能要的是「撤回其中一件，其余照常发货」。按现在的定义，这件事**没有词可以描述**，而且「取消后订单不再发货」这句会直接变成假的。\n\n具体例子：订单 #1001 有三个行项 —— 2 本书、1 个台灯。发货前客户说「台灯不要了，书照发」。\n\n我的建议：**把「取消」的作用对象改成行项，整单取消变成「所有行项都被取消」的派生结果**，而不是新造一个词（比如「撤件」）跟「取消」并排。理由是统一语言里一词一义（ubiquitous language, Evans《领域驱动设计》）—— 「取消」和「撤件」语感太近，人嘴上、代码里、客服话术里迟早混用；而「取消作用在哪个层级」是一个可以讲清楚的参数。这也是零售系统常见的做法（partial cancellation）。\n\n一题：**「取消」这个词，你要它指哪个 —— 行项级（整单取消 = 每一件都取消），还是保留它只指整单、另给撤单件起一个新词？**\n\n（后面还要逼的边界我先记着，不在这轮问：3 本书只取消 1 本算不算「取消」、最后一件被取消时整张订单是什么状态、已开发票怎么办。）"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 7,
+            "costUsd": 0.31284100000000004,
+            "judgeCostUsd": 0.009977999999999997,
+            "durationSeconds": 93,
+            "startedAt": "2026-09-19T06:31:34.773Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-LVbQlm\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "challenges-conflict",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "两个事实先说清楚：\n\n1. **`domain-modeling` 这个 skill 在这个环境里没装**。我查了可用 skill 列表和 `.claude/skills/`，都没有。所以下面用的是通用做法：DDD 的**统一语言（Ubiquitous Language）**和**聚合不变量（Aggregate Invariants）**，输出格式照你 `CONTEXT.md` 现有的 `**术语**: 定义 / _Avoid_` 样式来写。如果 `domain-modeling` 是你们内部的方法，告诉我在哪，我重做一版。\n2. **`CONTEXT.md` 我在磁盘上没找到**（cwd 是空的，`../CONTEXT.md` 也不存在）。所以下面给的是可以直接粘的文本，不是我改好的文件。\n\n---\n\n## 核心冲突（事实）\n\n你现在的词条写的是：\n\n> **取消（Cancellation）**：客户在发货前撤回**整张订单**；取消后订单不再发货。\n\n你要做的功能是：取消**订单里的任意一件商品**，其余照常发货。\n\n这是同一个词指两件事 —— 违反统一语言里「一个 context 内一词一义」。不先定下来，后面代码里会出现 `order.cancel()` 和 `lineItem.cancel()` 语义打架。\n\n## 建议的模型（推断，等你确认）\n\n**让「取消」落在行项上，整单取消是派生结果，不是独立概念。**\n\n理由：退款金额、库存回补都是按行项算的，整单取消最终也得落到每个行项。如果订单和行项各有一套「已取消」状态，两者迟早不一致。\n\n### Language 改动\n\n```md\n**取消（Cancellation）**:\n客户在发货前撤回订单中的某个行项；被取消的行项不再发货，其余行项照常发货。\n_Avoid_: 退单、作废、删除行项\n\n**整单取消（Order Cancellation）**:\n一次性取消订单中所有未发货的行项。不是独立状态，等价于对每个可取消行项执行一次取消。\n_Avoid_: 关单、废单\n\n**可取消（Cancellable）**:\n行项尚未发货，因此还能被取消。已发货的行项不可取消（那是退货，不属于本 context）。\n_Avoid_: 可退、可撤\n```\n\n### 不变量\n\n- **取消是状态，不是删除。** 被取消的行项留在订单里、带取消标记。所以「订单含一到多个行项」这条仍然成立，对账和退款也还查得到原始数据。\n- **订单的「已取消」是派生的**：所有行项都被取消 ⟹ 订单已取消。不单独存一个字段。\n- **取消不可逆**：客户反悔就重新下单。可逆的话要处理库存被别人抢走的情况，不值得。\n\n### 划到 context 外的\n\n运费怎么分摊、优惠券取消后还算不算门槛、退款走哪条路 —— 这些是定价/支付的事，不进订单这个 context 的 Language。这是 **Bounded Context** 的边界，别让它渗进来。\n\n---\n\n## 一个问题\n\n假设一个行项是「蓝色马克杯 ×3」，客户点了「取消」。\n\n是整行 3 个一起砍掉，还是可以只砍 1 个、剩 2 个照发？\n\n- 如果是**整行**：上面的模型直接能用，行项加个 `cancelled` 状态就行。\n- 如果是**部分数量**：行项要拆出「已取消数量」，`待发数量 = 数量 − 已取消数量`，「取消」的定义也要改成「撤回某行项的全部或部分数量」。模型重一档，但更贴真实电商。\n\n你要哪个？"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 7,
+            "costUsd": 0.21073599999999998,
+            "judgeCostUsd": 0.009930000000000001,
+            "durationSeconds": 65,
+            "startedAt": "2026-09-19T06:32:20.585Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-8mVHzV\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "challenges-conflict",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "两件事先说清楚：\n\n1. `domain-modeling` 这个 skill 在这个环境里没装（我查了 `.claude/skills/` 和整个仓库，都没有）。所以我没法按它的流程走。我用通用的领域驱动设计做法替代，主要是 **统一语言（Ubiquitous Language）** 那一套：一个限界上下文里，一个词只能有一个意思。\n2. 仓根也没有 `CONTEXT.md` 这个文件——工作目录是空的，只有 `.git`。我就按你贴的内容来分析，不动盘上的东西。\n\n---\n\n## 一、最要紧的发现：「取消」这个词已经对不上了\n\n现在 `CONTEXT.md` 写的是：\n\n> **取消（Cancellation）**：客户在发货前撤回**整张订单**；取消后**订单**不再发货。\n\n新需求是：撤回**一件商品**，其余照常发货。这两个说法没法共存。\n\n举个具体的：订单 #1001 里有一台咖啡机和一包滤纸。客户打电话说滤纸不要了，咖啡机照发。\n\n- 这时候问系统「#1001 取消了吗？」，按现在的定义答案必须是**没有**——因为「取消」= 整张不发货。\n- 但客服挂电话前一定会说「滤纸已经给您**取消**了」。\n\n同一个词，代码里和客服嘴里不是一个意思。这是统一语言最典型的裂缝，而且它会一路漏进代码：早晚有人写出 `order.isCancelled()` 和 `lineItem.isCancelled()` 两个方法，然后在某个地方把它们搞混。\n\n## 二、我的建议：把「取消」下沉到行项，整单取消变成派生状态\n\n两种改法：\n\n- **A（推荐）**：「取消」的主语是**行项**。整张订单不发货 = 它的行项**全部**被取消了，是个结果，不是另一个动作。\n- **B**：保留「取消」= 整单，另造一个词管单件（比如「撤件」）。\n\n选 A 的理由：业务动作本来就是「取消某几件」，整单只是数量上的全选。反过来建模会逼出一个叫「部分取消」的补丁概念，而「部分取消」这四个字，客户和客服都不会主动说出口——业务不说的词，不该进统一语言。\n\n按 A 改，Language 段大概长这样：\n\n```md\n**取消（Cancellation）**:\n客户在发货前撤回订单里的某个行项；该行项不再发货，同一订单的其余行项照常发货。\n_Avoid_: 退单、作废、部分取消\n\n**整单取消（Fully Cancelled）**:\n一张订单的全部行项都已被取消时订单所处的状态。这是取消累积出来的结果，不是单独的操作。\n_Avoid_: 撤单\n```\n\n## 三、顺带记两个待办（这轮不问，定完上面再说）\n\n- **「发货」没定义**。「取消」的定义靠它划时间线，但 Language 里没有这个词条。而且一旦能单件取消，「发货前」是行项级还是订单级的时间点，也得说清楚。\n- **被取消的行项还留在订单里吗**。留着（打标记）还是移走，直接决定订单金额怎么算、历史怎么查。\n\n---\n\n回到 #1001 那个例子：滤纸取消之后，客服在系统里看这张订单，理想情况下应该看到「#1001 有一件已取消」，而不是「#1001 已取消」。\n\n**你认可把「取消」的主语从订单改成行项吗（方案 A）？** 还是说你们内部习惯上「取消」就是指整单，单件那个动作你心里另有叫法？"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 6,
+            "costUsd": 0.2067305,
+            "judgeCostUsd": 0.011136,
+            "durationSeconds": 65,
+            "startedAt": "2026-09-19T06:33:07.641Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-jwi19a\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "challenges-conflict",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说两件查过的事实：\n\n1. **`domain-modeling` 这个 skill 在我这边不可用**——可用列表里没有它（只有 dataviz、code-review、simplify、init 等）。我不去猜它的内容，改用业界通行做法：DDD 的**统一语言 / Ubiquitous Language**（Eric Evans），也就是 `CONTEXT.md` 里 `Language` 那一节本来在做的事。\n2. **仓库里没有 `CONTEXT.md`**——我在工作目录和仓根都搜过，目前是空仓。所以下面全部基于你贴的内容。\n\n---\n\n## 最要紧的一条：现有定义和新需求是冲突的\n\n现在写的是：\n\n> **取消（Cancellation）**：客户在发货前撤回**整张订单**；取消后订单不再发货。\n\n新需求是「取消其中一件，其余照常发货」。这两句没法同时成立。统一语言的规矩是**一个词一个意思**，所以不能靠在代码里悄悄放宽——得先把词改掉。\n\n## 建议的模型\n\n**1. 把取消的单位从订单降到行项。**\n「取消」的对象是行项，整单取消不是另一种操作，而是「所有行项都被取消」这个特例。这样只有一套规则，不会出现整单取消和逐件取消两条互相打架的路径。\n\n**2. 订单的「已取消」是算出来的，不是设出来的。**\n别给订单加一个可以单独写的 `cancelled` 字段，否则会有两个真相来源——行项说还有两件没取消，订单头说已取消。让它从行项派生。对应的实践是 DDD 的**聚合根保护不变量（Aggregate Root / invariant）**：订单是聚合根，取消一定经由订单发起，由它来保证「订单状态和行项状态永远一致」。\n\n**3. 补上缺失的词：发货。**\n「取消」的定义依赖「发货前」，但 `Language` 里根本没定义**发货**。取消能不能做，边界就卡在这个没定义的词上，这是现在最大的空洞。\n\n**4. 把「退款」明确挡在门外。**\n`_Avoid_` 里已经有「退单」了，我建议把「退款」也加进去。部分取消后如果已付款就会牵出退款，那是**支付（Payment）**那个 context 的事，一旦混进订单语言里，「取消」会慢慢变成「取消并退钱」。\n\n## 改完的 `Language` 草案\n\n```md\n## Language\n\n**订单（Order）**:\n客户一次下单产生的整体，含一到多个行项。\n_Avoid_: 购买、交易\n\n**行项（Line Item）**:\n订单里的一件商品及其数量。\n_Avoid_: 商品行、明细\n\n**发货（Shipment）**:\n把一个或多个行项交给承运方。行项一旦发货就不能再取消。\n_Avoid_: 出库、配送\n\n**取消（Cancellation）**:\n客户在发货前撤回**某个行项**，该行项不再发货，同一订单里其余行项照常发货。\n取消以行项为单位；撤回整张订单，就是把它所有未发货的行项都取消。\n_Avoid_: 退单、作废、退款\n\n**已取消订单（Cancelled Order）**:\n所有行项都已取消的订单。这是从行项算出来的结果，不是能单独设置的状态。\n_Avoid_: 废单\n```\n\n**我暂定的假设**（你可以推翻）：订单部分发货之后，剩下没发的行项仍然可以取消——「发货前」是按行项各自判断的，不是看整张订单。\n\n---\n\n## 想先问你一题\n\n假设客户买了 **3 支同款钢笔**，在系统里是**一个行项、数量 3**。他现在反悔，只想取消其中 1 支，留 2 支照发。\n\n**这种「只取消部分数量」要支持吗？**\n\n这个答案会直接改模型：\n\n- **不支持**——取消的对象就是行项本身，行项只有「未取消 / 已取消」两态，模型就是上面那份，很干净。\n- **支持**——行项就得带一个「已取消数量」，「已取消」变成数量比较的结果而不是一个状态，`Language` 里还要多一个词来称呼「行项里被撤掉的那部分」。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 1,
+    "casesPassed": 1,
+    "overallScore": 1,
+    "overallPassRate": 1,
+    "meanDelta": 0
+  }
+}

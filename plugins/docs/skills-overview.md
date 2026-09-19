@@ -4,7 +4,7 @@
 
 一个 skill 一个目录：`plugins/<plugin>/skills/<skill>/SKILL.md`，旁边可放 `evals/evals.json`；插件级 `evals/` 下的 `claude plugin eval` 用例也算有 evals。装配用 `sk`（源码 `packages/sk`；profile 的 manifest.json 是声明，junction 是投影）。
 
-共 23 个 Skill，12 个 Plugin。
+共 27 个 Skill，13 个 Plugin。
 
 | Skill | Plugin | 版本 | L2 字节 | evals | description |
 |---|---|---|---|---|---|
@@ -18,9 +18,13 @@
 | `knowledge-maintenance` | knowledge-maintenance | 0.1.3 | 6488 | 无 | 用于多来源调研、可重复实验、会影响权威／Agent 配置／重要决定的研究，或用户要求复用、复核、更新当前知识时：先找已认可知识和失效条件，只补变化、冲突与缺口，再经价值门和可信门更新。不用于低成本一次性事实、原始材料／研发过程留存、私域结构… |
 | `note` | note | 0.1.0 | 2696 | 无 | 把成熟结论沉淀进本地 Markdown 知识库，或找回以前记过的结论。当用户说「沉淀到知识库」「记到 KB」「/note」「以前记过」「找回笔记」时使用。 |
 | `orchestrated-collaboration` | orchestrated-collaboration | 0.2.7 | 21795 | 无 | 当用户明确要求多 Agent／多 Session／跨 Provider 协作、任务已授权委派，或活动 Session 发生共享写入碰撞时，建立目标来源、排他所有权、可追踪交付、独立验收与综合；按共享资源和 Issue 子树确定唯一协调者，只… |
+| `code-review` | practices | 0.1.0 | 5058 | 有 | 审一条分支、PR 或在制的改动时用：以主人给的固定点取 diff，分标准与 spec 两轴各派一个子代理审，违例与判断题分开标，两份报告并排给出、各轴各自小结。Two-axis code review of the diff since a… |
+| `domain-modeling` | practices | 0.1.0 | 3825 | 有 | 设计途中要敲定领域术语、建或改统一语言、记一条架构决定时用：对着词汇表挑战用词，用具体场景逼清边界，和代码对照，词一定下就写进 CONTEXT.md，只在难回头的取舍上提 ADR。Build and sharpen a project do… |
+| `grilling` | practices | 0.1.0 | 3167 | 有 | 主人拿一个计划、决定或想法来要压力测试时用：把决定画成一棵树，按前提顺序一轮一题地问到没有一处被默默假设；事实自己查，决定归主人。Grill the user about a plan, decision or idea: walk the… |
+| `tdd` | practices | 0.1.0 | 4308 | 有 | 测试先行地做功能或修 bug 时用：先和主人定好要测的接缝，再红到绿一次一个切片；测试只穿公共接口，期望值用独立字面值，只在系统边界 mock。Test-driven development: agree the seams first, … |
 | `self-improvement` | self-improvement | 0.1.7 | 8987 | 无 | 当用户指出 Agent 漂移、误解、重复犯错，要求把任务经验固化为系统改进，或讨论只增概念却不减关键未知、形成决定或可检验资产时，只暂停依赖被推翻假设的路径，重锚原问题、持久记录纠正、诊断原因，并在授权内改进入口提示词或 Skill。最小实… |
 | `skill-appraisal` | skill-appraisal | 0.2.0 | 10450 | 无 | 判定一个 Skill 组该不该进当前装配、归哪些事项、与谁重叠，或对已判定过的组按节拍复核。三种进入：首次判定新候选、补判早已在用但从未判定过的组、按失效条件复核。判定单位是组不是单个 Skill；产出必须留下失效条件与下次最少复核步骤。用… |
-| `skill-authoring` | skill-authoring | 0.1.1 | 7296 | 有 | 写一条自建 skill 或改一条既有自建 skill 时用：从机会 issue 或反馈 issue 走到「PR 开了、上线待办建了」，先跑基线再动笔。Author or modify a self-built skill, from an … |
+| `skill-authoring` | skill-authoring | 0.1.2 | 7296 | 有 | 写一条自建 skill 或改一条既有自建 skill 时用：从机会 issue 或反馈 issue 走到「PR 开了、上线待办建了」，先跑基线再动笔。Author or modify a self-built skill, from an … |
 | `skill-maintenance` | skill-maintenance | 0.1.1 | 4363 | 有 | 创建、审计、修正、拆分、升级、迁移或退役 Skill，或其合同／入口已漂移时，先恢复行为、授权与预算，再同步正文、调用者、版本、生成物和验证。普通业务维护、纯格式修正、承载位置未定的纠正不触发。Use for explicit Skill … |
 | `architecture-design` | workcoding | 0.1.0 | 6743 | 有 | 在既有系统上设计一项新能力、要定领域模型和承载方式时用：摆现状与未知，比较至少两个候选，做支持／反对攻防，形成待主人确认的架构决定。Design a new capability on an existing system: compare… |
 | `evidence-regression` | workcoding | 0.1.0 | 7278 | 有 | 要证明老流程没变、新流程是对的时用：改代码前把真实出入参录成仓内母版，改后回放逐字节比对（Golden Master／Approval Testing）。触发语「怎么证明没改坏」「回归」「出入参采集」。Golden-master regre… |
