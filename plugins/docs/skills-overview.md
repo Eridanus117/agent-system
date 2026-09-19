@@ -12,7 +12,7 @@
 | `clarify` | clarify | 0.1.0 | 4241 | 有 | 主人冒出「想建 X／要不要搞一个／这个流程好烦」一类念头时，把「解」翻回「问题」，判断该不该做；只产出三行结论。不建则建一条 issue 写理由后以 wontfix 关闭，建则挂机会 issue。Turn an itch phrased a… |
 | `flow` | flow | 0.1.5 | 10417 | 有 | 判为常规变更、或主人开场直接敲了阶段里的 skill 时读：常规变更的路线——九个阶段的门与产物、每个阶段点名的活动、改旧代码时才开的活动、会话绑定、站会记录。The route for a normal change: nine stag… |
 | `architecture-decision` | flow-steps | 0.1.4 | 2999 | 有 | 常规变更改旧代码、要在既有系统上定一项新能力「系统成为什么样」时的活动：写清这轮决定什么，摆基线与未知，点名 tradeoff-analysis 出候选做两面，把暂定推荐交主人确认；确认前不实现。Architecture decision … |
-| `impact-analysis` | flow-steps | 0.1.4 | 3349 | 有 | 常规变更改旧代码、某个决定缺一个数或判断时的活动：把数挂到决定上，假设单列，effect-sketch 画两跳，只为拿不准的边取证，baseline-measurement 量数，出一行带置信度的结论进那个决定；限时两小时。Impact a… |
+| `impact-analysis` | flow-steps | 0.1.4 | 3361 | 有 | 常规变更改旧代码、某个决定缺一个数或判断时的活动：把数挂到决定上，假设单列，effect-sketch 画两跳，只为拿不准的边取证，baseline-measurement 量数，出一行带置信度的结论进那个决定；限时两小时。Impact a… |
 | `legacy-code-change` | flow-steps | 0.1.4 | 2350 | 有 | 常规变更第 5 阶段、要改的旧代码没有测试或注释与实现对不上时用：先按特征化测试把现状摆给主人否，否过之后按萌芽方法在旁边加新逻辑，旧实现不动。Stage 5 activity for legacy code: characterize f… |
 | `regression-evidence` | flow-steps | 0.1.4 | 2377 | 有 | 改旧代码时才开的活动「证」：改完要证明老流程没变、新流程是对的。改代码之前按 record-replay 录母版，改完按 golden-master 回放比对，三样进同一个 PR。The legacy-code activity for p… |
 | `requirement-elicitation` | flow-steps | 0.1.4 | 2914 | 有 | 改旧代码时需求不清才开的活动，第 4 阶段门上定：外来需求还是一句「解」、提出方只能由主人去问时用，把解翻回问题、备好问提出方的问题、查现成，收口成三行加一句可观察的验收判据。Requirement elicitation as a sta… |
