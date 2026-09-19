@@ -335,6 +335,8 @@
     {
       "name": "rollout-observe",
       "target": "plugins/flow-steps/skills/rollout-observe"
+    },
+    {
       "name": "characterization-test",
       "target": "plugins/practices/skills/characterization-test"
     },

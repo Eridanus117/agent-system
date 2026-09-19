@@ -116,7 +116,7 @@
 没到 1.0 的一条要说清：`canary-release-three-tiers` 0.33——第三次重跑三条回复的形状与 `references/release-plan.md` 的例子一致：三档各带放谁、停多久，回滚是关开关加 diff 为零的前提，两条需求句各一个观测点加四个黄金信号对上 p99、QPS、错误率、线程池占用，冒烟用 9001 新疆 3.2kg vip 期望 26，结尾只问档 1 放谁；同一份内容裁判三次分别投出 3/3 FAIL、3/3 PASS、1/3 PASS。这是裁判读法的抖动，不是行为缺口（第二次重跑三条同样形状的回复也被判 3/3 FAIL，那次是 grader 第 (d) 面写死了「模板 1032」而正确的冒烟该用 9001，已改）。主人已定不为 1.0 硬线重跑。
 
 迭代过程：第一轮门评测有 skill 组三条 0/3，逐条读回复后都不是行为缺口——`record-replay-sample-plan` 三次都给了带场景名的清单、规整规则、改前录、否过不录，结尾问的是一道覆盖问题（要不要加「模板没配表」那条），grader 把它数成「没请主人否」（改成「请否或问一道清单依赖的覆盖问题都算」，重跑 3/3）；`canary-release-three-tiers` 三次都指出提示词自身的矛盾（例子模板 1032 不在档 1 白名单里，冒烟打不出 26）并问主人怎么收（提示词补一句「9001 与 1032 配置相同」，重跑 1/3：另两次「档 3 全量」没写停多久，而这正是 `references/release-plan.md` 例子的写法，例子改成「档 3 全量，看满一个完整业务周期再收口」、grader 放宽到档 3 不要求停多久，再跑一次得 1/3，见上）。门评测之后正文只在审查（第 6 阶段）里改了几处，都没有重跑：golden-master 的两处出处措辞；record-replay 与 canary-release 各补一句主人定过的「纠偏留痕」（否了哪一行，原话记在那行下面）；两份 references 例子末尾与 SKILL.md 重复的禁令句删掉；「档」「规整」两个词补英文。
-## 0.1.1（2026-09-19，agent-system#121）：从 legacy-change、integration 拆出的四条实践
+## 0.1.2（2026-09-19，agent-system#121）：从 legacy-change、integration 拆出的四条实践
 
 跑法与上面相同，`--case '<skill>-*'` 四条各跑一次，结果在 `results/2026-09-19-as121-baseline/<skill>/` 与 `results/2026-09-19-as121-gate/<skill>/`（目录名带票号，因为同一天已有第一批的 `2026-09-19-baseline` 与 `-gate`）。用例的 `append_system_prompt` 沿用上面那份 mock 的常驻规则；材料是旧 `legacy-change`、`integration` 评测里那段运费计算（`FreightCalc.calc`、模板 1032 新疆 3.2kg），贴在提示词里，Bash 不可用。
 

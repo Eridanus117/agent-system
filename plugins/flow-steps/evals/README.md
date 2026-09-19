@@ -154,7 +154,7 @@
 
 三份结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`。
 
-### 0.1.2（2026-09-19，agent-system#121）：两条改旧代码时才开的活动——legacy-code-change、system-integration
+### 0.1.3（2026-09-19，agent-system#121）：两条改旧代码时才开的活动——legacy-code-change、system-integration
 
 跑法与上面相同（被测 sonnet、裁判 sonnet），`--case '<skill>-*'` 两条各跑一次，结果在 `results/2026-09-19-as121-baseline/<skill>/` 与 `results/2026-09-19-as121-gate/<skill>/`。用例的 `append_system_prompt` 沿用上面那份 mock 的常驻规则；材料是旧 `legacy-change`、`integration` 评测里那段运费计算，贴在提示词里，工具不可用，agent 只把要做的按顺序说出来。这两条是薄步：正文只点名 `characterization-test`、`sprout-method`、`interface-contract-checklist`、`incremental-integration` 四条实践与顺序，沙箱里没装 practices，所以 grader 判的是薄步自己定的顺序与停点。
 
