@@ -2,6 +2,14 @@
 
 本仓是 `agent-system` 的公共单仓：保存可公开复用的 Agent 系统原则、协议、知识、合同、Plugin、profile 装配和验证工具。它不保存个人当前工作状态，也不公开 private state-lab 原始研究证据。
 
+## Skill 部分停止维护（2026-09-19）
+
+`plugins/` 下的 skill 自 2026-09-19 起停止维护：维护者不再往这里新增 skill，也不再修改既有 skill 正文，日常使用的那份已转往别处。
+
+- 历史内容原样保留，可读、可复制、可 fork；许可不变。
+- 已有的 skill 相关 PR 与 issue 由维护者逐个处理或回复说明，不再承诺新的 skill 变更。
+- 本条只涉及 `plugins/` 下的 skill。仓内其余部分（`packages/`、`contracts/`、`entrypoints/`、`docs/` 等）不受影响，照常维护。
+
 ## Agent System 单仓边界
 
 本仓是 `agent-system` 单仓收敛的目标仓；目标由现有 `agent-control` 原位改名得到，不新建第六个仓。迁移完成后，根目录分别承载：

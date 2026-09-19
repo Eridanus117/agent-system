@@ -59,7 +59,9 @@ Issue 与 spec 记在本仓的 GitHub Issues，用 `gh` CLI 操作。见 [`docs/
 
 ### Skill authoring
 
-写一条自建 skill 或改既有自建 skill，用 `skill-authoring`（`plugins/skill-authoring`）：判是不是路由 skill、手动还是自动调用，先写评测用例跑基线再动笔，出口是 PR 加上线待办。退役不在它的范围。
+**`plugins/` 下的 skill 自 2026-09-19 起在本仓停止维护**（负责人裁定，见 README 同名小节）：不在本仓新增 skill，也不改既有 skill 正文；本仓其余部分照常。收到 skill 变更请求时说明已转走，不直接实施。
+
+历史做法（仅供参考，不再在本仓执行）：写或改自建 skill 用 `skill-authoring`（`plugins/skill-authoring`）——判是不是路由 skill、手动还是自动调用，先写评测用例跑基线再动笔，出口是 PR 加上线待办。
 
 ### Flow
 
