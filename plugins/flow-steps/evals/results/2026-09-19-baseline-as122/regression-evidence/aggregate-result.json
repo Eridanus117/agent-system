@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T08:58:12.732Z",
+  "durationSeconds": 87,
+  "costUsd": 0.3027348,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as122-split-evidence\\plugins\\flow-steps",
+    "ablation": "with-without",
+    "modelOverride": "sonnet",
+    "judgeModel": "sonnet",
+    "caseFilter": "regression-evidence-*",
+    "threshold": 1,
+    "concurrency": 2,
+    "plugins": [
+      {
+        "name": "flow-steps",
+        "version": "0.1.2",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as122-split-evidence\\plugins\\flow-steps"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "regression-evidence-before-change",
+      "dir": "evals\\regression-evidence-before-change",
+      "source": "prose",
+      "promptMarkdown": "第 5 阶段刚开始，还没改代码。第 4 阶段的门上已定：这次开改旧代码时才开的活动「证」（`regression-evidence`），因为运费计算 `FreightCalc.calc` 的老路径没有测试，验收要求老路径逐字节一致。改动是加「偏远附加按省份查表」，需求翻译的两条句子和例子已经有了（模板 1032 新疆 3.2kg vip → 26；模板 1032 广东 3.2kg → 18），老路径的分支是首重、续重、cod、vip；线上有 Arthas 和请求日志。\n\n按 `regression-evidence` 走。这个会话里 `orca`、`gh`、Arthas 都不可用，仓库文件也不在这个工作目录里，实践 skill（record-replay、golden-master）也没装：把这一步要做的按顺序说出来，说到该停下等我的地方为止。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 8,
+      "graders": [
+        {
+          "name": "orders-record-before-change",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the order of work the agent laid out. PASS if all of these hold: (a) it names record-replay for choosing the samples and recording them before any code change, and golden-master for the replay comparison after the change; (b) the sequence is: sample list (covering both requirement sentences and the old branches) → owner vetoes the list → record before the change → make the change → replay and compare (old category byte for byte against the master, new category against the expected values of the requirement) → master files, replay test and result in the same PR as the change; (c) it stops where the owner has to veto the sample list — one question — and does not go on to implement.\n\nFAIL if recording is placed after the change, if the veto of the owner is skipped, if the new-category expectations are folded into the master, or if the agent proceeds into implementation.",
+          "config": {
+            "criteria": "Judge the order of work the agent laid out. PASS if all of these hold: (a) it names record-replay for choosing the samples and recording them before any code change, and golden-master for the replay comparison after the change; (b) the sequence is: sample list (covering both requirement sentences and the old branches) → owner vetoes the list → record before the change → make the change → replay and compare (old category byte for byte against the master, new category against the expected values of the requirement) → master files, replay test and result in the same PR as the change; (c) it stops where the owner has to veto the sample list — one question — and does not go on to implement.\n\nFAIL if recording is placed after the change, if the veto of the owner is skipped, if the new-category expectations are folded into the master, or if the agent proceeds into implementation.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "regression-evidence",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.0940966,
+            "judgeCostUsd": 0.008274,
+            "durationSeconds": 57,
+            "startedAt": "2026-09-19T08:58:12.789Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-dJb8c7\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "orders-record-before-change",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`regression-evidence` 这条 skill 本身是占位（无实际步骤内容），所以按它在技能列表里的定义和第 4 阶段门上定的范围往下走。这是常规变更，第 5 阶段，从这里进：\n\n这一步（改代码前，先录母版）要做的事，按顺序：\n\n1. **定录制范围**：老路径分支是首重、续重、cod、vip，四个分支要两两组合都覆盖到，另外把需求翻译里已经确认的两条例子也纳入必录清单——模板 1032 新疆 3.2kg vip → 26，模板 1032 广东 3.2kg → 18。这两条既是新分支的验收例子，也顺带验证了老分支（vip、非 vip）在有输入命中新逻辑前后是否还能保持一致。\n\n2. **取样输入**：老路径没有测试，所以母版的可信度取决于输入是否覆盖真实分布。业界做法（record-replay / characterization testing）是从线上抓真实调用参数，而不是凭空编。线上有 Arthas 和请求日志两个来源，本该用 Arthas 挂 `FreightCalc.calc` 抓一批真实入参出参，或者从请求日志里捞历史请求重放。\n\n3. **跑老代码，录出参**：拿到输入后，跑当前这版 `FreightCalc.calc`（改动前的代码），把每组输入对应的输出记下来，形成母版（record）。这份母版要能覆盖四个分支的组合，且包含上面两条例子在老代码下的当前输出（预期新疆例子老代码算出来不是 26，广东例子算出来不是 18，因为老代码还没有偏远附加）。\n\n4. **母版落盘**：把这份录制存成仓库里的一个 fixture/数据文件，作为后续 golden-master 回放比对的基准，同时也是要进 PR 的三样东西之一。\n\n到这就停了，因为往下两步都卡住了：\n\n- 第 2 步要用 Arthas 或请求日志取样——这个会话里两者都不可用，我拿不到线上真实输入。\n- 第 3 步要跑老代码——仓库文件不在这个工作目录里，我也没法执行。\n\n另外 `record-replay` 和 `golden-master` 这两条实践 skill 没装，所以就算给我数据和仓库，我也只能按上面这套通用做法手工做，没法调 skill 本身。\n\n需要你给：\n- **输入样本**：要么是从 Arthas/请求日志导出的一批真实请求参数（哪怕是一个 CSV/JSON），要么明确说“没有真实样本，就按四分支组合手工构造”；\n- **仓库位置**：真实工作目录路径，好让我读到 `FreightCalc.calc` 并跑它。\n\n哪个先给，还是两个都换个方式（比如你贴一段 Arthas 输出，我直接读文本）？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 0.095299,
+            "judgeCostUsd": 0.008694,
+            "durationSeconds": 64,
+            "startedAt": "2026-09-19T08:58:12.790Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Cmvzcz\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "orders-record-before-change",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说清楚一个限制：这个会话里 `flow` 这个 skill 本身也不在可用列表里（我刚尝试加载失败），所以下面的顺序是按你描述的「证据先行」（`regression-evidence`）活动定义，套业界对应做法——**Characterization Testing / Golden Master**（Michael Feathers,《Working Effectively with Legacy Code》：老代码没测试、要求行为不变时，先把现状\"跑出来\"存成基线，改完再逐字节比对基线，而不是先猜测试用例）——手工拼出来的，不是从 skill 文本里读到的，需要你确认这套顺序是不是就是你们的 `regression-evidence` 定义。\n\n在第 5 阶段、这个活动下，顺序应该是：\n\n1. **定基线范围**：对象是 `FreightCalc.calc` 老路径，覆盖首重、续重、cod、vip 四个分支及其组合（包括 cod+vip 叠加这类边界组合），不包括这次新增的\"偏远附加\"——那部分没有旧行为可基线，只能拿需求例子（新疆3.2kg vip→26，广东3.2kg→18）单独验收。\n\n2. **采样真实输入**：从线上请求日志 / Arthas 抓一批覆盖上述分支组合的真实调用参数，作为基线输入集。——这一步依赖 Arthas 和日志访问，这个会话里都拿不到，我这边生成不了样本。\n\n3. **跑旧代码产出基线输出**：用改动前的 `FreightCalc.calc`，把第2步的输入集跑一遍，把输出（含中间字段，不只是最终价格）存成文件，作为golden master。——这一步依赖仓库源码在本地可跑，这个会话里仓库文件不在工作目录，我这边也执行不了。\n\n4. **确认基线覆盖度**：检查基线输入是否真的覆盖了四个分支及组合，有缺口要回到第2步补样本，而不是编造输入。\n\n5. **改代码**：在基线定好之后，才加\"偏远附加按省份查表\"的逻辑。\n\n6. **回归比对**：新代码跑同一批基线输入，逐字节比对第3步输出，四个老分支必须完全一致；偏远附加是新分支，不在旧基线覆盖范围内。\n\n7. **需求例子验收**：单独跑两条例子（新疆3.2kg vip→26，广东3.2kg→18），确认新增分支行为对。\n\n我能停下的点：第1步（定范围、列分支组合清单）和第4步（检查覆盖度）是可以我先做的纯分析工作，但第2、3步分别卡在\"没有 Arthas/日志访问\"和\"仓库不在本地、没法执行\"上。\n\n所以我这边先把第1步的分支/组合清单列出来，然后停在这里——需要你要么（a）把仓库路径/clone 方式给我，并从 Arthas 或日志里导出一批真实请求参数给我，要么（b）告诉我用什么替代方式产出基线（比如你们已经有现成的基线文件）。要哪种？"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    },
+    {
+      "name": "regression-evidence-new-only",
+      "dir": "evals\\regression-evidence-new-only",
+      "source": "prose",
+      "promptMarkdown": "第 5 阶段。改动是从零新建一个导出报表的命令 `ledger export`，仓里没有老路径，也没有谁在调它。第 4 阶段门上的清单写的是「从零新建，不开改旧代码的活动」，但我有点不放心：要不要按 `regression-evidence` 也录一份母版？\n\n这个会话里工具都不可用，仓库文件也不在这个工作目录里。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 8,
+      "graders": [
+        {
+          "name": "skips-when-no-old-path",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether the agent knew when the activity does not apply. PASS if the agent says this activity proves an existing path unchanged, so with no old path there is nothing to record as a master; it skips the activity with one line (and says the line goes into the PR body or the standup update), and points the correctness of the new command at the requirement examples and the tests written under tdd during implementation. It does not build a sample list or a recording plan.\n\nFAIL if the agent proposes recording a master for the brand-new command, or sets up a golden-master workflow anyway.",
+          "config": {
+            "criteria": "Judge whether the agent knew when the activity does not apply. PASS if the agent says this activity proves an existing path unchanged, so with no old path there is nothing to record as a master; it skips the activity with one line (and says the line goes into the PR body or the standup update), and points the correctness of the new command at the requirement examples and the tests written under tdd during implementation. It does not build a sample list or a recording plan.\n\nFAIL if the agent proposes recording a master for the brand-new command, or sets up a golden-master workflow anyway.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.0549686,
+            "judgeCostUsd": 0.003347999999999997,
+            "durationSeconds": 19,
+            "startedAt": "2026-09-19T08:59:10.066Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-jkovIt\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skips-when-no-old-path",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "这是查询。\n\n不用录。`regression-evidence` 的适用范围是「改旧代码时才开的活动」：它要证明的是\"老流程改动前后行为不变、新流程是对的\"，前提是有一段既存行为可以先用 record-replay 录下来做基准。`ledger export` 是从零新建、没有老路径、没人在调，根本不存在\"改动前的行为\"可录——录了也是空的，没有基准可比。\n\n第 4 阶段门上写的\"从零新建，不开改旧代码的活动\"是对的，不用因为不放心就补录一份母版。这类新命令要的证据应该走 `verify-evidence`（新流程本身跑得通、退出码和输出对不对），而不是 `regression-evidence`。"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.0583706,
+            "judgeCostUsd": 0.0046,
+            "durationSeconds": 23,
+            "startedAt": "2026-09-19T08:59:16.395Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-3Y5pb7\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skips-when-no-old-path",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  false
+                ],
+                "evidence": "这是查询。\n\n答案：不用额外录 regression-evidence 母版，第 4 阶段的判断是对的，不是漏项。\n\n理由：regression-evidence 这类母版存在的目的是给\"修改前的既有行为\"拍快照，好在改完后比对有没有破坏旧路径（业界叫 regression testing baseline / golden master）。它的前提是\"存在一个正在被改动的旧行为\"。你这次是从零新建 `ledger export`，仓里没有老路径、没有调用方，没有\"改动前的行为\"可拍——不是\"这项活动可做可不做\"，而是这项活动本身不适用（not applicable），录了也是空母版，没有比对意义。\n\n真正该核对的是：这个命令有没有碰到任何**既有**的合同（比如复用了老的导出框架、共享的 CLI 路由表、或者老报表用的数据格式）。如果完全是新代码、新路由、新格式，第 4 阶段清单成立，可以放心从第 5 阶段继续往下走。如果你不确定\"仓里没有老路径\"这个判断是不是完全准确（比如有没有类似的 `report export` 命令被复用了部分逻辑），这个我可以帮你查一下代码库——但你提到这个会话里工具不可用，所以这一步需要你自己确认或者换个能访问仓库的会话来查。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 2,
+    "casesPassed": 1,
+    "overallScore": 0.5,
+    "overallPassRate": 0.5,
+    "meanDelta": 0
+  }
+}

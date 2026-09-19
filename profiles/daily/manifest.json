@@ -291,6 +291,30 @@
     {
       "name": "find-skills",
       "target": "vendor/vercel-skills/skills/find-skills"
+    },
+    {
+      "name": "golden-master",
+      "target": "plugins/practices/skills/golden-master"
+    },
+    {
+      "name": "record-replay",
+      "target": "plugins/practices/skills/record-replay"
+    },
+    {
+      "name": "feature-toggle",
+      "target": "plugins/practices/skills/feature-toggle"
+    },
+    {
+      "name": "canary-release",
+      "target": "plugins/practices/skills/canary-release"
+    },
+    {
+      "name": "regression-evidence",
+      "target": "plugins/flow-steps/skills/regression-evidence"
+    },
+    {
+      "name": "rollout-observe",
+      "target": "plugins/flow-steps/skills/rollout-observe"
     }
   ]
 }

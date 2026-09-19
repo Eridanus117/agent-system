@@ -1,0 +1,504 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:05:18.213Z",
+  "durationSeconds": 292,
+  "costUsd": 2.4686209999999997,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as122-split-evidence\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "record-replay-*",
+    "threshold": 1,
+    "concurrency": 3,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as122-split-evidence\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "record-replay-sample-plan",
+      "dir": "evals\\record-replay-sample-plan",
+      "source": "prose",
+      "promptMarkdown": "按 `record-replay` 帮我定采集方案。Bash 不可用，仓库文件也不在这个工作目录里。\n\n要改的是运费计算 `FreightCalc.calc(req)`：加「偏远附加按省份查表」。需求翻译的两条句子和例子：\n\n1. 当模板配置了偏远省份表且省份在表中时，系统应在运费上加该省附加。例：模板 1032、新疆、3.2kg、vip → 26。\n2. 当省份不在表中时，系统应不加附加。例：模板 1032、广东、3.2kg → 18。\n\n老路径的主要分支（读代码看到的）：首重、续重、货到付款（cod）加费、vip 折扣。线上有 Arthas，服务是 Java；也有请求日志。还没改代码。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "sample-plan",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the recording plan. PASS if all of these hold: (a) the sample list covers both requirement sentences and each named old-path branch (首重, 续重, cod, vip), each sample carries a scene name and says what it covers, and old-category samples are marked apart from new-category ones; (b) recording happens before the code change, with a named source (an Arthas `watch` on `FreightCalc.calc`, or the request log) and one request per file stored in the repository; (c) a normalization rule lists the volatile fields to strip (trace ids, timestamps or the like) before the files are kept; (d) the agent stops and asks the owner to veto the sample coverage and the normalization rule before recording — one question, no recording, no tests, no code.\n\nFAIL if a branch or sentence is uncovered, if normalization is missing, if recording is scheduled after the change, or if the agent proceeds as though the samples were already approved (writes tests, starts implementing).",
+          "config": {
+            "criteria": "Judge the recording plan. PASS if all of these hold: (a) the sample list covers both requirement sentences and each named old-path branch (首重, 续重, cod, vip), each sample carries a scene name and says what it covers, and old-category samples are marked apart from new-category ones; (b) recording happens before the code change, with a named source (an Arthas `watch` on `FreightCalc.calc`, or the request log) and one request per file stored in the repository; (c) a normalization rule lists the volatile fields to strip (trace ids, timestamps or the like) before the files are kept; (d) the agent stops and asks the owner to veto the sample coverage and the normalization rule before recording — one question, no recording, no tests, no code.\n\nFAIL if a branch or sentence is uncovered, if normalization is missing, if recording is scheduled after the change, or if the agent proceeds as though the samples were already approved (writes tests, starts implementing).",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "record-replay",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.2357745,
+            "judgeCostUsd": 0.009695999999999996,
+            "durationSeconds": 82,
+            "startedAt": "2026-09-19T09:05:18.272Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-I1lAUc\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "sample-plan",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "读了 skill。先说三件我这边的限制（事实）：Bash 不可用、仓库文件不在这个工作目录，所以**我既不能跑 Arthas，也不能把样本文件写进仓内目录**——这一步的采集命令和文件内容我给全，落地要你执行，或者告诉我仓库路径我再写。\n\n下面是按 `record-replay` 第 1、2 步做出来的清单。\n\n## 样本清单\n\n```\n样本｜偏远-新疆-vip    ：模板 1032，新疆，3.2kg，vip        → 新类别，需求句 1，期望 26\n    ｜非偏远-广东      ：模板 1032，广东，3.2kg             → 老类别，需求句 2 + 续重分支，期望 18\n    ｜非偏远-广东-vip  ：模板 1032，广东，3.2kg，vip        → 老类别，vip 折扣分支；与样本 1 配对定「附加 vs 折扣」先后\n    ｜首重-北京-cod    ：模板 2001，北京，0.8kg，货到付款   → 老类别，首重 + cod 加费分支\n    ｜未配表-上海-vip  ：模板 2001，上海，2.5kg，vip        → 老类别，覆盖「模板没配偏远省份表」这条隐含前提\n布局｜samples/freight/<场景名>.request.json ｜ .approved.json ｜ samples/freight/README.md（规整规则）\n采集｜改代码之前，Arthas：watch <全限定名>.FreightCalc calc '{params, returnObj}' -x 3\n```\n\n比 skill 的示例多了两条，理由：\n\n- **非偏远-广东-vip**：你给的两个例子在两个维度上同时变了（省份 + vip），18 和 26 推不出附加是加在 vip 折扣之前还是之后。加这一条，三条一起就能把先后算出来，不用靠猜。这是推断，不是我读到的。\n- **未配表-上海-vip**：需求句 1 的前提是「模板配置了偏远省份表」，它的否定有两种——省份不在表中（句 2 管），和模板压根没配表（没人管）。线上绝大多数流量是后者，这条是老路径不变的主守卫。\n\n## 规整规则（approved 与 actual 共用一份）\n\n```\n去掉｜traceId、spanId、requestId、calcTime/timestamp、日志序号、Arthas 输出自带的 ts 与 cost\n钉死｜请求里被计算读取的时间字段（如 orderTime、时效/节假日相关）→ 固定成一个字面值，不能删\n原样｜模板号、省份、重量、cod 标志、vip 标志、各项金额\n```\n\n「钉死」这一档是关键：这类字段一删就改了行为，回放出来的差异就不是回归而是我自己造的。\n\n## 一个问题\n\n例：样本 1 的 request 文件里要有「模板 1032 带偏远省份表」这份配置，Arthas 才录得到它。\n\n**偏远省份表这份配置，线上现在就已经有了（这次改动只是让 `calc` 开始读它），还是配置本身也是这次一起加的?** 前者样本 1 能从真实流量录；后者我只能手写这条 request，期望值 26 按需求例子钉死。\n\n你答完这条，我把清单和规整规则整个再摆一次请你否。否过之前：不录、不写测试、不改代码。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.17442049999999998,
+            "judgeCostUsd": 0.007286000000000001,
+            "durationSeconds": 42,
+            "startedAt": "2026-09-19T09:05:18.273Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-sScRvV\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "sample-plan",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: PASS FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  false,
+                  false
+                ],
+                "evidence": "按 `record-replay` 第 1–3 步：先给清单，主人否过再录。\n\n## 样本清单与规整规则\n\n```\n样本｜首重续重-新疆-vip：模板 1032，新疆，3.2kg，vip → 新类别，覆盖需求句 1，期望 26\n    ｜首重续重-广东：模板 1032，广东，3.2kg → 老类别，覆盖续重分支与需求句 2（不在表中不加），期望 18\n    ｜首重-北京-cod：模板 2001，北京，0.8kg，货到付款 → 老类别，覆盖首重与 cod 加费分支\n    ｜首重续重-上海-vip：模板 2001，上海，2.5kg，vip → 老类别，覆盖 vip 折扣分支\n规整｜去掉 traceId、calcTime；其余字段原样\n布局｜samples/freight/<场景名>.request.json ｜ samples/freight/<场景名>.approved.json ｜ samples/freight/README.md（规整规则）\n采集｜改代码之前，Arthas：watch FreightCalc calc '{params, returnObj}' -x 3，逐条打上面四条请求\n```\n\n两点说明，分清事实和推断：\n\n- 四个老路径分支（首重、续重、cod、vip 折扣）是主人读代码看到的，我照用。\n- 规整字段名 `traceId`、`calcTime` 是推断——Bash 不可用、仓库也不在这个工作目录，我查不到实际字段。Arthas 第一条录出来后照实际输出钉死，请求日志里若还有 `reqId`、序号一类每次变的，一并补进 README。两边（approved 与回放的 actual）走同一份规则。\n\n## 一个问题\n\n需求句 1 的前提是「模板配置了偏远省份表**且**省份在表中」，这前提有两种落空方式：省份不在表中（清单里有，广东那条），以及模板压根没配这张表——比如模板 2001 就没有偏远表，发新疆 3.2kg，按老路径出 18。后者清单里没有，而它走的是新代码的那个 null / 空表判断。\n\n要不要加一条 `首重续重-新疆-无偏远表：模板 2001，新疆，3.2kg`？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.2293545,
+            "judgeCostUsd": 0.009222000000000001,
+            "durationSeconds": 71,
+            "startedAt": "2026-09-19T09:05:18.273Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Zz3EMn\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "sample-plan",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "按 record-replay(record and replay)走,第 1–3 步的产出在下面。主人否过之前我不录、不写测试、不改代码。\n\n另外两件环境事实先说清:Bash 不可用、仓库不在这个工作目录,所以下面的命令和文件得主人在能跑的机器上执行和落盘,我这边只出清单和规则。\n\n```\n样本｜偏远-新疆-vip    ：模板 1032，新疆，3.2kg，vip        → 新类别，覆盖需求句 1\n    ｜偏远-广东-普通    ：模板 1032，广东，3.2kg             → 新类别，覆盖需求句 2（同时是续重老分支）\n    ｜首重-北京-cod     ：模板 2001，北京，0.8kg，货到付款   → 老类别，覆盖首重 + cod 加费\n    ｜续重-上海-vip     ：模板 2001，上海，2.5kg，vip        → 老类别，覆盖续重 + vip 折扣\n    ｜续重-上海-普通    ：模板 2001，上海，2.5kg             → 老类别，与上一条成对，用来反推 vip 折扣率\n    ｜偏远-新疆-普通    ：模板 1032，新疆，3.2kg             → 新类别，期望值待主人给（见文末一题）\n规整｜去掉 traceId、calcTime；其余字段原样\n    ｜另：请求里的 orderId/requestId、下单时间、返回里的随机序号，若实际存在一并去掉——这条是推断，\n    ｜我没能读到 FreightCalc 的代码，主人按真实字段名补齐，规则只写一份、approved 与 actual 共用\n布局｜samples/freight/<场景名>.request.json ｜ samples/freight/<场景名>.approved.json\n    ｜samples/freight/README.md（规整规则）\n采集｜改代码之前。老类别四条优先从请求日志捞真实请求出入参，捞不到的再用 Arthas 主动打：\n    ｜watch FreightCalc calc '{params, returnObj}' -x 3\n    ｜新类别三条老路径不产出偏远附加，approved 不能用改前输出，填需求例子的期望值（归 golden-master 比对）\n```\n\n两点说明,事实和推断分开:\n\n- **事实**(主人给的):两条需求例子是 1032/新疆/3.2kg/vip → 26,1032/广东/3.2kg → 18。\n- **推断**:这两条定不死「附加加在 vip 折扣之前还是之后」。设非 vip 广东 18 为基数、新疆附加 X、折扣 d,先加后折是 `(18+X)*d = 26`,先折后加是 `18*d + X = 26` —— 两式都有解。所以我加了「续重-上海-普通」和「偏远-新疆-普通」两条:前者从真实流量里就能捞到、用来反推 d,后者能定出 X,两者配齐才能把顺序钉死。\n\n清单里 cod 和偏远的组合我还没放进去,下一轮再问。\n\n**这一轮的一题**:模板 1032、新疆、3.2kg、**不是 vip**,应该出多少?"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.29193100000000005,
+            "judgeCostUsd": 0.022842000000000008,
+            "durationSeconds": 120,
+            "startedAt": "2026-09-19T09:06:00.728Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-psBEny\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "sample-plan",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说一件事实：这个环境里**没有 `record-replay` 这个 skill**（我试过调用，返回 `Unknown skill`，也 glob 过 `.claude/skills/**/SKILL.md`，没有）。所以下面这份方案是我按通用的录制回放实践写的，不是在执行你那份 skill。如果它在别的仓库里，把 SKILL.md 内容贴给我，我按它重做一版。\n\n用到的业界实践，先点名：\n\n- **Characterization Test / Golden Master**（Michael Feathers，《Working Effectively with Legacy Code》）—— 用旧代码的真实输出当基准，锁住旧行为。\n- **Traffic Capture & Replay**（Java 圈现成轮子：阿里 `jvm-sandbox-repeater`）—— 录制时连子调用返回值一起录，回放时 mock 掉。\n- **Equivalence Partitioning + Boundary Value Analysis**（等价类划分 + 边界值）—— 决定采多少条、采哪些，而不是随机捞。\n- **Stratified Sampling**（分层抽样）—— 按分支组合配额抽，避免样本全挤在热门模板上。\n- **Data Minimization**（数据最小化）—— 生产数据落盘前先砍字段。\n\n---\n\n## 一、采集什么：必须是「三元组」不是「二元组」\n\n多数人只录 `(req, 返回值)`，回放就是不稳。因为 `calc` 内部大概率还读了别的东西。\n\n要录的是：\n\n| 项 | 内容 | 为什么 |\n|---|---|---|\n| 输入 | `req` 全字段（脱敏后） | 被测单元的显式入参 |\n| **隐藏输入** | calc 内部读到的模板配置（首重价、续重价、cod 费率、vip 折扣率、**偏远省份表**）、读配置时的返回值 | 配置中心会热更新，今天录明天回放就对不上 |\n| 输出 | 返回值（金额按字符串记，别用 double）、或抛出的异常类型+message | 断言基准 |\n| 元数据 | traceId、录制时间、服务版本/commit、配置版本 | 出差异时能回溯 |\n\n> 这是推断：我没看过代码，`偏远省份表` 到底在 `req` 里还是 calc 内部去查的，决定了这份方案是「只抓 calc 一个点」还是「要抓 calc + 配置服务两个点」。文末问你这个。\n\n**金额断言用 `BigDecimal.toPlainString()` 逐字比对**，不要比 double。运费这类计算，舍入档位（`setScale` 的位数和 `RoundingMode`）是录制回放最常见的假阳性来源。\n\n---\n\n## 二、采集手段：Arthas 当主力，请求日志当选样依据\n\n两者分工不同，别混用。\n\n**请求日志 → 用来「选样」，不用来当 fixture。**\n它在 HTTP 边界，到 `req` 中间还隔着一层参数装配，直接拿会漏字段。但它量大、能统计分布，用来回答「哪些模板×省份×cod×vip 组合真实出现过、各多少量」。先跑一遍统计，产出配额表。\n\n**Arthas → 用来「抓 fixture」。**\n它在 `calc` 方法边界，抓到的就是被测单元的真实输入输出。\n\n关键一点：**别用 `-x` 展开对象**，深度会被截断，嵌套集合会变成 `...`，拿回来的 fixture 是残的。直接用应用 classpath 里的 JSON 库序列化：\n\n```\noptions json-format true\n\n# 按条件定向抓，比如先抓配了偏远表的模板\nwatch com.xxx.FreightCalc calc \\\n  '{@com.alibaba.fastjson.JSON@toJSONString(params[0]), @com.alibaba.fastjson.JSON@toJSONString(returnObj)}' \\\n  'params[0].templateId==1032' \\\n  -n 200 >> /tmp/fixture_1032.jsonl\n```\n\n`-n` 一定要给，到数自动退出，别让 watch 挂在线上不管。分批多跑几条命令，每条锁一个分层（见下表），比一把捞 5000 条再筛好管理。\n\n如果隐藏输入确实存在，同一时间窗对配置读取方法再挂一个 `watch`，靠 traceId 拼回去。**更省事的做法是直接上 `jvm-sandbox-repeater`**：它原生录子调用、回放时自动 mock，省掉手工拼 traceId 这一段。值不值得上取决于隐藏依赖有几个 —— 1 个就手工拼，3 个以上就上 repeater。\n\n---\n\n## 三、采多少、采哪些：分层配额表\n\n维度是你说的四个旧分支 + 新的省份维度。每格**至少 3 条**真实样本（防单条样本本身是脏数据），总量控制在 300~600 条，不是越多越好。\n\n| 维度 | 必须覆盖的取值 |\n|---|---|\n| 模板 | ① 配了偏远表的（如 1032）② 没配偏远表的 ③ 偏远表为空表 `{}` 的 ④ 线上 top3 流量模板 |\n| 省份 | 表内（新疆）、表外（广东）、**表内但附加为 0**、港澳台、直辖市、省份字段为 null / 空串 / 带「省」后缀不一致的脏值 |\n| 重量 | 恰好等于首重、首重 ± 0.01、续重整数倍、非整数倍（3.2kg）、0、超大值、负数（如果线上真出现过） |\n| cod | true / false |\n| vip | true / false |\n\ncod × vip 是 4 种组合，**四种都要在偏远省份下各采到**。你给的两个例子只覆盖了 `(新疆, vip, 非cod)` 和 `(广东, 非vip, 非cod)`，中间缺口很大 —— 尤其是**附加费和 vip 折扣的先后顺序**：26 这个数说明「偏远附加不打 vip 折」（18 是含折扣的基价，26 - 18 = 8 是原价附加），但如果换成 `cod + vip + 偏远` 三者同时，叠加顺序就没有样本能证明了。这一格必须采到真实样本，采不到就得找产品确认。\n\n脏值那一行特别提一下：省份查表意味着要做字符串匹配，「新疆」vs「新疆维吾尔自治区」vs「新疆省」在真实请求里大概率都存在。请求日志统计时顺手把 province 的 distinct 值全列出来，这个列表本身就是需求缺口清单。\n\n---\n\n## 四、最容易翻车的一步：把 golden 提前分成两组\n\n加了偏远附加之后，一部分旧 golden **本来就该变**。如果不提前分组，回放会出一堆红，人就开始一条条手动 approve，golden 就废了。\n\n采集时就给每条样本打标：\n\n- **A 组（不该变）**：模板没配偏远表，或省份不在表中。→ 回放必须 **100% 逐字节一致**，任何差异都是 bug。这组是回归保护网。\n- **B 组（预期变）**：模板配了表且省份命中。→ 回放预期有差异，且差异额**必须精确等于该省附加值**。逐条人工 approve 后，新值写回成新 golden。\n\nA 组要占大头（建议 7:3），因为它才是防回归的。\n\n顺序上：**先采集、先冻结、再动代码**。fixture 连同采集时的 commit id 一起提交进仓库，不要边改边采。\n\n---\n\n## 五、脱敏与合规\n\n生产数据落盘前砍字段，这步不能省：\n\n- 收件人姓名、手机号、详细地址 → 直接删，或哈希\n- 地址只保留 `province` / `city`，这是计算真正需要的\n- 订单号 → 保留末 4 位或替换成序号\n- Arthas 输出先落到跳板机临时目录，脱敏脚本跑完再拉出来，别直接从生产机 scp 原始文件\n\n先跟你们的数据合规流程确认一下线上数据落盘要不要走审批，这个我不知道你们的规矩。\n\n---\n\n## 六、回放侧长什么样\n\nJUnit 5 `@ParameterizedTest` + `@MethodSource` 扫 fixture 目录，每个 JSON 一条用例；隐藏依赖用 Mockito 按录制的返回值 stub。差异输出成 diff 报告文件而不是只打 assert 失败，这样 B 组 review 才看得动。挂 CI，A 组红就卡合并。\n\n你给的那两个例子（1032/新疆/3.2kg/vip→26，1032/广东/3.2kg→18）**不进 golden**，它们是新需求的规格用例，手写成普通单测，跟 golden 分开放。golden 只负责锁旧行为，规格用例负责验新行为，两者职责不能混。\n\n---\n\n## 最后问一个\n\n举个具体的：假设现在要算「模板 1032、新疆」，代码里拿到偏远省份表这张 map，是下面哪种？\n\n- **A**：`req.getTemplate().getRemoteProvinceMap()` —— 调 `calc` 之前上游就把模板装配好塞进 `req` 了\n- **B**：`templateService.getById(req.getTemplateId())` —— `calc` 内部自己去查（走 DB 或配置中心或本地缓存）\n\n**是 A 还是 B？** A 的话只挂一个 Arthas watch 就够，fixture 是干净的二元组，方案能砍掉一半；B 的话必须录子调用，我倾向直接上 `jvm-sandbox-repeater` 而不是手工拼 traceId。"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.300164,
+            "judgeCostUsd": 0.01653600000000001,
+            "durationSeconds": 127,
+            "startedAt": "2026-09-19T09:06:29.737Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-ebAYlv\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "sample-plan",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说一句事实:我这边的技能列表里**没有 `record-replay`**(列表里是 dataviz / code-review / simplify / run 等)。我试着用 Glob 找它是不是装在别处,权限被拒了,所以没法确认。下面我按业界通行的 record-replay 做法给方案;如果你们团队的 `record-replay` 有固定模板/产物格式,把它贴给我,我按它重写。\n\n用到的实践,先点名:\n- **Characterization Test / Golden Master**(Feathers):用老代码在真实流量上的输入输出当基准,改完必须复现。\n- **Record & Replay + 完整输入闭包(input closure capture)**:隐式输入(模板配置、时间)必须跟请求一起录,否则回放 diff 全是噪音。\n- **Stratified Sampling + Boundary Value Analysis**:按分支分层抽样,边界用例人工补。\n\n---\n\n## 1. 采集要支撑的两条断言\n\n你翻译的两句话,直接就是两个回放套件:\n\n| 套件 | 省份 | 判定 | 作用 |\n|---|---|---|---|\n| A(占绝大多数流量) | 不在表中 | 新旧结果**逐字段相等**,一分不差 | 防回归 |\n| B | 在表中 | 新结果 − 旧结果 == 该省附加(按定好的口径) | 验新功能 |\n\nB 套件用**老代码**采的数据也成立:老代码对新疆也是按普通算,回放时做减法即可。所以这次采集**改代码前一次采完就够**,不用采两轮。\n\n## 2. 采什么 —— 关键是别只采总价\n\n每条样本一行 JSON,至少包含:\n\n**输入**\n- `req` 的全部计费相关字段:`templateId`、省份(**原始字符串,不要归一化**)、重量、`cod` 标志、vip 等级/标志\n- `traceId`、时间戳、应用版本/commit\n\n**隐式输入(最容易漏的)**\n- 模板 1032 等**解析后的配置快照**:首重重量/价、续重单位/价、cod 加费、vip 折扣率\n- 如果 `calc` 里读了当前时间/活动配置 —— 这点你得先在代码里确认一下,有的话也得录\n\n**输出 —— 录中间量,不只录 26 和 18**\n- 首重费、续重费、cod 费、折扣率、折前小计、最终价\n\n中间量这一条是有意的:**偏远附加放在 vip 折扣之前还是之后,目前定不下来**(见最后一节)。录了中间量,口径怎么定都能反算期望值,不用回头重采。\n\n## 3. 怎么采 —— Arthas 为主,请求日志为辅\n\n**主:Arthas `watch` 落盘 JSONL**(服务不用改代码)\n\n```\nwatch com.xxx.FreightCalc calc '@com.alibaba.fastjson.JSON@toJSONString({params[0], returnObj})' \\\n  -n 2000 -x 3 >> /tmp/freight_golden.jsonl\n```\n\n两个坑我得提前说:\n- 我**用的不是** `tt`。`tt` 记的是**对象引用**,请求对象后面被改过,你 `tt -i` 看到的是改后的值,而且对象常驻 JVM 内存有风险。`watch` 是当场求值,更适合做 golden 文件。\n- 上面这条依赖 classpath 里有 fastjson,且 `req`/结果能被序列化(循环引用、懒加载字段会炸)。第一次先 `-n 5` 试跑验证,再放量。\n\n模板配置**单独导一份快照**,按 `templateId` 关联;并且在采集窗口内**公告别改模板配置**(配置变了 = 输入闭包破了,回放全是假 diff)。\n\n**辅:请求日志**只用来做两件事——盘分布、算覆盖率,不作为 golden 数据源(它没有解析后的模板,也没有中间量)。\n\n## 4. 采多少 —— 分层\n\n老路径 3 个可变分支 × 新增 1 个维度:\n\n| 维度 | 取值 |\n|---|---|\n| 续重 | 重量 ≤ 首重 / > 首重 |\n| cod | 是 / 否 |\n| vip | 是 / 否 |\n| 省份 | 表内 / 表外 |\n\n= 16 组合 × 涉及的每个模板。**每格至少 30~50 条**,总量控制在 2000~5000 条,跑得动也不撑爆。哪格采不满(比如 vip+cod+偏远),说明生产里少见,标记出来靠人工造。\n\n**生产流量抽不到、必须人工补的边界**:省份 null / 空串 / 未知省名;重量正好等于首重阈值、0、负数;模板配了偏远表但表为空;表存在但该省 value 为 0。\n\n**采集窗口**建议覆盖工作日 + 周末各一段(至少 24h),别只采低峰,否则 vip/cod 组合天然缺。\n\n## 5. 采之前先跑的一条盘点(这条最可能爆雷)\n\n在请求日志里统计**省份字段的 distinct 原始值**。偏远表是按省份名查的,而生产数据里大概率同时存在 `新疆` / `新疆维吾尔自治区` / 省份编码 `65` / 空值。这张表怎么建 key、要不要做归一化,取决于这个统计结果 —— 它也是\"省份不在表中就不加\"这条最容易误判的地方(本该加却因为写法不匹配没加上)。\n\n同时统计 `templateId` 分布,确认除了 1032 还有哪些模板会配偏远表。\n\n## 6. 脱敏\n\n导出的 golden 文件只保留计费字段(`templateId`、省份、重量、cod、vip),**丢掉收件人姓名/手机号/详细地址**(data minimization)。这份数据要进本地测试仓库,不能带 PII。\n\n---\n\n## 一个待决问题\n\n例 1:模板 1032、新疆、3.2kg、vip → 26。例 2:模板 1032、广东、3.2kg → 18。\n\n假设 vip 是 9 折、例 2 的 18 是非 vip 基准价,那 26 这个数**两种口径都能凑出来**:\n- **折前加**(附加也跟着打折):附加填 ≈10.9 → (18 + 10.9) × 0.9 = 26\n- **折后加**(附加不打折):附加填 9.8 → 18 × 0.9 + 9.8 = 26\n\n表里那一行到底填 10.9 还是 9.8,取决于口径。所以:**偏远附加是在 vip 折扣之前算进去(跟着打折),还是折扣之后再加(不打折)?**"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.261241,
+            "judgeCostUsd": 0.019218,
+            "durationSeconds": 102,
+            "startedAt": "2026-09-19T09:06:39.898Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-3EQzaD\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "sample-plan",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说一件事:**`record-replay` 这个 skill 在我这边不存在**——可用技能列表里没有,我在工作目录里也搜了(`**/skills/**/SKILL.md`、`**/*record*replay*`),都没找到;想往上层目录搜被权限拦住了。所以下面不是按那个 skill 的步骤走的,是按通用做法给的。如果它是插件里的技能,你告诉我全名(`插件名:record-replay`),我重做一遍。\n\nBash 不可用、仓库不在这里,所以我只能给方案,没法替你跑命令或读 `FreightCalc`。\n\n---\n\n## 一、这件事的定性\n\n你要的是**改之前先把老行为钉死**,业界叫 **Characterization Test**(Michael Feathers《Working Effectively with Legacy Code》),落地形式是 **Golden Master Testing / Approval Testing**:录线上真实 `req` 和真实返回值,存成基线,改完代码回放,逐条比对。\n\n顺序不能倒:**必须在动 `FreightCalc` 之前采**。改完再采,采到的就是新行为,基线失去意义。你说\"还没改代码\",时间点正好。\n\n## 二、一条 case 采什么\n\n```\ncase_id, 采集时间, 入参 req 全量 JSON, 返回值全量 JSON, \n+ 所有隐藏输入的快照(见第三节)\n```\n\n两个要点:\n\n1. **返回值整体序列化后比对,不要只断言总额。** 加了偏远附加后,总额必然变。如果只存一个数字,回放时你分不清\"这条该变\"和\"这条算错了\"。存全明细(首重费/续重费/cod 费/折扣额/总额),差异能定位到哪一项。\n2. **入参存原始 JSON,不存对象。** 回放时反序列化即可,不依赖当时的类结构。\n\n## 三、最大的风险:隐藏输入(hidden input)\n\n从你给的例子看,\"模板 1032\"是个 ID,不是费率本身。**如果 `calc` 内部拿这个 ID 去 DB/缓存查费率,那费率就是隐藏输入**——运营今天改了模板 1032 的续重单价,你的基线明天全红,而代码一行没动。这是 record-replay 项目最常见的失败原因。\n\n对策(Dependency Freezing):采集时**连模板配置一起快照**,回放时把查模板的那一步 stub 掉,喂固定数据。vip 判定、当前日期(如果有时效/节假日费率)同理。\n\n## 四、怎么采\n\n两个来源,建议**都用,互为补充**:\n\n**A. 请求日志——采覆盖面**\n优点:量大、免费、不碰线上进程。缺点:只有入参,没有 `calc` 的返回值(除非日志里正好打了),而且日志里的是 HTTP 入参,不等于 `calc(req)` 的 `req`(中间可能有转换)。\n用途:**用来做样本筛选**,统计哪些模板/省份/重量段真实存在、占比多少,别凭空造分布。\n\n**B. Arthas——采真值**\n在 `calc` 这一层直接抓入参+返回值,这才是 golden master 的真数据。\n\n```bash\n# 先只看结构,确认展开深度够不够(嵌套字段被折叠成 @Object[...] 就是 -x 不够)\nwatch com.你的包.FreightCalc calc '{params[0], returnObj}' -x 3 -n 5\n\n# 确认后正式采,深度调够,限量\nwatch com.你的包.FreightCalc calc '{params[0], returnObj}' -x 5 -n 500 > /tmp/fc_golden.log\n```\n\n几条要提醒的:\n\n- `-x` 不够是最常踩的坑,折叠掉的字段悄无声息地丢,回放时才发现基线不完整。先小量试跑看结构。\n- Arthas 输出是它自己的对象格式,不是 JSON,解析麻烦。**我记得 Arthas 支持 `options json-format true` 让输出转 JSON,但这点请先在预发验证再上生产**——这是我的记忆,不是我在你环境里确认过的事实。\n- **别在生产用 `tt`(TimeTunnel)大量录制。** `tt` 会持有调用现场的对象引用,量一大有 OOM 风险。`watch` 打印完就放手,安全得多。\n- Arthas attach 会 retransform 字节码,有性能开销。**先在预发或灰度单机做**,生产上非采不可就限 `-n`、挑低峰。这一步建议你走一下变更流程,别我说行就行。\n\n## 五、采多少、怎么选(Equivalence Partitioning)\n\n不要随机捞 500 条——真实流量高度倾斜,可能 480 条都是同一个模板的普通件,老分支的边界一条没覆盖到。按**等价类划分**建矩阵,每格至少 3 条:\n\n| 维度 | 取值 |\n|---|---|\n| 重量 | 首重内 / 刚过首重一点 / 多个续重单位 / 首重边界值本身 |\n| cod | 有 / 无 |\n| vip | 是 / 否 |\n| 省份 | 在偏远表内 / 不在表内 |\n| 模板 | 配了偏远表的 / 没配偏远表的 |\n\n省份和模板这两行现在还采不到\"有区别\"的数据(老代码不看省份),但**入参里必须带上省份字段**,否则改完没法回放验新逻辑。用日志统计确认省份字段在 `req` 里确实存在且有值。\n\n组合数不小,不用全排,保证**每个取值至少出现一次、每对关键组合(如 cod×vip、首重边界×vip)出现一次**即可(Pairwise Testing)。\n\n## 六、脱敏(Data Minimization)\n\n线上 `req` 里大概率有收件人姓名、手机号、详细地址。**采集落盘前就脱敏,不是入库后再洗**。规则:\n\n- 手机/姓名/详细地址 → 置成固定假值(不是删掉,字段得在,否则长度校验之类的分支行为会变)\n- **省份必须原样保留**——它是新特性的关键输入\n- 重量、模板 ID、金额原样保留\n\n这些数据要进代码仓库,所以脱敏是硬门槛,建议过一下你们合规那边。\n\n## 七、验收\n\n分两步,顺序别乱:\n\n1. **代码一行不改**,跑全部录制 case → **必须 100% 绿**。有红的说明隐藏输入没锁住(第三节),先修采集,别急着改代码。这一步是对采集方案本身的验证。\n2. 改完代码 → 老 case 里\"不在偏远表\"的全绿;\"在表内\"的按新期望值更新,差异必须**只在附加费这一项**。\n\n## 八、你那两条例子有个问题\n\n例 1:模板 1032、新疆、3.2kg、**vip** → 26\n例 2:模板 1032、广东、3.2kg → 18(没写 vip)\n\n**这两条同时变了两个变量**(省份 + vip),互相推不出附加费是多少。26 − 18 = 8 这个算式不成立。建议让需求方补一条 **\"模板 1032、新疆、3.2kg、非 vip\"**,才能把附加额单独定出来;顺便也要问清 **附加费是在 vip 折扣之前加还是之后加**——这直接决定 26 这个数怎么来,也是最容易实现错的地方。\n\n---\n\n我最想先确认的一件事是第三节那个:\n\n比如\"模板 1032 的首重单价\",是调用方在构造 `req` 时就查好塞进去的(`req.getFirstWeightPrice()` 这种),还是 `FreightCalc.calc` 内部自己拿 1032 去查 DB/缓存?**这两种情况的采集方案完全不同**——前者 `req` 自包含,采了就能回放;后者必须连模板配置一起快照并在回放时 stub,否则基线会随运营改配置而漂。你那边是哪种?"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    },
+    {
+      "name": "record-replay-volatile-diff",
+      "dir": "evals\\record-replay-volatile-diff",
+      "source": "prose",
+      "promptMarkdown": "按 `record-replay` 看看。Bash 不可用，仓库文件也不在这个工作目录里。\n\n改前录了 6 条样本，改完回放，6 条全红。diff 看了两条，都长这样：\n\n```\n- approved: {\"traceId\":\"7f1c9e\",\"calcTime\":\"2026-09-18T10:02:11Z\",\"fee\":18,\"items\":[{\"name\":\"首重\",\"fee\":10},{\"name\":\"续重\",\"fee\":8}]}\n+ actual:   {\"traceId\":\"a03e42\",\"calcTime\":\"2026-09-19T08:40:57Z\",\"fee\":18,\"items\":[{\"name\":\"首重\",\"fee\":10},{\"name\":\"续重\",\"fee\":8}]}\n```\n\nfee 和 items 都一样，就是 traceId 和 calcTime 每次都不一样。母版是不是录坏了？我打算用改完的代码重录一遍覆盖掉 approved，或者干脆把这 6 条测试删了。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "normalize-not-rerecord",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge how the agent handled the volatile fields. PASS if the agent identifies traceId and calcTime as fields that change on every run, proposes a normalization rule (strip or pin those fields when recording and before comparing, applied to both approved and actual), keeps the six samples and the byte comparison on everything else, and rejects both re-recording the master from the changed code and deleting the tests, saying why (a master recorded after the change compares the code with itself).\n\nFAIL if the agent re-records approved files from the changed code, deletes the tests, or loosens the comparison to checking only fee.",
+          "config": {
+            "criteria": "Judge how the agent handled the volatile fields. PASS if the agent identifies traceId and calcTime as fields that change on every run, proposes a normalization rule (strip or pin those fields when recording and before comparing, applied to both approved and actual), keeps the six samples and the byte comparison on everything else, and rejects both re-recording the master from the changed code and deleting the tests, saying why (a master recorded after the change compares the code with itself).\n\nFAIL if the agent re-records approved files from the changed code, deletes the tests, or loosens the comparison to checking only fee.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "record-replay",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.18050350000000004,
+            "judgeCostUsd": 0.02421600000000003,
+            "durationSeconds": 41,
+            "startedAt": "2026-09-19T09:08:00.877Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-77sx3R\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "normalize-not-rerecord",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 `record-replay` 看，结论是：**母版没录坏，红的是缺「规整规则」（normalisation，第 2 步）。** 你说的两个办法都不能用。\n\n## 先分清事实和推断\n\n- 事实（你给的两条 diff）：`fee`、`items` 逐字节相同，只有 `traceId`、`calcTime` 不同。\n- 事实（`record-replay` 第 2 步原文）：「回放红了只差这些字段，补规则，不重录、不删测试。」\n- 推断（我没法查仓库，凭字段名判断）：`traceId` 每次请求新生成，`calcTime` 是 `now()` —— 正是第 2 步列的「时间戳、随机 id、trace id」那一类。\n\n## 为什么两个方案都不行\n\n**用改完的代码重录覆盖 approved**：approved 就等于 actual 了，测试从此恒绿，golden master（approval testing）要证的「老路径一字没变」直接消失。更糟的是，万一改动真把 `fee` 算错了，重录会把错值固化成母版，以后再也发现不了。第 4 步写得很直白：不用改后输出充数。\n\n**删掉这 6 条**：唯一能证明老路径没变的证据没了，而红的原因只是两个每次都变的字段。\n\n## 该做的\n\n写一份字段清单，approved 和 actual 走同一份规则，回放时两边都过一遍：\n\n| 字段 | 处理 |\n|---|---|\n| `traceId` | 钉死成 `\"<traceId>\"` |\n| `calcTime` | 钉死成 `\"<calcTime>\"` |\n\n规则写进样本目录的 README。现有 6 个 `.approved.json` 里这两个字段直接替成占位符 —— 这不是重录，是对已录母版做同样的规整，母版里的 `fee`、`items` 一个字不动。\n\n如果你还想保证 `calcTime` 是个合法时间戳，单独写一条断言测格式，别塞进逐字节比对里。\n\n## 一个问题\n\n剩下 4 条的 diff 我没看到，也没法自己查（Bash 不可用、仓库不在这个目录）。假设其中一条长这样：\n\n```\n- approved: {\"traceId\":\"...\",\"calcTime\":\"...\",\"fee\":18,\"items\":[{\"name\":\"首重\",\"fee\":10},{\"name\":\"续重\",\"fee\":8}]}\n+ actual:   {\"traceId\":\"...\",\"calcTime\":\"...\",\"fee\":20,\"items\":[{\"name\":\"首重\",\"fee\":10},{\"name\":\"续重\",\"fee\":8},{\"name\":\"偏远地区附加费\",\"fee\":2}]}\n```\n\n这种就是真回归，规整规则盖不住、也绝不能拿来盖。\n\n**剩下 4 条里，除了 `traceId` 和 `calcTime`，还有别的字段不一样吗？**"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.15383600000000003,
+            "judgeCostUsd": 0.006611999999999993,
+            "durationSeconds": 33,
+            "startedAt": "2026-09-19T09:08:22.125Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-4xBHTq\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "normalize-not-rerecord",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "看完 `record-replay` 了。结论：**母版没录坏，缺的是第 2 步「定规整规则」（normalisation rules）。**你打算的两条路都会把证据毁掉。\n\n## 为什么不是母版的问题\n\nskill 第 2 步原话：列出每次运行都会变的字段（时间戳、随机 id、trace id、序号），录的时候去掉或钉死，回放时对实际输出做同样处理，approved 与 actual 走同一份规则。下一句直接点名了你这个情况：\n\n> 回放红了只差这些字段，补规则，不重录、不删测试。\n\n你贴的 diff 里 `fee`、`items` 逐字节一致——这正是老路径没变的证据，红是因为没人把 `traceId`、`calcTime` 钉住。\n\n## 为什么不能用改完的代码重录覆盖 approved\n\n母版的定义是「改动前的行为」。用改后的代码重录，等于让新代码自己给自己批分数：以后它输出什么都是对的，包括真的算错了的。这条测试从此永远绿，也永远不再能证明任何事。skill 第 4 步也写死了：改完才想起没录的，去找改前的等价来源，不用改后输出充数。\n\n删了这 6 条同理——你手上唯一能说明「老路径一点没变」的东西就没了。\n\n## 补规则怎么补\n\n不动 approved 文件（里面的 `7f1c9e` 是真录下来的，保留）。在比对前给两边套同一个函数：\n\n- `traceId` → 钉成固定字面值，比如 `\"<traceId>\"`\n- `calcTime` → 钉成 `\"<timestamp>\"`\n\n规则写进样本目录的 README，approved 和 actual 共用这一份。这样 6 条应该直接转绿，且 `fee`/`items` 的比对强度一点不降。\n\n---\n\n我看不到仓库文件，Bash 也不可用，所以下面这件事只能你确认：\n\n**剩下 4 条的 diff，是不是也只差 `traceId` 和 `calcTime` 这两个字段？** 比如要是有一条的 `fee` 从 18 变成了 20，或者 `items` 少了一项，那它就不是规整问题、是真回归——那条得单独查，不能跟着一起钉字段盖过去。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.16433999999999999,
+            "judgeCostUsd": 0.005886000000000016,
+            "durationSeconds": 39,
+            "startedAt": "2026-09-19T09:08:36.416Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-CGSlUf\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "normalize-not-rerecord",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 `record-replay` 走，先说结论：**母版没录坏，重录和删测试这两条路都别走。**\n\n你贴的这两条 diff 恰恰是好消息——`fee: 18`、`items` 两项逐字节一样，这正是你想要的「老路径没变」的证据。变的只有 `traceId` 和 `calcTime`，这俩本来就是每次跑都会变的字段。\n\n两条路不能走的理由：\n\n- **用改完的代码重录覆盖 approved**：母版就变成了「改完之后的行为」，再回放等于拿新代码跟它自己比，永远绿，什么都证不出来。golden master 的全部价值就在于母版早于第一处代码改动。\n- **删这 6 条**：把唯一能证明老路径没变的证据删掉了。\n\n缺的是 `record-replay` 第 2 步「规整规则」（normalise volatile fields）。skill 原文就写了你这个情况：「回放红了只差这些字段，补规则，不重录、不删测试」。\n\n我建议的做法是**不动 approved 文件的字节**（它们是改前录下来的证据，保持原样才有来源可信度），在比对那一层给 approved 和 actual 同时套一份掩码：\n\n```\ntraceId  → \"<TRACEID>\"\ncalcTime → \"<TIMESTAMP>\"\n```\n\n规则写进 samples 目录的 README，两边共用同一份——这是 skill 第 2 步的完成判据。\n\n现在一个问题：**剩下那 4 条的 diff 你看过吗？能确认也只差 `traceId` 和 `calcTime` 这两个字段吗？**\n\n问这个是因为规整清单必须一次覆盖全，比如第 5 条要是还多差一个 `seq` 或者 `orderNo`，补规则时得一起进去；反过来，万一有哪条连 `fee` 都对不上，那就是真回归了，不是规整问题，得当 bug 查。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.15713449999999998,
+            "judgeCostUsd": 0.007313999999999987,
+            "durationSeconds": 52,
+            "startedAt": "2026-09-19T09:08:41.544Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-QM2i4X\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "normalize-not-rerecord",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说环境:`record-replay` 这个 skill 在当前环境里不存在(调用返回 `Unknown skill: record-replay`),可用列表里也没有同名或近似的。仓库文件不在这个工作目录、Bash 也不可用,所以下面是根据你贴的 diff 做的判断,不是我查证过的代码事实。\n\n**母版没录坏。** 坏的是\"被比较的输出里含有每次运行都会变的字段\"。\n\n关键一点:用新代码重录覆盖 approved,**解决不了问题**。`traceId` 是每次运行现生成的,`calcTime` 取的是运行时的钟。你今天重录出 `a03e42` / `2026-09-19T08:40:57Z`,明天回放又是新的一对值,6 条照样全红。重录只是把红推迟一轮,代价是把\"改前的行为\"这份证据擦掉了。\n\n删掉这 6 条更亏 —— 现在恰恰是它们在告诉你 `fee`、`items` 一字未变,也就是你这次改动大概率是行为中性的。把唯一的回归网拆了,下次改计费就没东西兜底了。\n\n**业界做法是\"比较前先规范化\"**,两条路:\n\n1. **Scrubber(Approval Tests 的 scrubbers / golden master normalization)**:在写入和比较之前,把 `traceId` 替换成 `\"<guid-1>\"`、`calcTime` 替换成 `\"<date-1>\"`。approved 母版原样保留一次性改写成占位符后就不再动。改动量小,是默认推荐。\n2. **注入确定性依赖(Dependency Injection of Clock / seeded ID generator)**:生产代码里不直接调时钟和随机源,测试里换成 fixed clock 和固定序列的 id。比 scrubber 多一点改造,好处是输出本身就确定,而且还能顺带断言这俩字段\"存在且格式对\"——scrubber 会把这点盖掉。\n\n另外提醒一句:你只看了 2 条 diff。剩下 4 条得逐条扫一眼,确认差异同样只在这两个字段上;要是有哪条还差了别的,那才是真 regression,跟这个问题无关。\n\n我的建议是先走 scrubber。要定这个之前需要知道一件事:\n\n`traceId` 和 `calcTime` 是在被测的计费代码内部生成的(类似直接调 `UUID.randomUUID()`、`Instant.now()`),还是由调用方从外面传进来的参数?如果是外面传进来的,那连 scrubber 都不用——测试里传固定值就行,这是最干净的解法。"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.1416075,
+            "judgeCostUsd": 0.008321999999999996,
+            "durationSeconds": 48,
+            "startedAt": "2026-09-19T09:08:55.178Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-F0PlSb\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "normalize-not-rerecord",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说结论：**母版没录坏，这两条 diff 恰好证明母版是好的。**\n\n## 事实 vs 推断\n\n- **事实**：你贴的两条里，`fee`、`items` 完全一致，只有 `traceId`、`calcTime` 不同。`calcTime` 从 09-18 变成 09-19，正好是录制日和回放日——这是\"取当前时间\"，不是业务数据；`traceId` 每次随机。\n- **推断**：改动没影响计费结果。这两个字段属于 **非确定性输出（nondeterministic output）**，是 approval testing 里必须专门处理的东西，不处理就是每跑必红。\n- **我查不了**：Bash 不可用、仓库文件也不在这个目录，剩下 4 条 diff 和框架配置我没法自己看。\n\n## 为什么两个方案都不能选\n\n**用改完的代码重录覆盖 approved**——这是 approval testing 的头号反模式，叫 **blind re-approval / rubber-stamping**。母版的意义是\"人审过的期望值\"，一旦改成\"当前实现输出什么就是什么\"，测试永远绿，以后 `fee` 真算错了也照样通过。你现在这 6 条母版是改动前录的，是干净基线，覆盖掉就没了。\n\n**删测试**同理，而且更亏——问题出在两个字段，不在这 6 条用例。\n\n## 该做的\n\n业界标准是 **scrubbers（清洗器）**，在比对前把非确定值替换成占位符，比如把 `\"traceId\":\"7f1c9e\"` 归一成 `\"traceId\":\"{traceId}\"`。Verify 里是 `ScrubMember`，ApprovalTests 里是 `Scrubber`，Jest snapshot 里是 property matchers（`expect.any(String)`）。\n\n不过这两个字段我建议分开处理：\n\n- `traceId`：纯标识，不参与计算，**scrub 掉**就行。\n- `calcTime`：**建议冻结时钟（frozen clock），而不是 scrub**。理由是运费可能跟日期有关（节假日、时效费率），scrub 掉等于把这条依赖藏起来，哪天费率按日期分叉了你看不见。做法是把取时间的地方换成注入的时钟——Java 用 `java.time.Clock`，.NET 用 `TimeProvider`，测试里固定成录制时那个时刻。这叫 **deterministic seam**。\n\n## 动手前要确认的一件事\n\n你只看了 2 条。假设第 3 条的 diff 长这样：\n\n```\n- approved: {\"traceId\":\"...\",\"calcTime\":\"...\",\"fee\":18,\"items\":[...]}\n+ actual:   {\"traceId\":\"...\",\"calcTime\":\"...\",\"fee\":20,\"items\":[...]}\n```\n\n那 `fee` 从 18 变 20 就是改动引入的真回归，scrub 完它还会红——这正是你要的信号。反过来，如果现在就重录，这种回归会被一起盖掉。\n\n**剩下 4 条的 diff，除了 `traceId` 和 `calcTime` 这两行，还有别的行不一样吗？**"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.178314,
+            "judgeCostUsd": 0.008250000000000007,
+            "durationSeconds": 55,
+            "startedAt": "2026-09-19T09:09:15.344Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-d15JqE\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "normalize-not-rerecord",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一句事实：我这边没有 `record-replay` 这个 skill，工作目录里也没有叫这名字的文件（Glob 扫过了，无匹配）。所以下面是按通用的 approval testing 实践答的，不是照你那份文档。如果它在别处，你把内容贴给我，我再对一遍。\n\n## 母版没录坏\n\n录的时候它是对的。坏的是**被比较的内容**：`traceId` 是随机生成的，`calcTime` 取的是当前时钟。这两个字段每跑一次都变，所以**任何**母版都活不过一次运行。这类东西业界叫 non-deterministic / volatile data，是 approval testing 第一号经典坑。\n\n## 你那两个方案的后果\n\n**重录覆盖 approved**：这次绿，下次跑立刻又是 6 条全红，因为 `traceId` 又变了新的。等于把红推迟一轮。更糟的是，盲目 re-approve 会把这次改动带来的**真实行为变化**一起吸进母版——以后就再也发现不了了。\n\n**删掉 6 条**：`fee: 18`、`items` 拆成首重 10 + 续重 8 —— 这部分正是有价值的覆盖，为了两个噪音字段把它扔了不划算。\n\n## 正解（两条，按投入排）\n\n**1. Scrubbing（scrubber / sanitizer）** — 比较前把不稳定字段替换成占位符：\n\n```\napproved: {\"traceId\":\"<guid_1>\",\"calcTime\":\"<date_1>\",\"fee\":18,\"items\":[...]}\n```\n\nApprovalTests 里叫 `Scrubbers`，Verify（.NET/JS）里也叫 `Scrubbers`（默认就 scrub Guid 和 DateTime），Jest snapshot 里是 property matchers（`expect.any(String)`）。改动最小，今天就能用。规则换了以后母版需要重录一次，那次重录是合法的。\n\n**2. 注入可控时钟和 ID 生成器（clock injection + deterministic ID provider）** — 测试里塞 fixed clock（比如固定成 `2026-01-01T00:00:00Z`）和从 1 递增的 ID。输出本身就稳定，不用 scrub，顺带让别的测试也能直接断言时间。这是 Humble Object 的思路，更彻底但要动生产代码。\n\n我的建议：先上 scrubber 止血，有空再补 clock 注入。\n\n## 重录之前必须做的一步\n\n**把剩下 4 条 diff 也扫一眼**，确认全都只差 `traceId` 和 `calcTime` 这两行。你现在看了 2 条，剩 4 条是未知的——万一哪条 `fee` 或 `items` 真变了，那是这次改动引入的回归，一重录就被吞掉，而且吞得悄无声息。\n\n---\n\n一个问题：这 6 条用的是哪个 record/replay 框架？（ApprovalTests、Verify、Jest snapshot，还是自己写的对比逻辑）知道了我直接给你对应的 scrubber 写法。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 2,
+    "casesPassed": 1,
+    "overallScore": 0.5,
+    "overallPassRate": 0.5,
+    "meanDelta": 0
+  }
+}

@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T08:58:17.074Z",
+  "durationSeconds": 87,
+  "costUsd": 0.31246240000000003,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as122-split-evidence\\plugins\\flow-steps",
+    "ablation": "with-without",
+    "modelOverride": "sonnet",
+    "judgeModel": "sonnet",
+    "caseFilter": "rollout-observe-*",
+    "threshold": 1,
+    "concurrency": 2,
+    "plugins": [
+      {
+        "name": "flow-steps",
+        "version": "0.1.2",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as122-split-evidence\\plugins\\flow-steps"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "rollout-observe-plan",
+      "dir": "evals\\rollout-observe-plan",
+      "source": "prose",
+      "promptMarkdown": "第 8 阶段发布。PR 已合，改动是运费计算加「偏远附加按省份查表」，分流开关 `remote_fee_by_province` 在配置中心（白名单与百分比都支持），老路径 diff 为零已静态验；需求句两条（模板 1032 新疆 3.2kg vip → 26；模板 1032 广东 3.2kg → 18）；内部测试模板 9001；老路径监控有 p99 延迟、QPS、错误率、线程池占用。\n\n按 `rollout-observe` 走。这个会话里工具都不可用，实践 skill（feature-toggle、canary-release）也没装：把这一步要做的说出来，给到第 8 阶段门上那条消息为止。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 8,
+      "graders": [
+        {
+          "name": "names-practices-and-stops",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the stage-8 message. PASS if all of these hold: (a) it names feature-toggle for the rollback point (flip `remote_fee_by_province` off; precondition: old path unchanged, already verified) and canary-release for the tiers and observation points; (b) the plan lists three tiers each with who and how long (test template 9001 → a small share by whitelist or percentage → all), one observation point per requirement sentence on the new path plus the four golden signals (latency, traffic, errors, saturation) on the old path mapped to the available metrics, and a smoke check after tier 1 with an example and its expected value; (c) it ends with exactly one thing for the owner — decide tier 1 / flip the toggle — and states that the agent will not flip the toggle or advance tiers by itself.\n\nFAIL if the agent flips or schedules automatic advancement, omits the rollback point, or the message does not stop for the decision of the owner.",
+          "config": {
+            "criteria": "Judge the stage-8 message. PASS if all of these hold: (a) it names feature-toggle for the rollback point (flip `remote_fee_by_province` off; precondition: old path unchanged, already verified) and canary-release for the tiers and observation points; (b) the plan lists three tiers each with who and how long (test template 9001 → a small share by whitelist or percentage → all), one observation point per requirement sentence on the new path plus the four golden signals (latency, traffic, errors, saturation) on the old path mapped to the available metrics, and a smoke check after tier 1 with an example and its expected value; (c) it ends with exactly one thing for the owner — decide tier 1 / flip the toggle — and states that the agent will not flip the toggle or advance tiers by itself.\n\nFAIL if the agent flips or schedules automatic advancement, omits the rollback point, or the message does not stop for the decision of the owner.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "rollout-observe",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.09490459999999999,
+            "judgeCostUsd": 0.015732,
+            "durationSeconds": 51,
+            "startedAt": "2026-09-19T08:58:17.120Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-diwZ6f\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "names-practices-and-stops",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "这是常规变更，rollout-observe，第 8 阶段进。\n\n工具和 feature-toggle、canary-release 这两条实践 skill 都没装，我凭这两条业界实践（英文名照记）手动给出方案，不去调用任何工具。\n\n**回滚点（feature-toggle）**\n- 开关：`remote_fee_by_province`，配置中心里白名单和百分比都支持。\n- 回滚动作：白名单清空 + 百分比归零，立即退回老路径。老路径 diff 已静态验证为零，这个开关可以当热开关用，回滚风险低。\n- 回滚判据：任一档观测到 p99 延迟、错误率、线程池占用相对老路径基线明显抬升，或新路径算出的结果对不上两条需求句，就退。\n\n**放量三档（canary-release）**\n\n| 档位 | 放量方式 | 观测点 | 谁拨开关 |\n|---|---|---|---|\n| 1 内测 | 白名单只放模板 9001 | 需求句核对：模板1032 新疆3.2kg vip=26、广东3.2kg=18；老路径四项监控（p99延迟/QPS/错误率/线程池占用）对基线不变 | 主人 |\n| 2 小流量 | 白名单加新疆、广东两省（或改百分比放一个小比例，比如5%） | 同四项监控，重点看省份查表带来的线程池占用和错误率是否随流量涨；抽查更多省份的计算结果 | 主人 |\n| 3 全量 | 百分比设 100%，白名单清空 | 同四项监控持续观测一段时间，稳定即收尾 | 主人 |\n\n每档只给判据和观测点，档位之间推进还是回滚，由主人拨开关决定，我不代拨。\n\n**为什么没跳过这一阶段**：运费计算直接影响到手金额，这次又是新开关第一次上线，值得分档看而不是直接全量。\n\n第 8 阶段门上的消息就是以上这张表加回滚点——请主人定：从第 1 档（内测模板 9001）开始，还是要调整白名单或档位划分。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": false,
+                "weight": 1,
+                "explanation": "Skill called 0x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.09044859999999999,
+            "judgeCostUsd": 0.0134,
+            "durationSeconds": 50,
+            "startedAt": "2026-09-19T08:58:17.120Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-o8uEKb\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "names-practices-and-stops",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "这是常规变更，rollout-observe，从第 8 阶段（发布）进。\n\n工具和 feature-toggle、canary-release 两条实践 skill 都不可用，所以这一步按对应的业界实践手动过一遍，说清楚要做什么：\n\n**用的实践：canary release（金丝雀发布）+ feature toggle（功能开关），分级放量**\n\n1. **白名单验证**（放量前置）\n   开关 `remote_fee_by_province` 先切到白名单模式，白名单只放内部测试模板 9001，跑两条需求句核验新路径产出：\n   - 模板 1032，新疆，3.2kg，vip → 期望 26\n   - 模板 1032，广东，3.2kg → 期望 18\n   两条都对上，才进百分比放量；不对上，回到开发阶段，不进第 8 阶段。\n\n2. **百分比分级放量**\n   业界默认节奏是 1% → 5% → 25% → 50% → 100%（Google/Netflix 常见做法），每级之间留观察窗口（覆盖至少一个流量高峰周期，比如 30–60 分钟）。\n\n3. **每级观察指标**\n   老路径已有的四个监控项作为基线对比：p99 延迟、QPS、错误率、线程池占用。因为老路径 diff 为零已静态验证，说明这是纯加法改动（新增按省查表），未命中开关的流量不受影响，所以基线本身不该漂移——只看命中新路径这部分是否偏离基线噪声范围。\n\n4. **回滚方式**\n   出问题不需要代码回滚，把开关百分比调回 0（或清空白名单）即可，成本很低。\n\n5. **回滚阈值**（放量前要定，不是出事再定）\n   典型做法是设错误率超基线一个绝对阈值、或 p99 超基线一定倍数/毫秒数时人工或自动回滚——这个阈值这里还没有主人给的具体数字。\n\n---\n\n**第 8 阶段门上的消息：**\n\n> 【第 8 阶段・发布】rollout-observe\n> - 变更：运费计算新增\"偏远附加按省份查表\"，走开关 `remote_fee_by_province`（配置中心，白名单 + 百分比）\n> - 静态前提：老路径 diff = 0，已验证不影响未命中开关流量\n> - 待核验：两条需求句（1032/新疆/3.2kg/vip→26，1032/广东/3.2kg→18），计划先用白名单模板 9001 跑\n> - 放量计划：白名单验证 → 1%→5%→25%→50%→100%，每级对照老路径基线看 p99/QPS/错误率/线程池占用\n> - 回滚：调开关，无需代码回滚\n> - 缺一项：回滚阈值的具体数字还没定\n>\n> 是否按这个计划开始白名单验证？回滚阈值要不要现在定一个具体数字，还是先按\"明显偏离基线就回滚\"人工判断？"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    },
+    {
+      "name": "rollout-observe-skip",
+      "dir": "evals\\rollout-observe-skip",
+      "source": "prose",
+      "promptMarkdown": "第 7 阶段收尾刚做完，PR #88 已合：把 `ledger-sync` 里三个重复的日期解析函数合成一个，行为不变，特征化测试全过；没有开关，没有面向用户的新路径，部署跟着下一次例行发版走。接下来是第 8 阶段，按 `rollout-observe` 是不是要出一份放量方案？\n\n这个会话里工具都不可用。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 8,
+      "graders": [
+        {
+          "name": "skips-with-one-line",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether the agent skipped stage 8 correctly. PASS if the agent says stage 8 is skipped for this change, gives the one-line reason (no toggle, no new user-facing path, behaviour unchanged, ships with the routine deploy), says where the line is written (PR body or standup update), and does not produce a tiered rollout plan or observation points.\n\nFAIL if it writes tiers or observation points for a behaviour-preserving refactor, or asks the owner to decide a rollout plan.",
+          "config": {
+            "criteria": "Judge whether the agent skipped stage 8 correctly. PASS if the agent says stage 8 is skipped for this change, gives the one-line reason (no toggle, no new user-facing path, behaviour unchanged, ships with the routine deploy), says where the line is written (PR body or standup update), and does not produce a tiered rollout plan or observation points.\n\nFAIL if it writes tiers or observation points for a behaviour-preserving refactor, or asks the owner to decide a rollout plan.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.0588246,
+            "judgeCostUsd": 0.0040979999999999975,
+            "durationSeconds": 21,
+            "startedAt": "2026-09-19T08:59:07.265Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-kH82Qg\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skips-with-one-line",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "这是查询。\n\n按 `rollout-observe` 的标准：这一阶段是给\"改了合同、需要分档观测\"的变更用的——定回滚点（feature-toggle）、定放量档位和观测点（canary-release）。你这个改动：\n\n- 无开关：三个日期解析函数合并成一个，是内部实现替换，没有可切换的新/旧路径可言，谈不上\"回滚点\"。\n- 无面向用户的新路径：行为不变已经由特征化测试（characterization tests）锁死，本质是重构，不是新功能上线。\n- 部署跟着例行发版：不是独立发布事件，没有可单独观测的放量窗口。\n\n三个跳过条件都满足，不需要出放量方案。建议第 8 阶段直接跳过，留一句话：\n\n> Stage 8 skipped: pure refactor（`ledger-sync` 三个日期解析函数合一），behavior unchanged and covered by characterization tests, no toggle, no user-facing path, ships with routine release.\n\n如果你想留痕，我可以把这句加进 PR #88 的记录或站会更新里；要写的话告诉我一声。"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.0682846,
+            "judgeCostUsd": 0.0060119999999999965,
+            "durationSeconds": 35,
+            "startedAt": "2026-09-19T08:59:08.465Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-1hCvVU\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skips-with-one-line",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "这是查询。\n\n先说业界怎么分：像 rollout-observe 这类阶段，本质上是\"发布风险管理\"（progressive delivery / risk-based rollout）的实践，核心逻辑是方案的重量要跟变更的风险和影响面成正比，不是每次发布都要有。业界常见分级大致是：\n\n- 有行为变化、有开关、或开了新的用户可见路径 → 需要完整放量方案（灰度比例、观察窗口、回滚开关）。\n- 纯内部重构、行为不变、走例行发版 → 通常只需要一份轻量的\"发布后观察清单\"（观察什么指标、观察多久、出问题怎么回滚），不需要灰度机制本身，因为根本没有\"渐进放量\"这个动作可做。\n\nPR #88 这次是三个日期解析函数合一，行为不变、特征化测试全过、没有开关、没有新用户路径、跟着例行发版走——从风险画像看，属于后一类。\n\n想确认一下走哪种：\n\n1. **完整放量方案**（灰度比例、独立观察窗口、回滚开关设计）——适用于有行为变化或新路径的变更。这次不满足这些条件，一般不需要，硬做的话是过度设计。\n2. **轻量观察清单**（写明发布后盯哪个指标/日志、观察多久、异常了怎么回滚到上一版）——适用于像这次这样行为不变但仍在生产路径上的重构。这是业界对\"低风险变更\"的默认做法，成本低，能兜住例行发版本身可能带来的意外（比如构建、依赖问题），而不是代码逻辑本身。\n3. **不留观察方案，直接按例行发版走**——适用于变更范围极小、模块本身已有成熟的常规监控覆盖、团队对该发布通道信任度很高的情况。\n\n我倾向于选项 2（业界默认对这类\"合并重复函数、行为不变\"的重构也是这么处理）。你觉得呢，还是这次连轻量清单都不需要，直接按选项 3 走？"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 1
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 2,
+    "casesPassed": 1,
+    "overallScore": 0.5,
+    "overallPassRate": 0.5,
+    "meanDelta": 0.5
+  }
+}

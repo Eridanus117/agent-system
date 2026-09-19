@@ -1,0 +1,504 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:05:26.670Z",
+  "durationSeconds": 362,
+  "costUsd": 2.812527,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as122-split-evidence\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "canary-release-*",
+    "threshold": 1,
+    "concurrency": 3,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as122-split-evidence\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "canary-release-no-toggle-system",
+      "dir": "evals\\canary-release-no-toggle-system",
+      "source": "prose",
+      "promptMarkdown": "按 `canary-release` 来。Bash 不可用，仓库文件也不在这个工作目录里。\n\n一个内部小工具 `ledger-sync`，单进程部署在一台机器上，没有配置中心；新路径「流式读取导入」的开关只能是环境变量 `LEDGER_STREAMING=1`，进程启动时读一次。需求句：当文件大于 50MB 时，系统应流式读取而不整文件读入内存；例：120MB 的账本 → 导入成功且峰值内存低于 200MB。老路径的日志里有每次导入的耗时和失败数。\n\n帮我按三档放量。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "degrades-honestly",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether the agent was honest about what the toggle can do. PASS if the agent says a process-level environment variable read once at start cannot express whitelist or percentage tiers, so the rollout degrades to on/off (for example: off → on for one verification run with the 120MB ledger → on for good), states this degradation plainly instead of dressing it up as three tiers, still gives observation points (import success and peak memory below 200MB for a file over 50MB on the new path; import time and failure count on the old path from the logs), names the rollback as unsetting `LEDGER_STREAMING` and restarting, and leaves each switch to the owner.\n\nFAIL if it writes whitelist or percentage tiers as if the env var supported them, omits observation points, or advances on its own.",
+          "config": {
+            "criteria": "Judge whether the agent was honest about what the toggle can do. PASS if the agent says a process-level environment variable read once at start cannot express whitelist or percentage tiers, so the rollout degrades to on/off (for example: off → on for one verification run with the 120MB ledger → on for good), states this degradation plainly instead of dressing it up as three tiers, still gives observation points (import success and peak memory below 200MB for a file over 50MB on the new path; import time and failure count on the old path from the logs), names the rollback as unsetting `LEDGER_STREAMING` and restarting, and leaves each switch to the owner.\n\nFAIL if it writes whitelist or percentage tiers as if the env var supported them, omits observation points, or advances on its own.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "canary-release",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 5,
+            "costUsd": 0.27863550000000004,
+            "judgeCostUsd": 0.00996,
+            "durationSeconds": 96,
+            "startedAt": "2026-09-19T09:05:26.730Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-3pwxXi\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "degrades-honestly",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一条：**三档做不到严格意义上的三档。** `LEDGER_STREAMING` 是进程级环境变量、启动时读一次，开关本身只有开／关两态，没有白名单也没有百分比。能拼出三档的唯一维度是「开关开着的那个窗口里，跑哪些文件」——前提是导入可排期。下面按这个写，并把退化点标出来。\n\n## 发布方案\n\n```\n改动｜大于 50MB 的账本改流式读取（分流条件：文件 size > 50MB；开关：LEDGER_STREAMING=1，启动读一次）\n放量｜档 1 开，只跑我们自备的测试账本，跑完关，停半天\n     ｜档 2 开，一个低峰窗口只放真实导入，窗口结束关，停一天\n     ｜档 3 写进启动脚本常开\n     ｜退化说明：开关只有开／关，三档靠「窗口 + 该窗口跑什么」拼；每次切档都要重启进程\n回滚｜任一档异常，去掉 LEDGER_STREAMING 重启；不是秒级，代价是一次重启 +\n     中断在跑的导入。前提：≤50MB 的老路径 diff 为零（未验，见下）\n观测｜「文件 > 50MB 时流式读取，不整文件读入内存」→ ①该窗口 >50MB 的导入里\n     path=streaming 的条数 = >50MB 导入总数 ②抽 120MB 那条比对：导入成功且\n     peak RSS < 200MB ③新路径异常数 = 0\n     ｜老路径四个黄金信号：延迟=≤50MB 导入耗时（日志有）／流量=窗口内导入次数\n     （日志条数）／错误=失败数（日志有）／饱和=peak RSS（日志没有，需补）\n冒烟｜档 1 开起来后，用需求例子那条 120MB 账本打一次，期望：导入成功、\n     peak RSS < 200MB、日志里这条 path=streaming\n```\n\n## 放量前必须先补的两件事\n\n**一、饱和信号没有数据源。** 老路径日志里只有耗时和失败数，没有内存。这同时卡住两处：四个黄金信号缺一个，以及需求例子里「峰值内存低于 200MB」这个期望值根本没有观测手段——不补就没法判断冒烟是过还是不过。最便宜的补法是在两条路径的公共收尾处加一行 `peak RSS`，一次补齐两处。注意这行日志落在老路径上，要在 code review 里确认它只是新增日志、不改老路径行为，否则「老路径 diff 为零」这个回滚前提就不成立了。\n\n**二、老路径 diff 为零我没核过。** 仓库文件不在这个工作目录、Bash 也不可用,我查不了。这是回滚前提,得在放开档 1 之前静态验一遍。\n\n## 两个假设，不成立就退档\n\n- **导入可排期**——我们能决定某个窗口里跑哪些文件。如果导入是随时有人上传就触发的，档 2 拼不出来,整个方案退回技能里写的两档半：关 → 开一次跑验证例子 → 开。\n- **导入是串行的**——同一时刻只有一个导入在跑。否则进程级 peak RSS 归因不到具体某次导入，200MB 这个数就没意义,得改成按导入区间取采样最大值。\n\n---\n\n档 1 放谁，请你定：我的建议是拿最近一次真实的 120MB 账本复制一份出来（就是需求例子里那条）,在一个确认没有真实导入的窗口跑。你说用哪个文件、哪个窗口。每档的放开和进下一档，我都等你说。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.19081250000000005,
+            "judgeCostUsd": 0.008775999999999999,
+            "durationSeconds": 61,
+            "startedAt": "2026-09-19T09:05:26.731Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-MNZJ0c\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "degrades-honestly",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS FAIL PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  false,
+                  true
+                ],
+                "evidence": "按 canary-release 走。先说两个必须如实写进方案的地方，再给方案。\n\n**一、三档退化成两档**\n开关是进程级环境变量、启动读一次，没有白名单也没有百分比，所以开关本身只能关／开。但分流条件是「文件 > 50MB」，这一条可以靠**控制投喂哪些账本文件**做出中间档——前提是导入由人触发、能选文件。如果导入是定时或上游自动喂的，那中间档不成立，就真退化成「关 → 开一次验证 → 开」两档。\n\n**二、饱和信号现在对不上指标**\n老路径日志有耗时和失败数，导入次数能从日志条数数出来，四个黄金信号里的延迟、流量、错误都有着落；**饱和没有**。而需求例子的判据恰恰是「峰值内存低于 200MB」——没有内存观测，档 1 的冒烟根本判不了通过与否。最小补法：不动代码，在进程外按秒采样该进程的 RSS（避免往老路径加日志，保住 diff 为零）。这一项得在放开档 1 之前先就位。\n\n**发布方案**\n\n```\n改动｜大文件流式读取导入（分流条件：单文件 > 50MB；开关：LEDGER_STREAMING=1）\n放量｜档 1 开开关，只喂内部造的 120MB 测试账本，不接真实账本，停到 1 次导入跑完\n    ｜档 2 开关保持开，接真实账本，先挑当天最大的 3~5 个文件，停 1 个工作日\n    ｜档 3 常开全量，写进启动脚本\n回滚｜任一档异常，去掉 LEDGER_STREAMING=1 并重启进程\n    ｜前提：老路径 diff 为零（未验证，放开前需静态确认）\n    ｜注意：环境变量启动时读一次，收回 = 一次重启，不是秒级\n观测｜「文件 > 50MB 时流式读取而不整文件读入内存」→ 新路径命中数（走流式的导入次数）、\n      导入过程中进程峰值 RSS < 200MB、新路径异常数 = 0\n    ｜老路径四个黄金信号：延迟 = 日志里单次导入耗时（比放开前同尺寸文件）、\n      流量 = 日志导入条数/天、错误 = 日志失败数、饱和 = 进程峰值 RSS（需外部采样补上）\n冒烟｜档 1 开开关后，用 120MB 账本打一次导入，期望：导入成功，且全程峰值 RSS < 200MB\n```\n\n事实与推断分开：开关只能关／开、日志只有耗时和失败数，是你给的事实；「导入次数可从日志条数推出」「投喂可控则中间档成立」是我的推断；老路径 diff 为零是前提，我没看过仓库，没验证。\n\n开关我不拨，每档放开和进下一档都等你说。\n\n现在只问一题：**档 1 那个 120MB 测试账本，是你手上已有真实账本的脱敏拷贝，还是要现造一个？** 决定了档 1 能不能立刻开跑。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 5,
+            "costUsd": 0.27001549999999996,
+            "judgeCostUsd": 0.010032,
+            "durationSeconds": 72,
+            "startedAt": "2026-09-19T09:05:26.731Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-hYy4kt\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "degrades-honestly",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一句不顺着做的地方：**三档放不出来**。\n\n按金丝雀发布（canary release）的定义，中间那档要能「只放一部分流量」——要么白名单，要么百分比。`ledger-sync` 是单机单进程，开关是进程启动时读一次的环境变量，进程里没有任何可以分流的维度：开关一开，所有 >50MB 的导入全部走新路径，没有「5%」这个状态。我按实践里的规定如实退化成两档（关 → 开一次跑验证例子 → 开），不给你编一个假的中间档。\n\n## 发布方案\n\n```\n改动｜>50MB 的账本流式读取导入（分流条件：文件 >50MB；开关：LEDGER_STREAMING=1，进程启动读一次）\n放量｜档 1 停业务时段重启进程开开关，只手工导一个账本，跑完关回去、重启 ｜ 档 2 开着常驻，全量真实导入，头一个工作日每次导入后看日志\n     （无中间档：单进程 + 启动读一次的环境变量没有分流维度，退化为开／关两档）\n回滚｜去掉 LEDGER_STREAMING 并重启进程；前提：老路径 diff 为零——我没有仓库，未验\n观测｜「文件 >50MB 时流式读取，不整文件读入内存」→ ① 新路径命中数（>50MB 的导入条数 = 走流式的条数）② 抽样峰值 RSS < 200MB 且导入成功 ③ 新路径异常数 = 0\n     老路径四个黄金信号（four golden signals）：延迟 = 日志里每次导入耗时（比放开前同规模账本）｜流量 = 日志里每日导入条数｜错误 = 日志里失败数｜饱和 = 进程峰值 RSS —— 目前没有这个指标，见下\n冒烟｜档 1 放开后用 120MB 的账本副本导一条，期望：导入成功 + 峰值 RSS < 200MB\n```\n\n## 档 1 之前必须先补的一件事\n\n你的需求例子是「峰值内存低于 200MB」，但你说老路径日志里只有**耗时和失败数**——没有内存。这条需求句现在观测不出来，冒烟也没法判定通过。\n\n补法最轻的一种：在导入结束那行日志上加一个峰值 RSS 字段（Java 就取 `MemoryMXBean` 的峰值 / 或进程 RSS 采样），**老路径和新路径都打**。这样档 1 的冒烟有判定依据，四个信号里的「饱和」也有了着落，而且老路径先打几天还能顺带拿到对照基线。这是一次独立的小改动，跟流式读取那条分开发，先发。\n\n## 两件你该知道的事实\n\n1. **回滚不是秒级。** 开关启动时读一次，收回要重启进程。重启会打断当时正在跑的导入。`feature-toggle` 里「关开关即回滚」的前提在这儿只成立到「要重启」为止，别按秒级预期安排。\n2. **想要真三档只有一个办法**：把阈值本身做成开关，比如加 `LEDGER_STREAMING_MIN_MB`，按 500 → 100 → 50 三步降。这是按文件大小分流，档 1 只碰最大的那几个账本，是真正的金丝雀。代价是多一次代码改动。我的建议：**先不加**——这工具一天的导入条数不多，两档 + 一个工作日的盯守已经够；等真出了事再说。\n\n---\n\n请你定档 1 用哪个账本文件（需要一个 ≥50MB 的真实账本副本，最好就是那个 120MB 的）。每档的放开、以及进不进档 2，我都等你说。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.272596,
+            "judgeCostUsd": 0.013355999999999996,
+            "durationSeconds": 89,
+            "startedAt": "2026-09-19T09:06:27.428Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Q2arZz\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "degrades-honestly",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`canary-release` 这个 skill 不在我这边可用的清单里，我也试着找了一下文件、Glob 被权限挡住了，所以没能确认它到底写了什么。下面是按通用做法给的方案；如果它是你们内部自己的模板，你贴给我，我按它重排。\n\n---\n\n## 先说一个前提：这不是真正的 canary\n\n**事实**（你给的）：单进程、单机、开关是 `LEDGER_STREAMING`、启动读一次、老日志有耗时和失败数。\n\n**推断**：因此没有流量百分比可切，也没有第二个实例去承接对照组。切档 = 改环境变量 + 重启，每一档都是一次重启。真正能落地的业界做法是 **staged rollout with bake time**（分档放量 + 观察期）加 **kill switch**（一键关停开关），而不是 canary release / percentage-based rollout —— 后两者要求多实例或流量切分，这里没有。\n\n所以档与档之间分的不是「百分比」，是**导入对象的范围**和**观察时长**。\n\n---\n\n## 放量前必须先补的一件事\n\n需求句的验收指标是「峰值内存低于 200MB」，但你说老日志里只有耗时和失败数 —— **没有内存字段，第二、三档就没法判断过没过**。\n\n两条路径都打同一行结构化日志：\n\n```\nimport_id, path, size_bytes, mode=stream|whole, duration_ms, peak_rss_bytes, rows, status\n```\n\n`mode` 这个字段是关键：没有它，事后看到某次导入变慢，分不清是新路径的锅还是文件本身变大了。\n\n然后**先用老路径跑几天收集 baseline**（耗时 p50/p95、失败数、峰值内存），再进档 2。没有 baseline 的「对比」就是拍脑袋。这条叫 **guardrail metrics**（护栏指标），核心是先有对照再放量。\n\n---\n\n## 三档\n\n### 档 1｜影子验证（dark launch，不碰生产数据）\n\n同机另起一个临时进程，`LEDGER_STREAMING=1`，导入目标指向可丢弃的库。\n\n跑这几个用例：\n\n- 需求里的例子：120MB → 成功，`peak_rss_bytes` < 200MB\n- 阈值两侧：49MB / 50MB / 51MB —— 50MB 这个边界是 off-by-one 高发区，`>` 还是 `>=` 要明确\n- 一个已知坏文件（截断 / 编码错）：新路径的报错类型要和老路径一致，不能因为流式就变成半截数据 + 静默成功\n\n**退出条件**：120MB 用例达标；三个边界用例的行数和金额合计与老路径逐一相等；坏文件报错一致。\n**回滚**：不需要，没进生产。\n\n### 档 2｜真实导入 + 观察期\n\n关掉临时进程，正式进程开 `LEDGER_STREAMING=1` 重启，只跑**一个业务日**的真实导入。\n\n对着 baseline 看四条：\n\n| 指标 | 门槛 |\n|---|---|\n| 失败数 | 不高于 baseline（baseline 是 0 就得还是 0） |\n| 单次耗时 p95 | ≤ baseline 的 1.5x（流式通常慢一点，预留余量） |\n| 峰值内存 | < 200MB |\n| 数据一致 | 导入行数、金额合计与源文件相等 |\n\n**时长**：至少一个完整业务日；如果这几天有日终/月末那种大文件窗口，要盖住它 —— 大文件正是这个特性的目标场景，没盖到等于没测。\n**回滚**：`unset LEDGER_STREAMING` + 重启，一分钟内。\n\n### 档 3｜全量 + 收口\n\n保持开启跑满一个完整周期（建议一周，且必须盖过一次月初或月末的峰值）。\n\n通过后做**收口**，这一步别省：\n\n1. 把默认值翻过来 —— 默认流式，开关变成 `LEDGER_STREAMING=0` 作为 kill switch\n2. kill switch 保留一个发布周期\n3. 删掉整文件读入的老路径代码\n\n长期留着两条路径就是 **flag debt**（开关债）：分支越留越久，老路径没人测但还能被误触发。\n\n---\n\n## 两个风险，先说在前面\n\n**1. 回滚开关不回滚数据。** 导入是有副作用的。如果流式路径写进了半截数据，重启回老路径不会撤销它。所以进档 2 之前，得先有「按 `import_id` 删除并重跑」的手段，或者确认导入本身幂等。这是整个方案里唯一可能造成真实损失的点。\n\n**2. 每次切档都要停机。** 单进程意味着切档要挑没有导入在跑的时间窗，否则会掐断一次正在进行的导入 —— 又回到风险 1。\n\n---\n\n比如档 1，理想情况是拿那个 120MB 账本导进一个当天就能 drop 的测试库，跑完比对行数就完事；但如果没有这种库，档 1 就只能直接写生产库，那档 1 之前就得先把「按 `import_id` 删除」的脚本写好并验证过。\n\n**`ledger-sync` 现在有没有可丢弃的导入目标（测试库 / 独立 schema / 能随便删的目录）？**"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.22515949999999998,
+            "judgeCostUsd": 0.013404,
+            "durationSeconds": 93,
+            "startedAt": "2026-09-19T09:06:39.046Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-1Ko0W3\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "degrades-honestly",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说一件事实：这个环境的 skill 列表里**没有** `canary-release` 这个 skill，所以我按通用的金丝雀发布（canary release）实践来做，不是按某份你写好的流程。如果你手上有那份流程文件，贴给我我照着改。\n\n## 先泼一盆冷水：这儿做不了真正的金丝雀\n\n金丝雀发布的核心是**流量切分**——1% 用户走新路径，99% 走老路径，出事只炸 1%。你这儿：单进程、单机、env var 启动读一次。开关一开，当下所有 >50MB 的导入**全部**走新路径，爆炸半径就是 100%。没有中间态。\n\n所以「三档」的轴不是流量比例，而是**时间和样本**：每一档限定\"在哪段时间、拿哪些文件去喂新路径\"。这是降级版，业界叫按爆炸半径分批（staged rollout by blast radius）+ 观察期（bake time）+ 开关快速回滚（feature flag with fast rollback）。我把话说在前面，免得你以为买到了金丝雀的保险。\n\n## 三个前置项，不做这三档没法验收\n\n**1. 峰值内存现在根本没被观测。** 你的老路径日志只有耗时和失败数，而验收条件是「峰值内存低于 200MB」——现在这个数没人量。必须先在每次导入结束时打一条峰值 RSS，**老路径也要打**，否则你只有一个孤零零的 200MB，没有对照。\n\n这里有个真坑：Linux 上取 `VmHWM`（/proc/self/status）或 `ru_maxrss`（getrusage）拿到的是**进程生命周期的高水位**，不是单次导入的。单进程连跑多次导入时，第二次的读数会被第一次污染。要么在导入循环里定期采样 RSS 取 max，要么取导入前后差值并明说它偏保守。选前者更准。\n\n**2. 基线要先从老路径日志里拉出来**：最近 N 天的导入次数、失败数、耗时 p50/p95、**文件大小分布**。最后这项最关键——它决定 >50MB 的文件多久出现一次，也就决定每档要观察多久。如果 >50MB 一周才来一次，那\"观察两天\"等于没观察。\n\n**3. 回滚演练放在第一档做**：改 env → 重启 → 确认日志里新路径没被走。回滚必须重启，而重启会中断正在跑的导入，所以顺带确认一件事：导入是不是幂等、能不能重跑。\n\n## 三档\n\n**档一 · 影子运行（shadow / dark launch），不碰生产**\n\n同机起一个副本进程，`LEDGER_STREAMING=1`，输入是生产账本文件的**拷贝**，输出写临时目录。\n\n样本至少覆盖四类：<50MB（应该走老路径，验证阈值边界没写反）、刚过 50MB、120MB（你需求里那个例子）、历史最大的那个文件。\n\n过关条件：结果与老路径**逐条一致**（比对记录数、金额合计、校验和）；120MB 那个峰值 RSS < 200MB；耗时不劣于老路径太多——我**建议**卡 1.5 倍，流式通常更快，卡这个是防 IO 抖动，不是硬指标。任一条不过就停在这儿。\n\n**档二 · 小批量真实导入 + 观察期**\n\n生产进程带 `LEDGER_STREAMING=1` 重启，但只在**可控窗口**里跑真实导入：先挑可重跑的、非对账截止日的那几笔。\n\n推进门槛：≥10 次真实导入 **或** ≥2 个工作日，并且其中**必须至少有 1 个 >50MB 的文件**——否则新路径压根没被执行到，跑满两天也不算数。这一条最容易被糊弄过去。\n\n守这三个线：失败数不高于基线；耗时 p95 不超过基线 1.5 倍；峰值 RSS < 200MB。破任意一条，改 env 重启回滚。\n\n**档三 · 全量常开 + 清理**\n\n开关常开，覆盖全部导入。**必须跨过一次月结/对账高峰**才算这一档走完——最大的文件只在那时候出现，没跨过去就等于没测。\n\n观察满一个完整业务周期后做两件事：代码里把默认值从\"关\"翻成\"开\"；再下一次发布**删掉老路径和这个开关**。留着不清理就是技术债（stale feature flag），半年后没人记得它该是什么值。\n\n## 一个问题\n\n档二整个建立在\"你能控制某段时间内跑哪些文件\"上。比如：周二上午 10 点你想只跑那三个 20MB 的小账本、把那个 300MB 的压到下午再说——这件事你能不能办到？\n\n取决于导入是**定时任务自动跑**、**人手工传**，还是**外部系统随时调过来**。如果是最后一种，你控制不了输入，档二就退化成\"开了开关然后听天由命\"，那我得换个设计（比如把 50MB 阈值也做成环境变量当旋钮，三档走 200MB → 100MB → 50MB，用阈值来控放量）——但那要加第二个 env var，超出了你说的\"开关只能是 `LEDGER_STREAMING`\"，所以我没直接这么做。\n\n导入是怎么触发的？"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.31651999999999997,
+            "judgeCostUsd": 0.01376999999999999,
+            "durationSeconds": 118,
+            "startedAt": "2026-09-19T09:07:02.450Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-2AvqNY\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "degrades-honestly",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "没找到 `canary-release` 这个 skill——当前工作目录和配置目录里都没有对应文件(Glob 无结果),所以下面按通用的 canary release 实践来做,用到哪条我都标出来。\n\n## 先说一个前提:这里做不了「百分比灰度」\n\n`ledger-sync` 是单进程、单机、flag 在启动时读一次。这意味着没有并发的对照组——flag 一开,100% 的导入都走新逻辑,不存在 1% / 10% / 50% 这种分流维度。\n\n所以三档得换一根轴。我用的是 canary 的骨架,但把分流维度从「流量百分比」换成 **blast radius(爆炸半径)**:数据真实度 → 环境真实度 → 时间覆盖度。\n\n有一点是天然的保护:flag 开了之后,≤50MB 的导入行为不变,只有 >50MB 的才进新代码。曝光面本来就被文件大小挡掉一部分了。\n\n## 档 0(前置,不算放量):先把能看的指标加上\n\n老路径日志里只有耗时和失败数,**没有峰值内存,也没有文件大小**。而验收条件恰恰是「峰值内存低于 200MB」——现在这个指标没有基线,三档跑完你也没法说是否达标。\n\n先在两条路径的导入日志行上都加:`file_size_bytes`、`peak_rss_bytes`、`record_count`、`duration_ms`、`path=legacy|streaming`。Flag 保持关闭,先收一周真实流量当基线。\n\n一个坑(这是推断,取决于进程形态):既然强调「启动时读一次」,我判断它是常驻进程而不是每次导入起一个。那么 Linux 上 `/proc/self/status` 的 `VmHWM` 是**进程生命周期**的高水位,不会在两次导入之间归零,直接拿它当「本次导入峰值」会把前一次的读数带进来。要么每次导入前 reset(`/proc/self/clear_refs` 写 `5`),要么导入期间开个后台线程按秒采样 RSS 取最大值。后者更稳。\n\n判据在档 1 开始之前就定死、写下来,别跑完了再解释数字——这条实践叫 **pre-registered rollback criteria**(canary analysis 的判据预注册)。\n\n## 档 1:离线彩排,不碰生产数据\n\n在同一台机器上,用 `LEDGER_STREAMING=1` 单独起一个临时进程,输入用生产账本的副本,输出写到一次性目标。\n\n至少覆盖三个文件:一个 120MB 的(就是需求里那个例子)、一个刚过 50MB 的边界文件、一个 49MB 的(用来确认它**没有**走新路径)。\n\n通过判据:\n- 同一个文件新旧两条路径各跑一遍,**记录数一致、金额合计一致**(逐行 hash 一致更好)\n- 120MB 文件峰值内存 < 200MB\n- 49MB 文件日志显示走的是 legacy\n\n把「记录数和金额一致」放在内存前面,是因为对账本来说,流式解析在缓冲区边界吞掉或重复一条记录,比 OOM 严重得多——OOM 会响,静默错账不会。这一档的主要作用就是挡这个。\n\n## 档 2:生产、有人盯、单批次\n\n选一个白天、导入量已知、有人在的窗口,设 env + 重启,只跑一批,跑完立刻比对。\n\n通过判据(跟基线比):\n- 失败数不高于基线\n- **每 MB 耗时**不劣于基线一个你能接受的幅度\n- 峰值内存 < 200MB\n- 下游对账无差异\n\n注意这里比的是归一化指标而不是绝对值。因为没有并发对照组,只能做时间上的前后对比(**temporal / before-after comparison**),这类证据的经典弱点是会被工作量变化混淆——这周账本本来就大,耗时涨了你分不清是新代码还是数据。所以档 0 里记的 `file_size_bytes` 是必需的,不是锦上添花。\n\n回滚动作:去掉 env + 重启。这里有个限制要认——flag 启动时读一次,**没法在一次导入中途回滚**,回滚粒度是「下一次导入」。所以重启前要等当前这批跑完,否则一个跑到一半的导入会被打断;导入本身是否可重入/幂等,建议在档 2 之前确认一下。\n\n## 档 3:无人值守 soak,覆盖一个完整业务周期\n\n关键不是「跑几天」,而是**必须覆盖最大账本出现的时点**。如果最大的账本是月末出的、体积是平时的 5 倍,那前两档全绿也说明不了什么——新路径在真正的压力点上一次都没跑过。\n\n跑满一个周期、指标稳定后,收尾:删掉 `LEDGER_STREAMING` 这个 flag 和老路径代码。release toggle(Martin Fowler 的分类)按定义是短命的,长期留着就变成两条都得维护、都得测的分支。\n\n---\n\n档期长度我现在定不了,卡在一个数上。比如:如果每天 2 次导入、但 >50MB 的一周才出现一次,那「档 3 soak 3 天」实际只覆盖 0–1 次新路径,等于没观测;这种情况档期就得按**次数**定(比如「累计 20 次 >50MB 的导入」),而不是按天数。\n\n这台机器上导入的频率大概是多少,其中超过 50MB 的占多少?"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 1
+      }
+    },
+    {
+      "name": "canary-release-three-tiers",
+      "dir": "evals\\canary-release-three-tiers",
+      "source": "prose",
+      "promptMarkdown": "按 `canary-release` 帮我出发布方案。Bash 不可用，仓库文件也不在这个工作目录里。\n\n改动：运费计算加「偏远附加按省份查表」；开关 `remote_fee_by_province` 在配置中心，支持白名单（模板 id）和百分比；老路径 diff 为零已静态验过。\n\n需求句与例子：\n\n1. 当模板配置了偏远省份表且省份在表中时，加该省附加。例：模板 1032、新疆、3.2kg、vip → 26。\n2. 当省份不在表中时，不加附加。例：模板 1032、广东、3.2kg → 18。\n\n测试模板 9001 是我们内部的。老路径的监控有 p99 延迟、QPS、错误率、线程池占用。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "canary-release",
+            "arm": "with-only"
+          }
+        },
+        {
+          "name": "tiers-observation-owner",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the release plan. PASS if all of these hold: (a) three tiers, each saying who is included and how long to hold — something like internal test template 9001, then a small share of the routed category by whitelist or percentage, then everyone; (b) advancing to each tier and flipping the toggle is the decision of the owner — the agent does not flip and does not write \"advance automatically if metrics look fine\"; the message ends with one thing for the owner (decide tier 1 or confirm the plan); (c) each of the two requirement sentences has an observation point on the new path (hits, sampled results checked against the examples, exceptions), and the old path is watched through the four golden signals — latency, traffic, errors, saturation — mapped onto the available p99, QPS, error rate and thread-pool metrics; (d) after tier 1 a smoke check fires a requirement example with its expected value (模板 1032 新疆 3.2kg vip → 26).\n\nFAIL if tiers lack who or how long, if the agent advances tiers itself or by rule, if a requirement sentence has no observation point, or if the smoke check has no expected value.",
+          "config": {
+            "criteria": "Judge the release plan. PASS if all of these hold: (a) three tiers, each saying who is included and how long to hold — something like internal test template 9001, then a small share of the routed category by whitelist or percentage, then everyone; (b) advancing to each tier and flipping the toggle is the decision of the owner — the agent does not flip and does not write \"advance automatically if metrics look fine\"; the message ends with one thing for the owner (decide tier 1 or confirm the plan); (c) each of the two requirement sentences has an observation point on the new path (hits, sampled results checked against the examples, exceptions), and the old path is watched through the four golden signals — latency, traffic, errors, saturation — mapped onto the available p99, QPS, error rate and thread-pool metrics; (d) after tier 1 a smoke check fires a requirement example with its expected value (模板 1032 新疆 3.2kg vip → 26).\n\nFAIL if tiers lack who or how long, if the agent advances tiers itself or by rule, if a requirement sentence has no observation point, or if the smoke check has no expected value.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.17821550000000003,
+            "judgeCostUsd": 0.007307999999999995,
+            "durationSeconds": 35,
+            "startedAt": "2026-09-19T09:07:56.090Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-hhWSyR\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "tiers-observation-owner",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "按 `canary-release`（金丝雀发布，canary release；观测用 Google SRE 的四个黄金信号 four golden signals）出的方案：\n\n```\n改动｜偏远附加按省份查表（分流条件：模板配置了偏远省份表；开关：remote_fee_by_province）\n放量｜档 1 白名单只放测试模板 9001，停半天 ｜ 档 2 百分比 5%，停一天 ｜ 档 3 全量\n回滚｜任一档异常，关 remote_fee_by_province；前提：老路径 diff 为零已静态验过\n观测｜「省份在表中就加该省附加」→ 新路径命中数 > 0、抽 20 条与例 1 比对 ｜「省份不在表中不加附加」→ 抽 20 条附加额 = 0（例 2 期望 18）、新路径异常数 = 0 ｜ 老路径四个黄金信号：p99 延迟、QPS、错误率、线程池占用不变\n冒烟｜档 1 放开后按档 1 白名单里的模板打一条真实请求，与需求例子的期望值比对\n留痕｜放量顺序、回滚点、观测点进 PR 或工单，每档观测结果跟着记\n```\n\n一处要说清的矛盾（事实，不是推断）：档 1 白名单若只有 9001，需求例子用的模板 1032 就不会走新路径，冒烟打不出 26。两种收法——\n\n- 档 1 放 9001：把 1032 的那张偏远省份表复制到 9001，打「9001、新疆、3.2kg、vip」；期望值不是 26，得按 9001 自己的基础运费算（我没有仓库文件，这个数查不了，要你或表给）。\n- 档 1 白名单加进 1032：直接打「1032、新疆、3.2kg、vip」，期望 26，冒烟最干净，代价是档 1 就碰到真实模板。\n\n我不会拨开关、不改比例、不发公告，每档放开和进下一档都等你说。\n\n请你定档 1 放谁：只放 9001，还是 9001 加 1032？"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.16251349999999998,
+            "judgeCostUsd": 0.008267999999999984,
+            "durationSeconds": 30,
+            "startedAt": "2026-09-19T09:08:12.486Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-uslWcB\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "tiers-observation-owner",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "用的是金丝雀发布（canary release，Humble & Farley《持续交付》；放大拨的就是 `feature-toggle` 认出的那一个开关），观测按 Google SRE 的四个黄金信号（four golden signals），档 1 之后那条叫冒烟测试（smoke test）。\n\n## 发布方案\n\n```\n改动｜偏远附加按省份查表（分流条件：模板配置了偏远省份表；开关：remote_fee_by_province）\n放量｜档 1 白名单只放测试模板 9001，停半天 ｜ 档 2 百分比 5%，停一天 ｜ 档 3 全量\n回滚｜任一档异常，关 remote_fee_by_province；前提：老路径 diff 为零已静态验过\n观测｜「省份在表中时加该省附加」→ 新路径命中数 > 0，抽 20 条与例子比对 ｜「省份不在表中时不加附加」→ 新路径异常数 = 0，且这些单与老路径金额一致 ｜ 老路径四个黄金信号：p99 延迟（延迟）、QPS（流量）、错误率（错误）、线程池占用（饱和）不变\n冒烟｜档 1 放开后打一条，期望金额与需求例子一致\n```\n\n## 两处要说清楚的\n\n**冒烟用哪个模板，和档 1 白名单是连着的。** 你给的两个例子都是模板 1032，但档 1 白名单只放 9001——1032 的请求根本不会进新路径，拿 1032 打冒烟只会打出老路径的 18，看着\"正常\"其实什么都没验。所以冒烟必须用白名单里的模板。\n\n**留档我做不了。** Bash 不可用、仓库也不在这个工作目录，放量顺序、回滚点、观测点这三行得你贴进 PR 或工单；每档看完的结果也跟着记在同一处，后面出问题好追。\n\n在你定之前我不拨开关、不改比例、不发公告。每档放开、停多久、进不进下一档，都等你说。\n\n---\n\n请你定档 1 放谁：\n\n- **A：只放 9001。** 那冒烟就得用 9001 打，得先确认 9001 的偏远省份表里「新疆」这一条和 1032 的配成一样，期望才能是 26；不一样的话期望值你给我。\n- **B：白名单放 9001 + 1032。** 冒烟直接用你的例子：模板 1032、新疆、3.2kg、vip，期望 26；代价是 1032 是真实模板，档 1 就有真实单走新路径了。"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.18095899999999998,
+            "judgeCostUsd": 0.008819999999999995,
+            "durationSeconds": 43,
+            "startedAt": "2026-09-19T09:08:31.554Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-rsfNqd\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "tiers-observation-owner",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "按 `canary-release`（金丝雀发布，Humble & Farley《持续交付》；观测按 Google SRE 四个黄金信号 four golden signals）出方案。\n\n## 发布方案\n\n```\n改动｜偏远附加按省份查表（分流条件：模板配置了偏远省份表；开关：remote_fee_by_province）\n放量｜档 1 白名单只放测试模板 9001，停半天 ｜ 档 2 百分比 5%，停一天 ｜ 档 3 全量\n回滚｜任一档异常，关 remote_fee_by_province；前提：老路径 diff 为零已静态验过\n观测｜「省份在表中时加该省附加」→ 新路径命中数 > 0，抽 20 条与例子比对附加额\n    ｜「省份不在表中时不加附加」→ 未命中分支计数，抽 20 条确认附加额为 0\n    ｜ 老路径四个黄金信号：p99 延迟、QPS、错误率、线程池占用，四条各自与放量前持平\n冒烟｜档 1 放开后按需求例子打一条：模板、新疆、3.2kg、vip，期望 26\n```\n\n## 一个要你先拍的坑\n\n需求例子写的是模板 1032，但档 1 白名单只放 9001——照这个档 1 打过去，1032 走的还是老路径，冒烟其实什么都没验到。两条路：\n\n- **推荐**：档 1 只放 9001，在 9001 上配一份和 1032 一样的偏远省份表，冒烟改成「9001、新疆、3.2kg、vip」，期望值按 9001 的基础运费重算一遍（26 这个数是 1032 的，不能直接搬）。好处是档 1 完全不碰真实客户单。\n- 备选：档 1 白名单写 9001 + 1032，直接用 26 这个期望值冒烟。省事，但 1032 是真模板，档 1 就见真单了。\n\n## 事实与推断分开\n\n- 你给的事实：开关名与所在位置、白名单+百分比都支持、老路径 diff 为零已静态验过、9001 是内部模板、老路径四个指标都有。\n- 我推的：档 1 半天 / 档 2 5% 一天 / 档 3 全量这组数，以及「26 是 1032 的基础运费算出来的、换模板要重算」。前者是常见起点，后者需要你或代码确认——Bash 不可用、仓库文件也不在这个目录，我没法自己查证。\n- 没做的：没拨开关、没改配置、没发公告；每档放开和进下一档都等你说。\n\n方案本身建议贴进 PR 或工单，每档观测结果跟着往下记。\n\n那么——档 1 放谁：只放 9001（我推荐，冒烟例子换成 9001 并重算期望值），还是 9001 加 1032？"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.2104845,
+            "judgeCostUsd": 0.01632,
+            "durationSeconds": 76,
+            "startedAt": "2026-09-19T09:08:42.448Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-fbYepO\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "tiers-observation-owner",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "查了一下:**`canary-release` 这个 skill 在当前环境里不存在**(Skill 调用报 `Unknown skill: canary-release`,Glob 也没搜到任何 canary 相关文件)。所以下面是我按通用灰度发布实践出的方案,不是某个既定模板的产出——如果你们团队内部有这份文档,给我路径我重出一版。\n\n另外声明:仓库文件不在这里、Bash 也不可用,所以下面关于代码的部分全部是**基于你的描述**,我没有实际验证过(包括\"老路径 diff 为零\")。\n\n---\n\n## 一、这次发布的性质\n\n代码路径上老逻辑 diff 为零 → **上线动作本身是空操作,风险 100% 集中在开关翻转那一刻**。\n\n对应做法:**部署与发布解耦(decouple deploy from release)**,先把代码带着 `remote_fee_by_province=off` 全量部署完、放置一段时间,确认老路径指标无漂移,再单独安排开关的灰度。这两件事不要放在同一个变更窗口里,否则出问题时你分不清是部署引起的还是开关引起的。\n\n## 二、放量阶梯\n\n用的是 **progressive delivery / canary release**,先定向名单后按比例:\n\n| 阶段 | 范围 | 停留时间 | 通过条件 |\n|---|---|---|---|\n| 0 | 全量部署,开关 off | 1 个业务日 | 老路径四项指标与上周同期无差异 |\n| 1 | 白名单:内部模板 9001 | 30 分钟 | 链路通、日志有新分支埋点 |\n| 1.5 | **演练关闭开关** | 10 分钟 | 实测从改配置到线上生效的秒数 |\n| 2 | 白名单:模板 1032 | 1 小时 | 两个验收用例线上实测通过 |\n| 3 | 百分比 1% | 覆盖一次晚高峰 | 见第三节指标 |\n| 4 | 5% | 4 小时 | 同上 |\n| 5 | 25% | 跨一个完整自然日 | 同上 + 对账无差异 |\n| 6 | 50% → 100% | 各 4 小时 | 同上 |\n\n两点说明:\n\n- **阶段 1.5 不能省**。配置中心客户端基本都有本地缓存,回滚的真实生效时间等于缓存 TTL,不等于你点下按钮的时间。这个数字必须在小流量时实测出来,而不是出事时才发现要等 60 秒。\n- **模板 9001 是内部的,它只能证明\"代码跑得通\",不能作为\"业务没问题\"的证据**。流量不真实、金额没人对账。别把它的绿灯当成进入百分比阶段的依据,真正的门槛在阶段 2 和 3。\n\n## 三、指标:你现在这套不够用\n\n你列的 p99 延迟、QPS、错误率、线程池占用,正好是 **四个黄金信号(the four golden signals)**,作为稳定性护栏是合格的。但对这次改动它有个致命盲区:\n\n> **运费算错了,这四个指标全是绿的。** 查表成功、返回 200、延迟正常、金额多收了 8 块——监控一声不吭。\n\n计价类改动必须补**正确性指标**,建议至少三个:\n\n1. **偏远附加命中率**:命中省份表的订单占比。突然从 3% 跳到 30%,说明省份匹配写宽了(比如归一化把\"广东\"匹配上了)。\n2. **运费金额分布**:按模板分桶的 P50/P99 运费,和开关关闭时的基线对比。\n3. **新旧双算差异**(最有价值):新路径算完后,影子跑一遍老逻辑,只记日志不生效,统计差异笔数和差异金额。这是 **diff testing / shadow comparison**(GitHub Scientist 那套思路)。如果来得及,建议在阶段 3 之前就把这个埋上,它能让你在 1% 流量下就拿到统计意义上的结论,而不是等用户投诉。\n\n另外单独加一条告警:**省份表加载失败时,降级行为必须是\"不加附加\"**(退回老行为),不能抛异常打断下单。这条要在阶段 1 用故障注入验一下,别只看代码。\n\n## 四、百分比灰度在计价场景的坑\n\n这条我认为是整个方案里最容易出事的地方:\n\n运费在**下单页展示、提交订单、支付、履约结算**会被算多次。如果百分比分桶是按请求随机的,同一个订单可能前一次命中新路径(26)、后一次命中老路径(18),用户看到的价和实际扣的钱对不上,财务也对不平。\n\n两个办法,选一个:\n\n- **按订单号/用户 ID 做一致性哈希分桶(sticky bucketing)**,保证同一订单全程走同一条路径;\n- 或者**运费一旦算出就快照存在订单上**,后续环节只读快照。\n\n后者更稳,但改动可能超出这次范围。如果配置中心的百分比是按请求随机的,阶段 3 之前必须先确认这点——否则不要开百分比,只用白名单推。\n\n## 五、回滚\n\n- 回滚 = 关开关,不重新发版。\n- 配置变更要有操作人和时间记录,便于事后和监控曲线对齐。\n- 触发条件写死,不要临场判断:错误率相对基线涨 0.5 个百分点、p99 涨 20%、或双算差异笔数超过阈值,任一触发立刻关到上一档。\n\n---\n\n## 我需要你确认一件事\n\n验收用例这里有个对不上的地方:\n\n- 例 1:模板 1032、新疆、3.2kg、**vip** → 26\n- 例 2:模板 1032、广东、3.2kg(**没写 vip**)→ 18\n\n需求句 1 只说\"加该省附加\",没提 vip。那这个 26 里,vip 到底起没起作用?\n\n- 如果 vip 不影响运费:新疆附加 = 26 − 18 = 8,两个例子可以直接当对照用例;\n- 如果 vip 有折扣:26 和 18 就不是干净的对照,我没法反推出新疆的附加值是多少,阶段 2 的线上验收也就没有明确的期望值。\n\n**vip 影响运费吗?** 如果影响,再给我一条\"模板 1032、新疆、3.2kg、非 vip\"的期望值,我把验收用例补全。"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.22356450000000005,
+            "judgeCostUsd": 0.017124000000000014,
+            "durationSeconds": 85,
+            "startedAt": "2026-09-19T09:09:00.655Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-MGHF5w\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "tiers-observation-owner",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`canary-release` 不在这个环境可用的 skill 列表里（可用的只有 dataviz、code-review、simplify、security-review、run 等），我没有猜着调。下面按业界通行的 canary release 做法给你出方案，仓库我看不到，所以全部基于你给的信息，假设都标出来了。\n\n---\n\n## 0. 我采用的假设（不对请驳回）\n\n- **白名单优先于百分比**：模板在白名单里 → 走新路径，不看百分比；不在白名单 → 按百分比抽样。理由是白名单存在的意义就是定向放量，被百分比盖住就没用了。\n- **开关关闭 = 完全走老路径**，这点你已经静态验过 diff 为零，是整套方案能靠\"关开关\"回滚的前提。\n- 9001 是内部模板，因此它既是首档灰度对象，**也必须从业务指标统计里排除**——否则内部测试单会污染灰度对照。\n\n---\n\n## 1. 放量节奏（Progressive Delivery）\n\n每档都要**跨过一次业务高峰**才算 bake 完成，别在凌晨低峰期放量然后第二天早上全量。\n\n| 档 | 范围 | Bake time | 目的 |\n|---|---|---|---|\n| S0 | 白名单：仅 9001 | 30 min | 验证链路通、配置能读到、日志打点齐 |\n| S1 | 白名单：1–2 个**低单量真实模板**（先别放 1032） | 2 h + 一次高峰 | 验证真实数据下的查表命中 |\n| S2 | 百分比 1% | 一个完整日峰 | 第一次看统计意义上的指标 |\n| S3 | 5% → 25% → 50% | 每档 ≥ 一次高峰 | 逐步放大 blast radius |\n| S4 | 100% | — | 全量 |\n| S5 | 全量后保留开关 ≥ 2 周，再清理代码 | — | flag cleanup，别留 flag debt |\n\n**为什么 1032 放到 S3 之后**：它是你两个需求例子里的模板，大概率是主力模板，单量大 = blast radius 大。用它做早期灰度，等于把最贵的模板放在最没把握的阶段。\n\n---\n\n## 2. 监控：老的那四项不够\n\n你列的 p99 延迟、QPS、错误率、线程池占用，正好就是 Google SRE 的 **Golden Signals**（latency / traffic / errors / saturation）。这套东西能告诉你\"系统有没有挂\"，但**告诉不了你\"钱有没有算错\"**——这次改的恰恰是钱。技术指标全绿、每单多收 8 块，是这次发布最可能的失败形态。\n\n### 2.1 老四项要改一件事：按路径打标分开看\n\n1% 灰度时，新路径的异常会被 99% 的老流量稀释掉，总量曲线纹丝不动。所以四项指标都要带 `path=new|old` 维度，**看的是新老两条曲线的对比，不是总量曲线**（cohort-based comparison）。\n\n### 2.2 必须新加的业务守卫指标\n\n- **偏远附加命中率，按省份分组**。新疆/西藏/青海/甘肃/宁夏/内蒙 应有命中；广东/江浙沪 命中率应恒为 0。任何一个\"不该命中的省份出现命中\"，直接回滚。\n- **省份名归一化失败率 / 查表 miss 率**。这是我判断最容易出 bug 的点：配置中心里写的是\"新疆\"还是\"新疆维吾尔自治区\"？订单里传的是哪个？这个指标预期值是 0，>0 就是配置或归一化有问题。\n- **单均运费 diff（新 vs 老）**，按模板分组。理想做法是 shadow compare：新路径算完，把老路径也算一遍只记录不生效，直接出逐单差额分布。\n- **配置中心读取失败时的降级行为**有没有被触发。拉不到配置应该 fail-safe 到\"不加附加\"（等同老路径），不是抛异常也不是加个默认值。\n\n---\n\n## 3. 通过 / 回滚判据\n\n**硬回滚（立刻关开关，不讨论）：**\n- 不该命中的省份出现附加\n- 查表 miss 率 > 0\n- 单笔金额 diff 超出该省配置的附加区间\n- 新路径错误率 > 老路径 + 0.1pp\n- 配置中心读取异常被触发\n\n**暂停放量、原地观察（不回滚但不往上走）：**\n- 新路径 p99 > 老路径 × 1.2\n- 线程池占用相对老路径有可见抬升（查表如果是远程调用，这里会先响）\n\n**放行到下一档：**\n- 上述全部不触发，且 bake time 跨过了一次高峰。\n\n---\n\n## 4. 回滚\n\n动作就是把 `remote_fee_by_province` 置 false，不需要发版——这一点成立的前提正是你已经验过的\"老路径 diff 为零\"。\n\n两件事发布前要落实：\n\n1. **开关生效延迟是多少**（配置中心是推送还是轮询？轮询间隔多少？）。这个数字就是你的 MTTR 下限，写进值班预案里。\n2. **回滚不会撤销已经算错的订单**。多收/少收的单子怎么补偿，口径要在发布前跟业务定好。出事之后再定，就是在压力下做决策。\n\n---\n\n## 5. 验收用例（从你那两句需求展开）\n\n| # | 场景 | 输入 | 期望 |\n|---|---|---|---|\n| 1 | 命中省份表 | 1032 / 新疆 / 3.2kg / vip | 26 |\n| 2 | 未命中省份表 | 1032 / 广东 / 3.2kg | 18 |\n| 3 | 模板未配置省份表 | 任意省份 | 等于老路径结果 |\n| 4 | 省份表配了但为空 | 任意省份 | 等于老路径结果 |\n| 5 | 开关关闭 | 上述全部输入 | 全部等于老路径结果 |\n| 6 | 白名单 vs 百分比冲突 | 白名单内模板，百分比 0% | 走新路径（按假设 1） |\n| 7 | 省份名别名 | \"新疆\" / \"新疆维吾尔自治区\" | 结果一致 |\n\n---\n\n## 一个问题\n\n例 1 写了 `vip`，例 2 没写。如果例 2 也是 vip，那新疆的附加就是 `26 - 18 = 8` 元，用例 1、2 可以互相校验；如果例 2 是非 vip，那 18 里少了 vip 折扣这一层，8 这个数就推不出来，我也没法把附加金额写成断言。\n\n**例 2（模板 1032、广东、3.2kg）是 vip 还是非 vip？**"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.30305100000000007,
+            "judgeCostUsd": 0.023346000000000033,
+            "durationSeconds": 134,
+            "startedAt": "2026-09-19T09:09:14.465Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Zc8pn0\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "tiers-observation-owner",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "## 先说一件事\n\n`canary-release` 这个 skill 在我这边的可用列表里没有（列表里只有 dataviz / code-review / simplify / security-review / run / init / update-config 等）。我没去猜同名的东西，直接按灰度发布（canary release）的通用做法给你出方案。如果它是某个插件里的 skill，你把它装上或者把内容贴给我，我按它的模板重排一版。\n\n另外因为 Bash 不可用、仓库也不在这个目录，下面所有内容都基于你给的描述，**没有一条是我读代码确认的**。我会标注哪些是你提供的事实、哪些是我的推断。\n\n---\n\n## 0. 我采用的假设（错了就会影响后面整段）\n\n- **A1：`remote_fee_by_province` 的「百分比」是灰度流量百分比，不是附加费费率。** 依据是你说附加费「按省份查表」，金额来自表；而「白名单 + 百分比」是配置中心灰度开关的标准组合。\n- **A2：1032 是真实业务模板**（你只说了 9001 是内部的）。\n- **A3：老路径 diff 为零是静态验证结论**（你的原话「已静态验过」），不是运行时观察到的结果。\n\n---\n\n## 1. 阶段设计（canary release + blast radius limitation）\n\n每一阶段都要有：进入条件、观察窗（bake time）、放行标准、回滚触发条件。\n\n| 阶段 | 范围 | 观察窗 | 放行标准 |\n|---|---|---|---|\n| S0 影子比对 | 100% 流量，双算，只返回老结果，记 diff | 1 个完整日峰 | 新老 diff 100% 可解释：表内省份差额=表值，表外省份差额=0 |\n| S1 内部模板 | 白名单 = 9001 | 1 个工作日 | 需求句 1/2 在生产实跑通过；新路径四个信号无异常 |\n| S2 单个真实模板 | 白名单 = 9001 + 1032 | 1 个工作日含日峰 | 附加费命中率、金额分布落在预估区间；零客诉/零人工改单 |\n| S3 小流量 | 百分比 1% | ≥2 小时且覆盖一个峰 | 见下面的门禁指标 |\n| S4 | 5% → 25% | 各 4 小时 / 1 天 | 同上，且对账无差异 |\n| S5 | 50% → 100% | 各 1 天 | 同上 |\n| S6 清理 | 拆开关、删老路径 | 全量后 ≥2 周 | 用的是 flag hygiene，别让开关长期悬着 |\n\n**S0 是我最想加的一步。** 用的是 dark launch / shadow compare（也叫 dark read + diff testing）。你 A3 的静态结论只能证明「代码路径没动」，证不出「线上真实数据分布下结果一致」——比如省份字段里塞的是「新疆维吾尔自治区」而表里存的是「新疆」。如果现有架构做不了双算，S0 可以降级为：先只上开关代码、开关全关发一次，观察一天，确认关态与发布前完全一致，再开始 S1。\n\n**为什么 S1 用 9001 但不能只靠 9001：** 内部模板验的是链路通不通（开关读取、查表、落单、结算），验不了定价正确性——它跑不到真实的省份分布和真实偏远表。这是推断，不是观察。\n\n---\n\n## 2. 门禁与回滚指标\n\n你现有的四个（p99 延迟、QPS、错误率、线程池占用）正好是 Google SRE 的 four golden signals（Latency / Traffic / Errors / Saturation），但它们只挂在**老路径**上。灰度期间必须补两类：\n\n**新路径技术指标（镜像那四个）**\n- 新路径 p99 / QPS / 错误率 / 线程池占用，按开关维度打标签，能和老路径同图对比\n- 查表耗时、配置中心读取耗时与失败率\n- 配置中心不可用时的降级计数（应当降级回老路径，fail closed 到「不加附加费」）\n\n**业务护栏指标（guardrail metrics）——这才是能抓住定价错误的**\n- 附加费命中率（加了附加费的订单占比），按省份、按模板拆\n- 附加费金额分布（histogram）+ 单笔最大值告警\n- **「省份不在表中却产生了非零附加费」计数，硬性要求恒为 0** —— 直接对应需求句 2\n- 同一订单重复报价金额不一致计数\n- 报价 / 下单 / 结算三处运费不一致计数\n- 人工改单、退差价、客诉量\n\n**基线**：S1 之前先抓一份 7 天基线，后面每一步都跟基线比，不要跟上一小时比。\n\n**回滚触发（任一命中即关开关，不讨论）**\n1. 「表外省份出现非零附加费」> 0\n2. 报价/结算不一致 > 0\n3. 新路径错误率相对基线上升超过一个可接受阈值（建议吃掉当期 error budget 的 10% 就停）\n4. 新路径 p99 超基线 20%\n5. 出现任一笔人工判定为错价的订单\n\n---\n\n## 3. 回滚方案\n\n- **一键回滚 = 开关关掉**（kill switch），不依赖重新发版。这是灰度开关唯一真正的价值，所以开关的关态路径必须在 S0/S1 就真跑过一次，别等到出事才第一次走。\n- **关开关不等于数据回滚。** 灰度期间已经按新逻辑报过价/下过单的订单，开关一关，结算就会走老逻辑，金额对不上。所以需要**决策固化（decision pinning）**：在第一次计费时把「本单用哪个路径 / 用了哪条表项 / 附加费多少」快照到订单上，后续结算、退款、对账全读快照，不重新求值。\n- 配套：灰度期间每天跑一次对账，比对订单快照与当时的表配置。\n\n---\n\n## 4. 从需求句推出的测试用例\n\n用的是 specification by example + 等价类划分 / 边界值（equivalence partitioning, boundary value analysis）。你给的两条是正例，但它们**不够用**，原因见第 5 节。\n\n**需求句 1（表内省份加附加费）**\n1. 1032 / 新疆 / 3.2kg / vip → 26 ✅（你给的）\n2. 1032 / 新疆 / 3.2kg / **非 vip** → ?（隔离 vip 影响，必须补）\n3. 表内省份但附加值配成 0 → 结果 = 无附加费，且要能和「不在表中」在日志里区分开\n4. 省份名规范化：新疆 / 新疆维吾尔自治区、内蒙古、广西、宁夏、西藏 五个自治区的简称全称都要过；再加港澳台与海外\n5. 重量对附加费的影响：3.2kg 一个点看不出附加费是**每单固定**还是**按重量/档位缩放**。需要同模板同省份下取 0.9kg / 1.0kg / 1.1kg / 3.2kg / 档位边界各一组\n6. 金额与四舍五入：26 和 18 都是整数，把舍入问题藏起来了。要有一组产生分位的数据，并明确 vip 折扣与附加费的先后顺序（先加后折 vs 先折后加，结果不同）\n\n**需求句 2（表外省份不加）**\n7. 1032 / 广东 / 3.2kg → 18 ✅（你给的）\n8. 1032 / 广东 / 3.2kg / **vip** → ?（隔离省份影响，必须补）\n9. 模板根本没配偏远表 + 新疆 → 无附加费，且与老路径结果完全一致\n10. 省份为空 / null / 无法识别 → 不抛异常，降级为不加附加费（宁可少收不可错收）\n\n**开关本身**\n11. 开关全关 → 结果与老路径逐字节一致（运行时验，不只静态验）\n12. 模板在白名单内、但百分比命中不到 → 走哪条路？白名单与百分比的优先级需要明确定义并有用例\n13. 配置中心读取失败 → 走老路径，且有降级计数\n14. 幂等：同一单连续算两次，结果一致（对应上面的决策固化）\n\n---\n\n## 5. 我发现的一个需求缺陷（不影响发布，但影响验收）\n\n你给的两个例子**同时变了两个变量**：省份（新疆→广东）和 vip（有→未提）。26 − 18 = 8 这个差额里混了「偏远附加」和「vip 折扣」两部分，从这两条例子推不出任何一项的单独值。所以上面用例 2、8 是必须补的——补齐后四个格子（新疆/广东 × vip/非vip）才能把两个因素拆开。\n\n这不阻塞发布，按我写的方案照常推进；但验收签字前建议把这四格填满。\n\n---\n\n## 一个问题\n\n灰度百分比要按什么 key 分桶，决定了 S3 之后会不会出现「同一个用户刷新一下运费就变了」。举个具体场景：用户在购物车看到运费 26，退出重进，如果分桶 key 是每次请求随机、或者是 traceId，这次没命中新路径，运费就变成 18 —— 用户会截图发客诉。\n\n我的建议是：**按用户 id 做稳定哈希分桶（sticky bucketing），下单时把解析结果固化到订单上**，这样浏览期价格稳定、订单生命周期内价格不变。\n\n**`remote_fee_by_province` 的百分比，配置中心现在是按什么 key 分桶的？** 如果是按请求随机，S3 之后的阶段我需要改成纯白名单逐模板放量，不走百分比。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 2,
+    "casesPassed": 1,
+    "overallScore": 0.5,
+    "overallPassRate": 0.5,
+    "meanDelta": 0.5
+  }
+}

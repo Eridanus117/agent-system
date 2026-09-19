@@ -1,0 +1,269 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:09:26.675Z",
+  "durationSeconds": 155,
+  "costUsd": 0.6162276,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as122-split-evidence\\plugins\\flow-steps",
+    "ablation": "with-without",
+    "modelOverride": "sonnet",
+    "judgeModel": "sonnet",
+    "caseFilter": "regression-evidence-before-change",
+    "threshold": 1,
+    "concurrency": 3,
+    "plugins": [
+      {
+        "name": "flow-steps",
+        "version": "0.1.2",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as122-split-evidence\\plugins\\flow-steps"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "regression-evidence-before-change",
+      "dir": "evals\\regression-evidence-before-change",
+      "source": "prose",
+      "promptMarkdown": "第 5 阶段刚开始，还没改代码。第 4 阶段的门上已定：这次开改旧代码时才开的活动「证」（`regression-evidence`），因为运费计算 `FreightCalc.calc` 的老路径没有测试，验收要求老路径逐字节一致。改动是加「偏远附加按省份查表」，需求翻译的两条句子和例子已经有了（模板 1032 新疆 3.2kg vip → 26；模板 1032 广东 3.2kg → 18），老路径的分支是首重、续重、cod、vip；线上有 Arthas 和请求日志。\n\n按 `regression-evidence` 走。这个会话里 `orca`、`gh`、Arthas 都不可用，仓库文件也不在这个工作目录里，实践 skill（record-replay、golden-master）也没装：把这一步从头到尾要做的按顺序说出来，然后停在该等我的地方。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 8,
+      "graders": [
+        {
+          "name": "orders-record-before-change",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the order of work the agent laid out. PASS if all of these hold: (a) it names record-replay for choosing the samples and recording them before any code change, and golden-master for the replay comparison after the change; (b) the sequence is: sample list (covering both requirement sentences and the old branches) → owner vetoes the list → record before the change → make the change → replay and compare (old category byte for byte against the master, new category against the expected values of the requirement) → master files, replay test and result in the same PR as the change; (c) it stops where the owner has to veto the sample list — one question — and does not go on to implement.\n\nFAIL if recording is placed after the change, if the veto of the owner is skipped, if the new-category expectations are folded into the master, or if the agent proceeds into implementation.",
+          "config": {
+            "criteria": "Judge the order of work the agent laid out. PASS if all of these hold: (a) it names record-replay for choosing the samples and recording them before any code change, and golden-master for the replay comparison after the change; (b) the sequence is: sample list (covering both requirement sentences and the old branches) → owner vetoes the list → record before the change → make the change → replay and compare (old category byte for byte against the master, new category against the expected values of the requirement) → master files, replay test and result in the same PR as the change; (c) it stops where the owner has to veto the sample list — one question — and does not go on to implement.\n\nFAIL if recording is placed after the change, if the veto of the owner is skipped, if the new-category expectations are folded into the master, or if the agent proceeds into implementation.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "regression-evidence",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.128956,
+            "judgeCostUsd": 0.008766000000000003,
+            "durationSeconds": 90,
+            "startedAt": "2026-09-19T09:09:26.722Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-NCirir\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "orders-record-before-change",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "这是常规变更第 5 阶段，按 `regression-evidence` 走。三步顺序：\n\n1. **改代码之前**（现在这步）：按 `record-replay` 挑样本、定规整规则，请主人否；否过后录母版进仓。\n2. **改完之后**：按 `golden-master` 回放比对——老类别逐字节比母版，新类别比需求例子期望值；红的归入规整/主人认可的更新/bug 三种之一。\n3. **留证**：母版、回放测试、比对结果进同一个 PR，「怎么验证的」按 `verify-evidence` 贴。\n\n停在第 1 步。先说清楚现在能做和不能做的：`orca`、`gh`、Arthas 都不可用，仓库文件也不在这个工作目录，所以**母版实际录制现在做不了**——只能先把样本清单列出来请你否，等工具/仓库可用了再补录，录制仍要早于第一处代码改动。\n\n样本清单（老路径分支：首重、续重、cod、vip；新路径需求句 2 条）：\n\n| 场景名 | 请求要点（模板/省份/重量/vip/cod） | 覆盖 |\n|---|---|---|\n| A-新疆vip | 模板1032, 新疆, 3.2kg, vip=true, cod=false | 需求句①（→26），新路径：偏远附加+vip |\n| B-广东基线 | 模板1032, 广东, 3.2kg, vip=false, cod=false | 需求句②（→18），新路径：非偏远省查表=0；顺带覆盖老路径 首重+续重 |\n| E-广东cod | 模板1032, 广东, 3.2kg, vip=false, cod=true | 老路径：cod 分支，非偏远省，逐字节比母版 |\n| F-广东vip | 模板1032, 广东, 3.2kg, vip=true, cod=false | 老路径：vip 分支，非偏远省，逐字节比母版 |\n\n说明：\n- A、B 是新路径样本，比对对象是需求例子给的期望值，不比母版（因为偏远附加是新加的，母版里这两条的老结果本来就该和现在不一样）。\n- E、F 用非偏远省份（广东）把 cod、vip 单独隔出来，比对对象是母版，逐字节一致。\n- 首重、续重两个分支没单独再开一条，B/E/F 都是 3.2kg（超首重阈值触发续重），首重作为基础档在四条里都会跑到；如果你觉得需要一条更轻重量（比如 0.5kg）单独隔出「只有首重、不触发续重」的老路径样本，我可以加第五条。\n- 规整规则待定：目前不知道 `FreightCalc.calc` 的真实请求/响应格式（仓库不在此工作目录），建议至少规整掉 traceId/timestamp 之类易变字段、JSON key 顺序；具体字段要等能读到代码或抓到线上请求日志再定。\n\n请否：这四条样本够不够、要不要加首重单独隔离那条、规整规则先按上面两条来行不行？确认后我再等工具/仓库可用时去录母版。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.09709519999999999,
+            "judgeCostUsd": 0.008027999999999999,
+            "durationSeconds": 56,
+            "startedAt": "2026-09-19T09:09:26.722Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-wcAD6e\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "orders-record-before-change",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "第 5 阶段开始，按 `regression-evidence` 走，不改代码。三步顺序：\n\n1. **改代码前**：按 record-replay 挑样本（新路径每条需求句、老路径每个主要分支各至少一条）、定规整规则，请主人否；否过后录母版进仓。\n2. **改完后**：按 golden-master 回放比对——老类别逐字节比母版，新类别比需求例子的期望值；红的归入规整、主人认可的更新、bug 三种之一。\n3. **留证**：母版、回放测试、比对结果进同一个 PR，「怎么验证的」一节按 `verify-evidence` 贴。\n\n现在停在第 1 步。因为 Arthas、请求日志、仓库文件这次都摸不到，样本表只能按你给的信息（老路径四分支：首重、续重、cod、vip；需求两句例子）先列成计划，录制留到工具可用时做。请你否下面这张样本表和规整规则：\n\n| # | 类别 | 场景 | 请求要点（计划） | 预期 |\n|---|------|------|------|------|\n| 1 | 新路径 | 需求句①：偏远附加命中+vip | 模板1032／新疆／3.2kg／vip | 26 |\n| 2 | 新路径 | 需求句②：非偏远省份不受影响 | 模板1032／广东／3.2kg | 18 |\n| 3 | 老路径 | 首重分支 | 某模板／非偏远省份／重量落在首重区间／非vip／非cod | 与母版逐字节一致 |\n| 4 | 老路径 | 续重分支 | 某模板／非偏远省份／重量超首重进入续重区间／非vip／非cod | 与母版逐字节一致 |\n| 5 | 老路径 | cod 分支 | 某模板／非偏远省份／代收货款 | 与母版逐字节一致 |\n| 6 | 老路径 | vip 分支（不叠加偏远附加） | 某模板／非偏远省份／vip | 与母版逐字节一致 |\n\n样本1（新疆/vip）同时碰了\"偏远附加\"和\"vip\"两条老分支的叠加逻辑，样本6单独验证 vip 分支在没有偏远附加时本身没被改动——这两条不能互相替代，需要都留。\n\n规整规则待定，我不确定实际请求/响应里有哪些易变字段，先按常见项列出来问你：\n- 请求流水号/traceId、时间戳类字段——比对时忽略还是脱敏？\n- 金额字段是否有浮点精度问题需要定小数位？\n- 响应字段顺序是否需要参与比较，还是只比键值？\n\n样本表和规整规则请否或改，否完我再去录母版（等 Arthas／日志／仓库可用时）。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.0856072,
+            "judgeCostUsd": 0.008946,
+            "durationSeconds": 39,
+            "startedAt": "2026-09-19T09:09:26.722Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-n6YwCG\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "orders-record-before-change",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "这是第 5 阶段，`regression-evidence` 已读入。先把三步顺序说全，然后停在第 1 步等你否样本。\n\n**三步顺序**\n1. 改代码前：按 `record-replay` 挑样本（新路径每条需求句、老路径每个主要分支各至少一条）+ 定规整规则，请你否 → 录母版进仓。\n2. 改完后：按 `golden-master` 回放比对——老类别逐字节比母版，新类别比需求例子期望值，红的归入规整/认可变更/bug 三类之一。\n3. 留证：母版、回放测试、比对结果进同一个 PR，「怎么验证的」一节按 `verify-evidence` 贴。\n\n**当前环境缺口，先说明**\n- `record-replay`、`golden-master` 两条实践 skill 未装：下面的样本清单只能按 `regression-evidence` 本身给的字段（场景名/请求要点/覆盖哪条句子或分支）手写，规整规则也是我提议、非按标准做法生成。\n- Arthas、`orca`、`gh` 都不可用，仓库文件也不在本工作目录：录母版这个动作现在做不了，只能先列样本计划，录制要等工具可用时再做。\n\n**样本清单（草案，请否）**\n\n新路径——覆盖需求翻译的两条句子：\n| # | 场景名 | 请求要点（占位字段名，待对真实 schema 核实） | 覆盖 |\n|---|---|---|---|\n| A | 新疆_vip_偏远 | 模板1032，省份=新疆，重量=3.2kg，vip=是 | 句1：新疆+vip→26 |\n| B | 广东_非vip | 模板1032，省份=广东，重量=3.2kg，vip=否/未传 | 句2：广东→18 |\n\n老路径——覆盖 `FreightCalc.calc` 四个主要分支，逐字节对母版：\n| # | 场景名 | 请求要点 | 覆盖分支 |\n|---|---|---|---|\n| C | 首重_基本 | 非偏远省份，重量落在首重区间内，无cod无vip | 首重 |\n| D | 续重_超重 | 非偏远省份，重量超首重阈值，触发续重计算 | 续重 |\n| E | cod_基本 | 非偏远省份，带cod金额 | cod |\n| F | vip_非偏远 | 非偏远省份，vip=是（与样本A分开，排除偏远附加干扰） | vip |\n\n规整规则（提议，未按标准做法生成，需你确认或改）：\n- 若响应里带 requestId/timestamp/traceId 等每次调用必变的字段，比对时先剔除这些字段再逐字节比。\n- 若 `calc` 是纯函数、输出只含金额字段，可能不需要规整——但字段名和是否存在浮点精度尾差需要拿到真实 request/response 样例后才能确认。\n\n请否：样本 A–F 是否覆盖到位（尤其是老路径分支是否只有这四个、有没有遗漏边界如免邮/超区域等），规整规则是否合理。你确认后我再按 `record-replay` 把这清单落成 request/approved 文件，等工具可用时录母版。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 0.071997,
+            "judgeCostUsd": 0.004847999999999998,
+            "durationSeconds": 32,
+            "startedAt": "2026-09-19T09:10:06.045Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-CVNgAo\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "orders-record-before-change",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`flow` 这个 skill 在当前环境里没有安装（Skill 工具返回 \"Unknown skill: flow\"），`regression-evidence`、`record-replay`、`golden-master` 也不在可用 skill 列表里——不是\"装了但离线\"，是这个会话的 skill 库里根本没有这几条。\n\n这意味着我手上没有 `regression-evidence` 活动的权威步骤定义，只有你消息里给的约束（老路径无测试、逐字节一致、Arthas/请求日志本来该用但现在不可用、仓库文件不在本工作目录）。我不想凭印象编一套步骤然后说这是\"regression-evidence 要求的\"——那是编造，不是复述。\n\n两个选项，你选一个：\n1. 你把 `flow` 或 `regression-evidence` 的 skill 内容贴给我（或告诉我文件路径，我读），我照着走。\n2. 你确认让我按\"给旧代码无测试路径建回归证据\"这个领域的通用最佳实践（golden master / characterization testing 的标准做法），自己给出一套步骤序列，不冒充这是某个已安装 skill 的原文，只说明这是通用实践加你给的约束推出来的。\n\n选哪个？"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.11082719999999999,
+            "judgeCostUsd": 0.011969999999999998,
+            "durationSeconds": 79,
+            "startedAt": "2026-09-19T09:10:22.926Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-owEfPa\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "orders-record-before-change",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "我先说清楚一件事：这个环境里没有 `flow` 这个 skill（调用返回 Unknown skill，仓库里也搜不到相关文件），所以下面的步骤是按你给的阶段设定（阶段4门槛=`regression-evidence`，阶段5=动代码前先拿证据）和这类活动本身对应的业界实践 —— **特征测试 / 黄金基准测试**（Characterization Testing / Golden Master Testing，Michael Feathers《Working Effectively with Legacy Code》里给没测试的老代码定\"改前基准\"的标准做法）——手动排出来的，不是从 skill 文件里读的。这点你需要知道，因为如果真有一份 `flow`/`regression-evidence` 的书面定义，它可能规定了比下面更细或不同的顺序。\n\n`regression-evidence` 这一步，从头到尾该做的事：\n\n1. **定位改动入口和老路径的全部分支** —— 在 `FreightCalc.calc` 里确认首重、续重、cod、vip 这四个分支的代码边界，包括彼此的组合（比如 vip+cod 同时命中时走哪段）。→ **卡住**：仓库文件不在本次工作目录，没法读代码。\n\n2. **拉老路径的真实输入样本** —— 用 Arthas 抓线上 `FreightCalc.calc` 的实际入参/出参（trace 或 watch），再用请求日志补历史样本，覆盖模板、省份、重量、vip/cod 的组合分布。→ **卡住**：Arthas 不可用，也没有日志访问方式。\n\n3. **没有 record-replay / golden-master 工具时的替代方案** —— 正常这一步会用工具自动把\"输入→输出\"存成回放集；工具没装的情况下，只能退化成手工基准表：一份 CSV/JSON，逐行记录 `(模板, 省份, 重量, vip, cod) → 运费`，靠人读代码或读日志样本手填。这是有效但脆弱的替代品，容易漏边界（比如续重进位的临界重量点）。\n\n4. **给四个分支各挑覆盖用例**，尤其是边界值（整重 vs 有小数续重、续重刚好进位、vip 单独、cod 单独、两者都无、两者都有）。\n\n5. **在老代码上跑一遍，把第 4 步的输入喂进去，记录当前实际输出**，作为\"改动前\"基准。这一步必须真的执行代码 —— 仅凭读代码猜输出不算证据，猜错了基准本身就是假的。→ **卡住**：仓库不在本地，没有可执行环境。\n\n6. **把两条需求例子也补进用例表**（模板1032 新疆 3.2kg vip → 26；模板1032 广东 3.2kg → 18），但标记为\"新行为\"，不能混进老路径的回归基准里 —— 它们是验收新逻辑用的，不是证明老逻辑不变用的。\n\n7. **固化基准**：把第5步的输出存成测试固件，改动后跑同一份输入，要求逐字节和基准一致（这是验收方定的硬要求）。\n\n8. 基准表和固件就绪、且能在老代码上实际跑出结果 —— 阶段5的门槛才算过，才能开始写\"偏远附加按省份查表\"的代码。\n\n**停在这里**：第1步和第2步都被卡住了（没仓库、没 Arthas、没日志访问），第3步的替代方案质量完全取决于第1、2步给出的真实样本有没有，所以我没法再往下走一步去\"造\"基准。\n\n一个问题，给你选：\n\n- **A（业界默认）**：你把 `FreightCalc.calc` 的源码贴给我，再从 Arthas/日志里导出一批真实请求样本（哪怕几十条，覆盖四个分支）贴给我，我按上面第3~7步手工建基准表。\n- **B**：你在有权限的机器上自己跑一遍 Arthas trace + 日志导出，把结果文件发我，我来做第3步之后的整理和固件化。\n- **C（退化方案，有风险）**：完全没有真实样本可拿，只贴源码，我纯读代码枚举边界值构造用例——能过阶段5门槛，但抓不住线上可能存在的\"代码没写但线上在跑\"的隐藏行为（比如某个历史 workaround），回归风险比A/B高。\n- **D**：跳过这一步直接改（不建议——阶段4门槛已经定死要有这份证据，跳过等于推翻已定的门）。\n\n我推荐 **A**：成本最低、能拿到真实分布，且直接对应黄金基准测试的标准做法。你选哪个？"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 0.12174499999999999,
+            "judgeCostUsd": 0.010505999999999995,
+            "durationSeconds": 84,
+            "startedAt": "2026-09-19T09:10:37.704Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-9XbTRP\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "orders-record-before-change",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "这一步（regression-evidence）本质上是\"characterization testing / golden master testing\"（Michael Feathers《Working Effectively with Legacy Code》里的做法）：给没有测试保护的老代码，先把它现在的真实输入输出原样存下来当基线，改完逐条比对，非目标分支必须逐字节不变。\n\n按顺序，这一步要做的事：\n\n1. **定证据范围** —— 把要保护的分支矩阵列出来：首重 × 续重 × cod(有/无) × vip(有/无)，再加上这次新增的省份维度（偏远/非偏远）。目的是知道要凑够多少组输入输出才算覆盖到。\n\n2. **读老代码，确认分支边界** —— 打开仓库里 `FreightCalc.calc`，看清首重/续重的临界重量、cod 和 vip 是否互斥或叠加计费，这样才能设计出覆盖所有分支交叉点的样本，而不是瞎猜。**这一步需要仓库文件，但你说了仓库不在这个工作目录里** —— 这是第一个卡点。\n\n3. **从线上抓真实输入样本** —— 正常走法是用 Arthas 的 watch/tt 在 `FreightCalc.calc` 上抓一批真实请求的入参出参，或从请求日志里捞历史请求，覆盖第1步定的矩阵，尤其是新疆、广东之外的其它省份和重量临界点。**这一步需要 Arthas 或日志查询，这个会话里也不可用** —— 第二个卡点。\n\n4. **整理成黄金基准用例** —— 把抓到的输入输出对存成一份基线列表（每条：入参 + 老代码实际吐出的金额），作为改完之后必须逐字节一致的对照。正常会用 record-replay/golden-master 类的 skill 自动生成夹具，这里没装，得手工整理成一份文件（比如一张表）。\n\n5. **先核对已有的两条需求例子能不能顶一部分基线** —— \"模板1032 广东 3.2kg → 18\"：广东不偏远，这条改动前后应该不变，如果老代码现在跑出来也是18，这条就是一条现成的回归证据，不用等线上抓取。\"模板1032 新疆 3.2kg vip → 26\"是新逻辑要打到的目标值，不算老基线，是验收例子。\n\n6. **改完后跑基线集比对** —— 偏远省份按新规则变化，非偏远分支（含 cod/vip 各种组合）必须和步骤4/5的基线逐字节一致。\n\n7. **把基线集和比对结果存档**，作为第4阶段门上定的 regression-evidence 交付物贴出来。\n\n现在卡在第2步：没有仓库文件我读不到 `FreightCalc.calc` 的真实分支逻辑，没法往下设计样本矩阵。这里需要你定一下怎么绕过：\n\n- **A. 把仓库路径/clone地址给我**，我自己读源码。适合你本地就能开一个可访问的路径给我的情况。\n- **B. 你把 `FreightCalc.calc` 的源码直接贴过来**。适合仓库不方便开放路径、但你手头有代码的情况。\n- **C. 不读源码，只凭你已经给的分支名单（首重/续重/cod/vip）做静态推测，构造样本**。适合临时应急、允许证据覆盖度打折的情况——但风险是分支边界猜错，基线本身就不准，等于白做。\n\n业界默认是 A（有仓库就直接读源码，不做代码搬运），我也推荐 A，理由是这一步的价值就在于基线要对着真实分支逻辑设计，猜的边界条件很容易漏掉一个 cod+vip 叠加之类的组合，白白留下没测到的回归风险。\n\n你选哪个，或者仓库其实在别的路径，告诉我一声。第3步（线上真实样本）的卡点我先不问，等第2步解决了再一起定。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 1
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 1,
+    "casesPassed": 1,
+    "overallScore": 1,
+    "overallPassRate": 1,
+    "meanDelta": 1
+  }
+}
