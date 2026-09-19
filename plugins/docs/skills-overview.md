@@ -9,7 +9,7 @@
 | Skill | Plugin | 版本 | L2 字节 | evals | description |
 |---|---|---|---|---|---|
 | `adaptive-problem-solving` | adaptive-problem-solving | 0.2.14 | 9389 | 无 | 用于问题含糊、关键路径选择、波次／里程碑反思、高成本或难回退动作、范围／成本变化、停滞、恢复／交接／验收／长期收口，或检查方向、方法、ROI、模型、上下文、工具、环境与 Agent 组合。恢复原问题和主瓶颈，比较普通路径与方法后组合、换路或… |
-| `clarify` | clarify | 0.1.1 | 3898 | 有 | 主人冒出「想建 X／要不要搞一个 Y／这个流程好烦」一类念头时用：把说成解的念头翻回问题，判该不该做，收成三行结论；不建就在 desk 仓建一条 issue 写理由后以 wontfix 关闭，建就挂机会 issue。Turn an itch… |
+| `clarify` | clarify | 0.1.1 | 4169 | 有 | 主人冒出「想建 X／要不要搞一个 Y／这个流程好烦」一类念头时用：把说成解的念头翻回问题，判该不该做，收成三行结论；不建就在 desk 仓建一条 issue 写理由后以 wontfix 关闭，建就挂机会 issue。Turn an itch… |
 | `flow` | flow | 0.1.6 | 10417 | 有 | 判为常规变更、或主人开场直接敲了阶段里的 skill 时读：常规变更的路线——九个阶段的门与产物、每个阶段点名的活动、改旧代码时才开的活动、会话绑定、站会记录。The route for a normal change: nine stag… |
 | `architecture-decision` | flow-steps | 0.1.5 | 3069 | 有 | 常规变更改旧代码、要在既有系统上定一项新能力「系统成为什么样」时的活动：写清这轮决定什么，摆基线与未知，点名 tradeoff-analysis 出候选做两面，把暂定推荐交主人确认；确认前不实现。Architecture decision … |
 | `impact-analysis` | flow-steps | 0.1.5 | 3432 | 有 | 常规变更改旧代码、某个决定缺一个数或判断时的活动：把数挂到决定上，假设单列，effect-sketch 画两跳，只为拿不准的边取证，baseline-measurement 量数，出一行带置信度的结论进那个决定；限时两小时。Impact a… |
@@ -24,7 +24,7 @@
 | `worktree-baseline` | flow-steps | 0.1.5 | 3221 | 有 | 常规变更第 4 阶段开工准备时用：用 Orca 开工作树并绑 issue，把目标仓自己的检查跑一遍当基线，给出第 4 阶段门上那条消息。Stage 4 of a normal change: open an Orca worktree bo… |
 | `wrap-up` | flow-steps | 0.1.5 | 2810 | 有 | 常规变更第 7 阶段收尾时用：从 issue、spec 与证据抄出 PR 正文四节，写站会记录，登记挂起物，只问主人一句「推上去开 PR，还是放着」；合并由主人做。Stage 7 of a normal change: draft the … |
 | `knowledge-maintenance` | knowledge-maintenance | 0.1.3 | 6488 | 无 | 用于多来源调研、可重复实验、会影响权威／Agent 配置／重要决定的研究，或用户要求复用、复核、更新当前知识时：先找已认可知识和失效条件，只补变化、冲突与缺口，再经价值门和可信门更新。不用于低成本一次性事实、原始材料／研发过程留存、私域结构… |
-| `note` | note | 0.1.1 | 3969 | 有 | 把当前对话里成熟的结论沉淀进本地 Markdown 知识库，或找回以前记过的结论；主人说「沉淀到知识库」「记到 KB」「/note」「以前记过」「找回笔记」时用。Persist a durable conclusion into the l… |
+| `note` | note | 0.1.1 | 3980 | 有 | 把当前对话里成熟的结论沉淀进本地 Markdown 知识库，或找回以前记过的结论；主人说「沉淀到知识库」「记到 KB」「/note」「以前记过」「找回笔记」时用。Persist a durable conclusion into the l… |
 | `orchestrated-collaboration` | orchestrated-collaboration | 0.2.7 | 21795 | 无 | 当用户明确要求多 Agent／多 Session／跨 Provider 协作、任务已授权委派，或活动 Session 发生共享写入碰撞时，建立目标来源、排他所有权、可追踪交付、独立验收与综合；按共享资源和 Issue 子树确定唯一协调者，只… |
 | `baseline-measurement` | practices | 0.1.4 | 3068 | 有 | 一个决定缺一个运行时的数（慢多少、占多大比例、多久跑完）时用：先在同样条件下量老路径当基线，再量新路径，只量决定要的那一个数，判定规则挂在数上，没量到就留空给主人跑。Baseline measurement for one decision… |
 | `canary-release` | practices | 0.1.4 | 3671 | 有 | 改动要放出去时用：三档放量（内部账号或测试模板 → 分流类别的一小部分 → 全量），每档写清放谁、停多久，进下一档由主人定；每条需求句配一个观测点，老路径看四个黄金信号（延迟、流量、错误、饱和）；档 1 放开后拿需求例子打一条冒烟。Cana… |

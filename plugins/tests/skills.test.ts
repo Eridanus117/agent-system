@@ -41,8 +41,8 @@ const RETIRED_TERMS: ReadonlyArray<{ label: string; pattern: RegExp }> = [
   { label: '自动调用', pattern: /自动调用/u },
   { label: '可选步', pattern: /可选步/u },
   { label: '段（第 N 段）', pattern: /第s*[0-9０-９一二三四五六七八九十N]+s*段(?!落)/u },
-  { label: '段（起始段、段的门、段里……）', pattern: /(?<!阶)(起始段|进段|哪段|各段|每段|九段|段的门|段里|段结果|段号)/u },
-  { label: '步（点名的步、薄步……）', pattern: /点名的步|条步|薄步|步的门|开哪些步/u },
+  { label: '段（起始段、段的门、段里……）', pattern: /(?<!阶)(起始段|进段|哪段|各段|九段|段的门|段结果|段号)/u },
+  { label: '步（点名的步、薄步……）', pattern: /点名的步|薄步|步的门|开哪些步/u },
 ];
 const seen = new Map<string, string>();
 const plugins = dirs(pluginsRoot).filter((entry) => existsSync(join(pluginsRoot, entry, '.claude-plugin', 'plugin.json')));

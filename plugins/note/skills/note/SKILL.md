@@ -5,7 +5,7 @@ description: 把当前对话里成熟的结论沉淀进本地 Markdown 知识库
 
 # 沉淀与找回知识
 
-第 9 阶段落家与交接点名的活动（`flow`），也随时可用。Markdown 加 git 是正文的真源（source of truth）；Rhizome 管作者契约与校验，Memex 管检索投影，目标库 `AGENTS.md` 指定的人工索引管导航与故障降级。当前实例：个人知识库在工作区的 `wiki/20-知识库/`（逻辑 source 名 `knowledge`，2026-09-13 随 desk 拆四仓独立回 wiki 仓，desk#79），工作知识库在 `logistics-kb/`。路径从工作区入口与本机源仓登记解析，正文里不写盘符与用户名；旧知识库只读参考，不作新笔记落点。
+第 9 阶段落家与交接点名的活动（`flow`），也随时可用。Markdown 加 git 是正文的真源（source of truth）；Rhizome 管作者契约与校验，Memex 管检索投影，目标库 `AGENTS.md` 指定的人工索引管导航与故障降级。当前实例：个人知识库在工作区的 `wiki/20-知识库/`（逻辑 source 名 `knowledge`），工作知识库在 `logistics-kb/`。路径从工作区入口与本机源仓登记解析，正文里不写盘符与用户名；旧知识库只读参考，不作新笔记落点。
 
 ## 什么时候用
 
@@ -35,5 +35,5 @@ description: 把当前对话里成熟的结论沉淀进本地 Markdown 知识库
 
 ## 为什么在哪
 
-- 为什么 Markdown 加 git 是真源、为什么先找回再写：各库 `AGENTS.md`、desk#79（知识库拆仓）；agent-system#115（本次按两节骨架与业界词重写，agent-system#123）。
+- 为什么 Markdown 加 git 是真源、为什么先找回再写：各库 `AGENTS.md`；个人知识库为什么在 wiki 仓：desk#79（2026-09-13 随 desk 拆四仓独立回 wiki 仓）；agent-system#115（本次按两节骨架与业界词重写，agent-system#123）。
 - 命令与读写边界：[references/knowledge-loop.md](./references/knowledge-loop.md)。
