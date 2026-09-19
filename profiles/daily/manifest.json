@@ -335,6 +335,30 @@
     {
       "name": "rollout-observe",
       "target": "plugins/flow-steps/skills/rollout-observe"
+    },
+    {
+      "name": "characterization-test",
+      "target": "plugins/practices/skills/characterization-test"
+    },
+    {
+      "name": "sprout-method",
+      "target": "plugins/practices/skills/sprout-method"
+    },
+    {
+      "name": "interface-contract-checklist",
+      "target": "plugins/practices/skills/interface-contract-checklist"
+    },
+    {
+      "name": "incremental-integration",
+      "target": "plugins/practices/skills/incremental-integration"
+    },
+    {
+      "name": "legacy-code-change",
+      "target": "plugins/flow-steps/skills/legacy-code-change"
+    },
+    {
+      "name": "system-integration",
+      "target": "plugins/flow-steps/skills/system-integration"
     }
   ]
 }

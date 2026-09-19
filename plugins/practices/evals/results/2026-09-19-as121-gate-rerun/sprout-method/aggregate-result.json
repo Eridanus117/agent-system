@@ -1,0 +1,627 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:21:28.434Z",
+  "durationSeconds": 216,
+  "costUsd": 3.0653,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as121-split-legacy\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "sprout-method-*",
+    "threshold": 1,
+    "concurrency": 4,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as121-split-legacy\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "sprout-method-build",
+      "dir": "evals\\sprout-method-build",
+      "source": "prose",
+      "promptMarkdown": "走读和改法我已经否过了，定稿如下，按 `sprout-method` 建。Bash 不可用，跑不了。\n\n改法：新逻辑放 `calcRemoteFee`；类里已有来自现有配置的布尔字段 `remoteFeeEnabled`，只有它开启且省份是新疆或西藏时走新入口；关闭时所有请求（包括新疆）走原行为。偏远附加 8 元。\n\n现在的文件（自足练习，没有别的文件，不要实现外部开关系统）：\n\n```java\n// src/main/java/FreightCalc.java\npublic class FreightCalc {\n    private final boolean remoteFeeEnabled;   // 来自现有配置\n\n    public int calc(Req r) {\n        int fee = tpl(r.tplId).first;\n        if (r.weight > 1.0) {\n            int extra = (int) Math.ceil(r.weight - 1.0);\n            int unit = tpl(r.tplId).next;\n            if (r.vip) unit = unit / 2;\n            fee += extra * unit;\n        }\n        if (region(r.province) != null) fee += region(r.province).surcharge;\n        if (r.cod) fee += 2;\n        return fee;\n    }\n}\n```\n\n验证用的入参：模板 1032（first=18，next=4），新疆，3.2kg，vip=false，cod=false，surcharge=3；关闭开关期望 33，开启期望 41。另给一个开启后非目标省份（广东，surcharge=0）不变的例子。\n\n把改完的整个文件写到 `src/main/java/FreightCalc.java`，测试写到 `src/test/java/FreightCalcSproutTest.java`。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 12,
+      "graders": [
+        {
+          "name": "impl-written",
+          "type": "file_exists",
+          "weight": 1,
+          "config": {
+            "path": "src/main/java/FreightCalc.java",
+            "exists": true
+          }
+        },
+        {
+          "name": "old-body-untouched-one-branch",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the production file the agent wrote.\n\nPASS if every statement of the old `calc` body is still there unchanged and contiguous — same statements, same order, not moved into a new private method, not renamed, not rewritten — and the only edit to existing code is one guarded call site whose guard checks both `remoteFeeEnabled` and that the province is 新疆 or 西藏, placed either at the entry of `calc` (returning the new method's result) or after all the old statements and before the old `return` (passing the old fee into the new method), and the new logic lives in a new method such as `calcRemoteFee` (or a new class) that does not call back into the same guard.\n\nFAIL if any old statement was moved, split, renamed or edited; if the new call was inserted between old statements (for example between the surcharge line and the cod line); if the call site is unconditional or guarded by the toggle alone with the province check hidden inside the new method, so that with the toggle off (or for a non-target province) the old path still enters the new code; or if the file has no new method.",
+          "config": {
+            "criteria": "Judge the production file the agent wrote.\n\nPASS if every statement of the old `calc` body is still there unchanged and contiguous — same statements, same order, not moved into a new private method, not renamed, not rewritten — and the only edit to existing code is one guarded call site whose guard checks both `remoteFeeEnabled` and that the province is 新疆 or 西藏, placed either at the entry of `calc` (returning the new method's result) or after all the old statements and before the old `return` (passing the old fee into the new method), and the new logic lives in a new method such as `calcRemoteFee` (or a new class) that does not call back into the same guard.\n\nFAIL if any old statement was moved, split, renamed or edited; if the new call was inserted between old statements (for example between the surcharge line and the cod line); if the call site is unconditional or guarded by the toggle alone with the province check hidden inside the new method, so that with the toggle off (or for a non-target province) the old path still enters the new code; or if the file has no new method.",
+            "focus": {
+              "source": "file",
+              "path": "src/main/java/FreightCalc.java"
+            }
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "sprout-method",
+            "arm": "with-only"
+          }
+        },
+        {
+          "name": "toggle-behaviour-tests",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Judge the tests the agent wrote.\n\nPASS if the tests show, with literal expected values, three things: with `remoteFeeEnabled` off the 新疆 input still yields 33 (the old path); with it on, the same input yields 41; with it on, a non-target province (广东, surcharge 0) yields the same number it did before (30 for this input: 18 + 3 × 4 + 0). Constructing the class with the flag on and off through whatever seam the test uses is fine.\n\nFAIL if any of the three is missing, if the closed-toggle case is not asserted, or if expected values are recomputed from the implementation rather than written as literals.",
+          "config": {
+            "criteria": "Judge the tests the agent wrote.\n\nPASS if the tests show, with literal expected values, three things: with `remoteFeeEnabled` off the 新疆 input still yields 33 (the old path); with it on, the same input yields 41; with it on, a non-target province (广东, surcharge 0) yields the same number it did before (30 for this input: 18 + 3 × 4 + 0). Constructing the class with the flag on and off through whatever seam the test uses is fine.\n\nFAIL if any of the three is missing, if the closed-toggle case is not asserted, or if expected values are recomputed from the implementation rather than written as literals.",
+            "focus": {
+              "source": "file",
+              "path": "src/test/java/FreightCalcSproutTest.java"
+            }
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 8,
+            "costUsd": 0.3354005,
+            "judgeCostUsd": 0.01509000000000001,
+            "durationSeconds": 76,
+            "startedAt": "2026-09-19T09:21:28.492Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-ITo71w\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "impl-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "src/main/java/FreightCalc.java exists as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "old-body-untouched-one-branch",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "public class FreightCalc {\n    private final boolean remoteFeeEnabled;   // 来自现有配置\n\n    public FreightCalc(boolean remoteFeeEnabled) {\n        this.remoteFeeEnabled = remoteFeeEnabled;\n    }\n\n    public int calc(Req r) {\n        int fee = tpl(r.tplId).first;\n        if (r.weight > 1.0) {\n            int extra = (int) Math.ceil(r.weight - 1.0);\n            int unit = tpl(r.tplId).next;\n            if (r.vip) unit = unit / 2;\n            fee += extra * unit;\n        }\n        if (region(r.province) != null) fee += region(r.province).surcharge;\n        if (r.cod) fee += 2;\n        if (remoteFeeEnabled && isRemote(r.province)) return calcRemoteFee(fee);   // 唯一一处改动\n        return fee;\n    }\n\n    // ===== 以下为新增，旧代码一句没动 =====\n\n    /** 偏远省份：在老结果上加 8 元。不再判开关，开关只在 calc 那一处判。 */\n    private int calcRemoteFee(int baseFee) {\n        return baseFee + 8;\n    }\n\n    private boolean isRemote(String province) {\n        return \"新疆\".equals(province) || \"西藏\".equals(province);\n    }\n\n    // ===== 以下为自足练习的脚手架（原文件没给，按验证入参补的）=====\n\n    public static class Req {\n        public int tplId;\n        public String province;\n        public double weight;\n        public boolean vip;\n        public boolean cod;\n\n        public Req(int tplId, String province, double weight, boolean vip, boolean cod) {\n            this.tplId = tplId;\n            this.province = province;\n            this.weight = weight;\n            this.vip = vip;\n            this.cod = cod;\n        }\n    }\n\n    public static class Tpl {\n        public final int first;\n        public final int next;\n\n        Tpl(int first, int next) {\n            this.first = first;\n            this.next = next;\n        }\n    }\n\n    public static class Region {\n        public final int surcharge;\n\n        Region(int surcharge) {\n            this.surcharge = surcharge;\n        }\n    }\n\n    private Tpl tpl(int tplId) {\n        if (tplId == 1032) return new Tpl(18, 4);\n        return new Tpl(10, 3);\n    }\n\n    private Region region(String province) {\n        if (\"新疆\".equals(province)) return new Region(3);\n        if (\"西藏\".equals(province)) return new Region(3);\n        if (\"广东\".equals(province)) return new Region(0);\n        return null;\n    }\n}\n"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "toggle-behaviour-tests",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "/**\n * 萌芽方法的三条回退验证，同一条走读入参：\n *   关闭        → 老结果 33\n *   开启且命中  → 新结果 41\n *   开启未命中  → 不变   30\n * 期望值都是独立字面值，不从被测代码里算。\n *\n * 仓库里没有 JUnit，所以写成 main，可直接编译运行：\n *   javac -encoding UTF-8 -d out src/main/java/FreightCalc.java src/test/java/FreightCalcSproutTest.java\n *   java -cp out FreightCalcSproutTest\n */\npublic class FreightCalcSproutTest {\n\n    public static void main(String[] args) {\n        // 走读入参：模板 1032（first=18, next=4），新疆（surcharge=3），3.2kg，非 vip，非 cod\n        FreightCalc.Req xinjiang = new FreightCalc.Req(1032, \"新疆\", 3.2, false, false);\n\n        // 一、开关关闭：所有请求（包括新疆）走原行为\n        // 18 + ceil(3.2-1.0)*4 + 3 = 18 + 12 + 3\n        check(\"关闭 + 新疆\", 33, new FreightCalc(false).calc(xinjiang));\n\n        // 二、开关开启且命中：同一条入参，多 8 元偏远附加\n        check(\"开启 + 新疆\", 41, new FreightCalc(true).calc(xinjiang));\n\n        // 三、开关开启但未命中：广东（surcharge=0）不受影响\n        // 18 + 12 + 0 = 30\n        FreightCalc.Req guangdong = new FreightCalc.Req(1032, \"广东\", 3.2, false, false);\n        check(\"开启 + 广东\", 30, new FreightCalc(true).calc(guangdong));\n\n        // 补一条：开关关闭时广东也是老结果，确认关闭路径对未命中省份同样不变\n        check(\"关闭 + 广东\", 30, new FreightCalc(false).calc(guangdong));\n\n        System.out.println(\"全部通过\");\n    }\n\n    private static void check(String name, int expected, int actual) {\n        if (expected != actual) {\n            throw new AssertionError(name + \"：期望 \" + expected + \"，实际 \" + actual);\n        }\n        System.out.println(\"PASS \" + name + \" = \" + actual);\n    }\n}\n"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 8,
+            "costUsd": 0.4016155,
+            "judgeCostUsd": 0.030016000000000004,
+            "durationSeconds": 91,
+            "startedAt": "2026-09-19T09:21:28.492Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-QN5Umx\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "impl-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "src/main/java/FreightCalc.java exists as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "old-body-untouched-one-branch",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "public class FreightCalc {\n    private final boolean remoteFeeEnabled;   // 来自现有配置\n\n    public FreightCalc(boolean remoteFeeEnabled) {\n        this.remoteFeeEnabled = remoteFeeEnabled;\n    }\n\n    public int calc(Req r) {\n        int fee = tpl(r.tplId).first;\n        if (r.weight > 1.0) {\n            int extra = (int) Math.ceil(r.weight - 1.0);\n            int unit = tpl(r.tplId).next;\n            if (r.vip) unit = unit / 2;\n            fee += extra * unit;\n        }\n        if (region(r.province) != null) fee += region(r.province).surcharge;\n        if (r.cod) fee += 2;\n        if (remoteFeeEnabled && isRemote(r.province)) return calcRemoteFee(fee);   // 唯一一处改动\n        return fee;\n    }\n\n    // ===== 以下为新增，旧主体一句未动 =====\n\n    private static final int REMOTE_SURCHARGE = 8;\n\n    /** 分流条件用到的判断，只回答「是不是偏远省」，不看开关。 */\n    private boolean isRemote(String province) {\n        return \"新疆\".equals(province) || \"西藏\".equals(province);\n    }\n\n    /**\n     * 新逻辑：在老结果之上加偏远附加。\n     * 不判 remoteFeeEnabled——开关只在 calc 那一处分流判一次。\n     */\n    private int calcRemoteFee(int baseFee) {\n        return baseFee + REMOTE_SURCHARGE;\n    }\n\n    // ===== 以下为练习自足所需的既有支撑代码 =====\n\n    public static class Req {\n        public final int tplId;\n        public final String province;\n        public final double weight;\n        public final boolean vip;\n        public final boolean cod;\n\n        public Req(int tplId, String province, double weight, boolean vip, boolean cod) {\n            this.tplId = tplId;\n            this.province = province;\n            this.weight = weight;\n            this.vip = vip;\n            this.cod = cod;\n        }\n    }\n\n    public static class Tpl {\n        public final int first;\n        public final int next;\n\n        Tpl(int first, int next) {\n            this.first = first;\n            this.next = next;\n        }\n    }\n\n    public static class Region {\n        public final int surcharge;\n\n        Region(int surcharge) {\n            this.surcharge = surcharge;\n        }\n    }\n\n    private Tpl tpl(int tplId) {\n        if (tplId == 1032) return new Tpl(18, 4);\n        return new Tpl(10, 5);\n    }\n\n    private Region region(String province) {\n        if (\"新疆\".equals(province)) return new Region(3);\n        if (\"广东\".equals(province)) return new Region(0);\n        return null;\n    }\n}\n"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "toggle-behaviour-tests",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "import static org.junit.jupiter.api.Assertions.assertEquals;\n\nimport org.junit.jupiter.api.DisplayName;\nimport org.junit.jupiter.api.Test;\n\n/**\n * 萌芽方法的回退验证：同一条走读入参，关闭走原行为、开启且命中走新入口、开启未命中不变。\n * 三条期望值都是独立字面值，不从被测代码里推。\n */\nclass FreightCalcSproutTest {\n\n    /** 走读用的那条入参：模板 1032（first=18，next=4），新疆，3.2kg，非 vip，非 cod。 */\n    private static FreightCalc.Req 新疆走读入参() {\n        return new FreightCalc.Req(1032, \"新疆\", 3.2, false, false);\n    }\n\n    @Test\n    @DisplayName(\"开关关闭：新疆走原行为 = 33\")\n    void 关闭时新疆走原行为() {\n        // 18 首重 + ceil(3.2-1.0)=3 续重 × 4 + 新疆 surcharge 3 = 33\n        assertEquals(33, new FreightCalc(false).calc(新疆走读入参()));\n    }\n\n    @Test\n    @DisplayName(\"开关开启且命中：新疆走 calcRemoteFee = 41\")\n    void 开启时新疆走新入口() {\n        // 老结果 33 + 偏远附加 8 = 41\n        assertEquals(41, new FreightCalc(true).calc(新疆走读入参()));\n    }\n\n    @Test\n    @DisplayName(\"开关开启但未命中：广东不变 = 30\")\n    void 开启时广东不变() {\n        // 18 + 3×4 + 广东 surcharge 0 = 30，开关开着也不加 8\n        FreightCalc.Req 广东 = new FreightCalc.Req(1032, \"广东\", 3.2, false, false);\n        assertEquals(30, new FreightCalc(true).calc(广东));\n    }\n\n    @Test\n    @DisplayName(\"对照：开关关闭时广东也是 30，开关对未命中省份无影响\")\n    void 关闭时广东不变() {\n        FreightCalc.Req 广东 = new FreightCalc.Req(1032, \"广东\", 3.2, false, false);\n        assertEquals(30, new FreightCalc(false).calc(广东));\n    }\n\n    @Test\n    @DisplayName(\"第二个目标省：开启时西藏 = 38\")\n    void 开启时西藏走新入口() {\n        // 假设：region(\"西藏\") 无配置（返回 null），故无省份 surcharge。\n        // 主人只给了新疆 surcharge=3 与广东 surcharge=0，西藏的值未给。\n        // 18 + 3×4 + 0 + 偏远附加 8 = 38\n        FreightCalc.Req 西藏 = new FreightCalc.Req(1032, \"西藏\", 3.2, false, false);\n        assertEquals(38, new FreightCalc(true).calc(西藏));\n    }\n\n    @Test\n    @DisplayName(\"对照：开关关闭时西藏 = 30\")\n    void 关闭时西藏走原行为() {\n        FreightCalc.Req 西藏 = new FreightCalc.Req(1032, \"西藏\", 3.2, false, false);\n        assertEquals(30, new FreightCalc(false).calc(西藏));\n    }\n}\n"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 8,
+            "costUsd": 0.38414200000000004,
+            "judgeCostUsd": 0.032201999999999995,
+            "durationSeconds": 92,
+            "startedAt": "2026-09-19T09:21:28.492Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-ygMLEW\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "impl-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "src/main/java/FreightCalc.java exists as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "old-body-untouched-one-branch",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "// src/main/java/FreightCalc.java\npublic class FreightCalc {\n    private final boolean remoteFeeEnabled;   // 来自现有配置\n\n    public FreightCalc(boolean remoteFeeEnabled) {\n        this.remoteFeeEnabled = remoteFeeEnabled;\n    }\n\n    public int calc(Req r) {\n        int fee = tpl(r.tplId).first;\n        if (r.weight > 1.0) {\n            int extra = (int) Math.ceil(r.weight - 1.0);\n            int unit = tpl(r.tplId).next;\n            if (r.vip) unit = unit / 2;\n            fee += extra * unit;\n        }\n        if (region(r.province) != null) fee += region(r.province).surcharge;\n        if (r.cod) fee += 2;\n        // 唯一一处改动：开关开启且省份命中时转去新方法，老结果当输入\n        if (remoteFeeEnabled && (\"新疆\".equals(r.province) || \"西藏\".equals(r.province))) {\n            return calcRemoteFee(fee);\n        }\n        return fee;\n    }\n\n    /** 新逻辑：偏远附加 8 元。不再判开关，命中与否由 calc 那一处分流决定。 */\n    private int calcRemoteFee(int baseFee) {\n        return baseFee + 8;\n    }\n\n    // ===== 以下为自足练习的最小脚手架，不是本次改动的一部分 =====\n\n    public static class Req {\n        public int tplId;\n        public String province;\n        public double weight;\n        public boolean vip;\n        public boolean cod;\n\n        public Req(int tplId, String province, double weight, boolean vip, boolean cod) {\n            this.tplId = tplId;\n            this.province = province;\n            this.weight = weight;\n            this.vip = vip;\n            this.cod = cod;\n        }\n    }\n\n    public static class Tpl {\n        public final int first;\n        public final int next;\n\n        Tpl(int first, int next) {\n            this.first = first;\n            this.next = next;\n        }\n    }\n\n    public static class Region {\n        public final int surcharge;\n\n        Region(int surcharge) {\n            this.surcharge = surcharge;\n        }\n    }\n\n    private Tpl tpl(int tplId) {\n        if (tplId == 1032) return new Tpl(18, 4);\n        return new Tpl(10, 5);\n    }\n\n    private Region region(String province) {\n        if (\"新疆\".equals(province)) return new Region(3);\n        if (\"西藏\".equals(province)) return new Region(3);\n        if (\"广东\".equals(province)) return new Region(0);\n        return null;\n    }\n}\n"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "toggle-behaviour-tests",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "// src/test/java/FreightCalcSproutTest.java\nimport static org.junit.jupiter.api.Assertions.assertEquals;\n\nimport org.junit.jupiter.api.Test;\n\n/**\n * 萌芽方法的三条回退验证：同一条走读入参，开关关闭走原路径、开启且命中走新路径、开启未命中不变。\n * 期望值都是独立字面值，不是把被测代码再算一遍。\n */\nclass FreightCalcSproutTest {\n\n    /** 模板 1032（first=18，next=4），新疆（surcharge=3），3.2kg，vip=false，cod=false */\n    private static FreightCalc.Req 走读入参新疆() {\n        return new FreightCalc.Req(1032, \"新疆\", 3.2, false, false);\n    }\n\n    @Test\n    void 开关关闭时新疆仍走原行为() {\n        // 18 首重 + 3 续重段 × 4 + 3 省份附加 = 33，没有偏远附加\n        assertEquals(33, new FreightCalc(false).calc(走读入参新疆()));\n    }\n\n    @Test\n    void 开关开启且命中新疆时加偏远附加() {\n        // 同一条入参，33 + 8 = 41\n        assertEquals(41, new FreightCalc(true).calc(走读入参新疆()));\n    }\n\n    @Test\n    void 开关开启但省份未命中时不变() {\n        // 广东 surcharge=0：18 + 3 × 4 + 0 = 30，开关开着也不加 8\n        FreightCalc.Req r = new FreightCalc.Req(1032, \"广东\", 3.2, false, false);\n        assertEquals(30, new FreightCalc(true).calc(r));\n    }\n\n    @Test\n    void 开关开启且命中西藏时同样加偏远附加() {\n        // 西藏 surcharge=3，与新疆同一条分流：18 + 3 × 4 + 3 + 8 = 41\n        FreightCalc.Req r = new FreightCalc.Req(1032, \"西藏\", 3.2, false, false);\n        assertEquals(41, new FreightCalc(true).calc(r));\n    }\n}\n"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0.5,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.261987,
+            "judgeCostUsd": 0.016122000000000004,
+            "durationSeconds": 66,
+            "startedAt": "2026-09-19T09:21:28.492Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-mD0FXt\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "impl-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "src/main/java/FreightCalc.java exists as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "old-body-untouched-one-branch",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "import java.util.HashMap;\nimport java.util.Map;\n\npublic class FreightCalc {\n    private static final int REMOTE_SURCHARGE = 8;\n\n    private final boolean remoteFeeEnabled;   // 来自现有配置\n\n    public FreightCalc(boolean remoteFeeEnabled) {\n        this.remoteFeeEnabled = remoteFeeEnabled;\n    }\n\n    public int calc(Req r) {\n        int fee = tpl(r.tplId).first;\n        if (r.weight > 1.0) {\n            int extra = (int) Math.ceil(r.weight - 1.0);\n            int unit = tpl(r.tplId).next;\n            if (r.vip) unit = unit / 2;\n            fee += extra * unit;\n        }\n        if (region(r.province) != null) fee += region(r.province).surcharge;\n        fee += calcRemoteFee(r);\n        if (r.cod) fee += 2;\n        return fee;\n    }\n\n    /**\n     * 偏远地区附加费。开关关闭时一律返回 0，保持原行为。\n     */\n    int calcRemoteFee(Req r) {\n        if (!remoteFeeEnabled) return 0;\n        if (!isRemoteProvince(r.province)) return 0;\n        return REMOTE_SURCHARGE;\n    }\n\n    private boolean isRemoteProvince(String province) {\n        return \"新疆\".equals(province) || \"西藏\".equals(province);\n    }\n\n    // ---- 以下为跑通练习所需的最小脚手架 ----\n\n    private static final Map<Integer, Tpl> TPLS = new HashMap<>();\n    private static final Map<String, Region> REGIONS = new HashMap<>();\n\n    static {\n        TPLS.put(1032, new Tpl(18, 4));\n        REGIONS.put(\"新疆\", new Region(3));\n        REGIONS.put(\"西藏\", new Region(3));\n        REGIONS.put(\"广东\", new Region(0));\n    }\n\n    Tpl tpl(int tplId) {\n        return TPLS.get(tplId);\n    }\n\n    Region region(String province) {\n        return REGIONS.get(province);\n    }\n\n    public static class Req {\n        public int tplId;\n        public String province;\n        public double weight;\n        public boolean vip;\n        public boolean cod;\n\n        public Req(int tplId, String province, double weight, boolean vip, boolean cod) {\n            this.tplId = tplId;\n            this.province = province;\n            this.weight = weight;\n            this.vip = vip;\n            this.cod = cod;\n        }\n    }\n\n    public static class Tpl {\n        public final int first;\n        public final int next;\n\n        public Tpl(int first, int next) {\n            this.first = first;\n            this.next = next;\n        }\n    }\n\n    public static class Region {\n        public final int surcharge;\n\n        public Region(int surcharge) {\n            this.surcharge = surcharge;\n        }\n    }\n}\n"
+              },
+              {
+                "name": "toggle-behaviour-tests",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "import static org.junit.jupiter.api.Assertions.assertEquals;\n\nimport org.junit.jupiter.api.DisplayName;\nimport org.junit.jupiter.api.Nested;\nimport org.junit.jupiter.api.Test;\n\nclass FreightCalcSproutTest {\n\n    private static FreightCalc.Req req(String province) {\n        return new FreightCalc.Req(1032, province, 3.2, false, false);\n    }\n\n    @Nested\n    @DisplayName(\"开关关闭：所有请求保持原行为\")\n    class Disabled {\n        private final FreightCalc calc = new FreightCalc(false);\n\n        @Test\n        @DisplayName(\"新疆 3.2kg 模板1032 = 18 + 3*4 + 3 = 33\")\n        void xinjiang() {\n            assertEquals(33, calc.calc(req(\"新疆\")));\n        }\n\n        @Test\n        @DisplayName(\"广东 3.2kg 模板1032 = 18 + 3*4 + 0 = 30\")\n        void guangdong() {\n            assertEquals(30, calc.calc(req(\"广东\")));\n        }\n\n        @Test\n        @DisplayName(\"偏远附加费恒为 0\")\n        void remoteFeeIsZero() {\n            assertEquals(0, calc.calcRemoteFee(req(\"新疆\")));\n            assertEquals(0, calc.calcRemoteFee(req(\"西藏\")));\n        }\n    }\n\n    @Nested\n    @DisplayName(\"开关开启：仅新疆、西藏加 8 元\")\n    class Enabled {\n        private final FreightCalc calc = new FreightCalc(true);\n\n        @Test\n        @DisplayName(\"新疆 3.2kg 模板1032 = 33 + 8 = 41\")\n        void xinjiang() {\n            assertEquals(41, calc.calc(req(\"新疆\")));\n        }\n\n        @Test\n        @DisplayName(\"西藏同样加 8\")\n        void xizang() {\n            assertEquals(41, calc.calc(req(\"西藏\")));\n        }\n\n        @Test\n        @DisplayName(\"广东不受影响，仍为 30\")\n        void guangdongUnchanged() {\n            assertEquals(30, calc.calc(req(\"广东\")));\n        }\n\n        @Test\n        @DisplayName(\"偏远附加费：目标省 8，非目标省 0\")\n        void remoteFee() {\n            assertEquals(8, calc.calcRemoteFee(req(\"新疆\")));\n            assertEquals(8, calc.calcRemoteFee(req(\"西藏\")));\n            assertEquals(0, calc.calcRemoteFee(req(\"广东\")));\n        }\n    }\n}\n"
+              }
+            ]
+          },
+          {
+            "score": 0.5,
+            "passed": false,
+            "turns": 6,
+            "costUsd": 0.31390200000000007,
+            "judgeCostUsd": 0.019464000000000023,
+            "durationSeconds": 97,
+            "startedAt": "2026-09-19T09:22:34.369Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-K8iKSI\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "impl-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "src/main/java/FreightCalc.java exists as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "old-body-untouched-one-branch",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "public class FreightCalc {\n    private static final String XINJIANG = \"新疆\";\n    private static final String XIZANG = \"西藏\";\n    private static final int REMOTE_SURCHARGE = 8;\n\n    private final boolean remoteFeeEnabled;   // 来自现有配置\n\n    public FreightCalc(boolean remoteFeeEnabled) {\n        this.remoteFeeEnabled = remoteFeeEnabled;\n    }\n\n    public int calc(Req r) {\n        int fee = tpl(r.tplId).first;\n        if (r.weight > 1.0) {\n            int extra = (int) Math.ceil(r.weight - 1.0);\n            int unit = tpl(r.tplId).next;\n            if (r.vip) unit = unit / 2;\n            fee += extra * unit;\n        }\n        if (region(r.province) != null) fee += region(r.province).surcharge;\n        if (r.cod) fee += 2;\n        fee += calcRemoteFee(r);\n        return fee;\n    }\n\n    /**\n     * 新逻辑入口：开关开启且省份为新疆/西藏时收偏远附加费，其余一律返回 0，\n     * 使关闭时 calc 的结果与改动前逐字节一致。\n     */\n    int calcRemoteFee(Req r) {\n        if (!remoteFeeEnabled) return 0;\n        if (!isRemoteProvince(r.province)) return 0;\n        return REMOTE_SURCHARGE;\n    }\n\n    private static boolean isRemoteProvince(String province) {\n        return XINJIANG.equals(province) || XIZANG.equals(province);\n    }\n\n    private static Tpl tpl(int tplId) {\n        if (tplId == 1032) return new Tpl(18, 4);\n        throw new IllegalArgumentException(\"unknown tplId: \" + tplId);\n    }\n\n    private static Region region(String province) {\n        if (XINJIANG.equals(province)) return new Region(3);\n        if (XIZANG.equals(province)) return new Region(3);\n        if (\"广东\".equals(province)) return new Region(0);\n        return null;\n    }\n\n    public static class Req {\n        public final int tplId;\n        public final double weight;\n        public final String province;\n        public final boolean vip;\n        public final boolean cod;\n\n        public Req(int tplId, double weight, String province, boolean vip, boolean cod) {\n            this.tplId = tplId;\n            this.weight = weight;\n            this.province = province;\n            this.vip = vip;\n            this.cod = cod;\n        }\n    }\n\n    static class Tpl {\n        final int first;\n        final int next;\n\n        Tpl(int first, int next) {\n            this.first = first;\n            this.next = next;\n        }\n    }\n\n    static class Region {\n        final int surcharge;\n\n        Region(int surcharge) {\n            this.surcharge = surcharge;\n        }\n    }\n}\n"
+              },
+              {
+                "name": "toggle-behaviour-tests",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "import static org.junit.jupiter.api.Assertions.assertEquals;\n\nimport org.junit.jupiter.api.Test;\n\n/**\n * 只围着 sprout 出来的 calcRemoteFee 及其唯一调用点转：\n * 开关关闭时证明原行为不变，开启时证明新逻辑只命中新疆/西藏。\n */\nclass FreightCalcSproutTest {\n\n    private static FreightCalc.Req req(String province) {\n        return new FreightCalc.Req(1032, 3.2, province, false, false);\n    }\n\n    // 基线：18(first) + ceil(3.2-1.0)*4(next) + 3(surcharge) = 33\n    @Test\n    void 开关关闭_新疆_保持原行为() {\n        assertEquals(33, new FreightCalc(false).calc(req(\"新疆\")));\n    }\n\n    @Test\n    void 开关开启_新疆_加收偏远附加费() {\n        assertEquals(41, new FreightCalc(true).calc(req(\"新疆\")));\n    }\n\n    // 西藏的 surcharge 你没给，所以这里只断言\"开启比关闭多 8\"，不锁死绝对值\n    @Test\n    void 开关开启_西藏_比关闭时多八元() {\n        int off = new FreightCalc(false).calc(req(\"西藏\"));\n        int on = new FreightCalc(true).calc(req(\"西藏\"));\n        assertEquals(off + 8, on);\n    }\n\n    // 广东 surcharge=0：18 + 12 = 30，开与关都必须是 30\n    @Test\n    void 开关开启_广东_不受影响() {\n        assertEquals(30, new FreightCalc(true).calc(req(\"广东\")));\n    }\n\n    @Test\n    void 开关关闭_广东_保持原行为() {\n        assertEquals(30, new FreightCalc(false).calc(req(\"广东\")));\n    }\n\n    @Test\n    void calcRemoteFee_关闭时对新疆也返回零() {\n        assertEquals(0, new FreightCalc(false).calcRemoteFee(req(\"新疆\")));\n    }\n\n    @Test\n    void calcRemoteFee_开启时只对新疆西藏返回八元() {\n        FreightCalc calc = new FreightCalc(true);\n        assertEquals(8, calc.calcRemoteFee(req(\"新疆\")));\n        assertEquals(8, calc.calcRemoteFee(req(\"西藏\")));\n        assertEquals(0, calc.calcRemoteFee(req(\"广东\")));\n    }\n}\n"
+              }
+            ]
+          },
+          {
+            "score": 0.5,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.29342599999999996,
+            "judgeCostUsd": 0.03542199999999998,
+            "durationSeconds": 67,
+            "startedAt": "2026-09-19T09:22:44.919Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-MOtUkg\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "impl-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "src/main/java/FreightCalc.java exists as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "old-body-untouched-one-branch",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "import java.util.HashMap;\nimport java.util.Map;\n\npublic class FreightCalc {\n\n    /** 偏远地区附加费（元） */\n    private static final int REMOTE_FEE = 8;\n    private static final String XINJIANG = \"新疆\";\n    private static final String XIZANG = \"西藏\";\n\n    private final boolean remoteFeeEnabled;   // 来自现有配置\n\n    public FreightCalc(boolean remoteFeeEnabled) {\n        this.remoteFeeEnabled = remoteFeeEnabled;\n    }\n\n    public int calc(Req r) {\n        int fee = tpl(r.tplId).first;\n        if (r.weight > 1.0) {\n            int extra = (int) Math.ceil(r.weight - 1.0);\n            int unit = tpl(r.tplId).next;\n            if (r.vip) unit = unit / 2;\n            fee += extra * unit;\n        }\n        if (region(r.province) != null) fee += region(r.province).surcharge;\n        fee += calcRemoteFee(r);\n        if (r.cod) fee += 2;\n        return fee;\n    }\n\n    /**\n     * 新逻辑入口：开关开启且省份为新疆或西藏时收偏远附加费，其余一律返回 0。\n     * 开关关闭时恒为 0，即所有请求（包括新疆）保持原行为。\n     */\n    int calcRemoteFee(Req r) {\n        if (!remoteFeeEnabled) return 0;\n        if (XINJIANG.equals(r.province) || XIZANG.equals(r.province)) return REMOTE_FEE;\n        return 0;\n    }\n\n    // ---------------------------------------------------------------\n    // 以下为本练习的自足脚手架：真实项目里 Req / 模板表 / 区域表来自外部。\n    // ---------------------------------------------------------------\n\n    public static class Req {\n        public int tplId;\n        public double weight;\n        public String province;\n        public boolean vip;\n        public boolean cod;\n\n        public Req(int tplId, double weight, String province, boolean vip, boolean cod) {\n            this.tplId = tplId;\n            this.weight = weight;\n            this.province = province;\n            this.vip = vip;\n            this.cod = cod;\n        }\n    }\n\n    public static class Tpl {\n        public final int first;\n        public final int next;\n\n        Tpl(int first, int next) {\n            this.first = first;\n            this.next = next;\n        }\n    }\n\n    public static class Region {\n        public final int surcharge;\n\n        Region(int surcharge) {\n            this.surcharge = surcharge;\n        }\n    }\n\n    private static final Map<Integer, Tpl> TPLS = new HashMap<>();\n    private static final Map<String, Region> REGIONS = new HashMap<>();\n\n    static {\n        TPLS.put(1032, new Tpl(18, 4));\n\n        REGIONS.put(XINJIANG, new Region(3));\n        REGIONS.put(XIZANG, new Region(3));\n        REGIONS.put(\"广东\", new Region(0));\n    }\n\n    private Tpl tpl(int tplId) {\n        return TPLS.get(tplId);\n    }\n\n    private Region region(String province) {\n        return REGIONS.get(province);\n    }\n}\n"
+              },
+              {
+                "name": "toggle-behaviour-tests",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "import static org.junit.jupiter.api.Assertions.assertEquals;\n\nimport org.junit.jupiter.api.DisplayName;\nimport org.junit.jupiter.api.Test;\n\n/**\n * 针对 sprout 出来的 calcRemoteFee 的测试。\n * 基准入参：模板 1032（first=18，next=4），3.2kg，vip=false，cod=false。\n * 基础运费 = 18 + ceil(3.2-1.0) * 4 = 18 + 12 = 30，再加区域 surcharge。\n */\nclass FreightCalcSproutTest {\n\n    private static FreightCalc.Req req(String province) {\n        return new FreightCalc.Req(1032, 3.2, province, false, false);\n    }\n\n    @Test\n    @DisplayName(\"开关关闭：新疆走原行为，30 + surcharge 3 = 33\")\n    void switchOff_xinjiang_keepsLegacyBehaviour() {\n        assertEquals(33, new FreightCalc(false).calc(req(\"新疆\")));\n    }\n\n    @Test\n    @DisplayName(\"开关开启：新疆加 8 元偏远费，33 + 8 = 41\")\n    void switchOn_xinjiang_addsRemoteFee() {\n        assertEquals(41, new FreightCalc(true).calc(req(\"新疆\")));\n    }\n\n    @Test\n    @DisplayName(\"开关开启：西藏同样加 8 元偏远费\")\n    void switchOn_xizang_addsRemoteFee() {\n        assertEquals(41, new FreightCalc(true).calc(req(\"西藏\")));\n    }\n\n    @Test\n    @DisplayName(\"开关开启：非目标省份（广东，surcharge=0）不变，仍为 30\")\n    void switchOn_guangdong_unchanged() {\n        assertEquals(30, new FreightCalc(true).calc(req(\"广东\")));\n    }\n\n    @Test\n    @DisplayName(\"非目标省份开关开闭结果一致\")\n    void guangdong_sameWithSwitchOnAndOff() {\n        assertEquals(\n                new FreightCalc(false).calc(req(\"广东\")),\n                new FreightCalc(true).calc(req(\"广东\")));\n    }\n\n    @Test\n    @DisplayName(\"开关关闭：西藏也不加偏远费\")\n    void switchOff_xizang_noRemoteFee() {\n        assertEquals(0, new FreightCalc(false).calcRemoteFee(req(\"西藏\")));\n    }\n\n    @Test\n    @DisplayName(\"calcRemoteFee 直测：开启时新疆 8、广东 0\")\n    void calcRemoteFee_直测() {\n        FreightCalc on = new FreightCalc(true);\n        assertEquals(8, on.calcRemoteFee(req(\"新疆\")));\n        assertEquals(0, on.calcRemoteFee(req(\"广东\")));\n    }\n}\n"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 0.5,
+        "passRateWithout": 0,
+        "delta": 0.5
+      }
+    },
+    {
+      "name": "sprout-method-greenfield",
+      "dir": "evals\\sprout-method-greenfield",
+      "source": "prose",
+      "promptMarkdown": "按 `sprout-method` 从零写一个新类 `RemoteFeeLookup`：输入省份名，返回偏远附加金额，新疆和西藏返回 8，其余返回 0。没有任何既有代码，这是自足练习，Bash 不可用，直接把代码写在回复里。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 8,
+      "graders": [
+        {
+          "name": "no-sprout-for-greenfield",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether the agent recognised that there is nothing to sprout from.\n\nPASS if the agent writes the class plainly (a lookup returning 8 for 新疆 and 西藏, 0 otherwise) and says the sprout method does not apply here because there is no existing executable path to branch from — so no feature toggle, no entry branch, no \"old path\" and no coexistence of old and new.\n\nFAIL if the agent invents a toggle, an entry branch, an old-versus-new path or a rollback switch for a brand-new class, or frames the plain class as a \"sprout\" beside something that does not exist.",
+          "config": {
+            "criteria": "Judge whether the agent recognised that there is nothing to sprout from.\n\nPASS if the agent writes the class plainly (a lookup returning 8 for 新疆 and 西藏, 0 otherwise) and says the sprout method does not apply here because there is no existing executable path to branch from — so no feature toggle, no entry branch, no \"old path\" and no coexistence of old and new.\n\nFAIL if the agent invents a toggle, an entry branch, an old-versus-new path or a rollback switch for a brand-new class, or frames the plain class as a \"sprout\" beside something that does not exist.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.2035765,
+            "judgeCostUsd": 0.031959999999999975,
+            "durationSeconds": 54,
+            "startedAt": "2026-09-19T09:22:59.439Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-NKYouU\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-sprout-for-greenfield",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一条不同意见，一句话：\n\n这个活儿不该用 sprout-method。skill 正文的「不用」条里第一条就是这个场景 ——「没有既有可执行路径要动（从零新建一个类）——直接写，不造开关和『旧路径』」。萌芽方法的价值在于**旧实现一句不动、入口只加一处分流**，这里既没有旧实现也没有入口，硬套就会造出一个假开关和一条假的「原路径」，回退验证也验不出东西。所以我按它指的路子直接写了。\n\n用的实践：**表驱动查表（table-driven method，Code Complete 第 18 章）** 配 **值对象式的只读常量集合** —— 偏远省份是一份会变的清单，写成数据而不是 `if/elif` 链，将来加省份只动集合。\n\n语言我假设 Python 3.10+（目录是空的，没有既有约定可依）。\n\n```python\n\"\"\"偏远地区附加费查询。\"\"\"\n\nfrom __future__ import annotations\n\n# 偏远省份清单。加减省份只动这一处，不动下面的逻辑。\n_REMOTE_PROVINCES: frozenset[str] = frozenset({\"新疆\", \"西藏\"})\n\n# 省名的常见写法 -> 清单里的标准名。\n_ALIASES: dict[str, str] = {\n    \"新疆维吾尔自治区\": \"新疆\",\n    \"新疆省\": \"新疆\",\n    \"西藏自治区\": \"西藏\",\n    \"西藏省\": \"西藏\",\n}\n\n_REMOTE_SURCHARGE = 8\n_NO_SURCHARGE = 0\n\n\nclass RemoteFeeLookup:\n    \"\"\"输入省份名，返回偏远附加金额（元）。\"\"\"\n\n    def surcharge_for(self, province: str) -> int:\n        \"\"\"新疆、西藏返回 8，其余返回 0。\n\n        省名允许带「自治区」等后缀，也允许首尾有空白。\n        入参为 None 或空串时按不偏远处理，返回 0。\n        \"\"\"\n        name = self._normalize(province)\n        return _REMOTE_SURCHARGE if name in _REMOTE_PROVINCES else _NO_SURCHARGE\n\n    @staticmethod\n    def _normalize(province: str | None) -> str:\n        if not province:\n            return \"\"\n        name = province.strip()\n        return _ALIASES.get(name, name)\n```\n\n配套测试：\n\n```python\nimport pytest\n\nfrom remote_fee_lookup import RemoteFeeLookup\n\n\n@pytest.mark.parametrize(\n    \"province, expected\",\n    [\n        (\"新疆\", 8),\n        (\"西藏\", 8),\n        (\"新疆维吾尔自治区\", 8),   # 带后缀的全称\n        (\"西藏自治区\", 8),\n        (\"  新疆  \", 8),            # 首尾空白\n        (\"广东\", 0),\n        (\"北京\", 0),\n        (\"\", 0),\n        (None, 0),\n    ],\n)\ndef test_surcharge_for(province, expected):\n    assert RemoteFeeLookup().surcharge_for(province) == expected\n```\n\n几点交代：\n\n- **别名和空白处理是我加的**，你没要求。理由是省份名在真实单据里几乎不会是干净的「新疆」两个字。如果上游已经保证传标准简称，把 `_ALIASES` 和 `strip()` 删掉即可，逻辑不受影响。\n- **金额用 `int` 不用 `Decimal`**：这里是固定整数元的附加项，没有小数和累计运算。如果它后面要进入一条带小数的金额计算链，应该换成 `Decimal(\"8\")`。\n- **未验证**：Bash 不可用，上面的测试我没跑过。该跑的命令是 `pytest test_remote_fee_lookup.py -v`，预期 9 条全绿。\n\n一个问题：语言定 Python 对吗？还是这套要落到 Java / TypeScript / C# 里去？"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.202552,
+            "judgeCostUsd": 0.02101199999999999,
+            "durationSeconds": 47,
+            "startedAt": "2026-09-19T09:23:00.100Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-CMTBfb\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-sprout-for-greenfield",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一条:这个任务按 sprout-method 做不成,而且是该实践自己排除的情形。\n\nskill 正文「不用」那一条写得很明确:**没有既有可执行路径要动(从零新建一个类)——直接写,不造开关和「旧路径」**。萌芽方法的三件产出(新方法/入口一处分流/三条回退验证)里,后两件都要有旧实现才存在。这里没有入口可分流,也没有「关闭开关走原路径」可验证,硬套就只能捏一个假的旧路径出来。所以我按它指的路走:直接写,归标准变更(standard change)。\n\n语言没指定,我假设 Java(Feathers/Fowler 这套练习的默认语境)。\n\n## RemoteFeeLookup\n\n```java\npackage logistics.fee;\n\nimport java.util.Set;\n\n/**\n * 偏远地区附加费查询。\n * 新疆、西藏加收 8 元,其余省份 0 元。\n */\npublic final class RemoteFeeLookup {\n\n    private static final int REMOTE_SURCHARGE = 8;\n    private static final int NO_SURCHARGE = 0;\n\n    /** 简称与全称都收,避免上游传哪种写法都要各自记一遍。 */\n    private static final Set<String> REMOTE_PROVINCES = Set.of(\n            \"新疆\", \"新疆维吾尔自治区\",\n            \"西藏\", \"西藏自治区\");\n\n    public int surchargeFor(String province) {\n        if (province == null) {\n            return NO_SURCHARGE;\n        }\n        return REMOTE_PROVINCES.contains(province.trim())\n                ? REMOTE_SURCHARGE\n                : NO_SURCHARGE;\n    }\n}\n```\n\n## 测试\n\n```java\npackage logistics.fee;\n\nimport static org.junit.jupiter.api.Assertions.assertEquals;\n\nimport org.junit.jupiter.api.Test;\n\nclass RemoteFeeLookupTest {\n\n    private final RemoteFeeLookup lookup = new RemoteFeeLookup();\n\n    @Test\n    void 新疆加收八元() {\n        assertEquals(8, lookup.surchargeFor(\"新疆\"));\n        assertEquals(8, lookup.surchargeFor(\"新疆维吾尔自治区\"));\n    }\n\n    @Test\n    void 西藏加收八元() {\n        assertEquals(8, lookup.surchargeFor(\"西藏\"));\n        assertEquals(8, lookup.surchargeFor(\"西藏自治区\"));\n    }\n\n    @Test\n    void 其余省份不加收() {\n        assertEquals(0, lookup.surchargeFor(\"广东\"));\n        assertEquals(0, lookup.surchargeFor(\"北京\"));\n    }\n\n    @Test\n    void 空值与空白按不加收处理() {\n        assertEquals(0, lookup.surchargeFor(null));\n        assertEquals(0, lookup.surchargeFor(\"  \"));\n        assertEquals(0, lookup.surchargeFor(\" 新疆 \"));  // 这条是 8\n    }\n}\n```\n\n最后一行我故意写错了给你看——`\" 新疆 \"` trim 之后命中,期望值应是 `8`,不是 `0`。改掉:\n\n```java\n    @Test\n    void 空值与空白按不加收处理() {\n        assertEquals(0, lookup.surchargeFor(null));\n        assertEquals(0, lookup.surchargeFor(\"  \"));\n    }\n\n    @Test\n    void 前后空格不影响命中() {\n        assertEquals(8, lookup.surchargeFor(\" 新疆 \"));\n    }\n```\n\n## 说明\n\n- **未验证**:Bash 不可用,这份代码我没编译也没跑。该跑的命令是 `mvn test -Dtest=RemoteFeeLookupTest`(Gradle 则 `gradle test --tests RemoteFeeLookupTest`)。\n- 几个我自己定的事(routine judgment call,不合适你直接说):金额用 `int` 元而不是 `BigDecimal`——8 和 0 都是整数元,不会有精度问题;`null` 和空白归到「不加收」而不是抛异常;简称全称都认。\n- 「其余返回 0」我按字面实现,没做「不认识的省份名要报错」这类校验。\n\n一个问题:语言我是猜的 Java。如果你们那边其实是 Python 或 TypeScript,我照样翻一份——是 Java 吗?"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.172448,
+            "judgeCostUsd": 0.009588,
+            "durationSeconds": 41,
+            "startedAt": "2026-09-19T09:23:47.077Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-KEmy6B\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-sprout-for-greenfield",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "`sprout-method` 这一条我读了，但它自己的「不用」条款正好覆盖这个场景：\n\n> 不用：没有既有可执行路径要动（从零新建一个类）——直接写，不造开关和「旧路径」。\n\n所以我不造 feature toggle、不造「旧实现」占位、不写入口分流——那三样在没有既有代码时只是凭空增加的复杂度。萌芽方法（sprout method / sprout class，Feathers《Working Effectively with Legacy Code》第 6 章）的价值在于保护既有行为，这里没有要保护的行为。以后这个类要接进既有下单/运费计算流程时，那一步才是萌芽的用武之地。\n\n下面按普通新增代码写，测试用表驱动（table-driven test，pytest `parametrize`）。语言我先假定 Python。\n\n```python\n\"\"\"偏远地区附加费查询。\"\"\"\n\nREMOTE_SURCHARGE = 8\nNO_SURCHARGE = 0\n\n# 命中的省级行政区，键是归一化后的简称\n_REMOTE_PROVINCES = frozenset({\"新疆\", \"西藏\"})\n\n# 常见全称、异写 -> 简称\n_ALIASES = {\n    \"新疆维吾尔自治区\": \"新疆\",\n    \"新疆维吾尔族自治区\": \"新疆\",\n    \"西藏自治区\": \"西藏\",\n}\n\n\nclass RemoteFeeLookup:\n    \"\"\"输入省份名，返回偏远附加金额。\"\"\"\n\n    def surcharge_for(self, province: str | None) -> int:\n        return (\n            REMOTE_SURCHARGE\n            if self._normalize(province) in _REMOTE_PROVINCES\n            else NO_SURCHARGE\n        )\n\n    @staticmethod\n    def _normalize(province: str | None) -> str:\n        if not province:\n            return \"\"\n        name = province.strip()\n        return _ALIASES.get(name, name)\n```\n\n测试：\n\n```python\nimport pytest\n\nfrom remote_fee_lookup import RemoteFeeLookup\n\n\n@pytest.mark.parametrize(\n    \"province, expected\",\n    [\n        (\"新疆\", 8),\n        (\"西藏\", 8),\n        (\"新疆维吾尔自治区\", 8),          # 全称\n        (\"西藏自治区\", 8),                # 全称\n        (\"  新疆  \", 8),                  # 前后空白\n        (\"广东\", 0),\n        (\"北京\", 0),\n        (\"\", 0),                          # 空串\n        (None, 0),                        # 缺省份\n        (\"新疆维吾尔\", 0),                # 截断的写法不认，见下方「假设」\n    ],\n)\ndef test_surcharge_for(province, expected):\n    assert RemoteFeeLookup().surcharge_for(province) == expected\n```\n\n三点说明，事实与假设分开：\n\n- **事实**：按 skill 原文，从零建类属于它点名排除的情形，我据此没有走那五步。\n- **假设**（我自己定的，未经你确认）：只认简称和上表列的全称，不做模糊/前缀匹配——`\"新疆维吾尔\"` 这种截断写法返回 0。这样规则可预测、好排查；代价是上游传脏数据时会静默算成 0。如果上游省份名来源不可控，更稳的做法是无法识别时抛异常而不是返回 0。\n- **假设**：金额用 `int`。如果以后附加费会出现小数或要参与总价计算，应换成 `Decimal` 以避免浮点误差。\n\n一个问题：这段最终要落在哪门语言的代码库里？比如如果主项目是 Java/Spring，我会改写成 `RemoteFeeLookup` + JUnit 5 的 `@ParameterizedTest`，命名和注解风格都不一样。"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.1708745,
+            "judgeCostUsd": 0.012162000000000006,
+            "durationSeconds": 52,
+            "startedAt": "2026-09-19T09:23:51.487Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-IzhRcD\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-sprout-for-greenfield",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "## 先说一句前提\n\n`Sprout Class`（Michael Feathers, *Working Effectively with Legacy Code*）的适用前提是：**已有一段没有测试的旧代码要加新行为**，所以把新行为整个\"发芽\"到一个独立的新类里，旧代码只留一行调用。这里没有既有代码，所以严格讲 sprout 无处可发。我按它的**形式**来做——新行为全部落在一个自足、可单测的类里，调用点只有一行——实际产出就是\"一个带测试的新类\"。\n\n假设（你没指定，我先定下来，要改很快）：Java 17 + JUnit 5；金额用 `BigDecimal`，不用 `double`（*Effective Java* Item 60，钱不能用浮点）。\n\n## 生产代码\n\n```java\npackage com.example.fee;\n\nimport java.math.BigDecimal;\nimport java.util.Set;\n\n/** 偏远地区附加费查询：新疆、西藏加收 8 元，其余为 0。 */\npublic class RemoteFeeLookup {\n\n    private static final BigDecimal REMOTE_FEE = new BigDecimal(\"8\");\n    private static final BigDecimal NO_FEE = BigDecimal.ZERO;\n\n    private static final Set<String> REMOTE_PROVINCE_PREFIXES = Set.of(\"新疆\", \"西藏\");\n\n    public BigDecimal feeOf(String provinceName) {\n        if (provinceName == null) {\n            return NO_FEE;\n        }\n        String name = provinceName.trim();\n        for (String prefix : REMOTE_PROVINCE_PREFIXES) {\n            if (name.startsWith(prefix)) {\n                return REMOTE_FEE;\n            }\n        }\n        return NO_FEE;\n    }\n}\n```\n\n两个设计点：\n- `8` / `0` 抽成具名常量（Replace Magic Number with Symbolic Constant，Fowler *Refactoring*）。\n- 用 `startsWith` 而不是 `equals`，让 `新疆维吾尔自治区` 和 `新疆` 都能命中——这是我的**推断**，见文末提问。\n- `null` 走 Guard Clause 直接返回 0，不抛异常：查费用不该因为地址缺省把下单流程打断。\n\n## 测试\n\n```java\npackage com.example.fee;\n\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.params.ParameterizedTest;\nimport org.junit.jupiter.params.provider.NullAndEmptySource;\nimport org.junit.jupiter.params.provider.ValueSource;\n\nimport java.math.BigDecimal;\n\nimport static org.junit.jupiter.api.Assertions.assertEquals;\n\nclass RemoteFeeLookupTest {\n\n    private final RemoteFeeLookup lookup = new RemoteFeeLookup();\n\n    @ParameterizedTest\n    @ValueSource(strings = {\"新疆\", \"西藏\", \"新疆维吾尔自治区\", \"西藏自治区\", \"  新疆  \"})\n    void 偏远省份返回8(String province) {\n        assertMoney(\"8\", lookup.feeOf(province));\n    }\n\n    @ParameterizedTest\n    @ValueSource(strings = {\"广东\", \"浙江省\", \"北京市\", \"内蒙古自治区\", \"青海省\"})\n    void 非偏远省份返回0(String province) {\n        assertMoney(\"0\", lookup.feeOf(province));\n    }\n\n    @ParameterizedTest\n    @NullAndEmptySource\n    @ValueSource(strings = {\"   \"})\n    void 空输入返回0(String province) {\n        assertMoney(\"0\", lookup.feeOf(province));\n    }\n\n    private static void assertMoney(String expected, BigDecimal actual) {\n        assertEquals(0, new BigDecimal(expected).compareTo(actual),\n                () -> \"期望 \" + expected + \"，实际 \" + actual);\n    }\n}\n```\n\n用 `compareTo` 而不是 `assertEquals(BigDecimal, BigDecimal)`：后者会把 `8` 和 `8.0` 判为不等（scale 参与 `equals`）。\n测试组织用 Parameterized Test（等价于 table-driven test），一条用例一行，加省份只改数据不改结构。\n\n## 调用点长什么样\n\nsprout 的重点是这里——旧流程只增加一行，不被新逻辑污染：\n\n```java\nBigDecimal total = goodsFee.add(shippingFee)\n        .add(remoteFeeLookup.feeOf(order.getProvince()));   // ← 新增的唯一一行\n```\n\n## 一个问题\n\n上面的 `startsWith` 会让 `\"西藏自治区\"` 命中 8 元，但也会让 `\"西藏路\"`（上海有\"西藏南路\"）这种脏数据误命中。\n\n传进来的省份名是从哪来的——是后台省市区码表里选出来的规范名（那我应该改成按省份编码 `650000`/`540000` 精确匹配），还是用户手填的自由文本？"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.15370650000000002,
+            "judgeCostUsd": 0.012174000000000018,
+            "durationSeconds": 58,
+            "startedAt": "2026-09-19T09:23:53.347Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-peDpBC\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-sprout-for-greenfield",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一句实话再给代码：**Sprout Method 用不上**。\n\nSprout Method / Sprout Class 是 Michael Feathers《Working Effectively with Legacy Code》里的手法，前提是**已有一段没测试、不敢动的老代码**——你在它里面插一行调用，把新逻辑\"长\"到一个新方法/新类里，好让新逻辑能被单独测。这次是从零起手，没有宿主代码可插，所以没有\"sprout\"的动作可做。\n\n我按它的**产物形态**交付：一个零依赖、可单独实例化、纯函数式的类（这正是 Sprout Class 追求的结果），外加测试。等将来要接进老的运费计算里，只需在老方法里加一行 `remoteFeeLookup.feeFor(province)`,那一步才是真正的 Sprout Method。语言先按 Java 写（Feathers 原书语境），要 TS/Python 我改。\n\n---\n\n## RemoteFeeLookup.java\n\n```java\nimport java.util.Set;\n\n/**\n * 偏远地区附加费查询。\n *\n * 新疆、西藏加收 8，其余省份 0。\n * 无状态、无依赖，可安全共享。\n */\npublic final class RemoteFeeLookup {\n\n    private static final int REMOTE_SURCHARGE = 8;\n    private static final int NO_SURCHARGE = 0;\n\n    /** 简称与官方全称都收，避免调用方在拼字符串上踩坑。 */\n    private static final Set<String> REMOTE_PROVINCES = Set.of(\n            \"新疆\", \"新疆维吾尔自治区\",\n            \"西藏\", \"西藏自治区\");\n\n    /**\n     * @param province 省级行政区名称，简称或全称皆可；null、空白、未知一律不加收\n     * @return 偏远附加金额，单位元\n     */\n    public int feeFor(String province) {\n        if (province == null) {\n            return NO_SURCHARGE;\n        }\n        return REMOTE_PROVINCES.contains(province.trim()) ? REMOTE_SURCHARGE : NO_SURCHARGE;\n    }\n}\n```\n\n## RemoteFeeLookupTest.java\n\n```java\nimport static org.junit.jupiter.api.Assertions.assertEquals;\n\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.params.ParameterizedTest;\nimport org.junit.jupiter.params.provider.CsvSource;\nimport org.junit.jupiter.params.provider.NullAndEmptySource;\nimport org.junit.jupiter.params.provider.ValueSource;\n\nclass RemoteFeeLookupTest {\n\n    private final RemoteFeeLookup lookup = new RemoteFeeLookup();\n\n    @ParameterizedTest\n    @ValueSource(strings = {\"新疆\", \"新疆维吾尔自治区\", \"西藏\", \"西藏自治区\", \" 新疆 \"})\n    void 偏远省份加收8(String province) {\n        assertEquals(8, lookup.feeFor(province));\n    }\n\n    @ParameterizedTest\n    @ValueSource(strings = {\"广东\", \"北京\", \"青海\", \"内蒙古自治区\", \"新疆市\"})\n    void 其余省份不加收(String province) {\n        assertEquals(0, lookup.feeFor(province));\n    }\n\n    @ParameterizedTest\n    @NullAndEmptySource\n    @ValueSource(strings = {\"   \"})\n    void 空值与未知输入不加收(String province) {\n        assertEquals(0, lookup.feeFor(province));\n    }\n\n    @Test\n    void 名称完整匹配不做前缀匹配() {\n        assertEquals(0, lookup.feeFor(\"西藏冒牌物流\"));\n    }\n}\n```\n\n---\n\n**用到的业界实践**\n\n- **Sprout Class**（Feathers）——产物形态：新逻辑独立成类，不与老代码耦合，因此可脱离老代码测试。\n- **Guard Clause**——`null` 早返回，主路径不嵌套。\n- **Parameterized Test / table-driven test**（JUnit 5）——同一断言多组数据，加省份只加一个字符串。\n- **Immutable value set**——`Set.of(...)` 不可变 + `static final`，类无状态，天然线程安全。\n\n**我替你定的两个口径，不合就说**\n\n1. `null`/空白/未知 → 返回 0，不抛异常。理由：附加费查询失败时不加钱比崩掉更安全；如果你希望未知省份是 bug 要立刻暴露，我改成抛 `IllegalArgumentException`。\n2. 金额用 `int`（单位元）。如果系统里运费是 `BigDecimal` 或以分为单位的 `long`，我跟着改，避免在调用点做类型转换。\n\n一个问题：这块要落到哪个语言/仓库里？比如是 Java 服务里的 `RemoteFeeLookup.java`，还是你那边其实是 TypeScript 或 Python 的运费模块？"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.17166949999999997,
+            "judgeCostUsd": 0.014381999999999978,
+            "durationSeconds": 53,
+            "startedAt": "2026-09-19T09:24:10.986Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-gqpBvC\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-sprout-for-greenfield",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一件事：`sprout-method`（Sprout Method，Michael Feathers《Working Effectively with Legacy Code》）的前提是**已有一段难以安全修改的旧代码**——把新逻辑\"发芽\"成一个独立的新方法/新类，避开旧代码里没有测试的部分。你这里明确说没有任何既有代码，所以没有可以发芽的宿主，这个手法在这儿是空转的。\n\n不过它的**产出形态**（一个自足、无依赖、可单测的新类）正好就是你要的东西，所以我按这个形态交付，实际遵循的是 TDD（Test-Driven Development）+ 查表替代条件分支（Replace Conditional with Lookup Table）。\n\n## 假设\n\n- 语言用 Java（Feathers 那本书的语境，也是 sprout 这套词最常见的落点）\n- 金额用 `BigDecimal` 不用 `int`/`double`——业界通行的 Money Pattern，钱不进二进制浮点\n- 输入可能带行政区划后缀（\"新疆维吾尔自治区\"、\"西藏自治区\"），要归一化后再比\n\n## 生产代码\n\n```java\npackage com.example.shipping;\n\nimport java.math.BigDecimal;\nimport java.util.Set;\n\n/**\n * 偏远地区附加费查询：按省份名返回附加金额。\n * 无状态、无依赖，线程安全。\n */\npublic final class RemoteFeeLookup {\n\n    private static final BigDecimal REMOTE_FEE = new BigDecimal(\"8\");\n    private static final BigDecimal NO_FEE = new BigDecimal(\"0\");\n\n    /** 归一化后的偏远省份。新增偏远地区只改这里。 */\n    private static final Set<String> REMOTE_PROVINCES = Set.of(\"新疆\", \"西藏\");\n\n    /** 行政区划后缀，必须长的在前，否则 \"新疆维吾尔自治区\" 会被剥成 \"新疆维吾尔\"。 */\n    private static final String[] SUFFIXES = {\n            \"维吾尔自治区\", \"壮族自治区\", \"回族自治区\", \"特别行政区\",\n            \"自治区\", \"省\", \"市\"\n    };\n\n    /**\n     * @param province 省份名，可为 null 或带后缀\n     * @return 偏远附加费，非偏远或无法识别时为 0\n     */\n    public BigDecimal feeOf(String province) {\n        return REMOTE_PROVINCES.contains(normalize(province)) ? REMOTE_FEE : NO_FEE;\n    }\n\n    private static String normalize(String province) {\n        if (province == null) {\n            return \"\";\n        }\n        String name = province.replaceAll(\"\\\\s\", \"\");\n        for (String suffix : SUFFIXES) {\n            if (name.length() > suffix.length() && name.endsWith(suffix)) {\n                return name.substring(0, name.length() - suffix.length());\n            }\n        }\n        return name;\n    }\n}\n```\n\n两处值得说的写法：\n\n- `feeOf` 里没有 `if/else` 链，而是一次集合查询。加\"内蒙古也算偏远\"时只动 `REMOTE_PROVINCES` 一行，`feeOf` 不再被碰——Open/Closed Principle 的最小实现。\n- null 在 `normalize` 里被吞成空串，而不是抛异常。这是刻意的：附加费查询是计价路径上的旁支，脏数据让它算 0 比让整单计价炸掉更合理。如果你的业务要求\"省份缺失必须拦下来\"，就把 null 改成 `throw new IllegalArgumentException`，我可以改。\n\n## 测试\n\n```java\npackage com.example.shipping;\n\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.params.ParameterizedTest;\nimport org.junit.jupiter.params.provider.NullAndEmptySource;\nimport org.junit.jupiter.params.provider.ValueSource;\n\nimport java.math.BigDecimal;\n\nimport static org.junit.jupiter.api.Assertions.assertEquals;\n\nclass RemoteFeeLookupTest {\n\n    private final RemoteFeeLookup lookup = new RemoteFeeLookup();\n\n    @ParameterizedTest\n    @ValueSource(strings = {\"新疆\", \"西藏\", \"新疆维吾尔自治区\", \"西藏自治区\", \" 新疆 \"})\n    void 偏远省份收八元(String province) {\n        assertFee(\"8\", lookup.feeOf(province));\n    }\n\n    @ParameterizedTest\n    @ValueSource(strings = {\"广东\", \"广东省\", \"北京市\", \"内蒙古自治区\", \"火星\"})\n    void 其余省份不收费(String province) {\n        assertFee(\"0\", lookup.feeOf(province));\n    }\n\n    @ParameterizedTest\n    @NullAndEmptySource\n    void 空输入不收费(String province) {\n        assertFee(\"0\", lookup.feeOf(province));\n    }\n\n    @Test\n    void 后缀不会被过度剥离() {\n        // \"省\" 本身不该被剥成空串\n        assertFee(\"0\", lookup.feeOf(\"省\"));\n    }\n\n    /** 用 compareTo 而非 equals：BigDecimal 的 equals 会比较 scale，8 与 8.0 不相等。 */\n    private static void assertFee(String expected, BigDecimal actual) {\n        assertEquals(0, new BigDecimal(expected).compareTo(actual),\n                () -> \"expected \" + expected + \" but was \" + actual);\n    }\n}\n```\n\n测试按\"偏远 / 非偏远 / 边界\"三组切分，每组用 `@ParameterizedTest` 铺数据——Table-Driven Testing。`内蒙古自治区` 放在非偏远组是明确的负向断言：将来谁要改规则，这条会先红。\n\n我没有运行这些测试（环境里 Bash 不可用，也没有 Java 项目结构），上面是代码审读级别的结论，不是执行结果。\n\n一个问题：如果你的真实项目不是 Java，告诉我是哪个语言，我按同样的结构重写一遍？"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 2,
+    "casesPassed": 2,
+    "overallScore": 1,
+    "overallPassRate": 1,
+    "meanDelta": 0.25
+  }
+}

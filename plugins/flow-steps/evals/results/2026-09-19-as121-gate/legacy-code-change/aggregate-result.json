@@ -1,0 +1,471 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:13:24.825Z",
+  "durationSeconds": 172,
+  "costUsd": 1.1106418,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as121-split-legacy\\plugins\\flow-steps",
+    "ablation": "with-without",
+    "modelOverride": "sonnet",
+    "judgeModel": "sonnet",
+    "caseFilter": "legacy-code-change-*",
+    "threshold": 1,
+    "concurrency": 4,
+    "plugins": [
+      {
+        "name": "flow-steps",
+        "version": "0.1.2",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as121-split-legacy\\plugins\\flow-steps"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "legacy-code-change-greenfield",
+      "dir": "evals\\legacy-code-change-greenfield",
+      "source": "prose",
+      "promptMarkdown": "第 5 阶段实现。票是 desk#32：新建一个 `RemoteFeeLookup` 类，输入省份名，返回偏远附加金额，新疆和西藏返回 8，其余返回 0。仓里没有任何相关既有代码，第 4 阶段门上那条消息写的是「从零新建，不开改旧代码的活动」，主人说了行。要不要先走一遍 `legacy-code-change`？仓库不在这个工作目录里，工具不可用。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 8,
+      "graders": [
+        {
+          "name": "skips-step-for-greenfield",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether the agent kept the legacy-code activity closed for a greenfield ticket.\n\nPASS if the agent says no: there is no existing behaviour to characterize and no existing path to sprout beside, the gate already recorded \"从零新建，不开改旧代码的活动\", so the next thing is the stage-5 implementation itself — the owner presses `/implement` (test-first) — and the agent stops there.\n\nFAIL if the agent starts a characterization test, a walkthrough, an entry branch or a toggle for the new class, or otherwise runs the legacy-code activity anyway.",
+          "config": {
+            "criteria": "Judge whether the agent kept the legacy-code activity closed for a greenfield ticket.\n\nPASS if the agent says no: there is no existing behaviour to characterize and no existing path to sprout beside, the gate already recorded \"从零新建，不开改旧代码的活动\", so the next thing is the stage-5 implementation itself — the owner presses `/implement` (test-first) — and the agent stops there.\n\nFAIL if the agent starts a characterization test, a walkthrough, an entry branch or a toggle for the new class, or otherwise runs the legacy-code activity anyway.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.0677266,
+            "judgeCostUsd": 0.00474,
+            "durationSeconds": 32,
+            "startedAt": "2026-09-19T09:13:24.870Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-riy9zz\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skips-step-for-greenfield",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "这是常规变更，desk#32，从第 5 阶段进。\n\n不需要走 `legacy-code-change`。这条 skill 针对的是「要改的旧代码没测试、或注释和实现对不上」——核心动作是先做特征化测试把现状钉住给你否决，再用萌芽法在旧实现**旁边**加新逻辑、不碰旧代码本身。但 `RemoteFeeLookup` 是全新建的类，仓里没有任何相关旧代码可改、可保护，第 4 阶段门上已经裁决「从零新建，不开改旧代码的活动」，你也认了。所以这一步不成立，直接按标准新建流程走：写类 + 配套单元测试（新疆/西藏返回 8，其余返回 0，可以再加个空值/未知省份的边界用例），不需要特征化这一步。\n\n但现在卡在：仓库不在这个工作目录里，工具用不了，我没法真的建文件、跑测试。要怎么继续？\n\n- **A（推荐，业界默认）**：你给我实际仓库路径，我 cd 过去后直接实现+跑测试贴证据。\n- **B**：先在当前占位目录写草稿代码，之后你手动挪过去，风险是没法跑测试验证。\n- **C**：先不做，等仓库路径/工具可用后再启动这个任务。\n\n选哪个？"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.060024600000000004,
+            "judgeCostUsd": 0.004967999999999999,
+            "durationSeconds": 22,
+            "startedAt": "2026-09-19T09:13:24.870Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-27D5H4\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skips-step-for-greenfield",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "这是查询。\n\n`legacy-code-change` 针对的是\"要改的旧代码没有测试或注释与实现对不上\"的情况——先特征化摆现状给你否决，再用萌芽法在旧实现旁边加新逻辑。它的前提是**有一段既有实现**需要被保护。\n\ndesk#32 是全新建类，仓库里没有任何相关既有代码，没有旧行为可特征化，也没有旧实现可以\"绕开萌芽\"。第 4 阶段门上那条消息已经明确写了\"从零新建，不开改旧代码的活动\"，你也确认了。这条 skill 在这个场景下没有适用对象，不是\"可选跳过\"而是\"不满足触发条件\"。\n\n所以不用走 `legacy-code-change`，直接按 spec 做标准的新建实现（写测试 + 实现 `RemoteFeeLookup`）即可。"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.0651486,
+            "judgeCostUsd": 0.004871999999999999,
+            "durationSeconds": 24,
+            "startedAt": "2026-09-19T09:13:24.870Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-glxUNi\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skips-step-for-greenfield",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "这是查询。\n\n不用走 legacy-code-change。这条 skill 针对的是\"要改的旧代码没测试、或注释和实现对不上\"的场景，前提是有旧代码要碰。desk#32 是从零新建 `RemoteFeeLookup`，仓里没有相关既有代码可改，这一点第 4 阶段门上已经写清楚（\"从零新建，不开改旧代码的活动\"），主人也确认过了——这个判断已经做完，不需要在第 5 阶段重新走一遍萌芽/特征化那套。\n\n第 5 阶段这里就是直接实现：新建类，输入省份名，新疆、西藏返回 8，其余返回 0，逻辑单一、改完一眼能验，不涉及碰旧代码或改合同。要我现在直接写这个类吗？"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.0903524,
+            "judgeCostUsd": 0.004800000000000002,
+            "durationSeconds": 41,
+            "startedAt": "2026-09-19T09:13:24.870Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-uicFRN\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skips-step-for-greenfield",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "`legacy-code-change` 不用跑,理由:\n\n- 第 4 阶段门上已经定性:从零新建,不涉及改旧代码。这条 skill 本来就是给\"改既有代码\"的活动准备的,新建类不在它的范围里。\n- 仓库里确实没有相关既有代码可审,即便跑一遍也无对象可查。\n- 主人已经在门上对这个定性说了行,不需要回头再走一遍。\n\n所以直接按第 5 阶段(实现)走,不额外插入 `legacy-code-change`。\n\n不过现在有个硬约束卡住实际动作:仓库不在这个工作目录里,工具不可用,我没法创建文件、也没法跑测试验证。所以这一步我只能给出要落的代码,不能算完成实现、也不能贴\"改完一眼能验\"的证据。\n\n打算实现的内容(供你确认或者等仓库可用时我再落地):\n\n```\nclass RemoteFeeLookup:\n    _REMOTE_PROVINCES = {\"新疆\", \"西藏\"}\n\n    def lookup(self, province: str) -> int:\n        return 8 if province in self._REMOTE_PROVINCES else 0\n```\n\n语言/命名风格要跟仓库现有约定对齐,但仓库现在读不到,所以这只是占位实现。要不要我先按这个写死,等仓库可访问了再核对命名规范和测试框架?"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 2,
+            "costUsd": 0.072471,
+            "judgeCostUsd": 0.004463999999999999,
+            "durationSeconds": 35,
+            "startedAt": "2026-09-19T09:13:47.078Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-gMSn3q\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skips-step-for-greenfield",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "**先说结论：不需要走 `legacy-code-change`。**\n\n那条 skill 对应的业界实践是「brownfield modification / strangler fig」类工作——目的是在改动既有代码时防回归、保护既有行为契约。desk#32 的场景是 greenfield（从零新建）：仓库里没有任何相关既有代码可供保护，第4阶段门上也已经明确写了\"从零新建，不开改旧代码的活动\"且主人已放行。没有旧代码，就没有\"legacy\"要处理，走这条 skill 只是空转。\n\n不过现在有个阻塞，需要你确认：\n\n1. `flow` 这条 skill 在当前可用列表里找不到（调用报错 Unknown skill），我没法按它规定的阶段动作往下走。\n2. 你说\"仓库不在这个工作目录里，工具不可用\"——我这边确实也拿不到仓库文件，无法核实第4阶段门的原始记录，也没法真正创建 `RemoteFeeLookup` 类。\n\n这次是想让我在没有工具的情况下先**纯讨论**第5阶段该做什么（比如确认实现思路、测试用例设计），还是你稍后会切到实际仓库目录、我们再动手？"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.1017606,
+            "judgeCostUsd": 0.005166000000000004,
+            "durationSeconds": 65,
+            "startedAt": "2026-09-19T09:13:49.321Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-HiRNd6\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skips-step-for-greenfield",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "这是常规变更，desk#32（新增功能类），从第5阶段进。\n\n先说结论：不用走 `legacy-code-change`。这个活动是为\"改既有代码\"时评估风险、找关联代码用的；desk#32 是从零新建，仓里也确认没有相关既有代码可改，第4阶段门上已经明确排除了这条路径，主人也确认过了——现在再走一遍等于重新审一遍已经关闭的决定，没有新信息支撑。\n\n不过有两个卡点没法跳过：\n1. 我这边当前会话的可用 skill 列表里没有 `flow`，也没有 `legacy-code-change`——这两个都不在系统给我的技能清单里，我没法真的去读或跑它们。\n2. 你说仓库不在这个工作目录、工具不可用，所以就算流程上该动（比如绑 issue、建分支、起草代码文件），我现在也做不了任何可撤销的第一步。\n\n所以想确认一下接下来怎么走，三个选项：\n- **等仓库/工具就位**：这个会话先搁置，等你把仓库接进当前工作目录或恢复工具后再继续第5阶段（默认做法，风险最低）。\n- **换目录/换会话指到真实仓库**：如果仓库其实在别的路径，告诉我路径，我看能不能直接切过去操作。\n- **先纯文本产出代码**：不落盘、不进工具，我直接把 `RemoteFeeLookup` 的实现和测试思路写在对话里，你自己拿去仓库里落地。\n\n你选哪个？"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    },
+    {
+      "name": "legacy-code-change-run",
+      "dir": "evals\\legacy-code-change-run",
+      "source": "prose",
+      "promptMarkdown": "第 5 阶段实现。票是 desk#31：`FreightCalc.calc` 要加偏远附加——目的地新疆或西藏时加 8 元。这个方法没有测试，注释和实现对不上（注释说按 0.5kg 进位、vip 免续重，实现是向上取整到 1kg、vip 折半）。第 4 阶段门上定了开 `legacy-code-change`，主人说了行。按 `legacy-code-change` 走。\n\n仓库不在这个工作目录里，Bash 与 gh 都不可用；把要做的按顺序说出来，说到停下为止。方法与一条真实入参在下面。\n\n```java\n// 运费计算：首重 + 续重（按 0.5kg 进位），vip 免续重，再加区域加价\npublic int calc(Req r) {\n    int fee = tpl(r.tplId).first;\n    if (r.weight > 1.0) {\n        int extra = (int) Math.ceil(r.weight - 1.0); // 向上取整到 1kg\n        int unit = tpl(r.tplId).next;\n        if (r.vip) unit = unit / 2;\n        fee += extra * unit;\n    }\n    if (region(r.province) != null) fee += region(r.province).surcharge;\n    if (r.cod) fee += 2;\n    return fee;\n}\n```\n\n真实入参：模板 1032（first=18，next=4），新疆，weight=3.2，vip=false，cod=false；`region(\"新疆\")` 是西北大区，surcharge=3。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "characterize-before-sprout",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the order of what the agent proposes to do and where it stops.\n\nPASS if the plan (a) first pins the current behaviour with a characterization test built from the one real input — walking the code step by step (18 first weight, ceil(2.2)=3 extra kilograms × 4, surcharge 3, result 33) and flagging that the comments contradict the implementation — and hands that walkthrough to the owner to veto; (b) only after the veto builds the change with the sprout method: the 8-yuan logic in a new method, the old body untouched, a single guarded branch at the entry of `calc`, with the toggle-off path verified against the same input; and (c) stops now, waiting for the owner's veto of the walkthrough, without editing the production method in this turn. Marking rows it cannot prove as assumptions is expected.\n\nFAIL if the agent edits or rewrites `calc` before the walkthrough is vetoed, if it skips the characterization test and goes straight to the new logic, if it presents walkthrough and build as both finished in one go, or if it does not stop for the owner.",
+          "config": {
+            "criteria": "Judge the order of what the agent proposes to do and where it stops.\n\nPASS if the plan (a) first pins the current behaviour with a characterization test built from the one real input — walking the code step by step (18 first weight, ceil(2.2)=3 extra kilograms × 4, surcharge 3, result 33) and flagging that the comments contradict the implementation — and hands that walkthrough to the owner to veto; (b) only after the veto builds the change with the sprout method: the 8-yuan logic in a new method, the old body untouched, a single guarded branch at the entry of `calc`, with the toggle-off path verified against the same input; and (c) stops now, waiting for the owner's veto of the walkthrough, without editing the production method in this turn. Marking rows it cannot prove as assumptions is expected.\n\nFAIL if the agent edits or rewrites `calc` before the walkthrough is vetoed, if it skips the characterization test and goes straight to the new logic, if it presents walkthrough and build as both finished in one go, or if it does not stop for the owner.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "legacy-code-change",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 6,
+            "costUsd": 0.149012,
+            "judgeCostUsd": 0.01666200000000001,
+            "durationSeconds": 82,
+            "startedAt": "2026-09-19T09:13:56.619Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-cmXoim\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "characterize-before-sprout",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "锁现状（characterization-test）先做完，我把走读、测试草稿、假设和萌芽做法摆出来，主人点头前不碰生产代码。\n\n**1. 真实入参走读**\n\n入参：`tplId=1032`（first=18, next=4）、`province=\"新疆\"`、`weight=3.2`、`vip=false`、`cod=false`；`region(\"新疆\")` 为西北大区，`surcharge=3`。\n\n按现有实现（不是按注释）逐行走：\n1. `fee = tpl(1032).first = 18`\n2. `weight(3.2) > 1.0` → `extra = ceil(3.2-1.0) = ceil(2.2) = 3`（不是注释说的按 0.5kg 进位，是整取到 1kg）\n3. `unit = tpl(1032).next = 4`；`vip=false` → unit 不变，仍是 4（不是注释说的\"vip 免续重\"，实现是 vip 半价，这里 vip 为 false 用不上但要记下差异）\n4. `fee += 3*4 = 12` → `fee = 30`\n5. `region(\"新疆\") != null` → `fee += 3` → `fee = 33`\n6. `cod=false` → 不加\n7. 返回 `33`（这是加偏远附加之前的现状值）\n\n**2. 特征化测试草稿**\n\n```java\n// 特征化：锁现状，不是锁注释。当前实现按 1kg 整取续重、vip 半价（不是免续重）——\n// 与方法注释不符，这里刻意不修，只记录。\n@Test\nvoid characterize_currentBehavior_1032_xinjiang_3_2kg_notVip_notCod() {\n    Req r = new Req(1032, \"新疆\", 3.2, false, false);\n    assertEquals(33, freightCalc.calc(r));\n}\n```\n\n**3. 需要主人确认的假设**\n\n1. \"偏远附加\"判断用的字段是 `r.province`，和 `region()` 查表用的是同一个字段；精确匹配字符串 `\"新疆\"` `\"西藏\"`，不含\"新疆维吾尔自治区\"等全称——如果库里存的是全称，这条要改匹配方式。\n2. 偏远附加（8 元）与 `region()` 已有的大区加价（如新疆的西北大区 surcharge=3）是**叠加**，不是互斥——即 33 元现状之上再加 8，变成 41。\n3. 偏远附加与 `vip`、`cod` 无关，直接加 8，不受这两个开关影响。\n\n**4. 萌芽做法（sprout-method）**\n\n旧方法只加一行分流，旧体一句不动；新方法单独复刻一份计算再加 8（不抽取共享方法，因为抽取会碰旧体不止一行）：\n\n```java\npublic int calc(Req r) {\n    if (FEATURE_REMOTE_SURCHARGE && isRemoteArea(r.province)) {\n        return calcWithRemoteSurcharge(r);\n    }\n    // 旧体，原样不动\n    int fee = tpl(r.tplId).first;\n    if (r.weight > 1.0) {\n        int extra = (int) Math.ceil(r.weight - 1.0);\n        int unit = tpl(r.tplId).next;\n        if (r.vip) unit = unit / 2;\n        fee += extra * unit;\n    }\n    if (region(r.province) != null) fee += region(r.province).surcharge;\n    if (r.cod) fee += 2;\n    return fee;\n}\n\nprivate boolean isRemoteArea(String province) {\n    return \"新疆\".equals(province) || \"西藏\".equals(province);\n}\n\nprivate int calcWithRemoteSurcharge(Req r) {\n    int fee = tpl(r.tplId).first;\n    if (r.weight > 1.0) {\n        int extra = (int) Math.ceil(r.weight - 1.0);\n        int unit = tpl(r.tplId).next;\n        if (r.vip) unit = unit / 2;\n        fee += extra * unit;\n    }\n    if (region(r.province) != null) fee += region(r.province).surcharge;\n    if (r.cod) fee += 2;\n    return fee + 8;\n}\n```\n\n这样有一小段重复代码（新方法复刻了旧体的计算），代价是换来\"旧体一句不动\"；另一条路是把公共部分抽成共享私有方法，但那样旧方法就不止改一行了。这两条选哪条，也想请主人定。\n\n同一条入参三条验证会是：开关关 → 33（老结果不变）；开且命中新疆 → 41（新结果）；开但命中非新疆/西藏省份 → 落回旧体，还是原值不变。\n\n**停在这**，等主人对上面的走读、三条假设、和\"复刻 vs 抽公共方法\"这条选择说「对」，才动生产代码。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 8,
+            "costUsd": 0.12227539999999999,
+            "judgeCostUsd": 0.010122000000000006,
+            "durationSeconds": 62,
+            "startedAt": "2026-09-19T09:14:05.898Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-WFjIAG\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "characterize-before-sprout",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 `legacy-code-change` 第 1 步（`characterization-test`）先把现状钉住，改代码之前请先否一遍。\n\n**走读清单（原始注释 vs 实际实现，差异点）**\n\n| 项 | 注释说的 | 实现做的 |\n|---|---|---|\n| 续重进位 | 按 0.5kg 进位 | `Math.ceil(weight - 1.0)`，实为向上取整到整 1kg |\n| vip 续重 | vip 免续重 | `unit = unit / 2`，实为续重单价折半，非免费 |\n| 区域费 | 未提及 | `region(province)` 存在即加 `surcharge`（已是现状，desk#31 要的\"偏远附加 8 元\"目前完全没实现） |\n\n**走读真实入参**（tpl 1032: first=18, next=4；新疆→西北大区 surcharge=3；weight=3.2, vip=false, cod=false）\n\n```\nfee = tpl(1032).first = 18\nweight 3.2 > 1.0 → extra = ceil(3.2-1.0) = ceil(2.2) = 3\nunit = tpl(1032).next = 4，vip=false 不折半\nfee += 3*4 = 12  → fee = 30\nregion(\"新疆\") 命中 → fee += 3 → fee = 33\ncod=false → 不追加\n最终 fee = 33\n```\n\n**特征化测试（锁现状，不是验需求）**\n\n```java\n@Test\nvoid calc_xinjiang_nonVip_noCod_currentBehavior() {\n    // 特征化测试：只锁现状。续重按实现是\"向上取整到1kg\"，与注释\"0.5kg进位\"不符；\n    // 本用例 vip=false，未覆盖\"vip折半\"分支——见走读清单。\n    Req r = new Req();\n    r.tplId = 1032;       // first=18, next=4\n    r.province = \"新疆\";   // region 已存在，surcharge=3（desk#31 要加的偏远附加尚未实现，不在此测试范围内）\n    r.weight = 3.2;\n    r.vip = false;\n    r.cod = false;\n\n    assertEquals(33, calc(r));\n    // 18 + ceil(3.2-1.0)*4=12 → 30；+region surcharge 3 → 33；cod 不追加\n}\n```\n\n**计划改法（萌芽法，旧体一句不动）**\n\n- 旧方法 `calc` 第一行加一处分流：开关开启 且 `r.province` 命中\"新疆\"或\"西藏\"（精确字符串匹配）→ 转去新方法（暂定名 `calcWithRemoteSurcharge`）；否则照旧落回旧体。\n- 新方法内部：调旧逻辑算出 `fee` 后，再加 8 元偏远附加，返回；不改动 first/next/vip/cod 等既有计算路径。\n- 旧方法体本身不做任何修改，只加这一行分流。\n\n**第 2 步完成判据待验证的三条**（现在还没做，等你否完这步再做）：\n1. 开关关：同一入参 → 33（旧结果不变）。\n2. 开关开且命中（新疆）：→ 41（33+8）。\n3. 开关开但未命中（其他省份）：→ 与旧逻辑该省份结果一致，不变。\n\n以上走读、差异点和改法，请否一遍：对不对？有没有要纠偏的地方（比如\"新疆/西藏\"的匹配方式、开关的形式、新方法怎么复用旧逻辑）？确认前我不会动生产代码。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 10,
+            "costUsd": 0.1815236,
+            "judgeCostUsd": 0.011286000000000004,
+            "durationSeconds": 115,
+            "startedAt": "2026-09-19T09:14:22.098Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-zWWTQ8\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "characterize-before-sprout",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "## 第 5 阶段步骤一：锁现状（characterization-test）\n\n**环境说明**：仓库不在这个工作目录、bash/gh 不可用，我这一步不实际写文件，先把走读、发现和改法摆出来，等你说「对」。\n\n### 真实入参走读\n\n入参：`tplId=1032`（first=18, next=4），`province=新疆`，`weight=3.2`，`vip=false`，`cod=false`；`region(\"新疆\")` = 西北大区，surcharge=3。\n\n逐行走：\n1. `fee = tpl(1032).first = 18`\n2. `weight=3.2 > 1.0` → 真\n   - `extra = ceil(3.2 - 1.0) = ceil(2.2) = 3`\n   - `unit = tpl(1032).next = 4`\n   - `vip=false` → unit 不变，仍是 4\n   - `fee += 3*4 = 12` → `fee = 30`\n3. `region(\"新疆\") != null` → 真，`fee += 3` → `fee = 33`\n4. `cod=false` → 不加\n5. `return 33`\n\n**现状结果：33**（这条是按实现走出来的，不是按注释）。\n\n### 发现（注释与实现不符，不在本票范围内，摆出来给你看）\n\n- ①续重进位：注释写\"按 0.5kg 进位\"，实现是 `Math.ceil(r.weight - 1.0)`，即按整 1kg 进位。这条入参 `weight=3.2` 两种算法结果一样（extra 都是 3），但比如 `weight=1.6` 时两种算法会分叉——具体 `unit=4` 是\"每 1kg 续重价\"还是\"每 0.5kg 续重价\"，我从代码本身判断不出来，需要你确认，但不影响这次要加的偏远附加，先不动。\n- ②vip 减续重：注释写\"vip 免续重\"（应为 0），实现是\"续重单价减半\"（`unit/2`），vip 仍要付一半续重费，不是全免。这条真实入参 `vip=false` 没触发，但按 legacy-code-change 的要求得摆出来。\n\n### 改法（萌芽法，旧体一字不动）\n\n1. 新增私有方法 `isRemoteDestination(String province)`：判断 `province` 等于\"新疆\"或\"西藏\"。\n2. 新增一个开关（占位名 `FeatureFlags.REMOTE_SURCHARGE_ENABLED`，默认关）。\n3. 在 `calc()` 第一行加分流：\n   ```java\n   public int calc(Req r) {\n       if (FeatureFlags.REMOTE_SURCHARGE_ENABLED && isRemoteDestination(r.province)) {\n           return calcWithRemoteSurcharge(r);\n       }\n       // 旧体一字不动\n       int fee = tpl(r.tplId).first;\n       ...\n   }\n   ```\n4. 新增 `calcWithRemoteSurcharge(r)`：复制现有计算逻辑，最后 `return` 前 `fee += 8`。\n5. 偏远附加与既有的区域加价（`region().surcharge`）并存、不互斥——新疆同时有西北大区的 3 元和偏远的 8 元。\n6. 不碰发现①②，也不改续重/vip 的既有逻辑。\n\n**假设**（需要你确认或纠偏）：\n- a. \"偏远附加\"只精确匹配\"新疆\"\"西藏\"两个省份字符串，不做模糊匹配、不含青海甘肃等其他可能算西部的省份。\n- b. 偏远附加固定 +8，不受 vip/cod 影响。\n- c. 偏远附加与区域加价（region surcharge）是叠加关系，不是二选一或覆盖关系。\n\n三条验证会在下一步（萌芽）用同一条入参跑：开关关→33；开关开且命中→41；开关开但不命中（如 province=北京）→走老逻辑不变。\n\n这个走读、两条发现和改法，你看对不对？有没有要纠偏的地方（尤其是上面三条假设）？对了我再往下写萌芽的代码。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.0761792,
+            "judgeCostUsd": 0.01243600000000001,
+            "durationSeconds": 24,
+            "startedAt": "2026-09-19T09:14:54.168Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-td2lNl\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "characterize-before-sprout",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`flow` 和 `legacy-code-change` 这两条 skill 在当前会话的可用列表里都没有，本地也搜不到对应文件——我这边无法读取阶段 5 的具体门槛和要求，没法照章往下走。\n\n停在这里。麻烦确认一下：这两条 skill 是不是配置在别的目录/插件里没挂载到这次会话？还是说要我凭票面信息（desk#31 + legacy-code-change 常规做法）自行判断第 5 阶段该做什么？"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 2,
+            "costUsd": 0.0568838,
+            "judgeCostUsd": 0.004031999999999994,
+            "durationSeconds": 17,
+            "startedAt": "2026-09-19T09:15:07.476Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Yt5yaH\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "characterize-before-sprout",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`flow` 这条 skill 在当前环境里搜不到（可用 skill 列表里没有 `flow`，也没有 `legacy-code-change`）。仓库不在这个工作目录里，这两条 skill 大概率是项目仓库自带的，没法在这里加载。\n\n停在这。需要你确认：这两条 skill 具体在仓库哪个路径下（比如 `.claude/skills/flow` 之类），还是说它们其实不是 skill 而是仓库里的文档/流程说明，需要我用 Read 去找？"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.067284,
+            "judgeCostUsd": 0.004409999999999997,
+            "durationSeconds": 22,
+            "startedAt": "2026-09-19T09:15:18.649Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-EC6WSb\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "characterize-before-sprout",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`flow` 这条 skill 在当前技能列表里没有，仓库目录下也搜不到对应文件（你提到仓库不在这个工作目录里）。这样我没法按 `legacy-code-change` 的具体阶段定义往下走，只能凭记忆猜步骤，这个我不想做——猜错了流程本身就是白改。\n\n要往下推进，需要下面之一：\n- 把仓库/技能所在目录接进当前工作目录（这样 `flow` 和 `legacy-code-change` 能被加载）；\n- 或者你把第 5 阶段该做什么（legacy-code-change 在这一阶段的具体动作、验收方式）贴给我，我照着做。\n\n在此之前我不会动代码。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.6666666666666666,
+        "passRate": 0.6666666666666666,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0.6666666666666666
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 2,
+    "casesPassed": 1,
+    "overallScore": 0.8333333333333333,
+    "overallPassRate": 0.8333333333333333,
+    "meanDelta": 0.3333333333333333
+  }
+}

@@ -6,13 +6,13 @@ description: >-
 
 # 测试驱动开发（tdd）
 
-来源：Matt Pocock 的 `tdd`（github.com/mattpocock/skills，revision 6acc160，MIT，许可全文见 `plugins/practices/LICENSE-mattpocock`），按 ADR-0007 复制入库改写。TDD 与红绿循环出自 Beck《测试驱动开发》；接缝（seam）出自 Feathers《修改代码的艺术》。`implement` 内含本实践；重构不在本循环里，归审查阶段的 `code-review`。与原版的差别：补了「跑不了就标未验证」（本工作区的证据规矩）、「只补测试不改行为归 `legacy-change`」、「拿耦合实现的测试当样板先指出不照抄」（评测里对照组照抄的缺口）三处；原版「每节每轮都看」「codebase-design 是参考不是会话」两句并进了第 1、2 步。
+来源：Matt Pocock 的 `tdd`（github.com/mattpocock/skills，revision 6acc160，MIT，许可全文见 `plugins/practices/LICENSE-mattpocock`），按 ADR-0007 复制入库改写。TDD 与红绿循环出自 Beck《测试驱动开发》；接缝（seam）出自 Feathers《修改代码的艺术》。`implement` 内含本实践；重构不在本循环里，归审查阶段的 `code-review`。与原版的差别：补了「跑不了就标未验证」（本工作区的证据规矩）、「只补测试不改行为归 `characterization-test`」、「拿耦合实现的测试当样板先指出不照抄」（评测里对照组照抄的缺口）三处；原版「每节每轮都看」「codebase-design 是参考不是会话」两句并进了第 1、2 步。
 
 ## 什么时候用
 
 用：主人要测试先行地做功能或修 bug，说「TDD」「红绿」「先写测试」，或要集成测试；规程在实现阶段点名。
 
-不用：只是给既有代码补测试、不改行为，那是特征化测试，归 `legacy-change`；主人拿着一条耦合实现的测试当样板要「照着再写几条」，先按第 2 步把它指出来，不照抄。
+不用：只是给既有代码补测试、不改行为，那是特征化测试，归 `characterization-test`；主人拿着一条耦合实现的测试当样板要「照着再写几条」，先按第 2 步把它指出来，不照抄。
 
 ## 步骤
 

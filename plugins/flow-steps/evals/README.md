@@ -152,3 +152,42 @@
 
 `not-closed` 两组同分，只作回归守卫。`translate` 0.67 没到 1.0 硬线，原因如上；是否再跑由主人在第 6 阶段的门上定（与上面 `wrap-up-pr-body` 同一处理）。四轮结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`。
 
+三份结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`。
+
+### 0.1.3（2026-09-19，agent-system#121）：两条改旧代码时才开的活动——legacy-code-change、system-integration
+
+跑法与上面相同（被测 sonnet、裁判 sonnet），`--case '<skill>-*'` 两条各跑一次，结果在 `results/2026-09-19-as121-baseline/<skill>/` 与 `results/2026-09-19-as121-gate/<skill>/`。用例的 `append_system_prompt` 沿用上面那份 mock 的常驻规则；材料是旧 `legacy-change`、`integration` 评测里那段运费计算，贴在提示词里，工具不可用，agent 只把要做的按顺序说出来。这两条是薄步：正文只点名 `characterization-test`、`sprout-method`、`interface-contract-checklist`、`incremental-integration` 四条实践与顺序，沙箱里没装 practices，所以 grader 判的是薄步自己定的顺序与停点。
+
+| 用例 | skill | 测什么 | 该怎么判 |
+|---|---|---|---|
+| `legacy-code-change-run` | legacy-code-change | 第 5 阶段、旧方法没有测试且注释与实现对不上，门上已开这条活动 | 先用一条真实入参走读成特征化测试摆给主人否（18 → 30 → 33，两处出入标出），否过之后才萌芽（新方法、旧体不动、入口一处分流、关开关验证），现在停在等否，不改生产方法 |
+| `legacy-code-change-greenfield` | legacy-code-change | 从零新建的票，门上写了「从零新建，不开改旧代码的活动」 | 说不用：没有现状可锁、没有旧路径可萌芽，请主人敲 `/implement` |
+| `system-integration-run` | system-integration | 改动建完要接进去：三个调用方（一个绕过入口）、加列的表与报表、开关未注册、共库 | 先边界清单每行变没变（BatchCalc 绕过入口交主人定），再依赖在前、每步带退法的顺序，联调 26 加老路径 18 且只读；停在请主人否，没合没动表没注册开关 |
+| `system-integration-merge-conflict` | system-integration | 合分支撞上冲突块 | 说这是配置管理不是集成活动，就冲突块作答、一题问主人 |
+
+两条正例各带一条 `tool_used: Skill` 的 with-only 指示器，不计分。
+
+基线（`results/2026-09-19-as121-baseline/`，SKILL.md 占位，每用例 1 次，两组，4 次运行两条各 67、72 秒，合计 0.90 美元）：
+
+- `legacy-code-change-run`：对照组先写特征化测试是对的，接着就「修 `calc`：在 `region` 分支里判断新疆或西藏加 8 元、顺手把注释改成与实现一致」——直接改旧方法体，没有摆给主人否，没有萌芽。有 skill 组在占位正文下已过，靠的是 description 那一句「先特征化测试摆给主人否，否过之后萌芽」。真缺口是「否之前不动、否之后萌芽」。
+- `legacy-code-change-greenfield`：两组都说不用。只作回归守卫。
+- `system-integration-run`：对照组没有逐边界的清单与顺序，问了一题 BatchCalc 要不要接就停；有 skill 组（占位）清单与顺序都有，但顺序是「注册开关 → 部署代码 → 加列 → 回填 → 开开关」，加列在代码之后，没有一步写退法，开开关排在本次顺序里。真缺口是「依赖在前、每步退法、停在否之前」。
+- `system-integration-merge-conflict`：两组都判为配置管理、就冲突块作答。只作回归守卫。
+
+实跑记录（2026-09-19，被测 sonnet、裁判 sonnet，每用例 3 次，阈值 1.0）。第一轮门评测（结果未提交，24 次运行、2.19 美元）四条过两条：`legacy-code-change-run` 0.33——有 skill 组走读与停点都对，改法把分流写到方法末尾且没有开关；`system-integration-run` 0——有 skill 组只出清单就停下等否，grader 要清单与顺序一起。改两条薄步：`legacy-code-change` 第 1 步写明改法三句（新逻辑放哪、哪个开关开启且哪个字段命中时转去、关闭时走哪），第 2 步写明分流位置；`system-integration` 改成清单与顺序一次出完、主人只否一次（沿用旧 `integration` 的做法，两条实践各加一句配合）。第二轮 `results/2026-09-19-as121-gate/`（24 次运行、357 秒、2.24 美元），第三轮按 skill 单跑 `results/2026-09-19-as121-gate-rerun/`（24 次，2.23 美元）。
+
+| 用例 | 有 skill 组 | 对照组 | 差值 | 来源 |
+|---|---|---|---|---|
+| `legacy-code-change-run` | 0.67 | 0 | +0.67 | rerun |
+| `legacy-code-change-greenfield` | 1.0 | 1.0 | 0 | rerun |
+| `system-integration-run` | 0.67 | 0 | +0.67 | rerun |
+| `system-integration-merge-conflict` | 1.0 | 1.0 | 0 | rerun |
+
+平均差值 +0.33。两条反例两组同分，只作回归守卫。对照组在两条正例上都是 0：sonnet 找不到 `flow` 与薄步就停下问主人，或直接改旧方法体。
+
+没到 1.0 的两条要说清：
+
+- `legacy-code-change-run` 0.67：第二轮一次失败是裁判把「把萌芽写成待否的代码草图」读成改了生产代码（grader 补了一句「草图不算改」）；第三轮一次失败是 sonnet 按正文把开关列成「待确认」，改法里却仍把新调用写成不受开关保护的一行插在 `return` 之前——单次失误，正文已写明「开关开启且入参命中的判断就在这一处」。
+- `system-integration-run` 0.67：第三轮两次失败都在 `order-undoable-and-stops`，一次是联调那步没写「只读」，一次是多列了一条「前置调查，退法不适用」的步。清单那条 grader 三次都过，BatchCalc 绕过入口都交主人定了。判断：一次漏词、一次多步，不是顺序或停点错；再跑只是换一组随机数，是否按 1.0 硬线重跑由主人在第 6 阶段的门上定。
+
+三轮结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`。
