@@ -1,0 +1,234 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T06:31:07.735Z",
+  "durationSeconds": 101,
+  "costUsd": 0.8732635000000001,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as118-practices\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "code-review-missing-fixed-point",
+    "threshold": 1,
+    "concurrency": 2,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.0",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as118-practices\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "code-review-missing-fixed-point",
+      "dir": "evals\\code-review-missing-fixed-point",
+      "source": "prose",
+      "promptMarkdown": "按 `practices:code-review` 给我审一下现在这个分支。仓库不在这个工作目录里，git 也不可用；缺什么直接问我。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "asks-fixed-point",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge what the agent did with a review request that has no fixed point and no diff.\n\nPASS if the agent produces no findings and asks the user one question to obtain the changeset: the fixed point to diff against (a commit, branch, tag, or merge-base such as main) and/or the diff taken against that fixed point, since git is unavailable here.\n\nFAIL if the agent fabricates a review or any findings, or asks a batch of unrelated questions, or asks for something other than the fixed point or the diff against it.",
+          "config": {
+            "criteria": "Judge what the agent did with a review request that has no fixed point and no diff.\n\nPASS if the agent produces no findings and asks the user one question to obtain the changeset: the fixed point to diff against (a commit, branch, tag, or merge-base such as main) and/or the diff taken against that fixed point, since git is unavailable here.\n\nFAIL if the agent fabricates a review or any findings, or asks a batch of unrelated questions, or asks for something other than the fixed point or the diff against it.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 5,
+            "costUsd": 0.153201,
+            "judgeCostUsd": 0.007962000000000002,
+            "durationSeconds": 28,
+            "startedAt": "2026-09-19T06:31:07.769Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Vso9xn\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "asks-fixed-point",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "我先自己查了能查的：\n\n- 这个工作目录 `C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Vso9xn\\home\\cwd` 是空的，里面没有代码，也没有 diff 文件。\n- 我这轮没有 Bash 工具，所以 `git diff` / `git log` / `git rev-parse` 一条都跑不了——不是\"仓库路径给我就行\"的问题，是命令本身执行不了。\n\n按 `practices:code-review` 的第 1 步，固定点和 diff 两样都不在手的时候，规矩是先问清再动，不凭猜写报告。所以卡在这里。\n\n**我的一题：diff 正文你打算怎么给我？**\n\n比如你在自己终端跑一条，把输出整段贴进对话：\n\n```\ngit log main..HEAD --oneline\ngit diff main...HEAD\n```\n\n（`main` 换成你要比的固定点——某个 commit、tag、`HEAD~5` 都行；三点 `...` 是对 merge-base 比，别写成两点。）\n\n或者你把 diff 存成文件放到我能读的地方，比如 `C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Vso9xn\\home\\cwd\\branch.diff`，我用 Read 读。文件大的话这个比贴更稳。\n\n拿到 diff 之后我还会再问两件事（spec 出处、仓里的编码标准文件），先不占这一轮。"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 5,
+            "costUsd": 0.151513,
+            "judgeCostUsd": 0.006392,
+            "durationSeconds": 26,
+            "startedAt": "2026-09-19T06:31:07.769Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-6RPShl\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "asks-fixed-point",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "我看了一下：当前工作目录 `C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-6RPShl\\home\\cwd` 是空的，一个文件都没有，`git` 也用不了。按 code-review 的第 1 步，没有固定点和 diff 就不能往下走，两个子代理也不能派——所以先卡在这里问你。\n\n比如说，如果这条分支是从 `main` 分出来的，我想要的是这样一份东西：\n\n```\n$ git diff main...HEAD\ndiff --git a/src/order.py b/src/order.py\n@@ -12,6 +12,9 @@ class Order:\n-    def total(self):\n+    def total(self, discount_rate):\n...\n```\n\n外加一行 commit 列表（`git log main..HEAD --oneline` 的输出）。\n\n**这份 diff 我怎么拿到？** 三条路任选一条：\n\n1. 你直接把 `git diff <固定点>...HEAD` 的输出贴给我（diff 大的话贴成文件也行，告诉我路径）；\n2. 告诉我仓库在这台机器上的真实路径，我自己去读文件——但没有 git 我只能看当前状态，看不出「改了什么」，所以还是得你告诉我固定点是哪个、或者哪些文件是改动过的；\n3. 仓库在别处（远端/另一台机器），那就只能走第 1 条。\n\n答完这个，我再问 spec 和标准文件的事——一轮一题。"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.136973,
+            "judgeCostUsd": 0.004668,
+            "durationSeconds": 29,
+            "startedAt": "2026-09-19T06:31:33.275Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-f2zvxa\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "asks-fixed-point",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "查过了：`C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-f2zvxa\\home\\cwd` 下一个文件都没有，所以 diff、spec、标准文件我这边都取不到，得靠主人给。\n\n按 `code-review` 的第 1 步，固定点没钉住就不往下走（不派子代理、不编报告）。所以先要一样东西：**从固定点起的 diff 正文**。\n\n举个例子，主人在有 git 的那台机器上跑：\n\n```\ngit diff main...HEAD > diff.txt\ngit log main..HEAD --oneline\n```\n\n把 `diff.txt` 的内容和那串 commit 列表贴给我就行（`main` 换成主人要的固定点，`v1.2.0`、`HEAD~5`、某个 commit hash 都行；三点 `...` 是对 merge-base 比，别写成两点）。diff 太长的话，贴到这个工作目录下一个文件里，告诉我路径，我自己读。\n\n问题只有一个：**主人这次的固定点是哪个，diff 怎么给我**（贴正文，还是放成文件给我路径）？\n\n拿到 diff 之后我还会再问两样——spec 的来源、仓里的标准文件（`CODING_STANDARDS.md` / `CONTRIBUTING.md` / `AGENTS.md` 之类）——那两个不阻塞现在这步，一个一个来。"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.1353975,
+            "judgeCostUsd": 0.004637999999999996,
+            "durationSeconds": 32,
+            "startedAt": "2026-09-19T06:31:35.404Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-ZLvtkp\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "asks-fixed-point",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "两件事先说清楚：\n\n**事实**\n- 当前工作目录 `C:\\Users\\<user>\\...\\home\\cwd` 是空的，里面没有任何文件。\n- 可用技能列表里没有 `practices` 这个插件，只有内置的 `code-review`。我按内置那个来做，如果你说的 `practices:code-review` 是另一套你们团队的审查清单，告诉我我就改用它。\n\n**推断**：既然仓库不在这儿、git 也用不了，就没法自己算出「这个分支」相对哪里的改动，得你把改动内容递给我。\n\n这种情况业界的常规做法是**打补丁评审（patch-based review，即 Linux 内核那套 `git format-patch` + 邮件列表的流程）**：不依赖仓库访问，只看一个自带上下文的 diff 文件。\n\n所以我需要的是一份 unified diff，比如你在有仓库的那台机器上跑：\n\n```\ngit diff -U20 main...HEAD > review.patch\n```\n\n（`-U20` 是多带点上下文行，`main...HEAD` 是取分支从主干分叉之后的改动）\n\n**问题：这份 diff 你打算怎么给我 —— 存成文件放到 `C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-ZLvtkp\\home\\cwd` 下让我读，还是直接贴在聊天里？**"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.15139400000000003,
+            "judgeCostUsd": 0.004949999999999996,
+            "durationSeconds": 37,
+            "startedAt": "2026-09-19T06:32:01.928Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-KbOzpw\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "asks-fixed-point",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "我这边先把事实查清楚了，两条结果：\n\n1. **工作目录是空的**：`C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-KbOzpw\\home\\cwd` 下一个文件都没有，往上层目录扫描的权限也被拒了。所以我现在手上没有任何可审的代码。\n2. **`practices:code-review` 这个技能不存在**：调用直接返回 `Unknown skill`。当前注册的只有一个不带前缀的 `code-review`。如果你说的 `practices` 是个还没装上的插件，那它的审查清单和内置的这个不是一回事——我默认先用内置的 `code-review`，你要是指的是别的，回头说一声我换。\n\n关于第 1 点我得问你一个事。代码审查的前提是拿到**变更集**而不是某个时间点的全量代码,业界标准做法是用 merge-base 的三点 diff(three-dot diff,就是 GitHub PR 页面上展示的那个 `git diff main...HEAD`),这样才不会把 main 上别人的提交混进来算成你的改动。\n\n举个具体例子:你在有 git 的那台机器上跑\n\n```bash\ngit diff main...HEAD > review.patch\n```\n\n然后把 `review.patch` 放进 `...\\home\\cwd\\`,我就能直接开审。\n\n**问题:你打算怎么把这个分支的改动给我——是按上面的方式导出 patch 文件,还是仓库其实在本机某个绝对路径下(告诉我路径,我直接读文件)?**"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.14478500000000002,
+            "judgeCostUsd": 0.005010000000000004,
+            "durationSeconds": 41,
+            "startedAt": "2026-09-19T06:32:07.642Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-gwogON\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "asks-fixed-point",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "两件事先说清楚，都是我刚查过的事实：\n\n1. `practices:code-review` 这个 skill 不存在——Skill 工具直接返回 `Unknown skill: practices:code-review`。当前可用的只有内置的 `code-review`（同名，无前缀）。如果你没有特指某个插件版本，我就按内置这个来，它的定位是查正确性 bug，外加复用/简化/效率的清理项。\n2. 当前工作目录 `C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-gwogON\\home\\cwd` 是空的，一个文件都没有。\n\n所以现在我手上没有任何可审的代码。而且你说 git 不可用，这意味着我没法自己确定\"这个分支\"相对哪个基线改了什么——业界做 branch review 的标准做法是拿 merge-base 三点 diff（three-dot diff，`git diff main...HEAD`），这条路被堵死了，得你来补基线信息。\n\n举个例子，你可以这样给我其中任一种：\n- 仓库的绝对路径，比如 `D:\\work\\myrepo`，再加一句\"改的是 `src/auth/*.ts` 和 `tests/auth_test.ts` 这几个文件\"——路径不在当前目录我也能读；\n- 或者从别处（PR 页面、CI 产物、同事）拿到的 unified diff，直接粘给我，或者告诉我 patch 文件在哪，比如 `D:\\tmp\\branch.patch`。\n\n**我的问题只有一个：这个分支的改动，我怎么拿到？**"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.6666666666666666,
+        "passRate": 0.6666666666666666,
+        "scoreWithout": 0.6666666666666666,
+        "passRateWithout": 0.6666666666666666,
+        "delta": 0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 1,
+    "casesPassed": 0,
+    "overallScore": 0.6666666666666666,
+    "overallPassRate": 0.6666666666666666,
+    "meanDelta": 0
+  }
+}

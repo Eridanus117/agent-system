@@ -1,0 +1,292 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T06:36:35.359Z",
+  "durationSeconds": 121,
+  "costUsd": 0.9249515,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as118-practices\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "domain-modeling-just-reading",
+    "threshold": 1,
+    "concurrency": 2,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.0",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as118-practices\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "domain-modeling-just-reading",
+      "dir": "evals\\domain-modeling-just-reading",
+      "source": "prose",
+      "promptMarkdown": "仓根的 `CONTEXT.md`（Bash 不可用，贴给你）：\n\n```md\n# 订单（Ordering）\n\n接收并跟踪客户订单的 context。\n\n## Language\n\n**订单（Order）**:\n客户一次下单产生的整体，含一到多个行项。\n_Avoid_: 购买、交易\n\n**行项（Line Item）**:\n订单里的一件商品及其数量。\n_Avoid_: 商品行、明细\n\n**取消（Cancellation）**:\n客户在发货前撤回整张订单；取消后订单不再发货。\n_Avoid_: 退单、作废\n```\n\n`CONTEXT.md` 里的「取消」到底指什么？我在写测试名，想用对词。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "answers-from-glossary",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether the agent treated this as a lookup, not a modeling session.\n\nPASS if the reply states the glossary definition of 取消 (the customer withdraws the whole order before shipping; after that the order does not ship) and applies it to the test name, and the agent does not rewrite CONTEXT.md, does not present new or changed glossary entries as its deliverable, and does not create an ADR. Anything else in the reply (caveats about cases the glossary does not cover, a follow-up question about which case the test covers) does not affect the verdict.\n\nFAIL only if the definition is missing or wrong, or the agent edits CONTEXT.md, or its main deliverable is new or changed glossary entries or an ADR.",
+          "config": {
+            "criteria": "Judge whether the agent treated this as a lookup, not a modeling session.\n\nPASS if the reply states the glossary definition of 取消 (the customer withdraws the whole order before shipping; after that the order does not ship) and applies it to the test name, and the agent does not rewrite CONTEXT.md, does not present new or changed glossary entries as its deliverable, and does not create an ADR. Anything else in the reply (caveats about cases the glossary does not cover, a follow-up question about which case the test covers) does not affect the verdict.\n\nFAIL only if the definition is missing or wrong, or the agent edits CONTEXT.md, or its main deliverable is new or changed glossary entries or an ADR.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "no-file-write",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Write",
+            "min": 0,
+            "max": 0
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 7,
+            "costUsd": 0.2104685,
+            "judgeCostUsd": 0.006666,
+            "durationSeconds": 54,
+            "startedAt": "2026-09-19T06:36:35.397Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-FYnhqA\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-from-glossary",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "查了一下仓里：工作目录下没有任何代码或文件（只有 `.git` 和 `.gitconfig`），所以没法拿代码对照，下面只按 `CONTEXT.md` 的字面定义说。\n\n另外，domain-modeling 这条实践自己写了「只是读 `CONTEXT.md` 查一个词的意思，答就是了，不进本实践的步骤」，所以我直接答。\n\n## 「取消」= 四个条件同时成立\n\n> 客户在发货前撤回整张订单；取消后订单不再发货。\n\n拆开就是：**客户**发起 + **发货前** + **整张**订单 + 结果是**不再发货**。\n\n每个限定都挡掉一类相邻的事：\n\n| 场景 | 算「取消」吗 |\n|---|---|\n| 客户下单 10 分钟后反悔，订单还没发货 | ✅ 算 |\n| 客户只想去掉订单里的一个行项，其余照发 | ❌ 不算（不是整张） |\n| 货已经发出，客户要退回来 | ❌ 不算（发货后） |\n| 超时未付款，系统把订单关掉 | ❌ 定义没覆盖（不是客户发起） |\n\n第三、四行该叫什么，`CONTEXT.md` 现在**没有给词**——这是词汇表的空缺，不是你没找到。\n\n而且 `_Avoid_` 里明确列了「退单、作废」，说明这两个词是**被刻意挡掉**的：写测试名时不要用 refund / void / 退单 来指代这件事，用 cancel。\n\n测试名可以这样：`cancels_order_before_shipment`、`cancelled_order_is_not_shipped`。\n\n## 问你一题\n\n比如你要写的是这两种里的哪种——\n\n- A：`客户在订单未发货时取消，订单变为不再发货` → 直接用 cancel，词对得上\n- B：`订单创建后 30 分钟未付款，系统关闭订单` → 这不在「取消」的定义里，得先定个新词\n\n你手上这条测试是 A 还是 B？（如果是 B，我们就得往 `CONTEXT.md` 里加词，那才走建模那套流程。）"
+              },
+              {
+                "name": "no-file-write",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.172738,
+            "judgeCostUsd": 0.006738000000000001,
+            "durationSeconds": 43,
+            "startedAt": "2026-09-19T06:36:35.397Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-KBSQsQ\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-from-glossary",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "我先查了一下：当前工作目录 `C:\\Users\\<user>\\home\\cwd` 里没有任何文件（`**/*` 零命中），所以没法拿代码去对 `CONTEXT.md` 的说法，下面全部依据你贴的原文。\n\n顺带说一句，我起手调了 `practices:domain-modeling`，但它自己写明「只是读 CONTEXT.md 查一个词的意思，答就是了，不进本实践的步骤」——你这问题正好落在它划出去的那一边，所以我直接答，不走那套流程。\n\n## 「取消」的四个限定\n\n定义原文：「客户在发货前撤回整张订单；取消后订单不再发货。」拆开是四条，缺一条就不是「取消」：\n\n| 维度 | 取消要求 |\n|---|---|\n| 谁发起 | 客户（不是运营、不是系统超时自动处理） |\n| 什么时候 | 发货前 |\n| 范围 | 整张订单，所有行项一起走 |\n| 结果 | 订单不再发货 |\n\n`_Avoid_: 退单、作废` 的意思是：这三个词在这个 context 里说的是同一件事时，只准写「取消」；**不是**说「退单」「作废」是「取消」的别名可以随便混用。\n\n所以测试名里用「取消」的前提，是被测场景同时满足上面四条。比如 `取消后订单不再发货`、`已发货的订单不能取消` 都合规——后者是在测边界，用词没跑偏。\n\n## 一个问题\n\n举个具体的：假设你要写的是「客户下了 3 件，发货前只想去掉其中 1 件」这种场景。按上面的定义，这不叫「取消」（范围不是整张订单），而 `CONTEXT.md` 里目前也没有词能称呼它——真要写，就得先补一个词条，那才轮到 domain-modeling 那套流程。\n\n**你现在要命名的这条测试，是「整张订单、发货前、客户发起」这个正统场景，还是落在它之外（单行项 / 发货后 / 非客户发起）？**\n\n（我用的实践：统一语言 ubiquitous language——测试名与词汇表共用同一套词，不在测试里另造同义词。）"
+              },
+              {
+                "name": "no-file-write",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.133991,
+            "judgeCostUsd": 0.005484000000000001,
+            "durationSeconds": 39,
+            "startedAt": "2026-09-19T06:37:18.891Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-xSM72V\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-from-glossary",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "仓里现在只有你贴的这段文字，没有代码可对照（glob 全空），所以下面全部是对定义原文的读解，不是从实现推的。\n\n**「取消」被定义收窄成三个条件同时成立：**\n1. 发起人是**客户**（不是运营、系统、库存）\n2. 时点在**发货前**\n3. 范围是**整张订单**，不是其中某几个行项\n\n后果那半句「取消后订单不再发货」是这个词的可观察效果，也就是测试里该断言的东西。\n\n**落在定义之外、不该叫「取消」的：**\n- 客户只撤掉一个行项 → 词汇表没给词，目前是空白\n- 发货之后要回退 → 属于退货/退款，这个 context 的语言里没有\n- 缺货、支付超时导致订单终止 → 发起人不是客户，定义不覆盖\n\n另外 `_Avoid_` 那行直接约束你的测试名：别用「退单」「作废」，英文别用 `void`、`refund`、`abort`。按 DDD 的统一语言（Ubiquitous Language, Eric Evans）实践，测试名用领域词而不是技术词，比如：\n\n```\ncancelled_order_is_not_shipped\ncancellation_is_rejected_after_shipment\n```\n\n要给你更准的词，得知道一件事：**你这条测试的场景，是「客户在发货前撤掉整张订单」，还是「客户只撤掉订单里的一个行项」？**（比如一张单有 2 件商品，客户只想去掉其中 1 件——这种情况现在的「取消」是不覆盖的。）"
+              },
+              {
+                "name": "no-file-write",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.14184149999999998,
+            "judgeCostUsd": 0.0071879999999999965,
+            "durationSeconds": 34,
+            "startedAt": "2026-09-19T06:37:29.610Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-9mMnpQ\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-from-glossary",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "我查了一下仓库（`Glob` + `Grep` 全库搜 `取消|cancel`）：除了 `.git` 和 `.gitconfig`，工作目录里没有任何代码或文档文件，所以下面完全是基于你贴的 `CONTEXT.md` 文本本身得出的。\n\n## 「取消」的三个硬条件\n\n词条 `客户在发货前撤回整张订单；取消后订单不再发货` 其实压了三个限定，缺一个就不是「取消」：\n\n1. **谁发起** — 客户。不是商家、不是系统（超时未付款、风控拦截都不算）。\n2. **什么时候** — 发货前。发货后客户反悔，那是另一件事，词表里没给名字。\n3. **范围多大** — 整张订单。单个行项撤掉不算取消，词表里也没给名字。\n\n结果是「订单不再发货」，所以「取消」描述的是一个**终态**，不是一个流程阶段。\n\n`_Avoid_: 退单、作废` 这行反向印证了边界：「退单」通常指发货/付款之后往回走（在这里属于条件 2 之外），「作废」通常是系统或运营侧动作（属于条件 1 之外）。词表把这两个词挡掉，就是不想让它们和「取消」混用。\n\n## 测试名怎么写\n\n这是 DDD 的 **Ubiquitous Language（统一语言）** 实践：词表里的词要原样出现在代码和测试名里，不做同义替换。测试名本身按 **BDD** 的 Given-When-Then 结构写。\n\n在「取消」定义内的：\n\n```\n取消订单后_订单不再发货\n已发货的订单_不能取消\n取消整张订单_所有行项都不再发货\n```\n\n不在定义内、**不该**用「取消」的：\n\n```\n超时未付款_订单自动取消      ← 系统发起，词表没覆盖\n客户撤掉一个行项_订单其余照常发货   ← 只撤一个行项，词表没覆盖\n```\n\n后两种如果你确实要测，词表目前没有词给你用——那属于该回头往 `CONTEXT.md` 加词条的信号，而不是把「取消」撑大。\n\n## 一个问题\n\n举个具体的：假设客户下单买了 3 件，其中 1 件还没发货就说不要了，另外 2 件照常发。\n\n你现在手上这条测试，是这种「只撤一部分」的情况，还是整张订单全撤？"
+              },
+              {
+                "name": "no-file-write",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.1360035,
+            "judgeCostUsd": 0.006678,
+            "durationSeconds": 35,
+            "startedAt": "2026-09-19T06:37:57.847Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-SGicmt\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-from-glossary",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "仓库工作目录当前是空的（只有 `../.gitconfig` 未跟踪），`CONTEXT.md` 在仓里也没搜到实体文件，所以下面全部依据你贴的文本。\n\n## 「取消」的四个边界\n\n定义原文：*客户在发货前撤回整张订单；取消后订单不再发货。*\n\n拆开看，它同时锁死了四件事：\n\n| 维度 | 限定 |\n|---|---|\n| 谁发起 | 客户（不是运营、不是系统自动关单） |\n| 什么时候 | 发货前 |\n| 作用范围 | 整张订单（不是某个行项） |\n| 结果 | 订单不再发货 |\n\n所以「取消」不是\"订单作废\"的泛称，而是**这一种**具体动作。这是 DDD 的 Ubiquitous Language：词义只在本 bounded context 内有效，且一个词对一个概念，不做同义扩展。\n\n## 对写测试名的直接影响\n\n可以用「取消」：\n\n- `取消_未发货订单_订单不再发货`\n- `取消_已取消的订单_拒绝重复取消`\n\n**不要**用「取消」的（超出定义，会把词撑坏）：\n\n- 发货后客户要回钱 → 那是退款/退货，本文件里没这个词\n- 只撤掉订单里的一个行项 → 定义写的是\"整张订单\"\n- 超时未付款系统关单 → 定义写的是\"客户…撤回\"\n\n这三种属于 CONTEXT.md 的**空白**，不是\"取消的子类型\"。上面三条是我从定义的措辞推出来的边界，文件本身没有明写它们被排除。真遇到了，正确做法是让 domain owner 补词，而不是自己借「取消」顶上——否则测试名会比代码更早说谎。\n\n另外 `_Avoid_` 那行是硬约束：测试名里别出现「退单」「作废」，哪怕读起来更顺。\n\n---\n\n比如你有个场景是\"客户已经收到货了，要求退回\"，按上面的规矩它就不能叫 `取消_...`。**你这批要写的测试里，有没有这类落在「发货后」或「只撤单个行项」的场景？**"
+              },
+              {
+                "name": "no-file-write",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.12990900000000002,
+            "judgeCostUsd": 0.009611999999999999,
+            "durationSeconds": 33,
+            "startedAt": "2026-09-19T06:38:03.859Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-WlMF8e\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-from-glossary",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "查了一下仓库：除了 `CONTEXT.md`，没有任何代码或测试文件（grep `cancel|取消|作废|退单` 零命中）。所以下面只基于这段定义本身来读。\n\n## 「取消」的四个限定条件\n\n定义原文：**客户在发货前撤回整张订单；取消后订单不再发货。**\n\n拆开就是四个必须同时成立的条件：\n\n| 维度 | 限定 |\n|---|---|\n| 谁发起 | 客户（不是客服、商家、系统） |\n| 什么时候 | 发货前 |\n| 范围多大 | 整张订单（不是某个行项） |\n| 结果是什么 | 订单不再发货 |\n\n四条缺一条，就不是这个 context 里的「取消」。\n\n## 因此，这些场景不该叫「取消」\n\n- 客户只去掉订单里的一个**行项**——范围不是整张订单\n- 订单**已发货**后客户要退——这是另一回事（退货/退款），`CONTEXT.md` 没给词\n- 客户超时未付款，**系统**自动关单——发起方不是客户\n- 商家缺货，**运营**把订单终止——发起方不是客户\n\n这几种情况 `CONTEXT.md` 目前都没有定义词汇，等于是语言上的空白。\n\n## 测试名怎么写\n\n业界实践是 **Ubiquitous Language（DDD，Eric Evans）**：测试名直接照抄 context 里的词，不引入同义词。所以：\n\n- ✅ `取消订单后订单不再发货` / `cancelOrder_beforeShipment_orderIsNotShipped`\n- ❌ 不要用 `退单`、`作废`、`voidOrder`、`refundOrder`——这三个词定义里明确 _Avoid_ 或根本没定义\n\n还有一条配套实践：**测试名应当能让领域专家读懂**（Behaviour-Driven Development，Dan North）。如果你的测试名里出现了 `CONTEXT.md` 没有的词，那通常是信号——要么用错词了，要么该补一条定义。\n\n---\n\n我想确认一件事再往下给建议：\n\n你要写的这条测试，具体是哪个场景？比如是「客户在发货前撤回整张订单，断言订单不再发货」这种正好落在定义内的，还是像「客户只想去掉订单里的一件商品」「订单已发货客户要退」这类落在定义外的？\n\n如果是后者，我们要讨论的就不是测试名，而是先给 `CONTEXT.md` 补一个词。"
+              },
+              {
+                "name": "no-file-write",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 1,
+    "casesPassed": 1,
+    "overallScore": 1,
+    "overallPassRate": 1,
+    "meanDelta": 0
+  }
+}

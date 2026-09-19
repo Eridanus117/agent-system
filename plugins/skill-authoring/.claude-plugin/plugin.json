@@ -1,6 +1,6 @@
 {
   "name": "skill-authoring",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "自建 skill 的规程：从机会 issue 走到可装的 skill 目录加上线待办，先跑基线再动笔。",
   "author": {
     "name": "Eridanus117"

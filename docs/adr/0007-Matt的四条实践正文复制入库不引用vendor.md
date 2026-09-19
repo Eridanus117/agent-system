@@ -51,7 +51,7 @@ decision-makers: 负责人
 
 - `plugins/practices/LICENSE-mattpocock` 与 `SOURCE` 在，`SOURCE` 记的 revision 与 `vendor/mattpocock/SOURCE.json` 一致。
 - 四条 SKILL.md 头部各有来源与 revision，正文通过 `skills.test.ts` 的词汇守卫。
-- 落地后回来补实际结果。
+- 实际结果（2026-09-19，agent-system#118）：`plugins/practices` 建成，`LICENSE-mattpocock` 为 vendor 的 MIT 原文，`SOURCE` 记 revision `6acc160e…`，与 `vendor/mattpocock/SOURCE.json` 一致；四条 SKILL.md 头部都写了来源仓、revision、许可与改写范围，`node plugins/tests/skills.test.ts` 通过。十个评测用例，有 skill 组九条 1.0、一条 0.78（裁判读法，见 `plugins/practices/evals/README.md`），平均差值 +0.38。`profiles/daily` 与 `profiles/all` 的四条已从 vendor 改指 `plugins/practices/skills/<名>`；`flow` 的点名（`tdd`、`code-review`）用的就是这四个名字，不需要改字。
 
 ## 更多信息（More Information）
 

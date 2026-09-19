@@ -1,0 +1,11 @@
+{
+  "name": "practices",
+  "version": "0.1.0",
+  "description": "四条实践 skill 的入库版：grilling、domain-modeling、tdd、code-review。正文按 MIT 从 Matt Pocock 的 skills 仓复制并改成中文与本仓写法；规程 skill 按活动点名它们。",
+  "author": {
+    "name": "Eridanus117"
+  },
+  "repository": "https://github.com/Eridanus117/agent-system",
+  "license": "MIT",
+  "skills": "./skills/"
+}

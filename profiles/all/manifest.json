@@ -13,6 +13,14 @@
       "target": "plugins/clarify/skills/clarify"
     },
     {
+      "name": "code-review",
+      "target": "plugins/practices/skills/code-review"
+    },
+    {
+      "name": "domain-modeling",
+      "target": "plugins/practices/skills/domain-modeling"
+    },
+    {
       "name": "evidence-regression",
       "target": "plugins/workcoding/skills/evidence-regression"
     },
@@ -22,7 +30,7 @@
     },
     {
       "name": "grilling",
-      "target": "vendor/mattpocock/skills/grilling"
+      "target": "plugins/practices/skills/grilling"
     },
     {
       "name": "integration",
@@ -79,6 +87,10 @@
     {
       "name": "system-analysis",
       "target": "plugins/workcoding/skills/system-analysis"
+    },
+    {
+      "name": "tdd",
+      "target": "plugins/practices/skills/tdd"
     },
     {
       "name": "verify-evidence",

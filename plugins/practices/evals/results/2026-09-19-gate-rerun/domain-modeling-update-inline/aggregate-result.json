@@ -1,0 +1,509 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T06:31:02.256Z",
+  "durationSeconds": 236,
+  "costUsd": 1.1997205,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as118-practices\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "domain-modeling-update-inline",
+    "threshold": 1,
+    "concurrency": 2,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.0",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as118-practices\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "domain-modeling-update-inline",
+      "dir": "evals\\domain-modeling-update-inline",
+      "source": "prose",
+      "promptMarkdown": "仓根的 `CONTEXT.md` 现在是这样（Bash 不可用；工作目录里如果还没有这个文件，就按这份内容建出来再改）：\n\n```md\n# 订单（Ordering）\n\n接收并跟踪客户订单的 context。\n\n## Language\n\n**订单（Order）**:\n客户一次下单产生的整体，含一到多个行项。\n_Avoid_: 购买、交易\n\n**行项（Line Item）**:\n订单里的一件商品及其数量。\n_Avoid_: 商品行、明细\n\n**取消（Cancellation）**:\n客户在发货前撤回整张订单；取消后订单不再发货。\n_Avoid_: 退单、作废\n```\n\n定了：「取消」保持整单的意思不动。行级的另起一个词，叫「行项撤回（Line Item Withdrawal）」：发货前从订单里去掉一个行项，订单其余部分照常发货。以后别再叫「部分取消」「删商品」。\n\n实现上我们打算在 `orders` 表加一个 `withdrawn_at` 列，用 `withdrawLineItem(orderId, lineItemId)` 这个函数来做。\n\n按 `domain-modeling` 把这个词落进 `CONTEXT.md`。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 12,
+      "graders": [
+        {
+          "name": "avoid-listed",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": {
+              "source": "file",
+              "path": "CONTEXT.md"
+            },
+            "pattern": "_Avoid_.*(部分取消|删商品)",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "context-written",
+          "type": "file_exists",
+          "weight": 1,
+          "config": {
+            "path": "CONTEXT.md",
+            "exists": true
+          }
+        },
+        {
+          "name": "entry-present",
+          "type": "regex",
+          "weight": 1,
+          "config": {
+            "target": {
+              "source": "file",
+              "path": "CONTEXT.md"
+            },
+            "pattern": "行项撤回",
+            "flags": "",
+            "match": "contains"
+          }
+        },
+        {
+          "name": "no-adr-created",
+          "type": "file_exists",
+          "weight": 1,
+          "config": {
+            "path": "docs/adr/*",
+            "exists": false
+          }
+        },
+        {
+          "name": "no-implementation-details",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the final content of CONTEXT.md in the workspace files.\n\nPASS if the new 行项撤回 entry defines the concept in one or two sentences (removing a line item before shipping, the rest of the order proceeds), lists the avoided synonyms, and keeps implementation details out of CONTEXT.md: no withdrawn_at column, no orders table, no withdrawLineItem function name. The existing entries (订单, 行项, 取消) are preserved.\n\nFAIL if the entry or any other part of CONTEXT.md mentions the column, the table, or the function, or if existing entries were dropped or rewritten in substance.",
+          "config": {
+            "criteria": "Judge the final content of CONTEXT.md in the workspace files.\n\nPASS if the new 行项撤回 entry defines the concept in one or two sentences (removing a line item before shipping, the rest of the order proceeds), lists the avoided synonyms, and keeps implementation details out of CONTEXT.md: no withdrawn_at column, no orders table, no withdrawLineItem function name. The existing entries (订单, 行项, 取消) are preserved.\n\nFAIL if the entry or any other part of CONTEXT.md mentions the column, the table, or the function, or if existing entries were dropped or rewritten in substance.",
+            "focus": {
+              "source": "file",
+              "path": "CONTEXT.md"
+            }
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "domain-modeling",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 6,
+            "costUsd": 0.1844975,
+            "judgeCostUsd": 0.0035159999999999996,
+            "durationSeconds": 36,
+            "startedAt": "2026-09-19T06:31:02.291Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-YQlGSO\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "avoid-listed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched _Avoid_.*(部分取消|删商品)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "context-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "CONTEXT.md exists as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "entry-present",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched 行项撤回",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-adr-created",
+                "passed": true,
+                "weight": 1,
+                "explanation": "docs/adr/* absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-implementation-details",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "# 订单（Ordering）\n\n接收并跟踪客户订单的 context。\n\n## Language\n\n**订单（Order）**:\n客户一次下单产生的整体，含一到多个行项。\n_Avoid_: 购买、交易\n\n**行项（Line Item）**:\n订单里的一件商品及其数量。\n_Avoid_: 商品行、明细\n\n**取消（Cancellation）**:\n客户在发货前撤回整张订单；取消后订单不再发货。\n_Avoid_: 退单、作废\n\n**行项撤回（Line Item Withdrawal）**:\n客户在发货前把一个行项从订单里去掉；订单其余部分照常发货。\n_Avoid_: 部分取消、删商品\n"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 7,
+            "costUsd": 0.2151545,
+            "judgeCostUsd": 0.0035099999999999997,
+            "durationSeconds": 47,
+            "startedAt": "2026-09-19T06:31:02.291Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-JPWbbp\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "avoid-listed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched _Avoid_.*(部分取消|删商品)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "context-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "CONTEXT.md exists as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "entry-present",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched 行项撤回",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-adr-created",
+                "passed": true,
+                "weight": 1,
+                "explanation": "docs/adr/* absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-implementation-details",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "# 订单（Ordering）\n\n接收并跟踪客户订单的 context。\n\n## Language\n\n**订单（Order）**:\n客户一次下单产生的整体，含一到多个行项。\n_Avoid_: 购买、交易\n\n**行项（Line Item）**:\n订单里的一件商品及其数量。\n_Avoid_: 商品行、明细\n\n**取消（Cancellation）**:\n客户在发货前撤回整张订单；取消后订单不再发货。\n_Avoid_: 退单、作废\n\n**行项撤回（Line Item Withdrawal）**:\n客户在发货前从订单里去掉一个行项；订单其余行项照常发货。\n_Avoid_: 部分取消、删商品\n"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 7,
+            "costUsd": 0.21281099999999997,
+            "judgeCostUsd": 0.0035100000000000027,
+            "durationSeconds": 200,
+            "startedAt": "2026-09-19T06:31:38.704Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-QLMlG9\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "avoid-listed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched _Avoid_.*(部分取消|删商品)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "context-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "CONTEXT.md exists as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "entry-present",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched 行项撤回",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-adr-created",
+                "passed": true,
+                "weight": 1,
+                "explanation": "docs/adr/* absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-implementation-details",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "# 订单（Ordering）\n\n接收并跟踪客户订单的 context。\n\n## Language\n\n**订单（Order）**:\n客户一次下单产生的整体，含一到多个行项。\n_Avoid_: 购买、交易\n\n**行项（Line Item）**:\n订单里的一件商品及其数量。\n_Avoid_: 商品行、明细\n\n**取消（Cancellation）**:\n客户在发货前撤回整张订单；取消后订单不再发货。\n_Avoid_: 退单、作废\n\n**行项撤回（Line Item Withdrawal）**:\n客户在发货前从订单里去掉一个行项；订单其余部分照常发货。\n_Avoid_: 部分取消、删商品\n"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 6,
+            "costUsd": 0.18247100000000002,
+            "judgeCostUsd": 0.003755999999999999,
+            "durationSeconds": 53,
+            "startedAt": "2026-09-19T06:31:49.524Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-wjYqqs\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "avoid-listed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched _Avoid_.*(部分取消|删商品)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "context-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "CONTEXT.md exists as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "entry-present",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched 行项撤回",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-adr-created",
+                "passed": true,
+                "weight": 1,
+                "explanation": "docs/adr/* absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-implementation-details",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "# 订单（Ordering）\n\n接收并跟踪客户订单的 context。\n\n## Language\n\n**订单（Order）**:\n客户一次下单产生的整体，含一到多个行项。\n_Avoid_: 购买、交易\n\n**行项（Line Item）**:\n订单里的一件商品及其数量。\n_Avoid_: 商品行、明细\n\n**取消（Cancellation）**:\n客户在发货前撤回整张订单；取消后订单不再发货。只用于整单，行级的去除见「行项撤回」。\n_Avoid_: 退单、作废\n\n**行项撤回（Line Item Withdrawal）**:\n发货前从订单里去掉一个行项；订单其余部分照常发货。作用于单个行项，不影响整张订单的状态。\n_Avoid_: 部分取消、删商品、行项取消\n"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 6,
+            "costUsd": 0.205174,
+            "judgeCostUsd": 0.0036240000000000005,
+            "durationSeconds": 46,
+            "startedAt": "2026-09-19T06:32:42.671Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-vZplAi\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "avoid-listed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched _Avoid_.*(部分取消|删商品)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "context-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "CONTEXT.md exists as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "entry-present",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched 行项撤回",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-adr-created",
+                "passed": true,
+                "weight": 1,
+                "explanation": "docs/adr/* absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-implementation-details",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "# 订单（Ordering）\n\n接收并跟踪客户订单的 context。\n\n## Language\n\n**订单（Order）**:\n客户一次下单产生的整体，含一到多个行项。\n_Avoid_: 购买、交易\n\n**行项（Line Item）**:\n订单里的一件商品及其数量。\n_Avoid_: 商品行、明细\n\n**取消（Cancellation）**:\n客户在发货前撤回整张订单；取消后订单不再发货。\n_Avoid_: 退单、作废\n\n**行项撤回（Line Item Withdrawal）**:\n发货前从订单里去掉一个行项；订单其余部分照常发货。作用在单个行项上，不是取消的一种。\n_Avoid_: 部分取消、删商品、部分退单\n"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 7,
+            "costUsd": 0.19961250000000003,
+            "judgeCostUsd": 0.0036599999999999966,
+            "durationSeconds": 57,
+            "startedAt": "2026-09-19T06:33:28.582Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-9j605H\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "avoid-listed",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched _Avoid_.*(部分取消|删商品)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "context-written",
+                "passed": true,
+                "weight": 1,
+                "explanation": "CONTEXT.md exists as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "entry-present",
+                "passed": true,
+                "weight": 1,
+                "explanation": "matched 行项撤回",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-adr-created",
+                "passed": true,
+                "weight": 1,
+                "explanation": "docs/adr/* absent as expected",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "no-implementation-details",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "# 订单（Ordering）\n\n接收并跟踪客户订单的 context。\n\n## Language\n\n**订单（Order）**:\n客户一次下单产生的整体，含一到多个行项。\n_Avoid_: 购买、交易\n\n**行项（Line Item）**:\n订单里的一件商品及其数量。\n_Avoid_: 商品行、明细\n\n**取消（Cancellation）**:\n客户在发货前撤回整张订单；取消后订单不再发货。\n_Avoid_: 退单、作废\n\n**行项撤回（Line Item Withdrawal）**:\n客户在发货前从订单里去掉一个行项；订单其余行项照常发货。作用范围是单个行项，整单范围的对应概念是「取消」。\n_Avoid_: 部分取消、删商品\n"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 1,
+    "casesPassed": 1,
+    "overallScore": 1,
+    "overallPassRate": 1,
+    "meanDelta": 0
+  }
+}
