@@ -118,3 +118,54 @@
 迭代过程：第一轮门评测有 skill 组三条 0/3，逐条读回复后都不是行为缺口——`record-replay-sample-plan` 三次都给了带场景名的清单、规整规则、改前录、否过不录，结尾问的是一道覆盖问题（要不要加「模板没配表」那条），grader 把它数成「没请主人否」（改成「请否或问一道清单依赖的覆盖问题都算」，重跑 3/3）；`canary-release-three-tiers` 三次都指出提示词自身的矛盾（例子模板 1032 不在档 1 白名单里，冒烟打不出 26）并问主人怎么收（提示词补一句「9001 与 1032 配置相同」，重跑 1/3：另两次「档 3 全量」没写停多久，而这正是 `references/release-plan.md` 例子的写法，例子改成「档 3 全量，看满一个完整业务周期再收口」、grader 放宽到档 3 不要求停多久，再跑一次得 1/3，见上）。门评测之后正文只在审查（第 6 阶段）里改了几处，都没有重跑：golden-master 的两处出处措辞；record-replay 与 canary-release 各补一句主人定过的「纠偏留痕」（否了哪一行，原话记在那行下面）；两份 references 例子末尾与 SKILL.md 重复的禁令句删掉；「档」「规整」两个词补英文。
 
 所有结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`。
+
+### 0.1.1（2026-09-19，agent-system#119）：从 workcoding 拆出的三条实践——switch-interview、ears、specification-by-example
+
+三条自建实践，从 `plugins/workcoding` 的 `requirement-insight`、`requirement-translation` 拆出来（活动 skill 在 `plugins/flow-steps` 的 `requirement-elicitation`、`requirement-specification`）。跑法同上，`--case '<skill>-*'` 三条各跑一次，结果目录带 `as119` 标签（`results/2026-09-19-as119-baseline/<skill>/`、`results/2026-09-19-as119-gate/<skill>/`）。规则副本与上面十个用例相同。
+
+| 用例 | skill | 测什么 | 该怎么判 |
+|---|---|---|---|
+| `switch-interview-prepare-questions` | switch-interview | 外来需求是一句「解」，主人下午去问提出方 | 原话一字不改（regex）；给主人的是一句标假设的断言不是问句；问提出方的只问过去发生的事，没有「你想要什么功能」 |
+| `switch-interview-read-answers` | switch-interview | 三个答案原话带回来了，旧草案说「商家在亏钱」 | 用四种力读，每种力指到一句原话或写「未提到」；真正的问题从答案推出来；改草案时旧句留着 |
+| `switch-interview-own-itch` | switch-interview | 念头是主人自己的 | 直接和主人谈，不备「问提出方」的清单、不编一个提出方 |
+| `ears-rewrite` | ears | 复合句、「要快」、带类名表名的三句 | 复合句拆成一句一条规则并标句式；「快」不编数，退回主人或标待定；类名表名不进句子 |
+| `ears-plain-question` | ears | 问五种句式是哪五种 | 直接答，答完不去要主人的需求或词汇表 |
+| `specification-by-example-attach` | specification-by-example | 三句 EARS 加模板 1032 的事实，全局默认金额没给 | 每句有真实入参与算对的期望输出，边界两侧各一条；第三句的默认金额交回主人，不编 |
+| `specification-by-example-cannot-example` | specification-by-example | 「收合理的偏远附加」要配两个例子 | 说这句举不出例子、缺什么，退回主人；不编金额与省份名单 |
+
+正例各带 `tool_used: Skill` 的 with-only 指示器；`switch-interview-prepare-questions` 多一条 regex 判原话一字不改。
+
+#### 基线观察（对照组，不装 skill）
+
+取自 `results/2026-09-19-as119-baseline/<skill>/`（SKILL.md 占位，每用例 1 次，两组，默认模型，14 次运行，353 秒，2.37 美元）：
+
+- `switch-interview-prepare-questions`：对照组没有备问题，先自己分析「按省份粒度撑不住」「和包邮叠加怎么算」这类设计题；两组都没把原话一字不改抄出来（regex 两组都败）。占位组备的问题大多问过去，但夹着「一周做几次」这种问法之外没有断言草案。真缺口：原话与断言。
+- `switch-interview-read-answers`：两组都会用四种力读答案、都从答案里读出「手工补差价下个月没人做」；占位组读完没改草案，反过来问主人「按走法二重写还是先带回去问 A」，旧草案没动。真缺口：读完就改断言、旧句留着。
+- `switch-interview-own-itch`：两组都直接和主人谈（对照组提 Wizard of Oz 测试，占位组走了 `grilling`），只作回归守卫。
+- `ears-rewrite`：两组都拆了复合句、都把 FreightCalc 与 remote_surcharge 从句子里拿掉；对照组把「快」写成「200 毫秒」占位再问口径，占位组写 `<T>` 并说不替主人编、另补了一句原话没有的反面规则。裁判两组都判败，判据的哪一面没过看不到（judge 只给票）；正文里「量词定不了就把这句退回主人要那个数」对准的是这一处。
+- `ears-plain-question`：对照组直接答；占位组答完追问「你手上是不是已经有一条具体需求要改写成 EARS？有的话贴原话过来」——skill 被点到就想接活。真缺口：知识题答完就停。
+- `specification-by-example-attach`：占位组靠描述那句「推不出的数交回主人」就过了；对照组例子都算对、第三句也没编默认金额，但被判败，裁判没给理由，记为噪声。
+- `specification-by-example-cannot-example`：对照组编了一份偏远省份名单（新疆、西藏、青海……）和「首重 15 元续重 8 元封顶 80 元」的计费，标了「占位值」但照样给出两个例子；占位组说举不出、留白交回。真缺口：不编数。
+
+#### 实跑记录
+
+2026-09-19，默认模型（`claude-opus-5`），裁判 sonnet，有 skill 组对对照组，每用例 3 次，阈值 1.0。七个用例的最终数字取各自最后一轮：三条各跑一次的门评测 `results/2026-09-19-as119-gate/<skill>/`（switch-interview 18 次 376 秒 3.21 美元、ears 12 次 149 秒 1.55 美元、specification-by-example 12 次 208 秒 1.89 美元），之后按用例重跑的 `results/2026-09-19-as119-gate-rerun/<用例或 skill>/`（read-answers 1.20、ears-rewrite 0.95、specification-by-example 两用例 1.89 美元）与 `-rerun2/<用例>/`（ears-rewrite 0.97、read-answers 1.20 美元）。连基线在内本票 practices 的评测花费 15.2 美元，在 20 美元以内。
+
+| 用例 | 有 skill 组 | 对照组 | 差值 | 来源 |
+|---|---|---|---|---|
+| `switch-interview-prepare-questions` | 0.89 | 0 | +0.89 | gate |
+| `switch-interview-read-answers` | 0.67 | 0 | +0.67 | rerun2 |
+| `switch-interview-own-itch` | 1.0 | 1.0 | 0 | gate |
+| `ears-rewrite` | 0.33 | 0.67 | −0.33 | rerun2 |
+| `ears-plain-question` | 1.0 | 1.0 | 0 | gate |
+| `specification-by-example-attach` | 0.67 | 0 | +0.67 | rerun |
+| `specification-by-example-cannot-example` | 0.67 | 0 | +0.67 | rerun |
+
+平均差值 +0.37。两条反例两组同分，只作回归守卫（`own-itch` 两组都直接和主人谈；`plain-question` 门评测时占位组追问要需求的毛病在正文「不用」里写明后没再出现）。
+
+迭代过程：门评测第一轮暴露两处正文缺口和一处用例缺口。`read-answers` 有 skill 组 0/3——三次回复都把「运营手工给每单补了差价」读成「钱已经不流血」，根子在 `references/example.md` 用了和用例同一个运费场景、示范的读法本身就这么读错了，三次照抄；`cannot-example` 两次先摆了两张填着猜测入参（西藏／江苏、猜的基础运费）的例子表再说缺什么，裁判按「编了名单」判。三份 `references/` 换成与用例不同的场景（切换访谈与 EARS 换成工单，实例化需求换成会员积分），`specification-by-example` 第 1 步分清「入参自己挑」与「推不出的是规则或常量」、第 3 步改成「退回只写缺什么加一行骨架」，重跑四个用例（rerun）：两个 sbe 用例到 0.67／0，`read-answers` 0.33，`ears-rewrite` 从 0.67 掉到 0。读原文：`read-answers` 两次失败仍把人工顶着的代价当成已解决，第 3 步补一句「用人工顶着的代价算推力，不算已解决」；`ears-rewrite` 三次回复都把第 3 句原话（类名表名）并入第 1 句「不另写」，grader (c) 写的是「rewritten」，裁判在这一面前后不一致，改成「改写或明说并入别句都算对」。再跑（rerun2）：`read-answers` 0.67／0，失败那次已按新正文读对，裁判 FAIL FAIL PASS；`ears-rewrite` 0.33／0.67。
+
+没到 1.0 的四条要说清。`prepare-questions` 0.89：一次 regex 没在最后一条消息里找到原话（agent 把原话写在开头的表里、最后一条只剩问题），行为对，形状差。`read-answers`、`attach`、`cannot-example` 各 0.67：失败那次的回复与过了的两次做的是同一套（四种力各指原话、退回缺数的句子、不编），裁判三票分裂（FAIL PASS FAIL、FAIL FAIL PASS），是裁判抖动。`ears-rewrite` 三轮有 skill 组 0.67、0、0.33，对照组 0.33、0、0.67，而六轮十八条回复的三个动作一样：复合句拆成三句各标句式、「快」退回或留待定占位不编数、类名表名不进句子并入第 1 句——差别只在有的把「配错了」那句也退回、有的把第 1 句写成复合句，`ears-form` 三面合一，任一面被裁判读严就整条败；这条的真差值接近 0（两组都会做），噪声大于差值。按主人定的「评分噪声查明后写进 README，不为 1.0 硬线反复重跑」，到此为止；要不要拆面再跑由主人在第 6 阶段的门上定。
+
+门评测之后正文在审查（第 6 阶段）里改了四处，没有重跑：`ears` 四条 29148 属性补英文原词、词汇表那句改成「项目的领域词汇表」；`specification-by-example` 描述里的 `instead of` 换成 `not`（部署门禁拦词）、第 3 步收下「退回的句子照写、空的只是那个数」这句真源（原在 `requirement-specification` 第 5 步）；`switch-interview` 描述里的 `never` 换成 `not`。所有结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`。
+

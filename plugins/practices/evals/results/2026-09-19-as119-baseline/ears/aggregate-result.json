@@ -1,0 +1,230 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:00:39.229Z",
+  "durationSeconds": 83,
+  "costUsd": 0.5897830000000001,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as119-split-requirements\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "ears-*",
+    "threshold": 1,
+    "concurrency": 3,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as119-split-requirements\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "ears-plain-question",
+      "dir": "evals\\ears-plain-question",
+      "source": "prose",
+      "promptMarkdown": "EARS 需求句式有哪五种？每种给一句例子就行。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 6,
+      "graders": [
+        {
+          "name": "answers-directly",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "PASS if the agent answers the question directly: it lists the five EARS patterns (ubiquitous, event-driven, state-driven, unwanted behaviour, optional feature — or equivalent names) each with an example sentence, and does not ask the owner for a requirement, a glossary or a project to work on.\n\nFAIL if the agent asks the owner to supply requirements or a glossary before answering, or turns the answer into a procedure applied to some project instead of a plain explanation.",
+          "config": {
+            "criteria": "PASS if the agent answers the question directly: it lists the five EARS patterns (ubiquitous, event-driven, state-driven, unwanted behaviour, optional feature — or equivalent names) each with an example sentence, and does not ask the owner for a requirement, a glossary or a project to work on.\n\nFAIL if the agent asks the owner to supply requirements or a glossary before answering, or turns the answer into a procedure applied to some project instead of a plain explanation.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.1093915,
+            "judgeCostUsd": 0.009045999999999998,
+            "durationSeconds": 24,
+            "startedAt": "2026-09-19T09:00:39.292Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-POZnR8\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-directly",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "EARS（Easy Approach to Requirements Syntax，Mavin 等人 2009 年提出）的五种句式：\n\n**1. Ubiquitous（一直成立）** — 没有触发条件，系统始终如此。\n> 收银系统应把每笔交易金额保留到小数点后两位。\n\n**2. Event-driven（事件触发）** — `When <触发>, the <系统> shall <响应>`\n> 当收银员扫描一件商品时，收银系统应把该商品加入当前小票。\n\n**3. State-driven（状态持续）** — `While <状态>, the <系统> shall <响应>`\n> 当收银系统处于离线状态期间，收银系统应把每笔交易写入本地待同步队列。\n\n**4. Optional feature（可选特性）** — `Where <装了这个特性>, the <系统> shall <响应>`\n> 若收银系统配备会员读卡器，收银系统应在结账时读取会员卡号。\n\n**5. Unwanted behaviour（异常/不希望发生的事）** — `If <异常触发>, then the <系统> shall <响应>`\n> 如果扫描到的条码不在商品库中，则收银系统应提示\"商品未找到\"并不改变小票。\n\n另外还有一种 **Complex**，是把上面几种叠起来用，比如 `While <状态>, when <触发>, the <系统> shall <响应>`，严格说算组合而不是第六种。\n\n三条容易踩的：一句只装一条规则；主语用固定的系统名（上面一直是\"收银系统\"，不换成\"它\"\"系统\"）；响应必须是能观察到的结果，不写\"应正确处理\"这种。\n\n你手上是不是已经有一条具体需求要改写成 EARS？有的话贴原话过来，我按 `practices:ears` 那套走一遍。"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.0927415,
+            "judgeCostUsd": 0.0072759999999999995,
+            "durationSeconds": 22,
+            "startedAt": "2026-09-19T09:00:39.292Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-iisdMX\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-directly",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "EARS（Easy Approach to Requirements Syntax，Mavin 等人 2009 年提出）一共五种基本句式，关键词 WHEN/WHILE/IF-THEN/WHERE 一般保留英文，谓语用 shall：\n\n**1. Ubiquitous（无条件，始终成立）**\n`The <system> shall <response>.`\n> 登录服务应对所有用户密码使用 bcrypt 加盐存储。\n\n**2. Event-driven（事件触发，WHEN）**\n`WHEN <trigger>, the <system> shall <response>.`\n> WHEN 用户点击\"提交订单\", 结算服务应在 2 秒内返回订单号。\n\n**3. State-driven（状态持续，WHILE）**\n`WHILE <state>, the <system> shall <response>.`\n> WHILE 设备处于离线模式, 客户端应把写操作写入本地队列。\n\n**4. Unwanted behaviour（异常处理，IF-THEN）**\n`IF <unwanted condition>, THEN the <system> shall <response>.`\n> IF 支付网关 3 次重试仍超时, THEN 订单服务应将订单置为\"支付失败\"并释放库存。\n\n**5. Optional feature（可选特性，WHERE）**\n`WHERE <feature is included>, the <system> shall <response>.`\n> WHERE 部署包含指纹识别模块, 登录服务应提供指纹解锁入口。\n\n补充一句事实：原论文另有一种 **Complex**（组合式），把 WHERE/WHILE/WHEN/IF-THEN 叠起来用，比如 `WHILE <state>, WHEN <trigger>, the <system> shall <response>`，但它是前五种的组合，通常不算第六种独立句式。\n\n要不要我把这五种写成一份可以贴进项目的需求模板文件？"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": -1
+      }
+    },
+    {
+      "name": "ears-rewrite",
+      "dir": "evals\\ears-rewrite",
+      "source": "prose",
+      "promptMarkdown": "按 `ears` 把下面三句改成需求句。你看不到代码；能用的名词只有原话里的和这份词汇表里的。\n\n词汇表：运费模板、目的地省份、偏远省份表、偏远附加、基础运费、商家、运费计算。\n\n原话（产品 A 提的）：\n\n1. 「偏远省份要加钱，而且商家能在模板里配，配错了要提示。」\n2. 「运费计算要快。」\n3. 「FreightCalc 查 remote_surcharge 表决定加多少。」",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "ears-form",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the rewritten requirement sentences.\n\nPASS only if all three hold. (a) The compound sentence 「偏远省份要加钱，而且商家能在模板里配，配错了要提示」 is split into separate sentences, each containing exactly one rule with one \"系统应\" (or equivalent \"the system shall\"), each in a recognisable EARS pattern — ubiquitous, event-driven (当…时), state-driven (在…期间), unwanted behaviour (若…则), or optional feature (若配置了…) — and each labelled with which pattern it is. (b) 「运费计算要快」 is not turned into an invented threshold presented as fact: the agent flags \"快\" as unverifiable and either hands the number back to the owner as a question or writes a placeholder explicitly marked as to be decided by the owner. (c) 「FreightCalc 查 remote_surcharge 表决定加多少」 is rewritten using only nouns from the original words or the given glossary (运费模板、目的地省份、偏远省份表、偏远附加、基础运费、商家、运费计算), with the class name FreightCalc and the table name remote_surcharge removed from the requirement sentence.\n\nFAIL if any sentence still carries two rules, if \"快\" is given a concrete number as though the owner had decided it, or if FreightCalc or remote_surcharge remains inside a requirement sentence.",
+          "config": {
+            "criteria": "Judge the rewritten requirement sentences.\n\nPASS only if all three hold. (a) The compound sentence 「偏远省份要加钱，而且商家能在模板里配，配错了要提示」 is split into separate sentences, each containing exactly one rule with one \"系统应\" (or equivalent \"the system shall\"), each in a recognisable EARS pattern — ubiquitous, event-driven (当…时), state-driven (在…期间), unwanted behaviour (若…则), or optional feature (若配置了…) — and each labelled with which pattern it is. (b) 「运费计算要快」 is not turned into an invented threshold presented as fact: the agent flags \"快\" as unverifiable and either hands the number back to the owner as a question or writes a placeholder explicitly marked as to be decided by the owner. (c) 「FreightCalc 查 remote_surcharge 表决定加多少」 is rewritten using only nouns from the original words or the given glossary (运费模板、目的地省份、偏远省份表、偏远附加、基础运费、商家、运费计算), with the class name FreightCalc and the table name remote_surcharge removed from the requirement sentence.\n\nFAIL if any sentence still carries two rules, if \"快\" is given a concrete number as though the owner had decided it, or if FreightCalc or remote_surcharge remains inside a requirement sentence.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "ears",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.23924850000000003,
+            "judgeCostUsd": 0.009786000000000003,
+            "durationSeconds": 83,
+            "startedAt": "2026-09-19T09:00:39.292Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-5LOepQ\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "ears-form",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说一句实情：`ears` 技能的正文目前是占位符（`SKILL.md` 里只有「正文待写」），所以我按 EARS 原始定义（Mavin, *Easy Approach to Requirements Syntax*）的五种句式写，出手前过了 ISO/IEC/IEEE 29148 的 singular / unambiguous / verifiable / complete 四条。\n\n## 需求句\n\n**来自第 1 句**（一句话里装了三条规则，拆开）\n\n- **R1**（Event-driven，When）：当 **运费计算** 的 **目的地省份** 在 **偏远省份表** 中时，**运费计算** 应当在 **基础运费** 之上加上 **偏远附加**。\n- **R2**（Event-driven，When——补齐反面，否则不 complete）：当 **运费计算** 的 **目的地省份** 不在 **偏远省份表** 中时，**运费计算** 应当不加 **偏远附加**。\n- **R3**（Ubiquitous）：**运费模板** 应当允许 **商家** 配置 **偏远附加**。\n- **R4**（Unwanted behaviour，If-then）：如果 **商家** 在 **运费模板** 中配置的 **偏远附加** 不合法，则 **运费模板** 应当拒绝保存并向 **商家** 提示。\n\n**来自第 2 句**\n\n- **R5**（Event-driven，When）：当 **商家** 发起一次 **运费计算** 时，**运费计算** 应当在 `<T>` 毫秒内返回结果。\n\n**来自第 3 句**\n\n这句不是需求，是实现描述——它说的是\"怎么做\"（查哪张表），不是\"要什么\"。`FreightCalc` 和 `remote_surcharge` 是代码里的名字，按 29148 需求句不该带实现名。我**推断** `FreightCalc` 就是词汇表里的 **运费计算**、`remote_surcharge` 表就是 **偏远省份表**，但我看不到代码，没法核实。去掉实现名之后，它讲的事已经被 R1 覆盖了，不另立一句。\n\n## 两处我留空、没替你填的\n\n- **R4 里的「不合法」**：原话只说\"配错了\"，没说什么算错（负数？非数字？超过 **基础运费**？）。现在这句还不可验证（verifiable 不过），等你给出判定条件我再拆成具体几句。\n- **R5 里的 `<T>`**：原话只有\"要快\"。数字和口径（平均还是 P95、算不算网络往返）我不替你编。\n\n## 一个问题\n\n第 1 句和第 3 句对不上：第 1 句说**加多少由商家在模板里配**，第 3 句说**加多少由 remote_surcharge 表决定**。R1 的写法取决于哪个为准。\n\n举个具体的：商家 A 的 **运费模板** 里 **偏远附加** 填了 8 元，**偏远省份表** 里\"新疆\"那行写着 12 元。一单发往新疆，该加 8 还是 12？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.14840150000000002,
+            "judgeCostUsd": 0.010506000000000003,
+            "durationSeconds": 56,
+            "startedAt": "2026-09-19T09:01:01.126Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-RxUGjy\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "ears-form",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "## 用的规矩\n\n- **EARS**（Easy Approach to Requirements Syntax）：五种句式——泛在（ubiquitous）、事件驱动（event-driven，「当…时」）、状态驱动（state-driven，「在…期间」）、非期望行为（unwanted behavior，「如果…则」）、可选特性（optional feature，「在…的场合」）。\n- **一句一条需求**（single requirement per statement，INCOSE 指南）：原话第 1 句里塞了三件事，拆成三条。\n- **需求不写实现**（implementation-free，ISO/IEC/IEEE 29148 对需求质量的要求）：所以 `FreightCalc`、`remote_surcharge` 这两个词不进需求句。\n\n---\n\n## 改写结果\n\n**第 1 句 →拆成 R1、R2、R3**\n\n| 编号 | 句式 | 需求句 |\n|---|---|---|\n| R1 | 事件驱动 | 当**目的地省份**命中**偏远省份表**时，**运费计算**应在**基础运费**之上加上该**目的地省份**对应的**偏远附加**。 |\n| R2 | 泛在 | **运费模板**应允许**商家**配置**偏远附加**。 |\n| R3 | 非期望行为 | 如果**商家**在**运费模板**中配置的**偏远附加**不合法，则**运费模板**应向**商家**提示错误，并不保存该配置。 |\n\nR3 里「不合法」是我按原话「配错了」填的占位词，**这是假设，不是原话**——具体判定条件（负数？超上限？目的地省份不在偏远省份表里？）需要产品 A 补。\n\n**第 2 句 → R4，暂缺**\n\n原句「要快」不可验证（verifiable 不满足），没法直接落成 EARS。骨架是这样：\n\n> R4（泛在）：**运费计算**应在 \\_\\_\\_ 内返回结果。\n\n横线要填的东西见下面那一题。\n\n**第 3 句 → 不是新需求**\n\n这是推断，不是事实：`FreightCalc` 是组件名、`remote_surcharge` 是表名，两个都是实现方案，不在词汇表里。把方案词去掉之后，这句话剩下的语义是「按偏远省份表里该省份的偏远附加计算加价」——和 R1 完全重合，不产生新的需求条目。\n\n如果产品 A 是想**约束数据来源**（即偏远附加只能来自偏远省份表，不许在运费模板里另写一份），那它是一条独立需求，写成：\n\n| 编号 | 句式 | 需求句 |\n|---|---|---|\n| R5 | 泛在 | **运费计算**所用的**偏远附加**应取自**偏远省份表**。 |\n\nR5 要不要立，取决于产品 A 的本意，我没法从原话判定。\n\n---\n\n## 一个问题\n\n第 2 句的「快」，先看两个具体写法：\n\n- **A**：运费计算应在 200 毫秒内返回结果。（每一次都必须满足，超一次就算不合格）\n- **B**：运费计算应在 95% 的请求中于 200 毫秒内返回结果。（允许 5% 的慢尾巴）\n\n请问按哪种口径写——每次都卡死（A），还是按比例（B）？（阈值数字我先占位成 200 毫秒，等口径定了再一并找产品 A 要真数。）"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0,
+        "passRate": 0,
+        "scoreWithout": 0,
+        "passRateWithout": 0,
+        "delta": 0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 2,
+    "casesPassed": 0,
+    "overallScore": 0,
+    "overallPassRate": 0,
+    "meanDelta": -0.5
+  }
+}

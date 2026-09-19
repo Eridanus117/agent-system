@@ -1,0 +1,470 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:11:02.542Z",
+  "durationSeconds": 149,
+  "costUsd": 1.5460420000000001,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as119-split-requirements\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "ears-*",
+    "threshold": 1,
+    "concurrency": 3,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as119-split-requirements\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "ears-plain-question",
+      "dir": "evals\\ears-plain-question",
+      "source": "prose",
+      "promptMarkdown": "EARS 需求句式有哪五种？每种给一句例子就行。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 6,
+      "graders": [
+        {
+          "name": "answers-directly",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "PASS if the agent answers the question directly: it lists the five EARS patterns (ubiquitous, event-driven, state-driven, unwanted behaviour, optional feature — or equivalent names) each with an example sentence, and does not ask the owner for a requirement, a glossary or a project to work on.\n\nFAIL if the agent asks the owner to supply requirements or a glossary before answering, or turns the answer into a procedure applied to some project instead of a plain explanation.",
+          "config": {
+            "criteria": "PASS if the agent answers the question directly: it lists the five EARS patterns (ubiquitous, event-driven, state-driven, unwanted behaviour, optional feature — or equivalent names) each with an example sentence, and does not ask the owner for a requirement, a glossary or a project to work on.\n\nFAIL if the agent asks the owner to supply requirements or a glossary before answering, or turns the answer into a procedure applied to some project instead of a plain explanation.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.1376645,
+            "judgeCostUsd": 0.007691999999999999,
+            "durationSeconds": 27,
+            "startedAt": "2026-09-19T09:11:02.587Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-dmCeAC\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-directly",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "用的是 EARS（Easy Approach to Requirements Syntax，Mavin 等 2009，Rolls-Royce 提出），五种句式：\n\n| 句式 | 形状 | 例子 |\n|---|---|---|\n| 普适 ubiquitous | 系统应 <行为> | 系统应以 UTC 记录每条交易的时间戳。 |\n| 事件驱动 event-driven | 当 <触发> 时，系统应 <行为> | 当用户提交订单时，系统应生成一个订单编号。 |\n| 状态驱动 state-driven | 在 <状态> 期间，系统应 <行为> | 在离线模式期间，系统应把待发消息存入本地队列。 |\n| 非期望行为 unwanted behaviour | 若 <条件>，则系统应 <行为> | 若密码连续输错 5 次，则系统应锁定该账号 15 分钟。 |\n| 可选特性 optional feature | 若配置了 <特性>，系统应 <行为> | 若配置了双因素认证，系统应在登录时要求一次性验证码。 |\n\n两种以上合在一句里叫复合句（complex），比如「在离线模式期间，当用户提交订单时，系统应…」。惯例是先试着拆成两句，拆不开再复合。\n\n每句只放一个「系统应」，这是分句的判据，也方便后面一句配一条例子。"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.11603549999999999,
+            "judgeCostUsd": 0.008929999999999999,
+            "durationSeconds": 32,
+            "startedAt": "2026-09-19T09:11:02.587Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-g0s5Yt\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-directly",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: FAIL PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  true,
+                  true
+                ],
+                "evidence": "EARS(Easy Approach to Requirements Syntax，Mavin 等人 2009 年在 RE'09 提出)共五种句式,关键词 While / When / Where / If-Then 用英文原词不译:\n\n**1. Ubiquitous(无条件)** — 一直成立的规则,没有前缀。\n> The 计费系统 shall 把所有金额以人民币分为单位存储。\n\n**2. Event-driven(事件触发)** — `When <触发事件>, the <系统> shall <响应>`。\n> When 用户提交订单, the 订单服务 shall 在 3 秒内返回订单号。\n\n**3. State-driven(状态持续)** — `While <处于某状态>, the <系统> shall <响应>`。触发条件是一段持续的状态,不是瞬时事件。\n> While 车辆处于倒车档, the 影像系统 shall 显示后视画面。\n\n**4. Unwanted behaviour(异常/非期望情况)** — `If <不期望的条件>, then the <系统> shall <响应>`。专门用来写错误、故障、越界。\n> If 支付网关连续 3 次超时, then the 订单服务 shall 把订单置为「支付待确认」并通知运营。\n\n**5. Optional feature(可选特性)** — `Where <包含某特性/配置>, the <系统> shall <响应>`。用于只有装了某模块/开了某配置才生效的规则。\n> Where 部署了指纹模块, the 门禁系统 shall 允许用指纹解锁。\n\n补充两条事实:原论文还提到把上面几种叠起来的 **Complex(复合)** 句式(如 `While ... When ..., the ... shall ...`),但它不算独立的第六种,是前五种的组合。另外一条句子只装一条规则,出现「并且/或者」通常说明该拆成两句。\n\n要真动手把某条需求写成 EARS 句子(含名词对词汇表、过 ISO 29148 四条属性),可以用 `/practices:ears`。你现在手头有要落笔的需求吗?"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.1012685,
+            "judgeCostUsd": 0.004698,
+            "durationSeconds": 22,
+            "startedAt": "2026-09-19T09:11:02.587Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-zAm34U\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-directly",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "EARS（Easy Approach to Requirements Syntax，Mavin 等人 2009 年提出）共五种句式，靠开头的关键词区分：\n\n**1. Ubiquitous（无条件）** — 一直成立，没有触发词\n> The system shall 把每笔交易记入审计日志。\n\n**2. Event-driven（事件触发）** — `When`\n> **When** 用户提交订单，the system shall 在 2 秒内返回订单号。\n\n**3. State-driven（状态持续）** — `While`\n> **While** 设备处于维护模式，the system shall 拒绝所有写入请求。\n\n**4. Unwanted behaviour（异常/不期望行为）** — `If … then`\n> **If** 支付网关 30 秒无响应，**then** the system shall 把订单标记为「待确认」并通知用户。\n\n**5. Optional feature（可选特性）** — `Where`\n> **Where** 设备装有指纹模块，the system shall 提供指纹解锁。\n\n补充一条事实：EARS 原文还定义了 **Complex**，就是上面几种的组合（如 `While … When … the system shall …`），但它不算第六种独立句式，是前五种的叠加。\n\n区分要点：`When` 是瞬时事件，`While` 是持续状态，`If` 专留给异常和不期望的情况，`Where` 只说产品配置/变体，不说运行时条件。\n\n要不要我拿你手上某条真实需求，按这五种改写一遍？"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.10104450000000001,
+            "judgeCostUsd": 0.010124000000000001,
+            "durationSeconds": 27,
+            "startedAt": "2026-09-19T09:11:24.773Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-NBnuNX\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-directly",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "EARS（Easy Approach to Requirements Syntax，Mavin 等人在 Rolls-Royce 提出）一共五种句式，靠关键词区分：\n\n**1. Ubiquitous（无条件，一直成立）**\n格式：`The <系统> shall <行为>.`\n例：The control unit shall maintain the cabin pressure within 0.2 bar of the target value.\n\n**2. Event-driven（事件触发，用 WHEN）**\n格式：`WHEN <触发事件> the <系统> shall <行为>.`\n例：WHEN the user presses the start button, the pump shall begin filling the tank.\n\n**3. State-driven（状态持续期间，用 WHILE）**\n格式：`WHILE <处于某状态> the <系统> shall <行为>.`\n例：WHILE the vehicle is in reverse gear, the display shall show the rear camera feed.\n\n**4. Unwanted behaviour（异常/不期望情况，用 IF … THEN）**\n格式：`IF <不期望的触发>, THEN the <系统> shall <行为>.`\n例：IF the sensor signal is lost for more than 2 seconds, THEN the controller shall enter safe mode and log a fault.\n\n**5. Optional feature（仅当包含某可选特性，用 WHERE）**\n格式：`WHERE <该特性被包含> the <系统> shall <行为>.`\n例：WHERE the vehicle is fitted with a heated steering wheel, the HMI shall provide a heating on/off control.\n\n两点补充说明（这是事实，不是我的推断）：\n- 原论文还提到 **Complex**（复合）写法，就是把上面的关键词叠起来用，例如 `WHILE <状态>, WHEN <事件>, the <系统> shall <行为>`。它一般不算第六种独立句式，只是组合。\n- 关键词顺序固定为 WHILE → WHEN → 主句，这是 EARS 的约定，照着写能让需求好解析、也便于逐条做可验证性检查。\n\n需要我把这五种整理成一份可直接放进仓库的模板文件（比如 `docs/requirements-template.md`，带空白句式和填写示例）吗？"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.0983845,
+            "judgeCostUsd": 0.012114,
+            "durationSeconds": 22,
+            "startedAt": "2026-09-19T09:11:30.082Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-bBaT6N\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-directly",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "用的是 EARS（Easy Approach to Requirements Syntax），Mavin 等人 2009 年在 Rolls-Royce 提出的需求写法。五种句式如下（关键词是固定的英文模板词）：\n\n**1. Ubiquitous（无条件恒常）**\n没有触发条件，系统一直要满足。\n> The `<system>` shall `<response>`.\n> 例：订单服务应将所有金额以分为单位存储。\n\n**2. Event-driven（事件触发）**\n某件事发生的那一刻要做什么。\n> WHEN `<trigger>`, the `<system>` shall `<response>`.\n> 例：WHEN 用户提交支付请求时，系统应在 3 秒内返回支付结果。\n\n**3. State-driven（状态持续）**\n处在某个状态期间一直成立，区别于事件的\"一瞬间\"。\n> WHILE `<state>`, the `<system>` shall `<response>`.\n> 例：WHILE 账户处于冻结状态期间，系统应拒绝所有转出操作。\n\n**4. Unwanted behaviour（异常/不期望情况）**\n错误、故障、非法输入的处理。\n> IF `<unwanted condition>`, THEN the `<system>` shall `<response>`.\n> 例：IF 连续 5 次密码错误，THEN 系统应锁定该账户 30 分钟。\n\n**5. Optional feature（可选特性）**\n只有装了/开了某个特性的配置才适用。\n> WHERE `<feature is included>`, the `<system>` shall `<response>`.\n> 例：WHERE 启用了双因素认证，系统应在登录时要求输入一次性验证码。\n\n补充一条事实性说明：EARS 原文除这五种外还定义了 **Complex**（复合句式），即把 WHILE / WHEN / IF-THEN 等叠加使用，例如\"WHILE 处于维护模式，WHEN 收到写请求时，系统应返回 503\"。所以严格说是\"五种基本句式 + 一种组合\"，平时讲\"五种\"指的就是上面这五条。"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.0920795,
+            "judgeCostUsd": 0.005333999999999995,
+            "durationSeconds": 25,
+            "startedAt": "2026-09-19T09:11:34.607Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-ey98Gj\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "answers-directly",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "EARS（Easy Approach to Requirements Syntax，Mavin 等人 2009 年在 Rolls-Royce 提出）的五种基本句式：\n\n**1. 普遍型 Ubiquitous** — 一直成立，没有触发条件\n> 系统 shall 把所有用户密码以 bcrypt 加盐哈希后存储。\n\n**2. 事件驱动型 Event-driven**（WHEN）— 某事发生的瞬间\n> WHEN 用户提交登录表单，系统 shall 在 2 秒内返回认证结果。\n\n**3. 状态驱动型 State-driven**（WHILE）— 在某状态持续期间\n> WHILE 设备处于离线模式，系统 shall 把待发送请求写入本地队列。\n\n**4. 非期望行为型 Unwanted behaviour**（IF…THEN）— 错误、故障、异常\n> IF 连续 5 次密码错误，THEN 系统 shall 锁定该账号 15 分钟。\n\n**5. 可选特性型 Optional feature**（WHERE）— 只在含某配置/选装件的产品上成立\n> WHERE 产品安装了指纹传感器，系统 shall 提供指纹解锁选项。\n\n另外还有一个**复合型 Complex**，把上面几种关键词叠加用，比如 `WHILE <状态>, WHEN <触发>, 系统 shall <响应>`，通常不算进\"五种\"里。\n\n两个写作惯例：关键词 WHEN/WHILE/IF/WHERE 大写，响应部分统一用 `shall`（表示强制约束，区别于 should/may）；一条需求只写一个 shall，方便逐条验证。\n\n要不要我按这个句式，把你手头某份需求文档改写一遍？"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    },
+    {
+      "name": "ears-rewrite",
+      "dir": "evals\\ears-rewrite",
+      "source": "prose",
+      "promptMarkdown": "按 `ears` 把下面三句改成需求句。你看不到代码；能用的名词只有原话里的和这份词汇表里的。\n\n词汇表：运费模板、目的地省份、偏远省份表、偏远附加、基础运费、商家、运费计算。\n\n原话（产品 A 提的）：\n\n1. 「偏远省份要加钱，而且商家能在模板里配，配错了要提示。」\n2. 「运费计算要快。」\n3. 「FreightCalc 查 remote_surcharge 表决定加多少。」",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "ears-form",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the rewritten requirement sentences.\n\nPASS only if all three hold. (a) The compound sentence 「偏远省份要加钱，而且商家能在模板里配，配错了要提示」 is split into separate sentences, each containing exactly one rule with one \"系统应\" (or equivalent \"the system shall\"), each in a recognisable EARS pattern — ubiquitous, event-driven (当…时), state-driven (在…期间), unwanted behaviour (若…则), or optional feature (若配置了…) — and each labelled with which pattern it is. (b) 「运费计算要快」 is not turned into an invented threshold presented as fact: the agent flags \"快\" as unverifiable and either hands the number back to the owner as a question or writes a placeholder explicitly marked as to be decided by the owner. (c) 「FreightCalc 查 remote_surcharge 表决定加多少」 is rewritten using only nouns from the original words or the given glossary (运费模板、目的地省份、偏远省份表、偏远附加、基础运费、商家、运费计算), with the class name FreightCalc and the table name remote_surcharge removed from the requirement sentence.\n\nFAIL if any sentence still carries two rules, if \"快\" is given a concrete number as though the owner had decided it, or if FreightCalc or remote_surcharge remains inside a requirement sentence.",
+          "config": {
+            "criteria": "Judge the rewritten requirement sentences.\n\nPASS only if all three hold. (a) The compound sentence 「偏远省份要加钱，而且商家能在模板里配，配错了要提示」 is split into separate sentences, each containing exactly one rule with one \"系统应\" (or equivalent \"the system shall\"), each in a recognisable EARS pattern — ubiquitous, event-driven (当…时), state-driven (在…期间), unwanted behaviour (若…则), or optional feature (若配置了…) — and each labelled with which pattern it is. (b) 「运费计算要快」 is not turned into an invented threshold presented as fact: the agent flags \"快\" as unverifiable and either hands the number back to the owner as a question or writes a placeholder explicitly marked as to be decided by the owner. (c) 「FreightCalc 查 remote_surcharge 表决定加多少」 is rewritten using only nouns from the original words or the given glossary (运费模板、目的地省份、偏远省份表、偏远附加、基础运费、商家、运费计算), with the class name FreightCalc and the table name remote_surcharge removed from the requirement sentence.\n\nFAIL if any sentence still carries two rules, if \"快\" is given a concrete number as though the owner had decided it, or if FreightCalc or remote_surcharge remains inside a requirement sentence.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "ears",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.153534,
+            "judgeCostUsd": 0.007089999999999999,
+            "durationSeconds": 35,
+            "startedAt": "2026-09-19T09:11:51.301Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-rs9Tyr\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "ears-form",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: FAIL PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  true,
+                  true
+                ],
+                "evidence": "用的是 EARS（Easy Approach to Requirements Syntax）的五种句式，出手前过了 ISO/IEC/IEEE 29148 的四条属性（可验证、单一、无歧义、必要）。\n\n## 需求句\n\n1. 当目的地省份在运费模板的偏远省份表中时，系统应在基础运费上加该省份的偏远附加。（事件驱动 event-driven）\n2. 系统应允许商家在运费模板里维护偏远省份表。（普适 ubiquitous）\n3. 若商家保存的偏远省份表里有同一省份两条，则系统应拒绝保存并提示商家。（非期望行为 unwanted behaviour）\n\n## 没写成句子的\n\n- **第 3 句原话**「FreightCalc 查 remote_surcharge 表决定加多少」说的是实现：`FreightCalc` 是类名、`remote_surcharge` 是表名，都不进需求句。它要的系统行为已经在上面第 1 句里，不另写。\n- **第 2 句原话**「运费计算要快」**退回**：缺一个可测的量，配不出例子，破了「可验证」这条。\n\n## 有一处我按假设写了，请你否\n\n原话「配错了要提示」没说什么算配错。我按**同一省份填了两条**解释，写成了上面第 3 句。如果你那边「配错」指的是别的（比如附加金额填了负数、省份名不在标准省份里），这句得重写。\n\n## 一个问题\n\n「运费计算要快」我需要一个数才能写成句子。比如填成这样：\n\n> 当运费计算收到一次计算请求时，系统应在 200ms（P95）内返回运费。（事件驱动 event-driven）\n\n这个数产品 A 要的是多少？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.17891350000000003,
+            "judgeCostUsd": 0.011078000000000005,
+            "durationSeconds": 43,
+            "startedAt": "2026-09-19T09:11:52.337Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-PwJkcS\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "ears-form",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "用 EARS（Easy Approach to Requirements Syntax）写，出手前过 ISO/IEC/IEEE 29148 的四条属性（可验证、单一、无歧义、必要）。\n\n## 需求句\n\n1. 当目的地省份在运费模板的偏远省份表中时，系统应在基础运费上加该目的地省份的偏远附加。（事件驱动 event-driven）\n2. 系统应允许商家在运费模板中维护偏远省份表。（普适 ubiquitous）\n3. 若商家保存的偏远省份表中同一目的地省份出现两条，则系统应拒绝保存并提示商家。（非期望行为 unwanted behaviour）\n\n## 退回一句\n\n**「运费计算要快」** —— 不可验证（29148 verifiable）：「快」不是可测的量，配不出例子，也写不成能判红绿的句子。\n\n缺两样，得由主人给：\n- 一个数和它的统计口径（比如「p99 ≤ 200ms」还是「平均 ≤ 50ms」）；\n- 量在哪儿测（运费计算这一步本身，还是商家从点提交到看见运费的整条链路）。\n\n数一到手，句子就是：**当商家发起运费计算时，系统应在 <数> 内返回结果。**（事件驱动）\n\n## 不写成句的一句\n\n**「FreightCalc 查 remote_surcharge 表决定加多少」** —— 这句说的是实现（类名、表名），不是系统可观察的行为；它要的行为已经在第 1 句里了，不另写。类名表名也不进句子。\n\n## 我替你解释过的地方，请否\n\n- **「配错」按「同一目的地省份在偏远省份表里出现两条」解释**（第 3 句）。原话没说配错指什么——也可能是偏远附加填了负数、填了非省份的值、或者省份名不在标准省份列表里。要是还有别的错法，第 3 句得按每种错法各写一句。\n- **假设偏远附加是偏远省份表的一部分**（所以第 2 句一句就盖住了「配省份」和「配加多少」）。要是偏远附加在模板里另存一处，第 2 句要拆成两句。\n\n## 一个问题\n\n比如主人说「p99 ≤ 200ms，测运费计算这一步，不含网络往返」，我就能把那句补全成可验证的。\n\n**「快」的那个数和测量点，是多少、量在哪一段？**"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.157879,
+            "judgeCostUsd": 0.013368000000000005,
+            "durationSeconds": 40,
+            "startedAt": "2026-09-19T09:11:59.632Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-PaYJRW\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "ears-form",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 EARS（Easy Approach to Requirements Syntax，Mavin 等 2009）写，出手前过了 ISO/IEC/IEEE 29148 的四条属性（可验证、单一、无歧义、必要）。\n\n## 需求句\n\n1. 当目的地省份在运费模板的偏远省份表中时，系统应在基础运费上加该省份的偏远附加。（事件驱动 event-driven）\n2. 系统应允许商家在运费模板里维护偏远省份表。（普适 ubiquitous）\n3. 若商家保存的偏远省份表里有同一省份两条，则系统应拒绝保存并提示商家。（非期望行为 unwanted behaviour）\n\n## 退回的句子\n\n**「运费计算要快」——退回，缺一个数。**\n\n破的是「可验证」这条：「快」没法配例子，也没法判一次运费计算算过还是算不过。\n\n## 没写成句的\n\n**「FreightCalc 查 remote_surcharge 表决定加多少」**——`FreightCalc` 是类名、`remote_surcharge` 是表名，都是实现，不进需求句。它要的系统行为已经在第 1 句里了，不另写。\n\n## 标出来的假设\n\n第 3 句里的「配错」是我解释的。原话只说「配错了要提示」，没说什么叫配错；我按「同一省份在表里出现两次」写。如果您说的配错是别的（比如附加金额填成负数、省份名不在标准省份列表里），这句得改或者拆成几句，请否。\n\n---\n\n补第 2 句退回的那个数，我需要一个可测的口径。举个例子，写成这样就能配例子了：\n\n> 当商家提交一次运费计算时，系统应在 200 毫秒内返回结果（P99，在网关入口测量，不含商家到网关的网络时间，在每秒 500 次运费计算的负载下）。\n\n这里的 200 毫秒、P99、每秒 500 次都是我编的占位。**您那边这三个数分别是多少？**（延迟上限、百分位、负载）"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.12548350000000003,
+            "judgeCostUsd": 0.009197999999999998,
+            "durationSeconds": 45,
+            "startedAt": "2026-09-19T09:12:26.621Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-elAX11\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "ears-form",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 **EARS（Easy Approach to Requirements Syntax）** 改写。EARS 只有五种句式，我在每条后面标了用的哪种。\n\n## 句 1 拆成三条\n\n原话里塞了三件事（加钱、可配、配错提示），EARS 一条只讲一件事。\n\n**R1**（Event-driven：当…时，系统应…）\n> 当运费计算的目的地省份在偏远省份表中时，运费计算应在基础运费之外加上该省份对应的偏远附加。\n\n**R2**（Ubiquitous：系统应…）\n> 运费模板应允许商家配置偏远附加。\n\n**R3**（Unwanted behavior：如果…则系统应…）\n> 如果商家在运费模板中配置的偏远附加不合法，则运费模板应拒绝保存该配置，并提示不合法的原因。\n\n## 句 2：暂时写不成合格的需求句\n\n「快」不可验证。按 **ISO/IEC/IEEE 29148** 的可验证性（verifiable requirement）要求，性能需求必须带数字和测量口径。骨架在这儿，空着一处：\n\n**R4**（Event-driven）\n> 当收到运费计算请求时，运费计算应在 **〈T〉** 毫秒内返回结果。\n\n## 句 3：这不是需求，是实现方案\n\n`FreightCalc`、`remote_surcharge` 是代码里的名字，不在词汇表里。**这是我的推断，未经核对**（我看不到代码）：`FreightCalc` ≈ 运费计算，`remote_surcharge` 表 ≈ 偏远省份表。\n\n按 **implementation-free requirements**（需求写 what，不写 how）这条实践，句 3 在需求层面的内容已经被 R1 完整覆盖了 —— 「查哪张表」属于设计文档，不该进需求。所以句 3 不产出新需求句，只建议把「偏远附加金额取自偏远省份表」记到设计说明里。\n\n## 我按假设填的空（供你否决）\n\n- R1 假定一个目的地省份最多命中一条偏远附加，不叠加。\n- R3 的「不合法」我没定义，因为原话没说。\n- R1 假定偏远附加是加在基础运费之上，不参与折扣或其它计算。\n\n---\n\n只问一个问题，关于 R4 的 **〈T〉**：\n\n业界通常写成「p95 ≤ 200ms」这种形式 —— 即 100 次运费计算里有 95 次在 200 毫秒内返回，而不是要求每一次都达标（因为单次最慢值几乎不可能保证）。产品 A 说「要快」的时候，有没有给过一个具体数字或者参照物（比如「别让下单页卡住」「和现在的结算接口差不多」）？"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.1279735,
+            "judgeCostUsd": 0.008807999999999983,
+            "durationSeconds": 47,
+            "startedAt": "2026-09-19T09:12:35.652Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-naVSk0\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "ears-form",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "## 改写结果\n\n原话 1 混了三件事，按 EARS 拆成三条（一条需求只说一件事，便于逐条验收）：\n\n**R1（Event-driven）**\n当运费计算的目的地省份命中偏远省份表时，运费计算应在基础运费之上叠加该省份的偏远附加。\n\n**R2（Ubiquitous）**\n运费模板应允许商家按目的地省份配置偏远附加。\n\n**R3（Unwanted behavior）**\n如果商家提交的偏远附加配置不合法，则运费模板应拒绝保存该配置，并向商家提示不合法的目的地省份及原因。\n\n**R4（Ubiquitous，阈值待定）**\n运费计算应在 **〈TBD〉** 内返回结果。\n— 「快」不可验证，没有数字我不编，见下面的问题。\n\n**R5（Ubiquitous）**\n运费计算应以偏远省份表作为偏远附加取值的唯一来源。\n\n---\n\n## 说明\n\n- 用的是 **EARS（Easy Approach to Requirements Syntax）**，五种模式里这次用到 Ubiquitous / Event-driven / Unwanted behavior 三种。\n- R5 这条还用了 **implementation-free requirements**（IEEE 29148 / INCOSE 对需求「方案无关」的要求）：原话 3 说的是实现——某个类去查某张物理表——不是需求。需求只能说「偏远附加从偏远省份表取」，至于谁去查、表叫什么，是设计阶段的事。\n- **推断，需产品 A 确认**：我把 `FreightCalc` 对应成词汇表里的「运费计算」、`remote_surcharge` 对应成「偏远省份表」。我看不到代码，这纯属名字上的对应猜测，可能 `remote_surcharge` 实际存的是别的东西。\n- **事实**：R3 里「配错」的判定规则原话没给，我只写了「不合法」这个占位，后续得单列一组规则（比如附加为负数、省份不在可选范围、同一省份重复配置）。\n\n---\n\n## 一个问题\n\nR4 那个 TBD，举两个具体写法：\n\n- A：**运费计算应在 200ms 内返回结果**（每一次都算，超一次就算不达标）\n- B：**运费计算应使 95% 的请求在 200ms 内返回结果**（按百分位算，允许长尾）\n\n这两种验收方式差别很大——A 要盯最坏情况，B 只盯大多数。产品 A 说的「快」，要按哪种写，数字定多少？"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.1557815,
+            "judgeCostUsd": 0.009815999999999991,
+            "durationSeconds": 52,
+            "startedAt": "2026-09-19T09:12:39.281Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-6crJEH\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "ears-form",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说三句的性质（事实 / 推断分开）：\n\n- **事实**：第 1 句混了 3 条需求（加钱、可配置、错误提示）；第 2 句没有可验证的数字；第 3 句说的是实现手段，不是需求。\n- **推断（未验证）**：`FreightCalc` ≈ 词汇表里的「运费计算」，`remote_surcharge` 表 ≈「偏远省份表」。我看不到代码，这个对应关系没核实过。\n\n用的是 **EARS（Easy Approach to Requirements Syntax）**，外加两条常规做法：需求只写「做什么」不写「怎么做」（solution-free requirement），以及每条需求都要可验证（verifiable requirement，ISO/IEC/IEEE 29148）。\n\n---\n\n### 第 1 句 →拆成 4 条\n\n**R1（Event-driven）**\n当 目的地省份 命中 偏远省份表 时，运费计算 应在 基础运费 之上加收 偏远附加。\n\n**R2（Event-driven，补反面）**\n当 目的地省份 未命中 偏远省份表 时，运费计算 应只收取 基础运费，不加收 偏远附加。\n\n**R3（Ubiquitous）**\n运费模板 应允许 商家 配置 偏远附加。\n\n**R4（Unwanted behaviour）**\n如果 商家 在 运费模板 中配置的 偏远附加 不合法，则 运费模板 应拒绝保存，并向 商家 提示不合法的具体项。\n> 「不合法」的判定还没定义，见下面的问题。\n\n---\n\n### 第 2 句 → 1 条，带占位\n\n**R5（Ubiquitous）**\n运费计算 应在 **`<T>` 毫秒**内返回结果（统计口径：`<P95 / P99>`）。\n\n「快」不可验证，EARS 写不出来。我先按 **P95 ≤ 200 ms** 这个假设往下推，等产品 A 给数再替换——这不是我定的数，只是占位。\n\n---\n\n### 第 3 句 → 1 条需求 + 1 条设计注释\n\n**R6（Ubiquitous）**\n运费计算 应以 偏远省份表 作为 偏远附加 取值的唯一来源。\n\n`FreightCalc`、`remote_surcharge` 是实现层的名字，词汇表里没有，不进需求句，放设计文档里当「R6 的实现方式」记。这样以后换表名、加缓存，不用动需求。\n\n---\n\n### 一个问题\n\nR4 卡在「配错了」没定义。举几个具体情形：\n\n- 偏远附加填了负数，比如 -5 元\n- 偏远附加填了 0\n- 同一个省份在一份 运费模板 里配了两次\n- 给一个不在 偏远省份表 里的省份配了 偏远附加\n- 偏远附加 比 基础运费 还高，比如基础运费 8 元、偏远附加 300 元\n\n这几种里，哪些算「配错了」要拦下来提示？（还是说其中有些只提醒、仍允许保存？）"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.6666666666666666,
+        "passRate": 0.6666666666666666,
+        "scoreWithout": 0.3333333333333333,
+        "passRateWithout": 0.3333333333333333,
+        "delta": 0.3333333333333333
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 2,
+    "casesPassed": 1,
+    "overallScore": 0.8333333333333333,
+    "overallPassRate": 0.8333333333333333,
+    "meanDelta": 0.16666666666666666
+  }
+}

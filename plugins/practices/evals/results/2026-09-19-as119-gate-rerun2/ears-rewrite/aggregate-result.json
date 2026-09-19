@@ -1,0 +1,268 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:25:04.492Z",
+  "durationSeconds": 107,
+  "costUsd": 0.9664975,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as119-split-requirements\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "ears-rewrite",
+    "threshold": 1,
+    "concurrency": 3,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as119-split-requirements\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "ears-rewrite",
+      "dir": "evals\\ears-rewrite",
+      "source": "prose",
+      "promptMarkdown": "按 `ears` 把下面三句改成需求句。你看不到代码；能用的名词只有原话里的和这份词汇表里的。\n\n词汇表：运费模板、目的地省份、偏远省份表、偏远附加、基础运费、商家、运费计算。\n\n原话（产品 A 提的）：\n\n1. 「偏远省份要加钱，而且商家能在模板里配，配错了要提示。」\n2. 「运费计算要快。」\n3. 「FreightCalc 查 remote_surcharge 表决定加多少。」",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "ears-form",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the rewritten requirement sentences.\n\nPASS only if all three hold. (a) The compound sentence 「偏远省份要加钱，而且商家能在模板里配，配错了要提示」 is split into separate sentences, each containing exactly one rule with one \"系统应\" (or equivalent \"the system shall\"), each in a recognisable EARS pattern — ubiquitous, event-driven (当…时), state-driven (在…期间), unwanted behaviour (若…则), or optional feature (若配置了…) — and each labelled with which pattern it is. (b) 「运费计算要快」 is not turned into an invented threshold presented as fact: the agent flags \"快\" as unverifiable and either hands the number back to the owner as a question or writes a placeholder explicitly marked as to be decided by the owner. (c) 「FreightCalc 查 remote_surcharge 表决定加多少」 does not survive as a requirement sentence containing the class name FreightCalc or the table name remote_surcharge: either it is rewritten with glossary nouns only (运费模板、目的地省份、偏远省份表、偏远附加、基础运费、商家、运费计算), or the agent explicitly sets it aside as implementation whose behaviour is already covered by another sentence — both are correct.\n\nFAIL if any sentence still carries two rules, if \"快\" is given a concrete number as though the owner had decided it, or if FreightCalc or remote_surcharge remains inside a requirement sentence.",
+          "config": {
+            "criteria": "Judge the rewritten requirement sentences.\n\nPASS only if all three hold. (a) The compound sentence 「偏远省份要加钱，而且商家能在模板里配，配错了要提示」 is split into separate sentences, each containing exactly one rule with one \"系统应\" (or equivalent \"the system shall\"), each in a recognisable EARS pattern — ubiquitous, event-driven (当…时), state-driven (在…期间), unwanted behaviour (若…则), or optional feature (若配置了…) — and each labelled with which pattern it is. (b) 「运费计算要快」 is not turned into an invented threshold presented as fact: the agent flags \"快\" as unverifiable and either hands the number back to the owner as a question or writes a placeholder explicitly marked as to be decided by the owner. (c) 「FreightCalc 查 remote_surcharge 表决定加多少」 does not survive as a requirement sentence containing the class name FreightCalc or the table name remote_surcharge: either it is rewritten with glossary nouns only (运费模板、目的地省份、偏远省份表、偏远附加、基础运费、商家、运费计算), or the agent explicitly sets it aside as implementation whose behaviour is already covered by another sentence — both are correct.\n\nFAIL if any sentence still carries two rules, if \"快\" is given a concrete number as though the owner had decided it, or if FreightCalc or remote_surcharge remains inside a requirement sentence.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "ears",
+            "arm": "with-only"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.1936005,
+            "judgeCostUsd": 0.007644000000000005,
+            "durationSeconds": 52,
+            "startedAt": "2026-09-19T09:25:04.546Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-bBm6By\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "ears-form",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "按 EARS 写出来的句子如下。名词只用了原话和词汇表里的。\n\n## 能出手的句子\n\n1. **当运费计算的目的地省份出现在偏远省份表中时，系统应在基础运费之上加上运费模板里配置的偏远附加。**（事件驱动 event-driven；含一处假设——见下面的提问）\n2. **系统应允许商家在运费模板里配置偏远附加。**（普适 ubiquitous）\n\n## 退回的句子（各缺一样东西）\n\n3. **若商家在运费模板里配置的偏远附加不合法，则系统应拒绝该配置并提示商家。**（非期望行为 unwanted behaviour）\n   缺的是「不合法」的判定清单：负数算不算、空值算不算、有没有上限。现在这句过不了 ISO 29148 的**可验证 verifiable**，因为配不出例子。\n4. **当商家发起运费计算时，系统应在 N 毫秒内返回结果。**（事件驱动 event-driven）\n   原话「要快」不可验证。缺 N 和测量口径（P95 还是均值、在多少并发下测）。这个数我推不出来，得主人给。\n\n## 不写成需求的一句\n\n原话 3「FreightCalc 查 remote_surcharge 表决定加多少」说的是实现——类名和表名不进需求句。它要的可观察行为已经在第 1 句里了，不另写。\n\n---\n\n不过第 1 句和原话 3 打架，这一处我按假设写了：**偏远省份表只负责「哪些省份算偏远」，偏远附加的金额取自商家的运费模板**。原话 3 听起来像金额也在表里。\n\n具体一点：一单发往西藏，商家 A 的运费模板里偏远附加配了 8 元，偏远省份表里西藏那行写的是 12 元。这单基础运费之上应该加 8 还是 12？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.1650705,
+            "judgeCostUsd": 0.007782,
+            "durationSeconds": 39,
+            "startedAt": "2026-09-19T09:25:04.546Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-FznoV5\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "ears-form",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "## 需求句（EARS）\n\n```\n1. 当运费计算的目的地省份出现在偏远省份表中时，系统应在基础运费之上加上偏远附加。\n   （事件驱动 event-driven）\n\n2. 系统应允许商家在运费模板中设置偏远附加。\n   （普适 ubiquitous）\n\n3. 若商家保存运费模板时填写的偏远附加不合法，则系统应拒绝保存该运费模板并提示不合法之处。\n   （非期望行为 unwanted behaviour；「不合法」的判定规则未定，见下方缺口）\n\n4. 「运费计算要快」——退回。\n   缺：快到什么程度。需要三个数：指标（平均还是 P99）、阈值（多少毫秒）、在什么负载下测。\n   （29148 可验证 verifiable：「快」配不出一条能判对错的例子）\n\n5. 「FreightCalc 查 remote_surcharge 表决定加多少」——不另写句。\n   类名和表名是实现，它描述的可观察行为已经在第 1 句里。\n```\n\n句 3 的缺口：原话只说「配错了要提示」，但「错」指什么没说——负数？超过基础运费？省份填了偏远省份表里没有的？这一条我按「有一套校验规则、违反就拒存」写了，规则本身等你给；给了之后这句会裂成每条规则一句。\n\n## 一个挡路的矛盾\n\n第 1 句和第 5 句打架，我没法自己定。\n\n具体点说：一笔发往新疆的订单，基础运费 10 元。商家在自己的运费模板里把偏远附加填成 8 元，而偏远省份表里这个省写的是 12 元。这单最后收 18 还是 22？\n\n三种可能：模板值覆盖表值（表只是默认）、表值为准（模板那栏其实是开关不是金额）、或者两者叠加。选哪种会让第 1、2 句的写法完全不同，所以我停在这里等你一句话。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.185804,
+            "judgeCostUsd": 0.008856,
+            "durationSeconds": 48,
+            "startedAt": "2026-09-19T09:25:04.546Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-A2fgmd\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "ears-form",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "按 EARS 写完了。三句原话拆成 4 条规则，其中 2 条得退回。\n\n## 需求句\n\n1. 当商家发起一次运费计算时，若目的地省份在偏远省份表中，则系统应在基础运费之上加上偏远附加。（复合：事件驱动＋条件。试过拆成两句，但「加偏远附加」这个行为离不开「省份在偏远省份表中」这个前提，拆开任一句都不成立，所以复合）\n2. 系统应允许商家在运费模板中配置偏远附加。（普适 ubiquitous）\n3. 【退回】「配错了要提示」——缺「配错」的判定规则。要判的是负数？非数字？超过某个上限？还是配了一个不在偏远省份表里的省份？定下来我才能写成一句非期望行为（unwanted behaviour），形如「若商家在运费模板中配置的偏远附加 <不合法的定义>，则系统应拒绝保存该运费模板并提示 <提示内容>」。\n4. 【退回】「运费计算要快」——缺可测的量。ISO 29148 的可验证（verifiable）这条过不了，「快」配不出例子。需要：在什么并发下、哪个分位（P95？P99？）、多少毫秒。\n5. 原话「FreightCalc 查 remote_surcharge 表决定加多少」说的是实现（类名、表名），不进句子；它要的行为已在第 1 句。\n\n用的规矩：EARS 的五种句式，名词只取原话和你给的词汇表（`FreightCalc`、`remote_surcharge` 作为实现名被换成了「运费计算」「偏远省份表」）；出手前过 ISO/IEC/IEEE 29148 的四条属性，第 3、4 条各破一条所以退回。\n\n## 一个问题\n\n第 1 句和第 2 句现在打架：第 2 句说偏远附加由商家在运费模板里配，第 3 句原话说加多少由偏远省份表决定。举个具体例子——商家 A 在运费模板里给偏远附加填了 15 元，而偏远省份表里「新疆」这一行写着 20 元，一单发往新疆，该加 15 还是 20？\n\n（可能的读法：偏远省份表只管「哪些省算偏远」，金额全由运费模板出；或者表出默认值、模板可覆盖；或者表出金额、模板只管开不开。）这三种读法会写出三套不同的句子，所以我没有替你选。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.12113550000000001,
+            "judgeCostUsd": 0.00954,
+            "durationSeconds": 31,
+            "startedAt": "2026-09-19T09:25:43.138Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-7P1oZl\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "ears-form",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "用的规矩是 **EARS（Easy Approach to Requirements Syntax）**，五种模板：Ubiquitous（无条件）、Event-driven（当…时）、State-driven（在…期间）、Unwanted behavior（如果…那么）、Optional（若具备…）。另外按 ISO/IEC/IEEE 29148 的两条：需求要**不含实现方案（implementation-free）**、要**可验证（verifiable）**。\n\n## 第 1 句 → 拆成三条\n\n原话一句里塞了三件事（加钱、可配、校验），EARS 一条只管一件。\n\n| # | 模板 | 需求句 |\n|---|---|---|\n| 1.1 | Event-driven | 当运费计算的目的地省份在偏远省份表中时，运费计算应在基础运费之上加收该省份对应的偏远附加。 |\n| 1.2 | Ubiquitous | 商家应能在运费模板中为目的地省份配置偏远附加。 |\n| 1.3 | Unwanted behavior | 当商家保存运费模板时，如果其中的偏远附加不合法，那么系统应拒绝保存，并提示是哪一个目的地省份的偏远附加不合法。 |\n\n还建议补一条反向的，否则「不在表里」这条路没人验：\n\n- 1.4（Event-driven）当运费计算的目的地省份不在偏远省份表中时，运费计算应只收基础运费。\n\n**推断，未经产品 A 确认**：1.3 里「不合法」我按「为空 / 非数字 / 为负」理解，但这是我猜的，先留成待确认项，不当事实写。\n\n## 第 2 句 → 不可验证，先占位\n\n「快」没有数字，测不出来，按 29148 属于不可验证需求。模板应是 Event-driven：\n\n- 2.1 当商家发起一次运费计算时，运费计算应在 **{TBD} 毫秒**内返回结果。\n\n## 第 3 句 → 是实现，不是需求\n\n**事实**：`FreightCalc`、`remote_surcharge` 都不在词汇表里，而且我看不到代码，无法确认它们和词汇表词的对应关系。产品 A 这句描述的是「怎么做」，不是「要什么」，属于 implementation bias。提到需求层是：\n\n- 3.1（Event-driven）当运费计算需要确定偏远附加的金额时，运费计算应以偏远省份表中该目的地省份的记录为准。\n\n这样 1.1 说「要加」，3.1 说「加多少以谁为准」，`FreightCalc` 查哪张表是设计文档的事。\n\n---\n\n一个问题：第 2 句的「快」，你想要的口径是**单次运费计算的响应时间上限**（比如 P99 ≤ 200ms），还是**吞吐**（比如每秒能算 500 单）？"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.1412605,
+            "judgeCostUsd": 0.009989999999999999,
+            "durationSeconds": 49,
+            "startedAt": "2026-09-19T09:25:52.685Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-oLyNNO\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "ears-form",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "## 先说规则\n\n用的是 **EARS (Easy Approach to Requirements Syntax)** 的五种模式，主语必须是系统（这里是「运费计算」和「运费模板」），不能是「商家」——商家是使用者，不是被约束的对象。\n\n另外两条业界实践：\n- 需求写「做什么」不写「怎么做」（solution-free requirements，IEEE 29148 / INCOSE 的要求）\n- 每条需求必须可验证（verifiable requirement，IEEE 29148）\n\n---\n\n## 改写结果\n\n**原话 1 拆成三条**（它混了三件事：算钱、配置、校验）\n\n| 编号 | EARS 模式 | 需求句 |\n|---|---|---|\n| R1 | Event-driven（When） | **当**运费计算的目的地省份在偏远省份表中**时**，运费计算**应**在基础运费之上加上该目的地省份的偏远附加。 |\n| R2 | Ubiquitous（普遍） | 运费模板**应**允许商家配置偏远附加。 |\n| R3 | Unwanted behaviour（If-Then） | **若**商家在运费模板中配置的偏远附加不合法，**则**运费模板**应**向商家提示不合法的原因，并且不保存该次配置。 |\n\nR3 里的「不合法」是我按原话「配错了」填的占位词，判定规则还没有 —— 见最后的问题。\n\n**原话 2**\n\n| 编号 | EARS 模式 | 需求句 |\n|---|---|---|\n| R4 | Event-driven（When） | **当**收到一次运费计算请求**时**，运费计算**应**在 `<N>` 毫秒内返回结果。 |\n\n「要快」本身不是需求，因为无法验收。`<N>` 必须由产品 A 给一个数字（还要说清是 P99 还是平均），否则 R4 不成立。\n\n**原话 3**\n\n这句**不是需求，是设计**。「查 remote_surcharge 表」说的是怎么实现，不是系统对外应该表现成什么样。按 solution-free 原则，它不该进需求文档。\n\n它想表达的可验收行为，已经被 R1 覆盖了 —— R1 说「加偏远附加」，至于这个数从哪张表取，是实现的事。\n\n还有一点要标出来：`FreightCalc` 和 `remote_surcharge` 是代码里的名字。我看不到代码，**没有依据**断定 `FreightCalc` 就是词汇表里的「运费计算」、`remote_surcharge` 就是「偏远省份表」——这两个对应关系是需要跟开发确认的推断，我没有把它写进需求句。\n\n---\n\n## 一个问题\n\nR3 卡在「配错了」没定义。举个具体例子：商家在运费模板里给「西藏」这一行的偏远附加填了 `-5`（负数），或者填了 `999999`（大得离谱），或者干脆给一个不在偏远省份表里的「江苏」配了偏远附加。\n\n这三种里，产品 A 说的「配错了」指哪些？"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.15962649999999998,
+            "judgeCostUsd": 0.009005999999999993,
+            "durationSeconds": 55,
+            "startedAt": "2026-09-19T09:25:56.415Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-AxaVpk\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "ears-form",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "按 EARS(Easy Approach to Requirements Syntax)改写。EARS 的一条句子只承载一个需求,所以第 1 句拆成三条。\n\n## 1. 「偏远省份要加钱,商家能在模板里配,配错了要提示」\n\n**1a 加钱** — Complex(State-driven + Event-driven)\n> 当目的地省份命中偏远省份表时,若商家触发运费计算,运费计算应在基础运费之上计入该目的地省份对应的偏远附加。\n\n**1b 商家可配** — Event-driven\n> 当商家在运费模板中提交偏远附加时,系统应保存该偏远附加,并在后续运费计算中使用它。\n\n**1c 配错提示** — Unwanted behaviour\n> 如果商家提交的运费模板中偏远附加不合法〈判定规则待定〉,则系统应拒绝保存该运费模板,并向商家提示不合法的偏远附加。\n\n## 2. 「运费计算要快」\n\nUbiquitous\n> 运费计算应在〈T 待定〉内返回运费计算结果(〈统计口径待定:P95 / 平均〉)。\n\n原话没有数字,照抄就是不可测的需求。上面这条先留占位,填上数字才算完成。\n\n## 3. 「FreightCalc 查 remote_surcharge 表决定加多少」\n\n这句不是需求,是设计说明——它讲的是\"怎么实现\",而需求句只该讲\"对外可观察的行为\"(solution-free requirement)。它和 1a 是同一件事的两种写法,1a 已经覆盖。\n\n如果确实想约束数据来源,可以单独写一条 Ubiquitous:\n> 运费计算应以偏远省份表作为偏远附加的唯一数据来源。\n\n**推断,非事实**:我看不到代码,`FreightCalc` 对应词汇表里的\"运费计算\"、`remote_surcharge` 表对应\"偏远省份表\",是我按名字猜的,没有验证。\n\n## 主体名的缺口\n\n1b、1c 的主体我写了\"系统\"。词汇表里没有承载\"配置运费模板\"这件事的系统名(比如商家后台),EARS 要求每条句子都有明确的 `<system name>`,这里先用\"系统\"占位。\n\n---\n\n问一题:1c 里的\"配错了\",具体指哪些情况?比如这三种——偏远附加填了负数 -5;配的目的地省份根本不在偏远省份表里;同一个运费模板里给同一个目的地省份配了两条偏远附加。哪些算错、哪些放过?"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.3333333333333333,
+        "passRate": 0.3333333333333333,
+        "scoreWithout": 0.6666666666666666,
+        "passRateWithout": 0.6666666666666666,
+        "delta": -0.3333333333333333
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 1,
+    "casesPassed": 0,
+    "overallScore": 0.3333333333333333,
+    "overallPassRate": 0.3333333333333333,
+    "meanDelta": -0.3333333333333333
+  }
+}

@@ -121,3 +121,34 @@
 门评测之后正文在审查（第 6 阶段）里按「规程只点名、做法在实践里」删掉了两条里重述实践内容的括号与开头那句「先把三步的顺序说全」，`rollout-observe` 的触发句改成不与 `canary-release` 抢「怎么灰度」；都没有重跑，评测沙箱里没装实践，这几处对沙箱里的 sonnet 只会更难，对装了实践的真实会话没有影响。
 
 结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`。
+
+三份结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`。
+
+### 0.1.2（2026-09-19，agent-system#119）：两条活动 skill——requirement-elicitation、requirement-specification
+
+`requirement-elicitation`、`requirement-specification` 是从 `plugins/workcoding` 的 `requirement-insight`、`requirement-translation` 拆出来的活动 skill（做法在 `plugins/practices` 的 `switch-interview`、`ears`、`specification-by-example`），第 4 阶段门上定开不开。四个用例，规则副本与上面八条相同；跑法同上，加 `--case 'requirement-*'`，结果目录带 `as119` 标签。评测沙箱只装 flow-steps，活动点名的三条实践在沙箱里读不到，agent 只能凭活动正文里「这一步做什么」那句和自己对 EARS、切换访谈的知识做——这正是活动 skill 该守住的那层。
+
+| 用例 | skill | 测什么 | 该怎么判 |
+|---|---|---|---|
+| `requirement-elicitation-prepare` | requirement-elicitation | 第 4 阶段门上开了它，外来需求是一句「解」，主人下午去问提出方 | 原话一字不改标提出方；断言草案标假设；问提出方的只问过去；查现成写「未查到」；收口三行加一句可观察判据；停下等答案，不写 EARS 句 |
+| `requirement-elicitation-already-closed` | requirement-elicitation | 三行加一句已被主人否过 | 不重备问题、不重写三行，说下一步是需求规约 |
+| `requirement-specification-translate` | requirement-specification | 门上开了它，定稿已否过，只给了模板字段 | 原话标提与验、判拆不拆、一条规则一句 EARS、每句一条例子、名词只用原话与字段、请逐句否并说被否的不覆盖；不写测试不写文件 |
+| `requirement-specification-not-closed` | requirement-specification | 需求没收口就要 EARS 句 | 不把 EARS 清单当规约交出去，指出先要需求获取 |
+
+两条正例各带 `tool_used: Skill` 的 with-only 指示器；llm grader 判可观测行为（问的是不是过去的事、有没有例子、停在哪），`elicitation-content` 列了五个面，与上面的做法相同；`translate` 的六面合一 grader 在第四轮拆成了三条（见实跑记录）。
+
+基线（`results/2026-09-19-as119-baseline/`，SKILL.md 占位，每用例 1 次，两组，被测 sonnet，8 次运行，139 秒，0.78 美元）。对照组：`prepare` 与 `translate` 都因为找不到 `flow` 停下，问主人 skill 文件在哪、产出该按什么格式；`not-closed` 直接给 EARS 句（占位组也是，还配了例子）；`already-closed` 对照组同样停下要 `flow`，占位组说了下一步是规约（Δ +1.0 来自对照组找不到路线，不是正文）。占位组的 `prepare` 把「问提出方」写成了功能设计题（省份粒度够不够、金额固定还是阶梯、挂在模板上还是独立规则），三行写成了功能描述（「运费模板可以按省份设置偏远附加金额」）；`translate` 拆了四个用例后只问了一题「省级附加与大区加价叠不叠」，没有句子清单。真缺口：问题只问过去、三行是问题不是功能、没收口不规约、句子加例子一次交齐再请否。正文只针对这四处写。
+
+门评测（被测 sonnet、裁判 sonnet、每用例 3 次两组、阈值 1.0）跑了四轮，四个用例的最终数字取各自最后一轮：
+
+| 用例 | 有 skill 组 | 对照组 | 差值 | 来源 |
+|---|---|---|---|---|
+| `requirement-elicitation-already-closed` | 1.0 | 0 | +1.0 | rerun |
+| `requirement-elicitation-prepare` | 1.0 | 0.33 | +0.67 | rerun |
+| `requirement-specification-not-closed` | 1.0 | 1.0 | 0 | rerun2 |
+| `requirement-specification-translate` | 0.67 | 0.20 | +0.47 | rerun3 |
+
+平均差值 +0.54。四轮：`results/2026-09-19-as119-gate/`（四用例，24 次，268 秒，2.16 美元）暴露三处正文缺口——`translate` 三次都没告诉主人「被否的句子留着、纠偏写在它下面」，有一次把所有例子都写成「缺一个数」（把自己该挑的入参当成推不出的常量）；`prepare` 一次把三行全留成「待定」等答案；`not-closed` 一次主人说「直接给」就照给了。正文补三句（三行先按假设写满；入参自己挑、推不出的是规则或常量才写缺一个数；交清单时说被否的留着），`results/2026-09-19-as119-gate-rerun/`（四用例，24 次，309 秒，2.24 美元）：`prepare` 到 1.0；`translate` 仍 0.33，读原文是两处——正文新加的第 1 步「三行加一句在不在」让 sonnet 在定稿少了「值不值」一行时停下来问，和 grader 不接受「退回那句、写明缺什么」代替例子（活动与实践都规定这样退）。第 1 步改成「主人说过否过了就算收口，少一行照走」，grader (d) 改成「有例子，或明写缺哪条规则」，`results/2026-09-19-as119-gate-rerun2/`（两个 specification 用例，12 次，141 秒，1.05 美元）：`not-closed` 6/6 过（对照组这轮也 3/3 过，前两轮是 0 和 0.33，对照组自身的抖动），`translate` 仍 0.33 而三次回复六面都在。六面合一的 `spec-list` 看不出哪一面判败（判官只给票），拆成三条各判一面（`spec-frame` 原话与拆不拆、`spec-sentences` 句式与例子、`spec-veto` 逐句否与不覆盖），`results/2026-09-19-as119-gate-rerun3/`（1 用例，6 次，103 秒，0.80 美元）：1.0、0.6、0.4，判败的都在 `spec-sentences`，原因看得见了——那两次把没定的规则（未配置省份怎么算、省级与大区叠加还是替代）写成「R2（缺一个数）某省份未配置时的取值规则」这种不是句子的条目，句子本身没了，只剩缺口；过的那次是先把句子写全、只把那个数空着退回。这是行为差别不是判官读法，正文第 5 步在审查后补了一句「退回的也先写成一句、空的只是那个数」（没有重跑）。
+
+`not-closed` 两组同分，只作回归守卫。`translate` 0.67 没到 1.0 硬线，原因如上；是否再跑由主人在第 6 阶段的门上定（与上面 `wrap-up-pr-body` 同一处理）。四轮结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`。
+

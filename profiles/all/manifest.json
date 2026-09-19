@@ -25,6 +25,10 @@
       "target": "plugins/practices/skills/domain-modeling"
     },
     {
+      "name": "ears",
+      "target": "plugins/practices/skills/ears"
+    },
+    {
       "name": "evidence-regression",
       "target": "plugins/workcoding/skills/evidence-regression"
     },
@@ -77,8 +81,16 @@
       "target": "plugins/workcoding/skills/release-observe"
     },
     {
+      "name": "requirement-elicitation",
+      "target": "plugins/flow-steps/skills/requirement-elicitation"
+    },
+    {
       "name": "requirement-insight",
       "target": "plugins/workcoding/skills/requirement-insight"
+    },
+    {
+      "name": "requirement-specification",
+      "target": "plugins/flow-steps/skills/requirement-specification"
     },
     {
       "name": "requirement-translation",
@@ -107,6 +119,14 @@
     {
       "name": "skill-maintenance",
       "target": "plugins/skill-maintenance/skills/skill-maintenance"
+    },
+    {
+      "name": "specification-by-example",
+      "target": "plugins/practices/skills/specification-by-example"
+    },
+    {
+      "name": "switch-interview",
+      "target": "plugins/practices/skills/switch-interview"
     },
     {
       "name": "system-analysis",
