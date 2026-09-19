@@ -69,6 +69,26 @@
       "target": "plugins/flow-steps/skills/wrap-up"
     },
     {
+      "name": "tradeoff-analysis",
+      "target": "plugins/practices/skills/tradeoff-analysis"
+    },
+    {
+      "name": "effect-sketch",
+      "target": "plugins/practices/skills/effect-sketch"
+    },
+    {
+      "name": "baseline-measurement",
+      "target": "plugins/practices/skills/baseline-measurement"
+    },
+    {
+      "name": "architecture-decision",
+      "target": "plugins/flow-steps/skills/architecture-decision"
+    },
+    {
+      "name": "impact-analysis",
+      "target": "plugins/flow-steps/skills/impact-analysis"
+    },
+    {
       "name": "switch-interview",
       "target": "plugins/practices/skills/switch-interview"
     },

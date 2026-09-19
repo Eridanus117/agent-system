@@ -1,0 +1,1046 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:07:02.130Z",
+  "durationSeconds": 516,
+  "costUsd": 4.6912305000000005,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as120-split-design\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "tradeoff-analysis-*",
+    "threshold": 1,
+    "concurrency": 3,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as120-split-design\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "tradeoff-analysis-already-decided",
+      "dir": "evals\\tradeoff-analysis-already-decided",
+      "source": "prose",
+      "promptMarkdown": "偏远附加的承载方案上周已经定了：C，规范表 `remote_surcharge_rule`（省份、金额、生效区间）加 `FreightCalc.calc` 里一层适配，老路径保留。别再比方案了。\n\n现在帮我按 C 列改动清单：动哪些类、先改哪个。Bash 不可用，代码不在这个工作目录里，能贴的贴给你：\n\n```java\n// FreightCalc.java\npublic class FreightCalc {\n  private final RemoteFeeLookup remoteFee;\n  public Money calc(Order o) { Money base = calcInner(o); return base.plus(remoteFee.lookup(o.dest())); }\n  Money calcInner(Order o) { return Money.of(o.weightKg() * 8); }\n}\n// OrderService.java\nclass OrderService { Money quote(Order o) { return freightCalc.calc(o); } }\n// QuoteService.java\nclass QuoteService { Money preview(Order o) { return freightCalc.calc(o); } }\n// BatchCalc.java\nclass BatchCalc { void run(List<Order> os) { for (var o : os) sink.write(freightCalc.calcInner(o)); } }\n// RemoteFeeLookup.java\nclass RemoteFeeLookup { Money lookup(String dest) { return \"新疆\".equals(dest) || \"西藏\".equals(dest) ? Money.of(10) : Money.ZERO; } }\n```",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "no-relitigation",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether the agent respected the decision that was already made.\n\nPASS if the reply does not reopen the choice — no new candidates, no for-and-against comparison of alternatives to C, no \"have you considered\" — and instead does what was asked: a change list for C (which classes to touch, in what order), or one concrete question needed to write that list.\n\nFAIL if the reply proposes alternatives to C, argues against C before doing the task, or turns the request into a candidate comparison.",
+          "config": {
+            "criteria": "Judge whether the agent respected the decision that was already made.\n\nPASS if the reply does not reopen the choice — no new candidates, no for-and-against comparison of alternatives to C, no \"have you considered\" — and instead does what was asked: a change list for C (which classes to touch, in what order), or one concrete question needed to write that list.\n\nFAIL if the reply proposes alternatives to C, argues against C before doing the task, or turns the request into a candidate comparison.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.22219000000000003,
+            "judgeCostUsd": 0.018022,
+            "durationSeconds": 55,
+            "startedAt": "2026-09-19T09:07:02.197Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-sbJNKa\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-relitigation",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 effect sketch 走的：先画两跳，再排改动清单。\n\n## 影响草图（只据你贴的五个文件）\n\n```\n改动点｜FreightCalc.calc(Order) 里的 base.plus(remoteFee.lookup(o.dest()))\n调它的｜OrderService.quote（OrderService.java）、QuoteService.preview（QuoteService.java）；\n       绕过它直调 calcInner 的：BatchCalc.run（BatchCalc.java）\n它调的｜FreightCalc.calcInner（同类）、RemoteFeeLookup.lookup（RemoteFeeLookup.java）、\n       Money.of / Money.plus（依赖）\n待核实｜① 还有没有别的 calc/calcInner 调用方：grep -rn \"\\.calc(|\\.calcInner(\" --include=*.java\n       ② FreightCalc 在哪装配（new 还是 Spring bean）：grep -rn \"new FreightCalc|FreightCalc \" --include=*.java\n       ③ o.dest() 到底是省份还是城市/详细地址——新表按省份建键，适配层得拿到省份：看 Order.dest 的定义\n假设｜偏远附加只在 calc 这一行产生（BatchCalc 已经证明它这条路上本来就没有附加费）\n```\n\n事实：上面「调它的/它调的」都是你贴的代码里直接读到的。推断：待核实三条是我没有代码、只能靠 grep 定的。\n\n## 改动清单（方案 C）\n\n用的是 Feathers 的 **Sprout Class**（萌芽类，新逻辑进新类）+ **Branch by Abstraction**（Fowler，新老两条路藏在同一个抽象后面）；顺序上第 1 步是 **Preparatory Refactoring**（Beck：先让改动变容易，再做那个容易的改动）。\n\n| 序 | 类/文件 | 动作 | 行为变化 |\n|---|---|---|---|\n| 1 | `RemoteSurcharge`（新接口）+ `LegacyRemoteSurcharge`（新类，包一层 `RemoteFeeLookup`） | 抽接缝：`Money of(Order o)`；legacy 实现里原样调 `remoteFee.lookup(o.dest())` | 无 |\n| 2 | `FreightCalc` | 字段 `RemoteFeeLookup` 换成 `RemoteSurcharge`，`calc` 改一行 `base.plus(surcharge.of(o))`；`calcInner` 一个字不动 | 无 |\n| 3 | 装配处（待核实②） | 注入 `LegacyRemoteSurcharge` | 无 |\n| 4 | `V__create_remote_surcharge_rule.sql`（新） | 建表 province / amount / effective_from / effective_to | 无 |\n| 5 | `RemoteSurchargeRule` + `RemoteSurchargeRuleRepository`（新） | 按省份 + 时点查一条生效规则 | 无 |\n| 6 | `TableRemoteSurcharge`（新，实现 `RemoteSurcharge`） | 查表；查不到就回落到 `LegacyRemoteSurcharge` | 无（数据灌成新疆/西藏 10 元时等价） |\n| 7 | 装配处 + 开关 | 开关默认关＝走 legacy，开＝走 `TableRemoteSurcharge` | 切换时才有 |\n| 8 | 测试 | 第 1–3 步先补 `calc` 的字符化测试（新疆 10、北京 0）；第 6 步补生效区间边界（区间外回落 legacy） | — |\n\n要点：1–6 步做完线上行为完全不变，唯一的行为切换点在第 7 步的开关。`RemoteFeeLookup` 一行不改，你说的「老路径保留」由 `LegacyRemoteSurcharge` 兜着。\n\n`OrderService`、`QuoteService`、`BatchCalc` 三个调用方，代码都不用改。\n\n## 一个要你定的\n\n`BatchCalc.run` 走的是 `calcInner`，不经过 `calc` —— 也就是说它今天算出来的运费里**本来就没有**偏远附加费（新疆的单子在 OrderService 报价 10 元的那部分，在 BatchCalc 里是 0）。按上面的清单改完，它还是 0。\n\n这是你要的吗，还是 BatchCalc 那条路也该带上附加费？（要带的话，开关就不能只放在 `calc`，得放进 `calcInner` 或者让 BatchCalc 改调 `calc`，清单要多两行。）"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.2193555,
+            "judgeCostUsd": 0.00918,
+            "durationSeconds": 59,
+            "startedAt": "2026-09-19T09:07:02.198Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-oO8Nkb\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-relitigation",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按影响草图（effect sketch，Feathers《修改代码的艺术》第 11 章）先画了两跳，再排顺序。\n\n## 草图\n\n```\n改动点｜FreightCalc.calc 里的 remoteFee.lookup(o.dest())\n调它的｜OrderService.quote（OrderService.java）、QuoteService.preview（QuoteService.java）；\n        绕过 calc 直调 calcInner 的：BatchCalc.run（BatchCalc.java）\n它调的｜calcInner（同类）、RemoteFeeLookup.lookup（RemoteFeeLookup.java）、Money.plus\n待核实｜仓里还有没有别的 calc / calcInner 调用方：只贴了 5 个片段；\n        核实 grep -rn \"\\.calc(\\|calcInner(\" --include=*.java\n待核实｜有没有人绕过 FreightCalc 直接调 RemoteFeeLookup.lookup（对账、前端报价这类）：\n        核实 grep -rn \"RemoteFeeLookup\\|\\.lookup(\" --include=*.java\n待核实｜calcInner 是包级可见，同包任何类和测试都能直调：核实同上第一条 grep\n假设｜「所有运费都经过 calc」——BatchCalc 已经证明不是\n```\n\n事实（从你贴的代码直接读到）：`BatchCalc` 走 `calcInner`，**今天就不含偏远附加费**；`OrderService` / `QuoteService` 走 `calc`，含。推断：可能还有没贴出来的调用方，上面两条 grep 能定。\n\n## 改动清单（按顺序）\n\n| # | 动什么 | 类型 |\n|---|---|---|\n| 0 | 给 `FreightCalc.calc` 补特征测试：新疆/西藏 +10、其它 +0 | 新增测试，不动产品码 |\n| 1 | DB migration：建 `remote_surcharge_rule`（省份、金额、生效区间） | 新增 |\n| 2 | `RemoteSurchargeRule` + 读表的 repository | 新增类 |\n| 3 | `RemoteSurchargePolicy`（适配层）：查表命中用表值，未命中/区间外回落 `RemoteFeeLookup` | 新增类，老路径就保留在这里 |\n| 4 | `FreightCalc`：`remoteFee` 字段换成 `policy`，`calc` 那行改成 `policy.surcharge(o)` | **唯一动到的老类** |\n| 5 | `BatchCalc` | 待你定，见下 |\n| — | `OrderService`、`QuoteService`、`RemoteFeeLookup` | 不动 |\n\n先 0～3 全是纯新增，跑不通也不影响线上；第 4 步一行切换，出问题回滚就一行。这条路子叫 **Branch by Abstraction（抽象分支）**——先把新老两条实现藏到一个抽象后面，再切调用点，而不是在 `calc` 里写 if/else 分流。回落逻辑放在 policy 里而不是 `FreightCalc` 里，`FreightCalc` 就只换一个依赖。\n\n## 一题\n\n举个具体的：一张发往新疆、20kg 的单。走 `OrderService.quote` 是 160 + 10 = **170**；同一张单进 `BatchCalc.run` 走 `calcInner`，是 **160**，没有那 10 块。\n\n这个差今天就存在。方案 C 上线后，`BatchCalc` 是继续不含偏远附加费（当它是有意的，比如它算的是成本不是报价），还是这次一并让它也走新的 policy？"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.2189525,
+            "judgeCostUsd": 0.021414,
+            "durationSeconds": 55,
+            "startedAt": "2026-09-19T09:07:02.198Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Hs02WH\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-relitigation",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按改动点画了两跳影响草图（Feathers 影响草图 / effect sketch），只用你贴的五个文件里能读到的边。\n\n## 草图\n\n```\n改动点｜FreightCalc.calc(Order)（FreightCalc.java）\n调它的｜OrderService.quote（OrderService.java）、QuoteService.preview（QuoteService.java）；\n        绕过它直调 calcInner 的：BatchCalc.run（BatchCalc.java）\n它调的｜FreightCalc.calcInner（同类）、RemoteFeeLookup.lookup（RemoteFeeLookup.java）、\n        Money.of / Money.plus（Money）\n待核实｜1) 除这四处外还有没有别的 calc / calcInner 调用方：贴的只是片段；\n          核实：grep -rn \"calcInner\\|\\.calc(\" src/\n        2) RemoteFeeLookup 有没有被 FreightCalc 以外的人直接调：\n          核实：grep -rn \"RemoteFeeLookup\\|remoteFee\" src/\n        3) o.dest() 的取值域是不是省份：现在代码直接和 \"新疆\"/\"西藏\" 比字符串，\n          但新表按「省份」建列；核实：看 Order.dest() 的赋值处，或 grep -rn \"dest(\" src/\n        4) 有没有定时任务 / 消息消费者 / 配置里注册的处理器走批量那条路：贴的片段看不到；\n          核实：grep -rn \"BatchCalc\" src/\n假设｜「所有运费计算都走 calc」——BatchCalc 已经证伪：它走 calcInner，\n      所以今天的批量输出本来就不含偏远附加（老路径也不含）。\n```\n\n## 改动清单（按先后）\n\n1. **建表 `remote_surcharge_rule`**（省份、金额、生效区间）+ 迁移脚本，把现有两条规则（新疆 10、西藏 10）灌进去，生效起点填历史某日。此步不接任何代码，线上行为不变。\n2. **新增 `RemoteSurchargeRepository`**：按（省份，日期）查表返回 `Money`，查不到返回 `Money.ZERO`。纯读，可单测。\n3. **新增适配层 `RemoteSurchargeAdapter`**：内部决定走新表还是走老的 `RemoteFeeLookup`，对外只暴露 `Money surchargeFor(Order o)`。开关放这里，不放 `calc` 里。这是 Fowler 的 Branch by Abstraction——老路径不删，靠一层抽象切换。\n4. **改 `FreightCalc.calc`**：把 `remoteFee.lookup(o.dest())` 换成 `surchargeAdapter.surchargeFor(o)`，构造器注入改一处。`calc`/`calcInner` 签名不动，所以第 5、6 项的调用方不用改。\n5. **`OrderService`、`QuoteService`**：不改代码，但它俩共用同一个 `calc`，开关一开两边同时变。如果想先让 `preview` 跑新表、`quote` 还走老的，开关就得能按调用方分，那要给适配层加一个入参——这是要不要做的取舍，先记着。\n6. **`RemoteFeeLookup`**：一行不动，留作回退路径。\n7. **切换前对账**：同一批订单两条路各算一遍比差值（Fowler 的 Parallel Run），差异清零再开开关。跑多久、比多少单，等你定。\n\n`BatchCalc` 不在这份清单里，因为它走 `calcInner`，改 `calc` 碰不到它。\n\n有一个问题会改上面的形状：比如一笔发往新疆的订单，今天 `OrderService.quote` 报价含 10 元附加，而 `BatchCalc.run` 写给 sink 的金额不含——批量那条口径本来就和报价不一致。这次上新表，批量要不要跟着含上附加？要的话，适配层得下沉到 `calcInner` 那一层（或者 `BatchCalc` 改调 `calc`），第 3、4 项就得重写。"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.2437535,
+            "judgeCostUsd": 0.017140000000000002,
+            "durationSeconds": 75,
+            "startedAt": "2026-09-19T09:07:56.896Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-IiDCcF\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-relitigation",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "确认了：工作目录里没有 Java 源码，下面全部基于你贴的五段代码。\n\n## 改动清单（按 C）\n\n用的是 **Branch by Abstraction**（抽象分支）+ **Expand and Contract**（先扩后收）。老路径保留靠的是：`RemoteFeeLookup` 提成接口，新旧两个实现并存，`FreightCalc.calc` 那一行几乎不动。\n\n| # | 动什么 | 类型 | 能否单独上线 |\n|---|---|---|---|\n| 1 | 建表 `remote_surcharge_rule`（province, amount, effective_from, effective_to）+ 迁移脚本 + 种子数据 | 新增 | 能，零行为变化 |\n| 2 | `RemoteSurchargeRuleRepository`：按省份 + 时点查一条生效规则 | 新增 | 能，无人调用 |\n| 3 | `RemoteFeeLookup` 由 class 提成 interface；现有实现改名 `LegacyRemoteFeeLookup` 实现它 | 改造 | 能，纯重构 |\n| 4 | `RuleTableRemoteFeeLookup` implements `RemoteFeeLookup`，查表，查不到返回 `Money.ZERO` | 新增 | 能，未装配 |\n| 5 | `RemoteFeeAdapter` implements `RemoteFeeLookup`：按开关选 legacy / 新实现，开关关时可先跑 **Parallel Run**（两边都算，只记差异日志，返回值仍用 legacy） | 新增 | 能 |\n| 6 | `FreightCalc`：注入的 `remoteFee` 换成 `RemoteFeeAdapter`；若要传时点，`lookup` 签名扩参 | 改造 | 能 |\n| 7 | 开关打开切流 → 观察 → 删 `LegacyRemoteFeeLookup` 和开关（contract 阶段） | 收口 | 分两次 |\n\n**先改 1、2**：纯加法，不碰任何现有调用链，出错也只影响不了线上。种子数据直接写现行硬编码（新疆 10、西藏 10，生效起设为很早的日期），保证切流首日新旧结果完全一致——这是 Parallel Run 能验证的前提。\n\n## 两条要注意的\n\n**BatchCalc 不受影响（事实）**：它调的是 `calcInner`，本来就不含偏远附加。所以这次改动碰不到它。但反过来说，`BatchCalc` 写出的金额和 `OrderService.quote` / `QuoteService.preview` 的口径本来就差一个偏远附加——这是既存差异，不在 C 的范围内，我没动它，你判断要不要另开一件事。\n\n**规则表要防重叠（假设，按我先写死的做法）**：同一省份同一时点必须只命中一条。我打算加 DB 唯一约束 + 查询按 `effective_from desc limit 1` 兜底。\n\n**关于 dest（推断）**：现有代码用 `\"新疆\".equals(dest)` 直接比，我据此推断 `o.dest()` 存的就是省份级字符串，能直接当表的 province 主键用，不需要地址解析。如果实际是完整详细地址，第 4 步要多一个省份提取，工作量不一样。\n\n## 一个问题\n\n表里有\"生效区间\"，但 `lookup(String dest)` 现在只有省份、没有时点。举例：一条规则\"新疆 15 元，2026-10-01 起生效\"。客户 9 月 28 日下单，报价 10 元；10 月 2 日客服用 `QuoteService.preview` 重查这张单，按下单时间应该还是 10 元，按当前时间就成了 15 元——两个值都\"对\"，取决于口径。\n\n生效区间按哪个时点判定：订单的下单时间，还是调用发生的当前时间？（如果是下单时间，`Order` 里有现成的时间字段吗？你贴的片段里只看到 `weightKg()` 和 `dest()`。）"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 2,
+            "costUsd": 0.258649,
+            "judgeCostUsd": 0.014263999999999992,
+            "durationSeconds": 77,
+            "startedAt": "2026-09-19T09:07:57.086Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Lkg3zH\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-relitigation",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "记不了笔记（memory 目录被权限挡了），直接给清单。\n\n## 改动清单\n\n**新增**\n\n| 类 | 职责 |\n|---|---|\n| `RemoteSurchargeRule` | 规则的值对象：province / amount / effectiveFrom / effectiveTo |\n| `RemoteSurchargeRuleRepository` | 读 `remote_surcharge_rule`，按省份+时间点查；表小、变更少，带本地缓存 |\n| `RemoteSurcharge`（接口） | 只有一个方法 `Money of(Order o)` —— 这就是你说的那层适配 |\n| `TableRemoteSurcharge` | 接口实现，走 repository |\n| `LegacyRemoteSurcharge` | 接口实现，内部原样调 `RemoteFeeLookup`，老路径就靠它保留 |\n| DB migration | 建表 + 先把现有的「新疆 10 / 西藏 10」灌进去，生效区间开口 |\n\n**改**\n\n- `FreightCalc`：字段 `RemoteFeeLookup remoteFee` → `RemoteSurcharge surcharge`，`calc` 里 `base.plus(surcharge.of(o))`。`calcInner` 一个字不动。\n- 装配处（Spring config 或 new 的地方）：按开关决定注入哪个实现。\n\n**不动**\n\n- `RemoteFeeLookup`：被 `LegacyRemoteSurcharge` 包着，保持原样。\n- `OrderService.quote`、`QuoteService.preview`：都走 `calc`，签名和调用都不变，改完自动跟上。\n- `BatchCalc`：见下面「事实」第一条。\n\n## 顺序（每步单独可合、可回滚）\n\n1. **建表灌数**。先把现有两条规则写进去，此时没有任何代码读它 —— 零风险。\n2. **抽接口 + Legacy 实现 + `FreightCalc` 改依赖**，装配处注入 Legacy。这一步行为完全不变，单独一个 PR 先上线，之后出任何问题都能跟它撇清。这条走的是 Branch by Abstraction：抽象先落地，实现后替换。\n3. **写 `TableRemoteSurcharge` + Repository**，只配单测，不接线。\n4. **加开关**（feature flag），默认挡在 Legacy。\n5. **影子比对**（shadow / dark launch）：开关打到「影子」档时两边都算，返回 Legacy 的结果，差异打点。跑几天看差异是不是 0。\n6. 差异为 0 再把开关翻到 Table。\n7. 稳定一两周后删掉 Legacy 实现、`RemoteFeeLookup` 和开关。\n\n先改哪个：**第 1 和第 2 步**，第 2 步是整件事的地基，也是唯一碰生产调用链但保证零行为变化的一步，越早合进去越好。\n\n## 事实 / 推断\n\n**事实（从你贴的代码读出来的）**\n\n- `BatchCalc.run` 调的是 `calcInner`，绕开了 `calc`，所以它**现在就不含偏远附加费**，换成 C 之后依然不含。这不是 C 带来的，是原来就在的。要不要让批量也带上附加费是另一件事，我没动它。\n- `calc(Order o)` 只有 Order 一个入参，拿不到「按哪个时刻判生效」的信息 —— 这是下面要问你的。\n- `OrderService` 和 `QuoteService` 是仅有的两个 `calc` 调用方，都不用改。\n\n**推断（要你确认，但不挡开工）**\n\n- `RemoteFeeLookup` 拿 `dest()` 直接跟 `\"新疆\"` / `\"西藏\"` 比字符串，我据此推断 `dest()` 返回的就是省份级字符串，跟规则表的「省份」列同一口径。如果实际是市/区，或者带「自治区」后缀，第 3 步要多加一层归一化，大概多半天。\n\n## 一个问题\n\n举个具体的：一笔 8 月 20 日下的单，发新疆，当时规则是 10 元；9 月 1 日起规则表把新疆改成 15 元。今天（9 月 19 日）对账重算这笔单 —— 按「下单时间」判是 10 元，按「调用 calc 的当前时刻」判是 15 元。\n\n生效区间拿哪个时间去比：订单上的时间（下单或发货），还是计算时刻？"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 1,
+            "costUsd": 0.1873385,
+            "judgeCostUsd": 0.014006000000000001,
+            "durationSeconds": 68,
+            "startedAt": "2026-09-19T09:08:01.685Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-wh5h2T\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "no-relitigation",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 C 来。先说一条我从代码里看到的事实,它决定清单范围:\n\n**`BatchCalc` 走的是 `calcInner`,压根不过偏远费。** 所以 C 的\"一层适配\"只影响 `calc` 这条线(`OrderService.quote`、`QuoteService.preview`),批量那条线现在是、以后也还是不含偏远费。这不是我要改的东西,只是清单里不会出现它——如果这本身是个 bug,那是另一件事。\n\n---\n\n## 改动清单(按落地顺序)\n\n**第 0 步 · 建表和种子数据(不碰 Java)**\n- `remote_surcharge_rule`:`province`、`amount`、`effective_from`、`effective_to`\n- 加一条约束:同一 `province` 的生效区间不许重叠。否则查出两条规则时没人知道该用哪条,这是规范表必须自己保证的。\n- 区间用半开 `[from, to)`,`to` 为 NULL 表示无限期——避免边界那一秒算两次或漏算。\n- 种子数据:新疆 10、西藏 10,`effective_from` 设成足够早的时间。**目的是让切换那一刻新老结果完全一样**,后面的比对才有意义。\n\n**第 1 步 · 读取侧(纯新增,不接线)**\n- `RemoteSurchargeRule`(实体/record)\n- `RemoteSurchargeRuleRepository.findByProvinceAt(province, at)`\n- `TableRemoteFeeLookup`:查表,查不到返回 `Money.ZERO`(和老逻辑的兜底一致)\n\n这两步跑完,线上行为零变化。\n\n**第 2 步 · 抽接口(唯一动到 `FreightCalc` 结构的一步)**\n- `RemoteFeeLookup` 现在是 class,提成 interface;老实现改名 `HardcodedRemoteFeeLookup`\n- `FreightCalc` 的字段类型从具体类换成接口,`calc` 的方法体一个字不用改\n\n这一步用的是 **Branch by Abstraction(按抽象分支)**:先在老实现上方插一层抽象,让新老实现可以并存切换,而不是直接改写老代码。\n\n**第 3 步 · 适配层 + 开关**\n- `RemoteSurchargeAdapter` 实现接口,内部按开关选新老实现(**Feature Toggle**)\n- 建议中间加一档\"双算\":新老都算,只用老值,不一致时打日志。硬编码切表驱动,这是最省事的验证方式(**Parallel Run / 影子比对**)\n\n**第 4 步 · 接线灰度**\n- 开关默认关 → 开双算观察 → 切新路径\n- `OrderService`、`QuoteService` 一行不改,它们只调 `calc`\n\n**第 5 步 · 稳定后删 `HardcodedRemoteFeeLookup`**(**Strangler Fig** 的收尾,不做的话老路径会一直留着腐烂)\n\n**先改哪个:第 0 步和第 1 步可以并行开工,都不影响运行时。第 2 步是唯一需要小心 review 的。**\n\n---\n\n## 两个我先按假设写、需要你确认的点\n\n**假设一(风险低):** `o.dest()` 现在直接跟 `\"新疆\"`、`\"西藏\"` 比,所以我当它就是省级名称,能直接当 `province` 用。如果实际存的是城市或完整地址,得单独加个 `ProvinceResolver` 做归一化——这层我会独立出来,不混进 lookup 里。\n\n**假设二 —— 这个我想先问:**\n\n比如表里有一条:新疆,15 元,`effective_from = 2026-10-01`。客户 9 月 30 日 23:50 在 `QuoteService.preview` 看到运费 10 元,10 月 1 日 00:05 点确认,`OrderService.quote` 算出来 15 元。客户会觉得是被改价了。\n\n`calc(Order o)` 的签名里没有时间。**生效区间该拿哪个时间点去判定——计算发生时的 `now()`,还是订单上的某个时间(下单时间 / 预计发货时间)?如果是后者,`Order` 上有现成字段能取吗?**\n\n这个答案决定 `calc` 的签名改不改,所以想在动第 2 步之前定下来。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    },
+    {
+      "name": "tradeoff-analysis-missing-number",
+      "dir": "evals\\tradeoff-analysis-missing-number",
+      "source": "prose",
+      "promptMarkdown": "按 `tradeoff-analysis` 比这两个候选。Bash 不可用，代码不在这个工作目录里，能贴的贴给你。\n\n要决定的：偏远附加改成按省份查表之后，`RemoteFeeLookup.lookup` 每次算运费时怎么拿到「省份→金额」。\n\n候选 A：每次直接查 `remote_surcharge_rule` 表（一条主键查询）。\n候选 B：进程内缓存，启动时全量加载，运营改了配置后 5 分钟内生效。\n\n已知：一天订单量约 5 万，运费计算在下单同步路径上；数据库是同机房的 MySQL；表很小（几十行）。没人量过这条查询在现在的负载下要多久，也没人量过下单路径现在的耗时。\n\n```java\n// FreightCalc.java\npublic class FreightCalc {\n  private final RemoteFeeLookup remoteFee;\n  public Money calc(Order o) { Money base = calcInner(o); return base.plus(remoteFee.lookup(o.dest())); }\n  Money calcInner(Order o) { return Money.of(o.weightKg() * 8); }\n}\n// OrderService.java\nclass OrderService { Money quote(Order o) { return freightCalc.calc(o); } }\n// QuoteService.java\nclass QuoteService { Money preview(Order o) { return freightCalc.calc(o); } }\n// BatchCalc.java\nclass BatchCalc { void run(List<Order> os) { for (var o : os) sink.write(freightCalc.calcInner(o)); } }\n// RemoteFeeLookup.java\nclass RemoteFeeLookup { Money lookup(String dest) { return \"新疆\".equals(dest) || \"西藏\".equals(dest) ? Money.of(10) : Money.ZERO; } }\n```",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "both-sides-still",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Judge whether both candidates were still argued from both sides.\n\nPASS if A and B each carry support, objections, biggest risk and reversibility (for B: staleness window, memory, restart behaviour; for A: added latency, database dependency on the hot path), even though the deciding number is missing.\n\nFAIL if either candidate lacks objections or risk, or if the reply collapses into a single recommendation without the comparison.",
+          "config": {
+            "criteria": "Judge whether both candidates were still argued from both sides.\n\nPASS if A and B each carry support, objections, biggest risk and reversibility (for B: staleness window, memory, restart behaviour; for A: added latency, database dependency on the hot path), even though the deciding number is missing.\n\nFAIL if either candidate lacks objections or risk, or if the reply collapses into a single recommendation without the comparison.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "tradeoff-analysis",
+            "arm": "with-only"
+          }
+        },
+        {
+          "name": "unknown-not-invented",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge how the reply handles the number nobody has measured.\n\nPASS if the unmeasured facts (how long the lookup takes under current load, how long the ordering path takes now) are marked as unknown, the reply says how they would be obtained (measure the old and new path under the same conditions, or name the practice that does it), and the recommendation is stated conditionally on that number — for example \"if the lookup adds less than X ms of the current path, A; otherwise B\" — with X tied to the owner's tolerance rather than to an invented measurement.\n\nFAIL if the reply asserts a latency figure, a proportion, or a \"typically N ms\" as if it were known for this system and decides on that basis, or if it picks a candidate without acknowledging that the deciding number is missing.",
+          "config": {
+            "criteria": "Judge how the reply handles the number nobody has measured.\n\nPASS if the unmeasured facts (how long the lookup takes under current load, how long the ordering path takes now) are marked as unknown, the reply says how they would be obtained (measure the old and new path under the same conditions, or name the practice that does it), and the recommendation is stated conditionally on that number — for example \"if the lookup adds less than X ms of the current path, A; otherwise B\" — with X tied to the owner's tolerance rather than to an invented measurement.\n\nFAIL if the reply asserts a latency figure, a proportion, or a \"typically N ms\" as if it were known for this system and decides on that basis, or if it picks a candidate without acknowledging that the deciding number is missing.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.2548845,
+            "judgeCostUsd": 0.030410000000000034,
+            "durationSeconds": 76,
+            "startedAt": "2026-09-19T09:09:09.684Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-ly5wF4\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "both-sides-still",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "已读 skill 和它的 `candidates.md`。先说一条从你贴的代码里读出来的事实，它会缩小这个决定的范围：\n\n**`BatchCalc.run` 走的是 `calcInner`，绕过了 `lookup`。** 所以这次改动的压力只落在 `OrderService.quote` 和 `QuoteService.preview` 两条路径上，批量跑数不受影响。（这同时意味着批量算出来的运费不含偏远附加——是有意还是漏了，是另一件事，这轮不定。）\n\n---\n\n```\n决定｜RemoteFeeLookup.lookup 用什么方式拿到「省份→金额」；这轮不定表结构、\n      不定查不到省份时的语义、不定 BatchCalc 要不要补上附加费\n受影响｜OrderService.quote（同步下单路径）、QuoteService.preview；BatchCalc 不受影响\n\n基线（事实）｜现在 lookup 是纯内存比较，零 IO、零失败模式。改成查表后，\n      它第一次变成一次可能失败、可能变慢的远程调用。这是本次改动真正的新增风险，\n      A 和 B 都逃不掉，只是失败时的表现不同。\n      表几十行、同机房 MySQL、一天约 5 万订单。\n\n未知（没人量过，我也不编）｜\n  U1 单次主键查询在当前负载下的 p99——谁去量：走 baseline-measurement\n  U2 下单路径现在的总耗时 p99——谁去量：同上，两个数要在同一条件下取\n  U3 QuoteService.preview 的调用量（预览通常比下单高一个量级，但这里未知）\n  U4 「5 分钟内生效」是运营提的硬要求，还是你为候选 B 设的实现参数\n```\n\n**候选 A：每次查表**\n碰：`RemoteFeeLookup` 内部加一个 DAO 调用，调用方签名不变。\n- 支持｜全集群同一时刻取值一致；运营改完下一笔即刻生效；没有缓存失效逻辑要维护；`lookup` 仍是无状态的，测试只要 mock DAO。\n- 反对｜把一次 IO 放进了同步下单路径；MySQL 抖动或连接池耗尽时，下单跟着受影响。\n- 最大风险｜U1 没量。若这条查询在峰值下真的慢（比如连接池排队），影响直接落在下单成功率上。\n- 可逆性｜双向门。改回去 = 在这个类内部加缓存，调用方一行不动。\n\n**候选 B：启动全量加载 + 5 分钟刷新**\n碰：`RemoteFeeLookup` 变成有状态组件，多一个定时刷新线程、一个启动依赖。\n- 支持｜lookup 回到零 IO；MySQL 短时不可用时仍能按旧值继续算钱。\n- 反对｜引入两个新的正确性问题：(1) 多实例之间在刷新窗口内取值不一致；(2) 启动时 DB 不可用，要么启动失败，要么加载成空表——空表意味着**全部订单静默按不收附加费算**，少收钱且不报错。\n- 最大风险｜业务可见的不一致。举个具体的：运营 10:00 把新疆从 10 改成 15，web-01 已刷新、web-02 没有，同一个用户在 `preview` 看到 10 元、下单被扣 15 元。这是客诉，而且难复现。\n- 可逆性｜双向门，但代码删除量比 A 大（要拆掉定时器和状态）。\n\n**没列第三个候选的理由**：想过「短 TTL（5 秒）缓存」作为折中，但它同时承担 A 的 IO 和 B 的不一致，只是把两者都调小，换来的收益在这个量级上看不出，不构成真实取舍。\n\n---\n\n**推荐｜暂定 A。**\n\n理由是顺序而不是性能：**两个候选都是双向门，而 A 是其中更简单、语义更少的那个**（业界说法：Make it work, make it right, make it fast——先不引入没有证据支持的缓存；以及 Phil Karlton 那句\"缓存失效是两大难题之一\"，候选 B 的两个反对点正是它的两种具体形态）。既然事后从 A 加缓存只动这个类的内部，就没有理由在 U1、U2 都空着的时候先付缓存一致性的代价。\n\n**推翻条件（这是要挂在数上的判定，不是感觉）**：量到 U1 和 U2 后，若单次 `lookup` 的 p99 超过下单路径 p99 的 5%，或峰值期这条查询出现连接池排队，则换 B——并且换 B 时必须同时定下启动加载失败的行为（宁可启动失败，不可静默空表）。\n\n我推荐的下一步是先按 A 实现，同时用 baseline-measurement 补 U1、U2 这两个数（量本身不阻塞 A 上线，因为 A 是可逆的）。\n\n一个问题请你定：**U4——「5 分钟内生效」是运营明确提过的要求，还是你为了描述候选 B 顺手定的数？** 如果是运营提的，我想知道他们改这张表的频率和改完之后会不会立刻拿一笔真实订单去验证；如果他们会立刻去验证，B 的窗口期不一致会直接变成运营的困惑，A 的优势还要再大一截。"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "unknown-not-invented",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "已读 skill 和它的 `candidates.md`。先说一条从你贴的代码里读出来的事实，它会缩小这个决定的范围：\n\n**`BatchCalc.run` 走的是 `calcInner`，绕过了 `lookup`。** 所以这次改动的压力只落在 `OrderService.quote` 和 `QuoteService.preview` 两条路径上，批量跑数不受影响。（这同时意味着批量算出来的运费不含偏远附加——是有意还是漏了，是另一件事，这轮不定。）\n\n---\n\n```\n决定｜RemoteFeeLookup.lookup 用什么方式拿到「省份→金额」；这轮不定表结构、\n      不定查不到省份时的语义、不定 BatchCalc 要不要补上附加费\n受影响｜OrderService.quote（同步下单路径）、QuoteService.preview；BatchCalc 不受影响\n\n基线（事实）｜现在 lookup 是纯内存比较，零 IO、零失败模式。改成查表后，\n      它第一次变成一次可能失败、可能变慢的远程调用。这是本次改动真正的新增风险，\n      A 和 B 都逃不掉，只是失败时的表现不同。\n      表几十行、同机房 MySQL、一天约 5 万订单。\n\n未知（没人量过，我也不编）｜\n  U1 单次主键查询在当前负载下的 p99——谁去量：走 baseline-measurement\n  U2 下单路径现在的总耗时 p99——谁去量：同上，两个数要在同一条件下取\n  U3 QuoteService.preview 的调用量（预览通常比下单高一个量级，但这里未知）\n  U4 「5 分钟内生效」是运营提的硬要求，还是你为候选 B 设的实现参数\n```\n\n**候选 A：每次查表**\n碰：`RemoteFeeLookup` 内部加一个 DAO 调用，调用方签名不变。\n- 支持｜全集群同一时刻取值一致；运营改完下一笔即刻生效；没有缓存失效逻辑要维护；`lookup` 仍是无状态的，测试只要 mock DAO。\n- 反对｜把一次 IO 放进了同步下单路径；MySQL 抖动或连接池耗尽时，下单跟着受影响。\n- 最大风险｜U1 没量。若这条查询在峰值下真的慢（比如连接池排队），影响直接落在下单成功率上。\n- 可逆性｜双向门。改回去 = 在这个类内部加缓存，调用方一行不动。\n\n**候选 B：启动全量加载 + 5 分钟刷新**\n碰：`RemoteFeeLookup` 变成有状态组件，多一个定时刷新线程、一个启动依赖。\n- 支持｜lookup 回到零 IO；MySQL 短时不可用时仍能按旧值继续算钱。\n- 反对｜引入两个新的正确性问题：(1) 多实例之间在刷新窗口内取值不一致；(2) 启动时 DB 不可用，要么启动失败，要么加载成空表——空表意味着**全部订单静默按不收附加费算**，少收钱且不报错。\n- 最大风险｜业务可见的不一致。举个具体的：运营 10:00 把新疆从 10 改成 15，web-01 已刷新、web-02 没有，同一个用户在 `preview` 看到 10 元、下单被扣 15 元。这是客诉，而且难复现。\n- 可逆性｜双向门，但代码删除量比 A 大（要拆掉定时器和状态）。\n\n**没列第三个候选的理由**：想过「短 TTL（5 秒）缓存」作为折中，但它同时承担 A 的 IO 和 B 的不一致，只是把两者都调小，换来的收益在这个量级上看不出，不构成真实取舍。\n\n---\n\n**推荐｜暂定 A。**\n\n理由是顺序而不是性能：**两个候选都是双向门，而 A 是其中更简单、语义更少的那个**（业界说法：Make it work, make it right, make it fast——先不引入没有证据支持的缓存；以及 Phil Karlton 那句\"缓存失效是两大难题之一\"，候选 B 的两个反对点正是它的两种具体形态）。既然事后从 A 加缓存只动这个类的内部，就没有理由在 U1、U2 都空着的时候先付缓存一致性的代价。\n\n**推翻条件（这是要挂在数上的判定，不是感觉）**：量到 U1 和 U2 后，若单次 `lookup` 的 p99 超过下单路径 p99 的 5%，或峰值期这条查询出现连接池排队，则换 B——并且换 B 时必须同时定下启动加载失败的行为（宁可启动失败，不可静默空表）。\n\n我推荐的下一步是先按 A 实现，同时用 baseline-measurement 补 U1、U2 这两个数（量本身不阻塞 A 上线，因为 A 是可逆的）。\n\n一个问题请你定：**U4——「5 分钟内生效」是运营明确提过的要求，还是你为了描述候选 B 顺手定的数？** 如果是运营提的，我想知道他们改这张表的频率和改完之后会不会立刻拿一笔真实订单去验证；如果他们会立刻去验证，B 的窗口期不一致会直接变成运营的困惑，A 的优势还要再大一截。"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.2377355,
+            "judgeCostUsd": 0.024264000000000015,
+            "durationSeconds": 68,
+            "startedAt": "2026-09-19T09:09:11.454Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-eQ24Vr\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "both-sides-still",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "用的是 ATAM 的核心动作（候选 / 两面 / 风险），可逆性按 Amazon 的单向门·双向门（one-way door / two-way door）。\n\n---\n\n**决定**｜`RemoteFeeLookup.lookup` 拿「省份→金额」的方式；这轮不定表结构、不定运营改配置的入口。受影响：`OrderService.quote`（下单同步路径）、`QuoteService.preview`。\n\n**基线**（从你贴的代码读到的事实）\n- `lookup` 只有一个调用点 `FreightCalc.calc`，往上分叉成 `quote` 和 `preview` 两条路径。\n- `BatchCalc` 走的是 `calcInner`，**绕开** `remoteFee.lookup`。所以批量跑不会放大这次新增的查询量。\n- 现在是硬编码常量，零 IO。两个候选都是从「0 次查询」变成「1 次查询 or 1 次内存读」，不是在优化一个已有的查询。\n\n**未知**（没人量过，我也不编）\n1. 这条主键查询在当前负载下要多久 —— 未量。\n2. 下单路径现在总耗时多少 —— 未量。没有这个数，「加了多少」说不出比例。\n3. `preview` 的调用量 —— 未量。**5 万/天是订单量，不是 `lookup` 的调用量**；预览通常比下单多几倍。\n4. 业务上运营改一次配置，多久生效算合格 —— 未确认。候选 B 里的「5 分钟」是方案自带的，不是需求给的。\n\n我能自己算的只有算术：5 万/天 ≈ 0.58 次/秒均值；压在 12 小时里约 1.2 次/秒。峰值倍数是我假设的（按 20 倍算约 23 次/秒），这条是推断不是事实。\n\n---\n\n**候选 A｜每次直接查 `remote_surcharge_rule`（一条主键查询）**\n碰：`RemoteFeeLookup` 内部加一个 DAO/Mapper；`lookup` 签名不变。无缓存状态、无启动顺序依赖。\n\n- 支持｜运营改完立刻生效，不存在「不同节点报价不一样」的窗口；没有缓存一致性、没有预热、没有刷新线程；代码少一个状态维度，测试只需要一个 DB fixture。\n- 反对｜把一次 IO 放进了下单同步路径，而这条路径现在的耗时没有基线；DB 抖动/慢查询会直接传导到下单（现在这条路径对这张表是零依赖）。\n- 最大风险｜`preview` 的真实 QPS 比订单量高很多，几十行的小表被打成热点行，连接池排队。（推断，未量）\n- 可逆性｜**双向门**。`lookup` 是唯一入口，后面要加缓存就在这个方法里包一层，调用方一行不改。\n\n**候选 B｜启动全量加载 + 进程内缓存，5 分钟内生效**\n碰：`RemoteFeeLookup` 持有一份 Map、一个刷新调度、一个启动加载；多实例各自一份。\n\n- 支持｜下单路径上是纯内存读，几乎不占耗时；DB 抖动时下单不受影响；表几十行，内存代价可忽略。\n- 反对｜引入 5 分钟的不一致窗口，而且这是**钱**：用户在 `preview` 看到一个价、下单时另一个节点用新配置算出另一个价，同一时刻不同实例报价不同；启动时 DB 不可用怎么办（起不来 / 起来但全按 0 算）要单独定，定错了是静默少收/多收；多一条「配置已改但没生效」的排查路径，运营会来问。\n- 最大风险｜按旧金额成交的订单。**这些订单是单向门**——单已经成了、钱已经结了，事后只能靠人工补差。\n- 可逆性｜代码层面是双向门（删掉缓存回到直查）；但上面那条错价订单不可逆。\n\n---\n\n**推荐**｜暂定 **A**。\n\n理由是「先量再优化」（premature optimization / YAGNI）：B 买的是一个没人量过大小的收益，付的是一个明确的、发生在金额上的代价。而且 A 把 `lookup` 保留成唯一接缝，真需要缓存时是在一个方法里加，不是重构。\n\n**推翻条件**（任一出现就换 B，或换成短 TTL 的折中）\n- 量出来这条查询占下单路径耗时的比例显著（比如 >5%）；\n- 或 `preview` 的 QPS 比订单量高一个数量级以上；\n- 或运营明确说「改配置晚几分钟生效没关系」，那 B 的主要反对项就不成立了。\n\n---\n\n请你定一件事：直接按 A 做，还是我先按 `baseline-measurement` 把「下单路径现在的耗时」量出来再定？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "unknown-not-invented",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "用的是 ATAM 的核心动作（候选 / 两面 / 风险），可逆性按 Amazon 的单向门·双向门（one-way door / two-way door）。\n\n---\n\n**决定**｜`RemoteFeeLookup.lookup` 拿「省份→金额」的方式；这轮不定表结构、不定运营改配置的入口。受影响：`OrderService.quote`（下单同步路径）、`QuoteService.preview`。\n\n**基线**（从你贴的代码读到的事实）\n- `lookup` 只有一个调用点 `FreightCalc.calc`，往上分叉成 `quote` 和 `preview` 两条路径。\n- `BatchCalc` 走的是 `calcInner`，**绕开** `remoteFee.lookup`。所以批量跑不会放大这次新增的查询量。\n- 现在是硬编码常量，零 IO。两个候选都是从「0 次查询」变成「1 次查询 or 1 次内存读」，不是在优化一个已有的查询。\n\n**未知**（没人量过，我也不编）\n1. 这条主键查询在当前负载下要多久 —— 未量。\n2. 下单路径现在总耗时多少 —— 未量。没有这个数，「加了多少」说不出比例。\n3. `preview` 的调用量 —— 未量。**5 万/天是订单量，不是 `lookup` 的调用量**；预览通常比下单多几倍。\n4. 业务上运营改一次配置，多久生效算合格 —— 未确认。候选 B 里的「5 分钟」是方案自带的，不是需求给的。\n\n我能自己算的只有算术：5 万/天 ≈ 0.58 次/秒均值；压在 12 小时里约 1.2 次/秒。峰值倍数是我假设的（按 20 倍算约 23 次/秒），这条是推断不是事实。\n\n---\n\n**候选 A｜每次直接查 `remote_surcharge_rule`（一条主键查询）**\n碰：`RemoteFeeLookup` 内部加一个 DAO/Mapper；`lookup` 签名不变。无缓存状态、无启动顺序依赖。\n\n- 支持｜运营改完立刻生效，不存在「不同节点报价不一样」的窗口；没有缓存一致性、没有预热、没有刷新线程；代码少一个状态维度，测试只需要一个 DB fixture。\n- 反对｜把一次 IO 放进了下单同步路径，而这条路径现在的耗时没有基线；DB 抖动/慢查询会直接传导到下单（现在这条路径对这张表是零依赖）。\n- 最大风险｜`preview` 的真实 QPS 比订单量高很多，几十行的小表被打成热点行，连接池排队。（推断，未量）\n- 可逆性｜**双向门**。`lookup` 是唯一入口，后面要加缓存就在这个方法里包一层，调用方一行不改。\n\n**候选 B｜启动全量加载 + 进程内缓存，5 分钟内生效**\n碰：`RemoteFeeLookup` 持有一份 Map、一个刷新调度、一个启动加载；多实例各自一份。\n\n- 支持｜下单路径上是纯内存读，几乎不占耗时；DB 抖动时下单不受影响；表几十行，内存代价可忽略。\n- 反对｜引入 5 分钟的不一致窗口，而且这是**钱**：用户在 `preview` 看到一个价、下单时另一个节点用新配置算出另一个价，同一时刻不同实例报价不同；启动时 DB 不可用怎么办（起不来 / 起来但全按 0 算）要单独定，定错了是静默少收/多收；多一条「配置已改但没生效」的排查路径，运营会来问。\n- 最大风险｜按旧金额成交的订单。**这些订单是单向门**——单已经成了、钱已经结了，事后只能靠人工补差。\n- 可逆性｜代码层面是双向门（删掉缓存回到直查）；但上面那条错价订单不可逆。\n\n---\n\n**推荐**｜暂定 **A**。\n\n理由是「先量再优化」（premature optimization / YAGNI）：B 买的是一个没人量过大小的收益，付的是一个明确的、发生在金额上的代价。而且 A 把 `lookup` 保留成唯一接缝，真需要缓存时是在一个方法里加，不是重构。\n\n**推翻条件**（任一出现就换 B，或换成短 TTL 的折中）\n- 量出来这条查询占下单路径耗时的比例显著（比如 >5%）；\n- 或 `preview` 的 QPS 比订单量高一个数量级以上；\n- 或运营明确说「改配置晚几分钟生效没关系」，那 B 的主要反对项就不成立了。\n\n---\n\n请你定一件事：直接按 A 做，还是我先按 `baseline-measurement` 把「下单路径现在的耗时」量出来再定？"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 5,
+            "costUsd": 0.3006440000000001,
+            "judgeCostUsd": 0.02983200000000001,
+            "durationSeconds": 99,
+            "startedAt": "2026-09-19T09:09:14.205Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-M8IZtJ\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "both-sides-still",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "读到了技能的形状文件；`plugins/CONTEXT.md` 的读取被拒了，用词按技能正文来。\n\n先说一条前置的事实判断：这两个候选之间的差，**一半落在一个没人量过的数上**（那条查询多久、下单路径现在多久）。技能里写了这种情况要先 `baseline-measurement` 把数拿到再比。但另一半差是功能性的——生效时效和错价——那部分现在就能比。所以我照常比完，把该量的数挂成判定规则。\n\n---\n\n**决定**｜`RemoteFeeLookup.lookup` 在一次运费计算里怎么拿到「省份→金额」。这轮不定：表结构、运营改配置的入口、`BatchCalc` 要不要也算偏远费。\n\n**基线**（从你贴的代码读到的事实）\n- `lookup` 现在是纯内存硬编码，一次 DB 都不碰。所以 A 和 B 都是**净增**：A 往下单同步路径上新加一次 DB 往返，B 新加一份进程内状态。不存在「A 是现状」。\n- `calc` 有两个调用方：`OrderService.quote`（下单）和 `QuoteService.preview`（预览）。两个都会走 `lookup`。\n- `BatchCalc` 调的是 `calcInner`，绕开 `lookup`——批量路径不受这个决定影响。（顺带：批量算出来的运费因此不含偏远附加。这是既有行为，不在本轮，但换成查表之后这个差会更显眼，建议单独记一条。）\n- 5 万单/天摊平约 **0.58 次/秒**。按峰值 20 倍算也就约 12 次/秒——这是条件推断，峰值倍数本身未知。\n\n**未知**｜谁去量\n1. 那条主键查询的 P99 —— 未量。谁去量：主人，在压测或线上影子流量上。\n2. `quote` 端到端 P99 —— 未量。同上。\n3. `QuoteService.preview` 的调用量级 —— 未知。预览量若比下单高一两个数量级，QPS 结论整个要重算。谁去查：主人或现有的接口监控。\n4. 运营改了金额，业务上要求多久生效 —— 未确认。B 把这个数默认成了 5 分钟。\n\n---\n\n**候选 A**｜每次调用直接查 `remote_surcharge_rule`，一条主键查询。碰：`RemoteFeeLookup` 一个类、一个 DAO、下单路径多一次 DB 往返。\n\n- 支持｜改了立即生效，没有陈旧窗口；多实例之间永远一致；没有缓存要预热、要失效、要调试；`lookup` 的行为等于表的内容，出问题只查表。表几十行，MySQL 里基本常驻 buffer pool。\n- 反对｜把 DB 拉进了运费计算这个之前纯内存的函数。一旦哪天 `BatchCalc` 改成走 `calc`，循环里就是 N 次查询（N+1 query problem），得在那时候一起处理。\n- 最大风险｜这条查询在峰值下比想的慢，拖累下单 P99——**而现在没有数能排除这个风险**。\n- 可逆性｜双向门（two-way door）。以后要加缓存只动 `RemoteFeeLookup` 内部，`FreightCalc` 和两个调用方一行不改。\n\n**候选 B**｜启动时全量加载进内存，5 分钟内刷新。碰：`RemoteFeeLookup` 一个类、一个定时刷新、启动顺序、外加「加载失败怎么办」的分支。\n\n- 支持｜运费计算回到纯内存，DB 完全不在这条路径上；峰值再高也不增 DB 负载；把上面 1、2 两个未知直接绕过去了。\n- 反对｜引入最长 5 分钟的陈旧窗口，且各实例的过期时刻互相错开——同一时刻不同实例可能给出不同金额。用户在预览页看到一个价、下单扣另一个价，这是客诉的典型来源。另外多一条启动依赖：加载失败时是拒绝启动，还是带着空表静默收 0 元？这个分支必须现在就想清楚。\n- 最大风险｜**错价收钱**。运营改了新疆的附加费，5 分钟内进来的单按旧价结算，事后要人工核对补退。几十行配置换来的省，和一次补退的人力不成比例。\n- 可逆性｜代码上是双向门，但有一段回不干净：上线后运营会按「改完等几分钟」来安排操作，客服也会开始收到「改了没生效」的工单；把这部分预期收回来要靠沟通，不是删代码。\n\n**两者互不兼得的那一处**：立即生效 vs 零每单查库。\n\n---\n\n**推荐**｜暂定 **A**。\n\n理由用的是两条业界实践：一是 Knuth 的 premature optimization——B 的收益落在一个没人量过的数上，代价（陈旧、错价、实例间不一致）却是确定的；二是 Kent Beck 的 make it work, make it right, make it fast——A 是先把行为做对，而且它把「以后要不要加缓存」完整地留在了 `RemoteFeeLookup` 这一个类里，加缓存的门一直开着。\n\n放弃 B，因为它为一个未证实的性能问题，先付了一个确定的正确性代价。\n\n**挂在数上的判定规则**（`baseline-measurement` 的做法）：量 `quote` 端到端 P99 和那条查询的 P99。若 查询 P99 ÷ quote P99 **< 5%**，A 定稿；≥ 5% 再把 B 拿回来谈。5% 这个阈值是我提的，你可以改。\n\n**推翻条件**（任一出现就换 B，或换带主动失效的读穿缓存）：\n- 量出来那条查询占 `quote` P99 超过上面定的阈值；\n- `QuoteService.preview` 的量比下单高一两个数量级；\n- 峰值时 DB 连接池已经接近打满——那问题不在这条查询的耗时，在连接数。\n\n---\n\n按 A 走、并且先把那两个 P99 量出来挂上判定规则——确认这样，还是你觉得哪条不对？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "unknown-not-invented",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "读到了技能的形状文件；`plugins/CONTEXT.md` 的读取被拒了，用词按技能正文来。\n\n先说一条前置的事实判断：这两个候选之间的差，**一半落在一个没人量过的数上**（那条查询多久、下单路径现在多久）。技能里写了这种情况要先 `baseline-measurement` 把数拿到再比。但另一半差是功能性的——生效时效和错价——那部分现在就能比。所以我照常比完，把该量的数挂成判定规则。\n\n---\n\n**决定**｜`RemoteFeeLookup.lookup` 在一次运费计算里怎么拿到「省份→金额」。这轮不定：表结构、运营改配置的入口、`BatchCalc` 要不要也算偏远费。\n\n**基线**（从你贴的代码读到的事实）\n- `lookup` 现在是纯内存硬编码，一次 DB 都不碰。所以 A 和 B 都是**净增**：A 往下单同步路径上新加一次 DB 往返，B 新加一份进程内状态。不存在「A 是现状」。\n- `calc` 有两个调用方：`OrderService.quote`（下单）和 `QuoteService.preview`（预览）。两个都会走 `lookup`。\n- `BatchCalc` 调的是 `calcInner`，绕开 `lookup`——批量路径不受这个决定影响。（顺带：批量算出来的运费因此不含偏远附加。这是既有行为，不在本轮，但换成查表之后这个差会更显眼，建议单独记一条。）\n- 5 万单/天摊平约 **0.58 次/秒**。按峰值 20 倍算也就约 12 次/秒——这是条件推断，峰值倍数本身未知。\n\n**未知**｜谁去量\n1. 那条主键查询的 P99 —— 未量。谁去量：主人，在压测或线上影子流量上。\n2. `quote` 端到端 P99 —— 未量。同上。\n3. `QuoteService.preview` 的调用量级 —— 未知。预览量若比下单高一两个数量级，QPS 结论整个要重算。谁去查：主人或现有的接口监控。\n4. 运营改了金额，业务上要求多久生效 —— 未确认。B 把这个数默认成了 5 分钟。\n\n---\n\n**候选 A**｜每次调用直接查 `remote_surcharge_rule`，一条主键查询。碰：`RemoteFeeLookup` 一个类、一个 DAO、下单路径多一次 DB 往返。\n\n- 支持｜改了立即生效，没有陈旧窗口；多实例之间永远一致；没有缓存要预热、要失效、要调试；`lookup` 的行为等于表的内容，出问题只查表。表几十行，MySQL 里基本常驻 buffer pool。\n- 反对｜把 DB 拉进了运费计算这个之前纯内存的函数。一旦哪天 `BatchCalc` 改成走 `calc`，循环里就是 N 次查询（N+1 query problem），得在那时候一起处理。\n- 最大风险｜这条查询在峰值下比想的慢，拖累下单 P99——**而现在没有数能排除这个风险**。\n- 可逆性｜双向门（two-way door）。以后要加缓存只动 `RemoteFeeLookup` 内部，`FreightCalc` 和两个调用方一行不改。\n\n**候选 B**｜启动时全量加载进内存，5 分钟内刷新。碰：`RemoteFeeLookup` 一个类、一个定时刷新、启动顺序、外加「加载失败怎么办」的分支。\n\n- 支持｜运费计算回到纯内存，DB 完全不在这条路径上；峰值再高也不增 DB 负载；把上面 1、2 两个未知直接绕过去了。\n- 反对｜引入最长 5 分钟的陈旧窗口，且各实例的过期时刻互相错开——同一时刻不同实例可能给出不同金额。用户在预览页看到一个价、下单扣另一个价，这是客诉的典型来源。另外多一条启动依赖：加载失败时是拒绝启动，还是带着空表静默收 0 元？这个分支必须现在就想清楚。\n- 最大风险｜**错价收钱**。运营改了新疆的附加费，5 分钟内进来的单按旧价结算，事后要人工核对补退。几十行配置换来的省，和一次补退的人力不成比例。\n- 可逆性｜代码上是双向门，但有一段回不干净：上线后运营会按「改完等几分钟」来安排操作，客服也会开始收到「改了没生效」的工单；把这部分预期收回来要靠沟通，不是删代码。\n\n**两者互不兼得的那一处**：立即生效 vs 零每单查库。\n\n---\n\n**推荐**｜暂定 **A**。\n\n理由用的是两条业界实践：一是 Knuth 的 premature optimization——B 的收益落在一个没人量过的数上，代价（陈旧、错价、实例间不一致）却是确定的；二是 Kent Beck 的 make it work, make it right, make it fast——A 是先把行为做对，而且它把「以后要不要加缓存」完整地留在了 `RemoteFeeLookup` 这一个类里，加缓存的门一直开着。\n\n放弃 B，因为它为一个未证实的性能问题，先付了一个确定的正确性代价。\n\n**挂在数上的判定规则**（`baseline-measurement` 的做法）：量 `quote` 端到端 P99 和那条查询的 P99。若 查询 P99 ÷ quote P99 **< 5%**，A 定稿；≥ 5% 再把 B 拿回来谈。5% 这个阈值是我提的，你可以改。\n\n**推翻条件**（任一出现就换 B，或换带主动失效的读穿缓存）：\n- 量出来那条查询占 `quote` P99 超过上面定的阈值；\n- `QuoteService.preview` 的量比下单高一两个数量级；\n- 峰值时 DB 连接池已经接近打满——那问题不在这条查询的耗时，在连接数。\n\n---\n\n按 A 走、并且先把那两个 P99 量出来挂上判定规则——确认这样，还是你觉得哪条不对？"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.22763350000000004,
+            "judgeCostUsd": 0.04503000000000007,
+            "durationSeconds": 74,
+            "startedAt": "2026-09-19T09:10:19.893Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-qDpP3f\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "both-sides-still",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "没找到 `tradeoff-analysis` 这个 skill（本地 `.claude/skills/` 下没有任何 skill 文件），所以下面按通用的技术选型对比框架来写：先分事实/推断/未知，再按几个维度比，最后给结论和触发条件。\n\n---\n\n## 一、先把已知和猜的分开\n\n**事实（你给的 + 我从代码里看到的）**\n- 5 万单/天，同机房 MySQL，表几十行，运费计算在下单同步路径上。\n- 没有实测数据：既不知道这条查询多久，也不知道下单路径现在多久。\n- 代码里 `lookup` 有两个调用方：`OrderService.quote` 和 `QuoteService.preview`。也就是说**真实调用量不等于订单量**。\n- `BatchCalc` 走的是 `calcInner`，根本不经过 `remoteFee`。\n\n**我的推断（没量过，仅为数量级估算）**\n- 5 万单/天 = 平均 0.58 QPS。电商峰谷比按 20 倍算，下单峰值约 12 QPS。\n- 加上 `preview`，预览:下单按 10:1 估，`lookup` 峰值约 100~150 QPS 量级。\n- 同机房主键查询：网络 RTT 0.1~0.3ms + 执行 <0.1ms，合计**亚毫秒级**。几十行的表会常驻 InnoDB buffer pool，不碰磁盘。\n- 按 150 QPS × 1ms 算，稳态只占用约 0.15 个数据库连接。连接池毫无压力。\n\n## 二、按维度比\n\n| 维度 | A：每次查库 | B：进程内缓存 + 5 分钟刷新 |\n|---|---|---|\n| 下单路径延迟 | +0.3~1ms（推断） | +~0 |\n| 代码量 | 几乎为零，改 `lookup` 一个方法 | 加载器、定时刷新、并发安全的 map 替换、启动时 DB 不可用的降级、刷新失败的保底与告警 |\n| 配置生效 | 立即 | 最长 5 分钟，且**各节点不同步** |\n| 失败模式 | DB 挂了 → 下单也挂了（本来就挂了） | 刷新静默失败 → 长期用旧价，无感知 |\n| 可测试性 | 直接 | 每个测试都要管缓存状态 |\n| 可回退 | — | 加缓存是 two-way door，随时能加 |\n\n**B 独有的一个具体风险**：运营 10:00 把新疆从 10 元改成 15 元。10:01 用户在节点 1 上 `preview` 看到 10 元，下单请求路由到已刷新的节点 2，`quote` 算出 15 元。同一个用户、同一分钟内两个价格。A 不会有这个问题（窗口只有一个事务）。\n\n## 三、结论：选 A\n\n三条业界实践支持：\n\n1. **YAGNI（You Aren't Gonna Need It）**——B 解决的是一个没人证明存在的问题。\n2. **Measure, don't guess（Knuth 的 premature optimization）**——在不知道下单路径 p99 是多少的前提下谈省 1ms，分母都没有。按我的估算，这是 <1% 量级的优化。\n3. **Two-way door（可逆决策）**——缓存是纯加法，`lookup` 的签名不变，将来要加随时能加；而 B 的一致性窟窿现在就得开始运维。\n\n配套做两件事：\n- 给 `lookup` 加一个耗时打点（p50/p99 + QPS），把\"没人量过\"这条补上。\n- 定一个**触发条件（tripwire）**：如果 `lookup` 的 p99 超过下单路径 p99 的 5%，或连接池等待时间上升且能归因到这条查询，再上 B。有了打点，这个判断只要看一眼图。\n\n---\n\n顺带一个观察，不影响上面的选型但影响你这次改动的范围：`BatchCalc.run` 调的是 `calcInner`，绕过了 `remoteFee`，所以批量算出来的运费不含偏远附加费——改成查表之后这个差异还在。\n\n这是故意的（批量场景本来就不该含附加费），还是漏了？"
+              },
+              {
+                "name": "unknown-not-invented",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "没找到 `tradeoff-analysis` 这个 skill（本地 `.claude/skills/` 下没有任何 skill 文件），所以下面按通用的技术选型对比框架来写：先分事实/推断/未知，再按几个维度比，最后给结论和触发条件。\n\n---\n\n## 一、先把已知和猜的分开\n\n**事实（你给的 + 我从代码里看到的）**\n- 5 万单/天，同机房 MySQL，表几十行，运费计算在下单同步路径上。\n- 没有实测数据：既不知道这条查询多久，也不知道下单路径现在多久。\n- 代码里 `lookup` 有两个调用方：`OrderService.quote` 和 `QuoteService.preview`。也就是说**真实调用量不等于订单量**。\n- `BatchCalc` 走的是 `calcInner`，根本不经过 `remoteFee`。\n\n**我的推断（没量过，仅为数量级估算）**\n- 5 万单/天 = 平均 0.58 QPS。电商峰谷比按 20 倍算，下单峰值约 12 QPS。\n- 加上 `preview`，预览:下单按 10:1 估，`lookup` 峰值约 100~150 QPS 量级。\n- 同机房主键查询：网络 RTT 0.1~0.3ms + 执行 <0.1ms，合计**亚毫秒级**。几十行的表会常驻 InnoDB buffer pool，不碰磁盘。\n- 按 150 QPS × 1ms 算，稳态只占用约 0.15 个数据库连接。连接池毫无压力。\n\n## 二、按维度比\n\n| 维度 | A：每次查库 | B：进程内缓存 + 5 分钟刷新 |\n|---|---|---|\n| 下单路径延迟 | +0.3~1ms（推断） | +~0 |\n| 代码量 | 几乎为零，改 `lookup` 一个方法 | 加载器、定时刷新、并发安全的 map 替换、启动时 DB 不可用的降级、刷新失败的保底与告警 |\n| 配置生效 | 立即 | 最长 5 分钟，且**各节点不同步** |\n| 失败模式 | DB 挂了 → 下单也挂了（本来就挂了） | 刷新静默失败 → 长期用旧价，无感知 |\n| 可测试性 | 直接 | 每个测试都要管缓存状态 |\n| 可回退 | — | 加缓存是 two-way door，随时能加 |\n\n**B 独有的一个具体风险**：运营 10:00 把新疆从 10 元改成 15 元。10:01 用户在节点 1 上 `preview` 看到 10 元，下单请求路由到已刷新的节点 2，`quote` 算出 15 元。同一个用户、同一分钟内两个价格。A 不会有这个问题（窗口只有一个事务）。\n\n## 三、结论：选 A\n\n三条业界实践支持：\n\n1. **YAGNI（You Aren't Gonna Need It）**——B 解决的是一个没人证明存在的问题。\n2. **Measure, don't guess（Knuth 的 premature optimization）**——在不知道下单路径 p99 是多少的前提下谈省 1ms，分母都没有。按我的估算，这是 <1% 量级的优化。\n3. **Two-way door（可逆决策）**——缓存是纯加法，`lookup` 的签名不变，将来要加随时能加；而 B 的一致性窟窿现在就得开始运维。\n\n配套做两件事：\n- 给 `lookup` 加一个耗时打点（p50/p99 + QPS），把\"没人量过\"这条补上。\n- 定一个**触发条件（tripwire）**：如果 `lookup` 的 p99 超过下单路径 p99 的 5%，或连接池等待时间上升且能归因到这条查询，再上 B。有了打点，这个判断只要看一眼图。\n\n---\n\n顺带一个观察，不影响上面的选型但影响你这次改动的范围：`BatchCalc.run` 调的是 `calcInner`，绕过了 `remoteFee`，所以批量算出来的运费不含偏远附加费——改成查表之后这个差异还在。\n\n这是故意的（批量场景本来就不该含附加费），还是漏了？"
+              }
+            ]
+          },
+          {
+            "score": 0.3333333333333333,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.20756650000000007,
+            "judgeCostUsd": 0.041334000000000065,
+            "durationSeconds": 68,
+            "startedAt": "2026-09-19T09:10:26.123Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-qBTbv1\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "both-sides-still",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "我这边没有 `tradeoff-analysis` 这个技能（可用列表里没有），所以下面按常规的权衡分析写，不是套那个模板。如果它是你们内部的某个文档/流程，贴给我我再按它重做一遍。\n\n## 先分清事实和推断\n\n**从你贴的代码能看到的事实：**\n- `lookup` 只有一条调用链：`FreightCalc.calc` ← `OrderService.quote` 和 `QuoteService.preview`。\n- `BatchCalc.run` 调的是 `calcInner`，**完全绕过** `lookup`。所以批量那条路根本不产生这个查询——也意味着批量算出来的运费从来就不含偏远附加费（这是个已经存在的口径不一致，改成查表之后差异会变大，但不属于这次要决定的事，单独提一句）。\n\n**推断（没量过，标明是推断）：**\n- 5 万单/天 ≈ 平均 0.58 QPS。电商下单通常集中，按峰值 20 倍算也就 ~12 QPS。\n- 同机房 MySQL、几十行的表必然常驻 buffer pool，主键查询往返大概 0.5–1ms（含连接池获取）。\n- 下单同步路径本身要写订单、明细、扣库存，量级是几十毫秒。这条查询大概占 1–3%。\n\n这三条都是推断。但注意：**这个推断只需要\"数量级对\"就够支撑决策**——就算我估错 10 倍，12 QPS 变 120 QPS，MySQL 主键查询也远没到吃力的程度。\n\n## 两边真正的代价\n\n| | A：每次查库 | B：进程内缓存 |\n|---|---|---|\n| 省下的 | — | 每次调用 ~1ms（推断值） |\n| 付出的 | 一次 DB 往返 | 5 分钟的脏数据窗口 |\n| 失败模式 | DB 挂 → 下单失败（**响亮**） | 启动时 DB 挂 → 表为空 → 所有偏远费静默变 0（**无声**，还是错的金额） |\n| 运营改配置 | 立即生效 | 5 分钟内生效，期间有人按旧价下单 |\n\n几个关键点：\n\n**B 的可用性收益是假的。** 缓存常见的一个卖点是\"DB 挂了我还能算\"，但这条路径在 `OrderService.quote` 里，下单本来就必须写库。DB 挂了订单也落不了地，缓存住一个查询没有任何意义。\n\n**B 的 5 分钟窗口是真的业务代价。** 运营发现某省费率配错了改过来，之后 5 分钟内的订单仍按错的金额收钱。这不是\"稍微不新鲜\"，是收错钱，事后要对账、要退。\n\n**启动全量加载这个设计本身有问题。** 如果要做缓存，read-through + 短 TTL（比如 Caffeine `expireAfterWrite(30s)`）严格优于\"启动加载 + 5 分钟刷新\"：没有冷启动依赖 DB 的硬约束，脏数据窗口也短一个数量级。所以 B 的当前形态即使在\"该做缓存\"的前提下也不是最优解。\n\n## 建议：选 A\n\n依据两条业界实践：\n\n1. **Premature optimization / measure first**（Knuth）——你们自己说了，没人量过这条查询的耗时，也没人量过下单路径的耗时。B 是在优化一个还没证明存在的问题，代价是确定存在的正确性窗口。\n2. **Two-way door**（可逆决策，Bezos 的说法）——A→B 后来想加缓存，只要在 `RemoteFeeLookup` 内部包一层，`lookup` 的签名和所有调用方都不用动，成本极低；B→A 则是先吃过一轮脏数据 bug 再回退。两个方向不对称，往低风险那边走。\n\n落地顺序建议：先做 A，同时在 `lookup` 上打一个耗时指标（p50/p99）。跑两周，如果 p99 真的变成下单路径里显著的一块，再加 30 秒 TTL 的 read-through 缓存——那时候是拿数据做决定，而且脏数据窗口只有 30 秒不是 5 分钟。\n\n## 一个问题\n\n`QuoteService.preview` 的调用量我完全不知道。比如说：如果它是购物车页面每次改数量就调一次、或者开放给合作方的报价 API 被轮询，那实际 QPS 可能是订单量的几十上百倍，我上面那个\"12 QPS\"的推断就塌了（结论大概率还是 A，但\"不用量\"这条理由就不成立了）。\n\n`preview` 大概一天被调多少次，跟下单量比是什么量级？"
+              },
+              {
+                "name": "unknown-not-invented",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "我这边没有 `tradeoff-analysis` 这个技能（可用列表里没有），所以下面按常规的权衡分析写，不是套那个模板。如果它是你们内部的某个文档/流程，贴给我我再按它重做一遍。\n\n## 先分清事实和推断\n\n**从你贴的代码能看到的事实：**\n- `lookup` 只有一条调用链：`FreightCalc.calc` ← `OrderService.quote` 和 `QuoteService.preview`。\n- `BatchCalc.run` 调的是 `calcInner`，**完全绕过** `lookup`。所以批量那条路根本不产生这个查询——也意味着批量算出来的运费从来就不含偏远附加费（这是个已经存在的口径不一致，改成查表之后差异会变大，但不属于这次要决定的事，单独提一句）。\n\n**推断（没量过，标明是推断）：**\n- 5 万单/天 ≈ 平均 0.58 QPS。电商下单通常集中，按峰值 20 倍算也就 ~12 QPS。\n- 同机房 MySQL、几十行的表必然常驻 buffer pool，主键查询往返大概 0.5–1ms（含连接池获取）。\n- 下单同步路径本身要写订单、明细、扣库存，量级是几十毫秒。这条查询大概占 1–3%。\n\n这三条都是推断。但注意：**这个推断只需要\"数量级对\"就够支撑决策**——就算我估错 10 倍，12 QPS 变 120 QPS，MySQL 主键查询也远没到吃力的程度。\n\n## 两边真正的代价\n\n| | A：每次查库 | B：进程内缓存 |\n|---|---|---|\n| 省下的 | — | 每次调用 ~1ms（推断值） |\n| 付出的 | 一次 DB 往返 | 5 分钟的脏数据窗口 |\n| 失败模式 | DB 挂 → 下单失败（**响亮**） | 启动时 DB 挂 → 表为空 → 所有偏远费静默变 0（**无声**，还是错的金额） |\n| 运营改配置 | 立即生效 | 5 分钟内生效，期间有人按旧价下单 |\n\n几个关键点：\n\n**B 的可用性收益是假的。** 缓存常见的一个卖点是\"DB 挂了我还能算\"，但这条路径在 `OrderService.quote` 里，下单本来就必须写库。DB 挂了订单也落不了地，缓存住一个查询没有任何意义。\n\n**B 的 5 分钟窗口是真的业务代价。** 运营发现某省费率配错了改过来，之后 5 分钟内的订单仍按错的金额收钱。这不是\"稍微不新鲜\"，是收错钱，事后要对账、要退。\n\n**启动全量加载这个设计本身有问题。** 如果要做缓存，read-through + 短 TTL（比如 Caffeine `expireAfterWrite(30s)`）严格优于\"启动加载 + 5 分钟刷新\"：没有冷启动依赖 DB 的硬约束，脏数据窗口也短一个数量级。所以 B 的当前形态即使在\"该做缓存\"的前提下也不是最优解。\n\n## 建议：选 A\n\n依据两条业界实践：\n\n1. **Premature optimization / measure first**（Knuth）——你们自己说了，没人量过这条查询的耗时，也没人量过下单路径的耗时。B 是在优化一个还没证明存在的问题，代价是确定存在的正确性窗口。\n2. **Two-way door**（可逆决策，Bezos 的说法）——A→B 后来想加缓存，只要在 `RemoteFeeLookup` 内部包一层，`lookup` 的签名和所有调用方都不用动，成本极低；B→A 则是先吃过一轮脏数据 bug 再回退。两个方向不对称，往低风险那边走。\n\n落地顺序建议：先做 A，同时在 `lookup` 上打一个耗时指标（p50/p99）。跑两周，如果 p99 真的变成下单路径里显著的一块，再加 30 秒 TTL 的 read-through 缓存——那时候是拿数据做决定，而且脏数据窗口只有 30 秒不是 5 分钟。\n\n## 一个问题\n\n`QuoteService.preview` 的调用量我完全不知道。比如说：如果它是购物车页面每次改数量就调一次、或者开放给合作方的报价 API 被轮询，那实际 QPS 可能是订单量的几十上百倍，我上面那个\"12 QPS\"的推断就塌了（结论大概率还是 A，但\"不用量\"这条理由就不成立了）。\n\n`preview` 大概一天被调多少次，跟下单量比是什么量级？"
+              }
+            ]
+          },
+          {
+            "score": 0,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.23912649999999994,
+            "judgeCostUsd": 0.027587999999999946,
+            "durationSeconds": 82,
+            "startedAt": "2026-09-19T09:10:53.471Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-XZgell\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "both-sides-still",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`tradeoff-analysis` 这个 skill 在当前环境里不存在（我查了工作目录和 `.claude/skills/`，都没有；config 目录不让读）。下面我按通用的取舍分析套路来做——**可逆性优先 + 先量后优化**（two-way door decision + data-driven optimization），结论会明确标出哪些是事实、哪些是我的推断。\n\n---\n\n## 结论：选 A（每次直接查表）\n\n理由不是\"A 更快\"，而是**这个决定是可逆的，而 B 引入的问题不可逆**。\n\n---\n\n## 先说从你贴的代码里读出来的事实\n\n调用链只有两条会走到 `lookup`：\n\n- `OrderService.quote` → `calc` → `lookup`（下单同步路径）\n- `QuoteService.preview` → `calc` → `lookup`（预览）\n\n`BatchCalc.run` 走的是 `calcInner`，**根本不调 `lookup`**。\n\n这条很关键：通常反对\"每次查库\"的最强论据是批量循环里的 N+1 query problem——一批 1000 单就是 1000 次查询。但你这里批量路径压根不碰偏远费，所以这个论据不成立。只剩下单笔请求加一次查询。\n\n## 量级估算（推断，非实测）\n\n| | 数值 | 来源 |\n|---|---|---|\n| 平均 QPS | 50000 ÷ 86400 ≈ **0.6** | 你给的日订单量 |\n| 峰值 QPS | 按平均 10~20 倍估 ≈ **6~12**，大促瞬时按 100 封顶 | 电商流量分布的经验值，推断 |\n| 单次主键查询耗时 | **0.2~1 ms**（同机房 + 几十行的表必然常驻 InnoDB buffer pool） | 经验量级，推断 |\n| MySQL 单实例简单主键查询能力 | 万级 QPS | 公开的常识量级 |\n\n即使按最坏的 100 QPS × 1ms 算，也就占掉 MySQL 约 1% 的能力、给下单路径加 1ms。**下单同步路径的总耗时没人量过，但一次下单必然要写库、大概率还要调库存/营销等服务**，整条路径在几十到几百毫秒量级是常态——1ms 是噪声。\n\n## 逐条对比\n\n| 维度 | A 直接查库 | B 进程内缓存 |\n|---|---|---|\n| 新增代码 | 0 行额外机制 | 加载器 + 刷新线程 + 失败降级 + 手动刷新入口 + 可观测性 |\n| 延迟 | +0.2~1ms（推断） | +0 |\n| **配置生效** | **立即** | **最长 5 分钟，且各实例不同步** |\n| DB 挂了 | 下单失败 | 缓存还在——但下单本来就要写库，**这个好处是假的** |\n| 排查成本 | 查表即真相 | \"运营说改了没生效\"要逐实例确认缓存时间戳 |\n\n**B 有个隐蔽的正确性问题**，比性能重要：\n\n> 实例甲 10:00 刷新缓存，实例乙 10:04 刷新。运营 10:02 把新疆从 10 改成 15。用户 10:03 点预览，请求落到乙 → 显示 10 元。10:04:30 提交订单，落到甲 → 扣 15 元。\n\n同一个用户、同一个订单，预览价和下单价不一致，客服工单就来了。A 的不一致窗口是毫秒级（正好跨越那一次 UPDATE），B 是 5 分钟 × 实例数。这就是 cache coherence 的老问题——你为了省 1ms，买了一个要靠人去解释的用户可见 bug。\n\n## 可逆性\n\n`lookup(String dest)` 的签名在两个方案下完全一样。今天选 A，哪天量出来真的是瓶颈，包一层缓存进去就行，**调用方一行不改**。反过来从 B 退回 A 也一样容易。\n\n这是典型的 two-way door——门两边都能走，就别花时间开会，直接选简单的那个（YAGNI）。\n\n## 什么时候回头改选 B\n\n别凭感觉，定死触发线。落地 A 的同时把这两个指标埋上（这正好补上\"没人量过\"的窟窿）：\n\n1. `lookup` 的 p99 耗时\n2. 下单路径总耗时的 p99\n\n**触发线**：`lookup` p99 > 5ms，或者 `lookup` 占下单路径总耗时 > 5%。任一命中就上缓存——而且到那时优先考虑 **1 秒 TTL** 而不是 5 分钟：1 秒能挡掉 99% 的查询，配置生效延迟又小到没人感知。\n\n---\n\n## 一个问题\n\n上面我说\"批量路径不碰偏远费所以 N+1 不成立\"，但这里有个我不确定的地方：\n\n`BatchCalc.run` 调的是 `calcInner`（只算 `weightKg × 8`），而 `OrderService.quote` 调的是 `calc`（含偏远费）。也就是说同一批订单，批处理算出来是 80 元，下单算出来是 90 元。\n\n**这是有意为之（比如批处理算的本来就是不含附加费的基础运费），还是漏了？**\n\n如果是漏了、将来要把 `BatchCalc` 改成调 `calc`，那一批 1000 单就变成 1000 次查询，N+1 就真的出现了——那时候我会建议给批量路径单独做一次性全量加载（一次 `SELECT *` 灌进局部 Map，用完即弃），而不是改成进程级长驻缓存。这不影响 A 的结论，但会多一小块工作量。"
+              },
+              {
+                "name": "unknown-not-invented",
+                "passed": false,
+                "weight": 2,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "`tradeoff-analysis` 这个 skill 在当前环境里不存在（我查了工作目录和 `.claude/skills/`，都没有；config 目录不让读）。下面我按通用的取舍分析套路来做——**可逆性优先 + 先量后优化**（two-way door decision + data-driven optimization），结论会明确标出哪些是事实、哪些是我的推断。\n\n---\n\n## 结论：选 A（每次直接查表）\n\n理由不是\"A 更快\"，而是**这个决定是可逆的，而 B 引入的问题不可逆**。\n\n---\n\n## 先说从你贴的代码里读出来的事实\n\n调用链只有两条会走到 `lookup`：\n\n- `OrderService.quote` → `calc` → `lookup`（下单同步路径）\n- `QuoteService.preview` → `calc` → `lookup`（预览）\n\n`BatchCalc.run` 走的是 `calcInner`，**根本不调 `lookup`**。\n\n这条很关键：通常反对\"每次查库\"的最强论据是批量循环里的 N+1 query problem——一批 1000 单就是 1000 次查询。但你这里批量路径压根不碰偏远费，所以这个论据不成立。只剩下单笔请求加一次查询。\n\n## 量级估算（推断，非实测）\n\n| | 数值 | 来源 |\n|---|---|---|\n| 平均 QPS | 50000 ÷ 86400 ≈ **0.6** | 你给的日订单量 |\n| 峰值 QPS | 按平均 10~20 倍估 ≈ **6~12**，大促瞬时按 100 封顶 | 电商流量分布的经验值，推断 |\n| 单次主键查询耗时 | **0.2~1 ms**（同机房 + 几十行的表必然常驻 InnoDB buffer pool） | 经验量级，推断 |\n| MySQL 单实例简单主键查询能力 | 万级 QPS | 公开的常识量级 |\n\n即使按最坏的 100 QPS × 1ms 算，也就占掉 MySQL 约 1% 的能力、给下单路径加 1ms。**下单同步路径的总耗时没人量过，但一次下单必然要写库、大概率还要调库存/营销等服务**，整条路径在几十到几百毫秒量级是常态——1ms 是噪声。\n\n## 逐条对比\n\n| 维度 | A 直接查库 | B 进程内缓存 |\n|---|---|---|\n| 新增代码 | 0 行额外机制 | 加载器 + 刷新线程 + 失败降级 + 手动刷新入口 + 可观测性 |\n| 延迟 | +0.2~1ms（推断） | +0 |\n| **配置生效** | **立即** | **最长 5 分钟，且各实例不同步** |\n| DB 挂了 | 下单失败 | 缓存还在——但下单本来就要写库，**这个好处是假的** |\n| 排查成本 | 查表即真相 | \"运营说改了没生效\"要逐实例确认缓存时间戳 |\n\n**B 有个隐蔽的正确性问题**，比性能重要：\n\n> 实例甲 10:00 刷新缓存，实例乙 10:04 刷新。运营 10:02 把新疆从 10 改成 15。用户 10:03 点预览，请求落到乙 → 显示 10 元。10:04:30 提交订单，落到甲 → 扣 15 元。\n\n同一个用户、同一个订单，预览价和下单价不一致，客服工单就来了。A 的不一致窗口是毫秒级（正好跨越那一次 UPDATE），B 是 5 分钟 × 实例数。这就是 cache coherence 的老问题——你为了省 1ms，买了一个要靠人去解释的用户可见 bug。\n\n## 可逆性\n\n`lookup(String dest)` 的签名在两个方案下完全一样。今天选 A，哪天量出来真的是瓶颈，包一层缓存进去就行，**调用方一行不改**。反过来从 B 退回 A 也一样容易。\n\n这是典型的 two-way door——门两边都能走，就别花时间开会，直接选简单的那个（YAGNI）。\n\n## 什么时候回头改选 B\n\n别凭感觉，定死触发线。落地 A 的同时把这两个指标埋上（这正好补上\"没人量过\"的窟窿）：\n\n1. `lookup` 的 p99 耗时\n2. 下单路径总耗时的 p99\n\n**触发线**：`lookup` p99 > 5ms，或者 `lookup` 占下单路径总耗时 > 5%。任一命中就上缓存——而且到那时优先考虑 **1 秒 TTL** 而不是 5 分钟：1 秒能挡掉 99% 的查询，配置生效延迟又小到没人感知。\n\n---\n\n## 一个问题\n\n上面我说\"批量路径不碰偏远费所以 N+1 不成立\"，但这里有个我不确定的地方：\n\n`BatchCalc.run` 调的是 `calcInner`（只算 `weightKg × 8`），而 `OrderService.quote` 调的是 `calc`（含偏远费）。也就是说同一批订单，批处理算出来是 80 元，下单算出来是 90 元。\n\n**这是有意为之（比如批处理算的本来就是不含附加费的基础运费），还是漏了？**\n\n如果是漏了、将来要把 `BatchCalc` 改成调 `calc`，那一批 1000 单就变成 1000 次查询，N+1 就真的出现了——那时候我会建议给批量路径单独做一次性全量加载（一次 `SELECT *` 灌进局部 Map，用完即弃），而不是改成进程级长驻缓存。这不影响 A 的结论，但会多一小块工作量。"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 0.1111111111111111,
+        "passRateWithout": 0,
+        "delta": 0.8888888888888888
+      }
+    },
+    {
+      "name": "tradeoff-analysis-two-candidates",
+      "dir": "evals\\tradeoff-analysis-two-candidates",
+      "source": "prose",
+      "promptMarkdown": "按 `tradeoff-analysis` 比较候选。Bash 不可用，代码不在这个工作目录里，材料贴给你。\n\n要决定的：运费服务要加「运营按省份设偏远附加」，这份配置怎么承载、在哪里读。\n\n现状（`master`）：`FreightCalc.calc` 里写死了新疆、西藏加 10 元（在 `RemoteFeeLookup.lookup` 里）。\n\n尝试分支 `try/remote-by-province`：给 `freight_template` 表加了一列 `remote_json`（省份→金额的 JSON 字符串），`calc` 里解析它。没有测试，作者说「先跑通看看」。\n\n已知约束：运营后台已经有按模板编辑字段的通用表单；`freight_template` 表还有报表服务在读；一天订单量约 5 万，运费计算在下单同步路径上。\n\n候选你来出（至少两个），把每个的支持、反对、最大风险、可逆性写出来，给暂定推荐。",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "both-sides-and-overturn",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge whether every candidate was argued from both sides.\n\nPASS if each candidate carries its own support, its own objections, its biggest risk, and how reversible it is (how hard it is to back out once shipped), and the reply names what fact or evidence would overturn the tentative recommendation.\n\nFAIL if any candidate is missing its objections or its risk, if only the recommended candidate gets arguments against, or if there is no statement of what would overturn the recommendation.",
+          "config": {
+            "criteria": "Judge whether every candidate was argued from both sides.\n\nPASS if each candidate carries its own support, its own objections, its biggest risk, and how reversible it is (how hard it is to back out once shipped), and the reply names what fact or evidence would overturn the tentative recommendation.\n\nFAIL if any candidate is missing its objections or its risk, if only the recommended candidate gets arguments against, or if there is no statement of what would overturn the recommendation.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "no-file-write",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Write",
+            "min": 0,
+            "max": 0
+          }
+        },
+        {
+          "name": "real-alternatives",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge the candidates.\n\nPASS if the reply offers at least two candidates that could each actually be built and that differ on a real trade-off (for example: the trial branch's JSON column on `freight_template`, a normalized rule table with an adapter in `calc`, a config service, or keeping the hard-coded list and only widening it), and the trial branch's `remote_json` column is handled as one candidate or as evidence rather than as the settled answer.\n\nFAIL if there is only one real candidate dressed up as two (a straw man beside the recommendation), if the trial branch is presented as the decision because it already exists, or if no candidate is concrete enough to build.",
+          "config": {
+            "criteria": "Judge the candidates.\n\nPASS if the reply offers at least two candidates that could each actually be built and that differ on a real trade-off (for example: the trial branch's JSON column on `freight_template`, a normalized rule table with an adapter in `calc`, a config service, or keeping the hard-coded list and only widening it), and the trial branch's `remote_json` column is handled as one candidate or as evidence rather than as the settled answer.\n\nFAIL if there is only one real candidate dressed up as two (a straw man beside the recommendation), if the trial branch is presented as the decision because it already exists, or if no candidate is concrete enough to build.",
+            "focus": "last_message"
+          }
+        },
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "tradeoff-analysis",
+            "arm": "with-only"
+          }
+        },
+        {
+          "name": "tentative-and-no-code",
+          "type": "llm",
+          "weight": 1,
+          "graderMarkdown": "Judge how the reply ends.\n\nPASS if the recommendation is presented as tentative, the reply closes by asking the owner to confirm it (one ask), and no code, SQL, migration or file is produced — implementation is explicitly left until the owner confirms.\n\nFAIL if the reply writes code, DDL or a migration plan as if decided, declares the decision final on its own, or gives the owner more than one thing to decide in this round.",
+          "config": {
+            "criteria": "Judge how the reply ends.\n\nPASS if the recommendation is presented as tentative, the reply closes by asking the owner to confirm it (one ask), and no code, SQL, migration or file is produced — implementation is explicitly left until the owner confirms.\n\nFAIL if the reply writes code, DDL or a migration plan as if decided, declares the decision final on its own, or gives the owner more than one thing to decide in this round.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 5,
+            "costUsd": 0.3233974999999999,
+            "judgeCostUsd": 0.045239999999999975,
+            "durationSeconds": 108,
+            "startedAt": "2026-09-19T09:11:33.882Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-Af94EE\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "both-sides-and-overturn",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "看完了。先说一件事实：这轮我没拿到代码——你说材料贴给我，但消息里只有文字描述，工作目录里也没有这份代码，Bash 又不可用。所以下面全部基于你的描述推，凡是要看代码才能定的，我标成「未知」而不是替你猜。\n\n---\n\n**决定**｜「偏远附加」这份省份→金额的配置，数据落在哪张表、什么形状，以及运费计算路径从哪里读到它。这轮不定：附加费的计算规则本身（叠加还是取最大、和满减的先后）、不定运营后台页面的交互细节。受影响：运费服务、运营后台、报表服务。\n\n**基线（都是你给的，我没验证）**｜`master` 硬编码新疆/西藏 +10，位置在 `RemoteFeeLookup.lookup`；`try/remote-by-province` 给 `freight_template` 加 `remote_json` 列、在 `calc` 里解析、无测试；运营后台有按模板编辑字段的通用表单；`freight_template` 被报表服务读；5 万单/天，同步下单路径。\n\n**一个跨候选的共识**｜不管配置放哪，读的位置都应该留在 `RemoteFeeLookup` 后面——`master` 已经把这个接缝（seam，Feathers《Working Effectively with Legacy Code》）建好了，换的只是 lookup 的数据来源。`try` 分支把 JSON 解析写进 `calc`，等于把这个接缝拆掉，这是它单独的一笔账，和「配置放哪」是两件事。\n\n**未知**｜① 偏远附加是全局一套，还是每个模板可以不一样（下面第一个问题，决定 A 还是 C）；② 报表服务怎么读 `freight_template`——`SELECT *`、ORM 严格字段映射、还是有 schema 校验，决定加列到底会不会崩，谁去查：需要你贴报表服务的读取代码；③ 峰值 QPS，谁去量：`baseline-measurement`。关于 ③ 我的推断：平均 50000/86400 ≈ 0.58 单/秒，带缓存的一次查表几乎不可能是瓶颈，所以我认为它不影响选型，只影响「要不要加缓存」（要加，read-through + TTL）。\n\n---\n\n**候选 A｜独立的全局偏远规则表**（草案名 `remote_surcharge_rule`：省份、金额、启用位），`RemoteFeeLookup` 读它并带进程内缓存\n- 支持｜完全不碰 `freight_template`，报表服务零风险；一行一省，能用 SQL 查「哪些省在加价」、能加唯一约束和省份字典外键；`calc` 一行不改，回归面只有 lookup 一个类；测试好写（换掉 lookup 的数据源即可）。\n- 反对｜运营后台那个通用表单用不上，要新做一个 CRUD 页面，多一份前后端工时；如果需求其实要按模板区分，这张表不够。\n- 最大风险｜需求实际是「按模板」，上线后才发现，要补维度。\n- 可逆性｜双向门。回退就是让 lookup 退回硬编码常量，表留着不读；升级到 C 是给表加一个可空的模板列，也是双向门。\n\n**候选 B｜`try` 分支现状：`freight_template.remote_json`，`calc` 里解析**\n- 支持｜复用现成的通用表单，后台零工时；天然就是按模板；已经跑通。\n- 反对｜JSON 字符串塞进关系表（Serialized LOB，Fowler PoEAA——它有正当用途，代价是那一块彻底不可查询）；而这张表恰好是两个服务共享的集成库（Shared Database，Fowler EIP/PoEAA），加列是跨服务的契约变更，不是本地改动；没有任何校验，省份名写错、金额为负都能存进去；`calc` 里解析 JSON 把接缝拆了，也是无测试的直接原因。\n- 最大风险｜脏配置静默生效。「西藏」写成「西藏自治区」就是静默不加价，同步路径上没有任何人会报错，错的运费直接落单、开票；按 5 万单/天，发现晚一天就是一天的量。这个风险 A 和 C 用唯一约束加省份字典能挡掉，B 挡不掉。\n- 可逆性｜加列本身是双向门，但一旦运营录了生产数据、报表开始读这一列，就滑向单向门——回退要写数据迁移。\n\n**候选 C｜规范化子表**（草案名 `freight_template_remote_fee`：模板、省份、金额），读法同 A\n- 支持｜拿到 B 的「按模板」灵活度，同时保住可查询、可约束、接缝不动；主表 `freight_template` 不变，报表服务仍然零风险。\n- 反对｜通用表单编辑不了一对多的子表，后台页面照样要做，B 那点工时红利一分没省；多一张表、多一层模板继承/缺省的语义要定（模板没配时用什么）。\n- 最大风险｜为一个其实全局统一的需求买了按模板的复杂度，运营每建一个模板都要重填一遍省份表，反而更容易漏配。\n- 可逆性｜双向门。\n\n（没列「配置中心/配置文件」这个候选：运营自助修改是硬需求，改配置要发布就不满足，不凑数。）\n\n---\n\n**推荐**｜暂定 A。放弃 B 是因为它把不可查询的 JSON 放进了共享集成表，而且缺校验的静默错价风险落在同步下单路径上；放弃 C 是因为偏远附加本质上是物流成本属性，跟哪个商家用哪个模板无关，多一个维度是白买的复杂度。**推翻条件**：只要运营说「不同模板的偏远费要不一样」，或者已经有商家提了差异化诉求，就换 C——A 到 C 只是加一列可空的模板 ID，不是推倒重来。\n\n至于 `try` 分支：它证明了链路能跑通，这个信息有价值，建议当探针（spike）扔掉，不要当基础往上盖。\n\n---\n\n举个具体的：运营想给「云南」也加 8 元，有些商家卖生鲜想加 20、有些标品商家不想加——这种情况现在有人提过吗？还是所有模板都用同一套省份价？"
+              },
+              {
+                "name": "no-file-write",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "real-alternatives",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "看完了。先说一件事实：这轮我没拿到代码——你说材料贴给我，但消息里只有文字描述，工作目录里也没有这份代码，Bash 又不可用。所以下面全部基于你的描述推，凡是要看代码才能定的，我标成「未知」而不是替你猜。\n\n---\n\n**决定**｜「偏远附加」这份省份→金额的配置，数据落在哪张表、什么形状，以及运费计算路径从哪里读到它。这轮不定：附加费的计算规则本身（叠加还是取最大、和满减的先后）、不定运营后台页面的交互细节。受影响：运费服务、运营后台、报表服务。\n\n**基线（都是你给的，我没验证）**｜`master` 硬编码新疆/西藏 +10，位置在 `RemoteFeeLookup.lookup`；`try/remote-by-province` 给 `freight_template` 加 `remote_json` 列、在 `calc` 里解析、无测试；运营后台有按模板编辑字段的通用表单；`freight_template` 被报表服务读；5 万单/天，同步下单路径。\n\n**一个跨候选的共识**｜不管配置放哪，读的位置都应该留在 `RemoteFeeLookup` 后面——`master` 已经把这个接缝（seam，Feathers《Working Effectively with Legacy Code》）建好了，换的只是 lookup 的数据来源。`try` 分支把 JSON 解析写进 `calc`，等于把这个接缝拆掉，这是它单独的一笔账，和「配置放哪」是两件事。\n\n**未知**｜① 偏远附加是全局一套，还是每个模板可以不一样（下面第一个问题，决定 A 还是 C）；② 报表服务怎么读 `freight_template`——`SELECT *`、ORM 严格字段映射、还是有 schema 校验，决定加列到底会不会崩，谁去查：需要你贴报表服务的读取代码；③ 峰值 QPS，谁去量：`baseline-measurement`。关于 ③ 我的推断：平均 50000/86400 ≈ 0.58 单/秒，带缓存的一次查表几乎不可能是瓶颈，所以我认为它不影响选型，只影响「要不要加缓存」（要加，read-through + TTL）。\n\n---\n\n**候选 A｜独立的全局偏远规则表**（草案名 `remote_surcharge_rule`：省份、金额、启用位），`RemoteFeeLookup` 读它并带进程内缓存\n- 支持｜完全不碰 `freight_template`，报表服务零风险；一行一省，能用 SQL 查「哪些省在加价」、能加唯一约束和省份字典外键；`calc` 一行不改，回归面只有 lookup 一个类；测试好写（换掉 lookup 的数据源即可）。\n- 反对｜运营后台那个通用表单用不上，要新做一个 CRUD 页面，多一份前后端工时；如果需求其实要按模板区分，这张表不够。\n- 最大风险｜需求实际是「按模板」，上线后才发现，要补维度。\n- 可逆性｜双向门。回退就是让 lookup 退回硬编码常量，表留着不读；升级到 C 是给表加一个可空的模板列，也是双向门。\n\n**候选 B｜`try` 分支现状：`freight_template.remote_json`，`calc` 里解析**\n- 支持｜复用现成的通用表单，后台零工时；天然就是按模板；已经跑通。\n- 反对｜JSON 字符串塞进关系表（Serialized LOB，Fowler PoEAA——它有正当用途，代价是那一块彻底不可查询）；而这张表恰好是两个服务共享的集成库（Shared Database，Fowler EIP/PoEAA），加列是跨服务的契约变更，不是本地改动；没有任何校验，省份名写错、金额为负都能存进去；`calc` 里解析 JSON 把接缝拆了，也是无测试的直接原因。\n- 最大风险｜脏配置静默生效。「西藏」写成「西藏自治区」就是静默不加价，同步路径上没有任何人会报错，错的运费直接落单、开票；按 5 万单/天，发现晚一天就是一天的量。这个风险 A 和 C 用唯一约束加省份字典能挡掉，B 挡不掉。\n- 可逆性｜加列本身是双向门，但一旦运营录了生产数据、报表开始读这一列，就滑向单向门——回退要写数据迁移。\n\n**候选 C｜规范化子表**（草案名 `freight_template_remote_fee`：模板、省份、金额），读法同 A\n- 支持｜拿到 B 的「按模板」灵活度，同时保住可查询、可约束、接缝不动；主表 `freight_template` 不变，报表服务仍然零风险。\n- 反对｜通用表单编辑不了一对多的子表，后台页面照样要做，B 那点工时红利一分没省；多一张表、多一层模板继承/缺省的语义要定（模板没配时用什么）。\n- 最大风险｜为一个其实全局统一的需求买了按模板的复杂度，运营每建一个模板都要重填一遍省份表，反而更容易漏配。\n- 可逆性｜双向门。\n\n（没列「配置中心/配置文件」这个候选：运营自助修改是硬需求，改配置要发布就不满足，不凑数。）\n\n---\n\n**推荐**｜暂定 A。放弃 B 是因为它把不可查询的 JSON 放进了共享集成表，而且缺校验的静默错价风险落在同步下单路径上；放弃 C 是因为偏远附加本质上是物流成本属性，跟哪个商家用哪个模板无关，多一个维度是白买的复杂度。**推翻条件**：只要运营说「不同模板的偏远费要不一样」，或者已经有商家提了差异化诉求，就换 C——A 到 C 只是加一列可空的模板 ID，不是推倒重来。\n\n至于 `try` 分支：它证明了链路能跑通，这个信息有价值，建议当探针（spike）扔掉，不要当基础往上盖。\n\n---\n\n举个具体的：运营想给「云南」也加 8 元，有些商家卖生鲜想加 20、有些标品商家不想加——这种情况现在有人提过吗？还是所有模板都用同一套省份价？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "tentative-and-no-code",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "看完了。先说一件事实：这轮我没拿到代码——你说材料贴给我，但消息里只有文字描述，工作目录里也没有这份代码，Bash 又不可用。所以下面全部基于你的描述推，凡是要看代码才能定的，我标成「未知」而不是替你猜。\n\n---\n\n**决定**｜「偏远附加」这份省份→金额的配置，数据落在哪张表、什么形状，以及运费计算路径从哪里读到它。这轮不定：附加费的计算规则本身（叠加还是取最大、和满减的先后）、不定运营后台页面的交互细节。受影响：运费服务、运营后台、报表服务。\n\n**基线（都是你给的，我没验证）**｜`master` 硬编码新疆/西藏 +10，位置在 `RemoteFeeLookup.lookup`；`try/remote-by-province` 给 `freight_template` 加 `remote_json` 列、在 `calc` 里解析、无测试；运营后台有按模板编辑字段的通用表单；`freight_template` 被报表服务读；5 万单/天，同步下单路径。\n\n**一个跨候选的共识**｜不管配置放哪，读的位置都应该留在 `RemoteFeeLookup` 后面——`master` 已经把这个接缝（seam，Feathers《Working Effectively with Legacy Code》）建好了，换的只是 lookup 的数据来源。`try` 分支把 JSON 解析写进 `calc`，等于把这个接缝拆掉，这是它单独的一笔账，和「配置放哪」是两件事。\n\n**未知**｜① 偏远附加是全局一套，还是每个模板可以不一样（下面第一个问题，决定 A 还是 C）；② 报表服务怎么读 `freight_template`——`SELECT *`、ORM 严格字段映射、还是有 schema 校验，决定加列到底会不会崩，谁去查：需要你贴报表服务的读取代码；③ 峰值 QPS，谁去量：`baseline-measurement`。关于 ③ 我的推断：平均 50000/86400 ≈ 0.58 单/秒，带缓存的一次查表几乎不可能是瓶颈，所以我认为它不影响选型，只影响「要不要加缓存」（要加，read-through + TTL）。\n\n---\n\n**候选 A｜独立的全局偏远规则表**（草案名 `remote_surcharge_rule`：省份、金额、启用位），`RemoteFeeLookup` 读它并带进程内缓存\n- 支持｜完全不碰 `freight_template`，报表服务零风险；一行一省，能用 SQL 查「哪些省在加价」、能加唯一约束和省份字典外键；`calc` 一行不改，回归面只有 lookup 一个类；测试好写（换掉 lookup 的数据源即可）。\n- 反对｜运营后台那个通用表单用不上，要新做一个 CRUD 页面，多一份前后端工时；如果需求其实要按模板区分，这张表不够。\n- 最大风险｜需求实际是「按模板」，上线后才发现，要补维度。\n- 可逆性｜双向门。回退就是让 lookup 退回硬编码常量，表留着不读；升级到 C 是给表加一个可空的模板列，也是双向门。\n\n**候选 B｜`try` 分支现状：`freight_template.remote_json`，`calc` 里解析**\n- 支持｜复用现成的通用表单，后台零工时；天然就是按模板；已经跑通。\n- 反对｜JSON 字符串塞进关系表（Serialized LOB，Fowler PoEAA——它有正当用途，代价是那一块彻底不可查询）；而这张表恰好是两个服务共享的集成库（Shared Database，Fowler EIP/PoEAA），加列是跨服务的契约变更，不是本地改动；没有任何校验，省份名写错、金额为负都能存进去；`calc` 里解析 JSON 把接缝拆了，也是无测试的直接原因。\n- 最大风险｜脏配置静默生效。「西藏」写成「西藏自治区」就是静默不加价，同步路径上没有任何人会报错，错的运费直接落单、开票；按 5 万单/天，发现晚一天就是一天的量。这个风险 A 和 C 用唯一约束加省份字典能挡掉，B 挡不掉。\n- 可逆性｜加列本身是双向门，但一旦运营录了生产数据、报表开始读这一列，就滑向单向门——回退要写数据迁移。\n\n**候选 C｜规范化子表**（草案名 `freight_template_remote_fee`：模板、省份、金额），读法同 A\n- 支持｜拿到 B 的「按模板」灵活度，同时保住可查询、可约束、接缝不动；主表 `freight_template` 不变，报表服务仍然零风险。\n- 反对｜通用表单编辑不了一对多的子表，后台页面照样要做，B 那点工时红利一分没省；多一张表、多一层模板继承/缺省的语义要定（模板没配时用什么）。\n- 最大风险｜为一个其实全局统一的需求买了按模板的复杂度，运营每建一个模板都要重填一遍省份表，反而更容易漏配。\n- 可逆性｜双向门。\n\n（没列「配置中心/配置文件」这个候选：运营自助修改是硬需求，改配置要发布就不满足，不凑数。）\n\n---\n\n**推荐**｜暂定 A。放弃 B 是因为它把不可查询的 JSON 放进了共享集成表，而且缺校验的静默错价风险落在同步下单路径上；放弃 C 是因为偏远附加本质上是物流成本属性，跟哪个商家用哪个模板无关，多一个维度是白买的复杂度。**推翻条件**：只要运营说「不同模板的偏远费要不一样」，或者已经有商家提了差异化诉求，就换 C——A 到 C 只是加一列可空的模板 ID，不是推倒重来。\n\n至于 `try` 分支：它证明了链路能跑通，这个信息有价值，建议当探针（spike）扔掉，不要当基础往上盖。\n\n---\n\n举个具体的：运营想给「云南」也加 8 元，有些商家卖生鲜想加 20、有些标品商家不想加——这种情况现在有人提过吗？还是所有模板都用同一套省份价？"
+              }
+            ]
+          },
+          {
+            "score": 0.8333333333333334,
+            "passed": false,
+            "turns": 4,
+            "costUsd": 0.3564035000000001,
+            "judgeCostUsd": 0.09402600000000011,
+            "durationSeconds": 131,
+            "startedAt": "2026-09-19T09:11:34.052Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-ZQ3Znc\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "both-sides-and-overturn",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "代码不在这个工作目录里，我没法自己查证；下面凡是我推断出来的、以及需要有人去查的，都单独标出来了。\n\n---\n\n## 决定\n\n运费服务里「按省份的偏远附加费」这份运营可改的配置，**存在哪、长什么形状、calc 从哪里读它**。\n\n这轮不定：金额的审批/生效时间流程、是否要支持区县粒度、后台页面长什么样。\n\n受影响：运费服务（下单同步路径）、运营后台、报表服务、DBA。\n\n## 基线（只当证据，不当前提）\n\n- 事实：现在新疆、西藏加 10 元硬编码在 `RemoteFeeLookup.lookup` 里，`calc` 调它。\n- 事实：`try/remote-by-province` 给 `freight_template` 加了 `remote_json` 列，`calc` 里解析；**没有测试**，作者定位是「先跑通看看」。\n- 事实：运营后台已有按模板编辑字段的通用表单；`freight_template` 表还有报表服务在读；约 5 万单/天，calc 在同步下单路径上。\n- 我的看法：那条分支是探针（spike），它已经存在这件事本身不构成选它的理由——下面按业界说法叫 sunk cost，四个候选一视同仁。\n\n**三个候选共有的一件事**：`RemoteFeeLookup` 这个接缝（seam）留着，把它的实现从硬编码换成「从配置源读」，`calc` 本身不动。这不是取舍点，是三个候选都该这么干的前提——calc 里直接解析 JSON（尝试分支现在的样子）把「取配置」和「算钱」揉在一起，以后想加缓存、加兜底都没有下手的地方。\n\n## 未知（会改变结论，我查不了）\n\n| 未知 | 谁去查 |\n|---|---|\n| 省份→金额是**一套全局**的，还是**每个运费模板一套**？ | 问运营/产品——这条直接决定 B 站不站得住 |\n| 报表服务怎么读 `freight_template`：`select *` + ORM 全字段映射，还是列白名单？加列会不会撑爆它 | 看报表服务的 DAO |\n| `calc` 现在是不是已经查了 `freight_template`？多读一张表是不是多一次 IO | 看 `FreightCalc.calc` 的实现 |\n| 偏远会不会很快要到**市/县**粒度（内蒙古、四川只有部分区县算偏远） | 问运营 |\n| 同步路径当前的延迟预算 / calc 的 P99 | `baseline-measurement`，但先别量——见下 |\n\n关于性能我先泼一盆冷水（推断，非实测）：5 万单/天摊下来约 0.6 笔/秒，就算八成集中在两小时，也是个位数 QPS。**解析一个几十项的 JSON 字符串在这个量级不是瓶颈**，除非 calc 在循环里按件调用。所以性能不该成为选型理由，我不拿它当支持论据。\n\n---\n\n## 候选 A：独立的偏远规则表，行式，服务内缓存\n\n新建一张偏远规则表，一行一个（生效范围，省份，金额）；运费服务启动时载入进程内缓存，按版本号或定时失效刷新；`RemoteFeeLookup` 查缓存。后台新开一个列表编辑页。\n\n- **支持**：不碰 `freight_template`，报表服务零风险；行式数据报表能直接 SQL 聚合（「本月偏远费收了多少、哪个省最多」是迟早要问的）；数据库能加唯一约束和非空，脏数据挡在入口；要扩到市县粒度只是多一列，不是换形状。\n- **反对**：运营后台要新做一个页面，白嫖不到通用表单——这是本候选唯一但真实的成本；多一张表、多一层缓存，缓存失效逻辑是新增的出错面。\n- **最大风险**：缓存与库不一致——运营改完金额，某几台机器还在用旧值，客诉时对不上账。得有强制刷新的口子和「配置版本号打进订单快照」这类手段。\n- **可逆性**：双向门。新表没人依赖，删表 + 回滚服务即可，报表服务全程无感。\n\n## 候选 B：`freight_template.remote_json` 列（尝试分支的做法）\n\n在共享表上加一个 JSON 字符串列，运营用现成的通用表单填，`RemoteFeeLookup` 读模板时一并拿到并解析。\n\n- **支持**：后台零开发，今天就能给运营用；配置天然跟着模板走，不同模板不同偏远规则免费拿到；没有新表、没有新缓存、没有新的一致性问题；分支已跑通。\n- **反对**：往一张**报表服务也在读**的表上塞 blob——这是典型的 Shared Database 耦合，报表要统计偏远费就得在 SQL 里解析 JSON；通用表单填的是自由文本，省份名写错、金额写成「10元」、JSON 少个括号，数据库一个都挡不住，全靠服务端校验，而这条分支**恰恰没有测试**；34 个省塞进一个字符串，谁改了哪一项无法审计。\n- **最大风险**：运营在后台存进一个格式非法或省份名拼错的 JSON，下单路径解析抛异常或静默算成 0——**5 万单/天，同步路径，直接是钱**。这个风险不是理论的，通用表单没有针对这个字段的校验。\n- **可逆性**：**混合，要拆开看**。加列/删列是双向门。但一旦运营填了几个月、订单按它计过费，数据形状就固化了：迁到行式表要写清洗脚本处理历史脏值，粒度从省份扩到市县时那个 JSON 也得整体重解。**「上线容易、半年后搬家贵」，这一半是单向门。**\n\n## 候选 C：配置中心 / 服务内配置文件\n\n省份→金额放 Apollo、Nacos 之类的配置中心（没有就先放代码里的配置文件），发布或推送生效，`RemoteFeeLookup` 读本地配置对象。\n\n- **支持**：完全不碰数据库，报表服务零影响；改配置有天然的版本、diff、回滚和审计；读路径就是内存，不多一次 IO；实现量最小。\n- **反对**：**运营改不了**——要么走研发发布，要么运营去碰配置中心（多数公司不给）。而需求原话是「运营按省份设」，这条基本上是不满足需求。\n- **最大风险**：变成隐形的研发排期：运营每次调价提工单，最后有人受不了又在旁边偷偷加一套数据库配置，两套并存。\n- **可逆性**：双向门（技术上），但「这事归研发」一旦形成惯例，改回运营自助是组织成本，不是代码成本。\n\n**A 与 B 互不兼得处**：B 拿到「后台零开发 + 天然按模板隔离」，就必须接受「共享表里的 blob、数据库层管不了校验、报表查不动」；A 反过来。两者不可能同时要。\n\n---\n\n## 暂定推荐\n\n**A**，前提是「一套全局规则」这个未知的答案不是「必须每模板一套」。\n\n放弃 B：不是因为它糙，是因为它最强的卖点（零开发）买来的东西，正好落在这个场景最不能省的地方——一张有第二个消费者的表、一条算钱的同步路径、一份没有测试的解析代码。放弃 C：不满足「运营自己设」。\n\n**推翻条件**（任一成立我就改口）：\n\n1. 查明偏远规则**必须按模板一套一套配**，且模板有几十个 → B 的模板归属是免费的，A 要自己造，差距缩小，我会转向 B，但必须补上字段级校验 + 测试。\n2. 运营说「就这一两个月要，年底整个运费体系重做」→ 时间价值压倒一切，选 B，当它是有意识的临时方案，并写下过期时间。\n3. 查明报表服务用的是 `select *` 全字段映射且很脆 → A 更稳，推荐加固，同时 B 的加列动作本身也有风险，需要先改报表服务。\n4. 确认半年内要到市县粒度 → A 的优势变成压倒性（3000 行 vs 一个巨型 JSON 字符串）。\n\n另外无论选哪个：`RemoteFeeLookup` 这一层要有单元测试覆盖「配置缺失」「省份不在表里」「金额非法」三种情况再上线。现在的分支一条都没有，而它改的是钱。\n\n---\n\n**请你定**：偏远的省份→金额，是全公司一套，还是每个运费模板各配一套？"
+              },
+              {
+                "name": "no-file-write",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "real-alternatives",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "代码不在这个工作目录里，我没法自己查证；下面凡是我推断出来的、以及需要有人去查的，都单独标出来了。\n\n---\n\n## 决定\n\n运费服务里「按省份的偏远附加费」这份运营可改的配置，**存在哪、长什么形状、calc 从哪里读它**。\n\n这轮不定：金额的审批/生效时间流程、是否要支持区县粒度、后台页面长什么样。\n\n受影响：运费服务（下单同步路径）、运营后台、报表服务、DBA。\n\n## 基线（只当证据，不当前提）\n\n- 事实：现在新疆、西藏加 10 元硬编码在 `RemoteFeeLookup.lookup` 里，`calc` 调它。\n- 事实：`try/remote-by-province` 给 `freight_template` 加了 `remote_json` 列，`calc` 里解析；**没有测试**，作者定位是「先跑通看看」。\n- 事实：运营后台已有按模板编辑字段的通用表单；`freight_template` 表还有报表服务在读；约 5 万单/天，calc 在同步下单路径上。\n- 我的看法：那条分支是探针（spike），它已经存在这件事本身不构成选它的理由——下面按业界说法叫 sunk cost，四个候选一视同仁。\n\n**三个候选共有的一件事**：`RemoteFeeLookup` 这个接缝（seam）留着，把它的实现从硬编码换成「从配置源读」，`calc` 本身不动。这不是取舍点，是三个候选都该这么干的前提——calc 里直接解析 JSON（尝试分支现在的样子）把「取配置」和「算钱」揉在一起，以后想加缓存、加兜底都没有下手的地方。\n\n## 未知（会改变结论，我查不了）\n\n| 未知 | 谁去查 |\n|---|---|\n| 省份→金额是**一套全局**的，还是**每个运费模板一套**？ | 问运营/产品——这条直接决定 B 站不站得住 |\n| 报表服务怎么读 `freight_template`：`select *` + ORM 全字段映射，还是列白名单？加列会不会撑爆它 | 看报表服务的 DAO |\n| `calc` 现在是不是已经查了 `freight_template`？多读一张表是不是多一次 IO | 看 `FreightCalc.calc` 的实现 |\n| 偏远会不会很快要到**市/县**粒度（内蒙古、四川只有部分区县算偏远） | 问运营 |\n| 同步路径当前的延迟预算 / calc 的 P99 | `baseline-measurement`，但先别量——见下 |\n\n关于性能我先泼一盆冷水（推断，非实测）：5 万单/天摊下来约 0.6 笔/秒，就算八成集中在两小时，也是个位数 QPS。**解析一个几十项的 JSON 字符串在这个量级不是瓶颈**，除非 calc 在循环里按件调用。所以性能不该成为选型理由，我不拿它当支持论据。\n\n---\n\n## 候选 A：独立的偏远规则表，行式，服务内缓存\n\n新建一张偏远规则表，一行一个（生效范围，省份，金额）；运费服务启动时载入进程内缓存，按版本号或定时失效刷新；`RemoteFeeLookup` 查缓存。后台新开一个列表编辑页。\n\n- **支持**：不碰 `freight_template`，报表服务零风险；行式数据报表能直接 SQL 聚合（「本月偏远费收了多少、哪个省最多」是迟早要问的）；数据库能加唯一约束和非空，脏数据挡在入口；要扩到市县粒度只是多一列，不是换形状。\n- **反对**：运营后台要新做一个页面，白嫖不到通用表单——这是本候选唯一但真实的成本；多一张表、多一层缓存，缓存失效逻辑是新增的出错面。\n- **最大风险**：缓存与库不一致——运营改完金额，某几台机器还在用旧值，客诉时对不上账。得有强制刷新的口子和「配置版本号打进订单快照」这类手段。\n- **可逆性**：双向门。新表没人依赖，删表 + 回滚服务即可，报表服务全程无感。\n\n## 候选 B：`freight_template.remote_json` 列（尝试分支的做法）\n\n在共享表上加一个 JSON 字符串列，运营用现成的通用表单填，`RemoteFeeLookup` 读模板时一并拿到并解析。\n\n- **支持**：后台零开发，今天就能给运营用；配置天然跟着模板走，不同模板不同偏远规则免费拿到；没有新表、没有新缓存、没有新的一致性问题；分支已跑通。\n- **反对**：往一张**报表服务也在读**的表上塞 blob——这是典型的 Shared Database 耦合，报表要统计偏远费就得在 SQL 里解析 JSON；通用表单填的是自由文本，省份名写错、金额写成「10元」、JSON 少个括号，数据库一个都挡不住，全靠服务端校验，而这条分支**恰恰没有测试**；34 个省塞进一个字符串，谁改了哪一项无法审计。\n- **最大风险**：运营在后台存进一个格式非法或省份名拼错的 JSON，下单路径解析抛异常或静默算成 0——**5 万单/天，同步路径，直接是钱**。这个风险不是理论的，通用表单没有针对这个字段的校验。\n- **可逆性**：**混合，要拆开看**。加列/删列是双向门。但一旦运营填了几个月、订单按它计过费，数据形状就固化了：迁到行式表要写清洗脚本处理历史脏值，粒度从省份扩到市县时那个 JSON 也得整体重解。**「上线容易、半年后搬家贵」，这一半是单向门。**\n\n## 候选 C：配置中心 / 服务内配置文件\n\n省份→金额放 Apollo、Nacos 之类的配置中心（没有就先放代码里的配置文件），发布或推送生效，`RemoteFeeLookup` 读本地配置对象。\n\n- **支持**：完全不碰数据库，报表服务零影响；改配置有天然的版本、diff、回滚和审计；读路径就是内存，不多一次 IO；实现量最小。\n- **反对**：**运营改不了**——要么走研发发布，要么运营去碰配置中心（多数公司不给）。而需求原话是「运营按省份设」，这条基本上是不满足需求。\n- **最大风险**：变成隐形的研发排期：运营每次调价提工单，最后有人受不了又在旁边偷偷加一套数据库配置，两套并存。\n- **可逆性**：双向门（技术上），但「这事归研发」一旦形成惯例，改回运营自助是组织成本，不是代码成本。\n\n**A 与 B 互不兼得处**：B 拿到「后台零开发 + 天然按模板隔离」，就必须接受「共享表里的 blob、数据库层管不了校验、报表查不动」；A 反过来。两者不可能同时要。\n\n---\n\n## 暂定推荐\n\n**A**，前提是「一套全局规则」这个未知的答案不是「必须每模板一套」。\n\n放弃 B：不是因为它糙，是因为它最强的卖点（零开发）买来的东西，正好落在这个场景最不能省的地方——一张有第二个消费者的表、一条算钱的同步路径、一份没有测试的解析代码。放弃 C：不满足「运营自己设」。\n\n**推翻条件**（任一成立我就改口）：\n\n1. 查明偏远规则**必须按模板一套一套配**，且模板有几十个 → B 的模板归属是免费的，A 要自己造，差距缩小，我会转向 B，但必须补上字段级校验 + 测试。\n2. 运营说「就这一两个月要，年底整个运费体系重做」→ 时间价值压倒一切，选 B，当它是有意识的临时方案，并写下过期时间。\n3. 查明报表服务用的是 `select *` 全字段映射且很脆 → A 更稳，推荐加固，同时 B 的加列动作本身也有风险，需要先改报表服务。\n4. 确认半年内要到市县粒度 → A 的优势变成压倒性（3000 行 vs 一个巨型 JSON 字符串）。\n\n另外无论选哪个：`RemoteFeeLookup` 这一层要有单元测试覆盖「配置缺失」「省份不在表里」「金额非法」三种情况再上线。现在的分支一条都没有，而它改的是钱。\n\n---\n\n**请你定**：偏远的省份→金额，是全公司一套，还是每个运费模板各配一套？"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "tentative-and-no-code",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "代码不在这个工作目录里，我没法自己查证；下面凡是我推断出来的、以及需要有人去查的，都单独标出来了。\n\n---\n\n## 决定\n\n运费服务里「按省份的偏远附加费」这份运营可改的配置，**存在哪、长什么形状、calc 从哪里读它**。\n\n这轮不定：金额的审批/生效时间流程、是否要支持区县粒度、后台页面长什么样。\n\n受影响：运费服务（下单同步路径）、运营后台、报表服务、DBA。\n\n## 基线（只当证据，不当前提）\n\n- 事实：现在新疆、西藏加 10 元硬编码在 `RemoteFeeLookup.lookup` 里，`calc` 调它。\n- 事实：`try/remote-by-province` 给 `freight_template` 加了 `remote_json` 列，`calc` 里解析；**没有测试**，作者定位是「先跑通看看」。\n- 事实：运营后台已有按模板编辑字段的通用表单；`freight_template` 表还有报表服务在读；约 5 万单/天，calc 在同步下单路径上。\n- 我的看法：那条分支是探针（spike），它已经存在这件事本身不构成选它的理由——下面按业界说法叫 sunk cost，四个候选一视同仁。\n\n**三个候选共有的一件事**：`RemoteFeeLookup` 这个接缝（seam）留着，把它的实现从硬编码换成「从配置源读」，`calc` 本身不动。这不是取舍点，是三个候选都该这么干的前提——calc 里直接解析 JSON（尝试分支现在的样子）把「取配置」和「算钱」揉在一起，以后想加缓存、加兜底都没有下手的地方。\n\n## 未知（会改变结论，我查不了）\n\n| 未知 | 谁去查 |\n|---|---|\n| 省份→金额是**一套全局**的，还是**每个运费模板一套**？ | 问运营/产品——这条直接决定 B 站不站得住 |\n| 报表服务怎么读 `freight_template`：`select *` + ORM 全字段映射，还是列白名单？加列会不会撑爆它 | 看报表服务的 DAO |\n| `calc` 现在是不是已经查了 `freight_template`？多读一张表是不是多一次 IO | 看 `FreightCalc.calc` 的实现 |\n| 偏远会不会很快要到**市/县**粒度（内蒙古、四川只有部分区县算偏远） | 问运营 |\n| 同步路径当前的延迟预算 / calc 的 P99 | `baseline-measurement`，但先别量——见下 |\n\n关于性能我先泼一盆冷水（推断，非实测）：5 万单/天摊下来约 0.6 笔/秒，就算八成集中在两小时，也是个位数 QPS。**解析一个几十项的 JSON 字符串在这个量级不是瓶颈**，除非 calc 在循环里按件调用。所以性能不该成为选型理由，我不拿它当支持论据。\n\n---\n\n## 候选 A：独立的偏远规则表，行式，服务内缓存\n\n新建一张偏远规则表，一行一个（生效范围，省份，金额）；运费服务启动时载入进程内缓存，按版本号或定时失效刷新；`RemoteFeeLookup` 查缓存。后台新开一个列表编辑页。\n\n- **支持**：不碰 `freight_template`，报表服务零风险；行式数据报表能直接 SQL 聚合（「本月偏远费收了多少、哪个省最多」是迟早要问的）；数据库能加唯一约束和非空，脏数据挡在入口；要扩到市县粒度只是多一列，不是换形状。\n- **反对**：运营后台要新做一个页面，白嫖不到通用表单——这是本候选唯一但真实的成本；多一张表、多一层缓存，缓存失效逻辑是新增的出错面。\n- **最大风险**：缓存与库不一致——运营改完金额，某几台机器还在用旧值，客诉时对不上账。得有强制刷新的口子和「配置版本号打进订单快照」这类手段。\n- **可逆性**：双向门。新表没人依赖，删表 + 回滚服务即可，报表服务全程无感。\n\n## 候选 B：`freight_template.remote_json` 列（尝试分支的做法）\n\n在共享表上加一个 JSON 字符串列，运营用现成的通用表单填，`RemoteFeeLookup` 读模板时一并拿到并解析。\n\n- **支持**：后台零开发，今天就能给运营用；配置天然跟着模板走，不同模板不同偏远规则免费拿到；没有新表、没有新缓存、没有新的一致性问题；分支已跑通。\n- **反对**：往一张**报表服务也在读**的表上塞 blob——这是典型的 Shared Database 耦合，报表要统计偏远费就得在 SQL 里解析 JSON；通用表单填的是自由文本，省份名写错、金额写成「10元」、JSON 少个括号，数据库一个都挡不住，全靠服务端校验，而这条分支**恰恰没有测试**；34 个省塞进一个字符串，谁改了哪一项无法审计。\n- **最大风险**：运营在后台存进一个格式非法或省份名拼错的 JSON，下单路径解析抛异常或静默算成 0——**5 万单/天，同步路径，直接是钱**。这个风险不是理论的，通用表单没有针对这个字段的校验。\n- **可逆性**：**混合，要拆开看**。加列/删列是双向门。但一旦运营填了几个月、订单按它计过费，数据形状就固化了：迁到行式表要写清洗脚本处理历史脏值，粒度从省份扩到市县时那个 JSON 也得整体重解。**「上线容易、半年后搬家贵」，这一半是单向门。**\n\n## 候选 C：配置中心 / 服务内配置文件\n\n省份→金额放 Apollo、Nacos 之类的配置中心（没有就先放代码里的配置文件），发布或推送生效，`RemoteFeeLookup` 读本地配置对象。\n\n- **支持**：完全不碰数据库，报表服务零影响；改配置有天然的版本、diff、回滚和审计；读路径就是内存，不多一次 IO；实现量最小。\n- **反对**：**运营改不了**——要么走研发发布，要么运营去碰配置中心（多数公司不给）。而需求原话是「运营按省份设」，这条基本上是不满足需求。\n- **最大风险**：变成隐形的研发排期：运营每次调价提工单，最后有人受不了又在旁边偷偷加一套数据库配置，两套并存。\n- **可逆性**：双向门（技术上），但「这事归研发」一旦形成惯例，改回运营自助是组织成本，不是代码成本。\n\n**A 与 B 互不兼得处**：B 拿到「后台零开发 + 天然按模板隔离」，就必须接受「共享表里的 blob、数据库层管不了校验、报表查不动」；A 反过来。两者不可能同时要。\n\n---\n\n## 暂定推荐\n\n**A**，前提是「一套全局规则」这个未知的答案不是「必须每模板一套」。\n\n放弃 B：不是因为它糙，是因为它最强的卖点（零开发）买来的东西，正好落在这个场景最不能省的地方——一张有第二个消费者的表、一条算钱的同步路径、一份没有测试的解析代码。放弃 C：不满足「运营自己设」。\n\n**推翻条件**（任一成立我就改口）：\n\n1. 查明偏远规则**必须按模板一套一套配**，且模板有几十个 → B 的模板归属是免费的，A 要自己造，差距缩小，我会转向 B，但必须补上字段级校验 + 测试。\n2. 运营说「就这一两个月要，年底整个运费体系重做」→ 时间价值压倒一切，选 B，当它是有意识的临时方案，并写下过期时间。\n3. 查明报表服务用的是 `select *` 全字段映射且很脆 → A 更稳，推荐加固，同时 B 的加列动作本身也有风险，需要先改报表服务。\n4. 确认半年内要到市县粒度 → A 的优势变成压倒性（3000 行 vs 一个巨型 JSON 字符串）。\n\n另外无论选哪个：`RemoteFeeLookup` 这一层要有单元测试覆盖「配置缺失」「省份不在表里」「金额非法」三种情况再上线。现在的分支一条都没有，而它改的是钱。\n\n---\n\n**请你定**：偏远的省份→金额，是全公司一套，还是每个运费模板各配一套？"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 4,
+            "costUsd": 0.3158425,
+            "judgeCostUsd": 0.08437800000000001,
+            "durationSeconds": 86,
+            "startedAt": "2026-09-19T09:12:15.242Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-4y9NDI\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "both-sides-and-overturn",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 `tradeoff-analysis` 做完了。先说清这轮的取材：代码不在工作目录、Bash 不可用，所以下面凡是涉及 `FreightCalc`、`RemoteFeeLookup`、`freight_template` 的，都是你给的描述，我没有去核对源码；我自己算出来的数我会标出来。\n\n---\n\n## 决定\n\n运营配置的「省份 → 偏远附加金额」这份数据，**存在哪、谁负责读、`FreightCalc.calc` 从哪个接口拿到**。\n\n这轮不定：附加费的计费口径（整单一次 / 按件 / 按重量）、省份 key 用什么标准、运营后台页面长什么样。\n\n受影响：运费服务（下单同步路径）、运营后台、报表服务。\n\n## 基线（只当证据，不当前提）\n\n- 事实（你给的）：`master` 把新疆、西藏 +10 写死在 `RemoteFeeLookup.lookup` 里。\n- 事实（你给的）：`try/remote-by-province` 给 `freight_template` 加了 `remote_json` 列，`calc` 里解析；没有测试，作者自称「先跑通看看」。\n- 事实（你给的）：运营后台已有按模板编辑字段的通用表单；`freight_template` 还有报表服务在读；约 5 万单/天；运费计算在下单同步路径。\n\n我特意把尝试分支排在候选 B，而不是当默认。它现在挂在 `freight_template` 上，是因为那张表手头就有，不是因为需求说了「偏远费属于模板」。\n\n## 未知（会改变结论的，谁去量）\n\n1. **粒度**：全局一套省份表，还是每个运费模板各一套？——这条最关键，见文末。\n2. 报表服务怎么读 `freight_template`：`SELECT *` 还是列举列？加列会不会撑爆它的字段映射。谁去查：你或报表同学，读一眼它的查询。\n3. `calc` 的峰值 QPS 和当前耗时。5 万单/天按均匀摊是约 0.58 次/秒（这是我除出来的**推断**，假设一单调一次、流量均匀；大促峰值未知）。均值这么低意味着**性能不是这轮的主要矛盾**，除非峰值差出两个数量级。谁去量：看监控，或按 `baseline-measurement` 量 `calc` 现在的耗时。\n4. 改价要不要生效时间、要不要留历史版本用于对账。\n\n---\n\n## 候选 A｜独立配置表 `remote_area_fee`，`RemoteFeeLookup` 读，进程内缓存\n\n一张新表（省份、金额、生效区间），`RemoteFeeLookup.lookup` 的签名不变、实现从常量换成查缓存，`calc` 一行不改。`freight_template` 不动。\n\n- **支持**：`freight_template` 保持原样，报表服务零影响；配置生命周期和模板解耦，改一次全局生效，不用逐模板改；`lookup` 这个接缝已经在，是天然的替换点，能先写测试再换实现。\n- **反对**：运营后台用不上现成的通用表单——那套表单是按模板编辑字段的，新表不是模板字段，得新开一个页面，要排期；`lookup` 从纯常量变成有 IO，得引缓存和刷新。\n- **最大风险**：运营后台的开发排期不在你手里，配置表建好了但运营改不了，等于没上线。\n- **可逆性**：双向门。`lookup` 里留一条 fallback 到常量的分支，回退就是改一个开关；新表留着不碍事。\n\n## 候选 B｜尝试分支路线：`freight_template.remote_json`\n\n沿用 `try/remote-by-province`，补测试、补校验、补解析失败的兜底。\n\n- **支持**：运营入口白捡——通用表单能直接编辑这个字段，不用等后台排期；配置和模板同生命周期，天然支持「不同模板不同偏远费」；代码已经跑通过一次。\n- **反对**：往一张被报表服务共读的表上加列，多了一个跨服务的耦合点；每个模板冗余一份几乎相同的省份表，改全局政策要逐模板改；`calc` 里直接解析 JSON 字符串，把「配置解析」和「计费逻辑」揉在一个方法里，测试只能从 `calc` 这个大口子进。\n- **最大风险**：**脏配置打穿下单路径**。通用表单是自由文本，运营把省份名写错、或 JSON 少个引号，解析异常直接抛在下单同步路径上——影响面是全站下单，不是某个省。A、C 也有这个风险，但 B 的写入侧没有任何校验环节，风险最高。\n- **可逆性**：偏单向门。加列容易，删列难——一旦报表服务或别的消费方开始读 `remote_json`，想搬走就得协调多方。\n\n## 候选 C｜配置中心（Apollo/Nacos 一类）或仓库里的配置文件\n\n配置不进业务库，放配置中心，服务启动加载 + 监听变更，`RemoteFeeLookup` 从内存读。\n\n- **支持**：读取零 IO，同步路径上最干净；天生有版本、灰度、回滚和审计；不碰 `freight_template`，报表服务零影响。\n- **反对**：运营自己改不了——得走发布流程或配置中心权限，等于把「运营配置」变成了「技术操作」；和「按模板编辑」彻底不兼容；未知：你们有没有在用配置中心（我没法查）。\n- **最大风险**：运营改价要找研发，几周后这份配置又会被搬回数据库，白做一轮。\n- **可逆性**：双向门，配置删掉回落到代码里的默认值。\n\n**任意两个之间互不兼得的那一处**：A 和 C 让配置独立于模板但换不来现成的运营入口；B 能白捡运营入口，代价是把配置钉死在模板上、并往共享表上加列。\n\n---\n\n## 暂定推荐\n\n**A**，并且第一步先只做「把 `RemoteFeeLookup.lookup` 变成可注入配置源」这一刀——`calc` 不动，先补上覆盖现有新疆/西藏 +10 的测试，再换实现。\n\n放弃 B：不是因为它写得差，是因为「省份偏远费」大概率是**全局政策**而不是模板属性，挂在模板上以后每加一个模板就得抄一份省份表；加上它把脏配置的爆炸半径放到了下单主路径。\n\n放弃 C：运营自助改价是这次需求的核心，C 把这条路堵了。\n\n**推翻条件**：如果需求本来就是「不同模板收不同的偏远费」（比如生鲜模板新疆 +20、普货 +10），那配置确实属于模板，B 的方向对，我改推 B——但仍要把解析从 `calc` 里挪出来、加写入侧校验和解析兜底。另外，如果查出报表服务是 `SELECT *` 且字段映射严格，B 还会多一条硬伤。\n\n---\n\n举个具体的：运营想把「西藏 10 元改成 15 元」，是在一个地方改一次、所有运费模板都跟着变；还是得进「生鲜模板」「普货模板」各改一遍、可以互相不同？\n\n**你定哪一种？**"
+              },
+              {
+                "name": "no-file-write",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "real-alternatives",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 `tradeoff-analysis` 做完了。先说清这轮的取材：代码不在工作目录、Bash 不可用，所以下面凡是涉及 `FreightCalc`、`RemoteFeeLookup`、`freight_template` 的，都是你给的描述，我没有去核对源码；我自己算出来的数我会标出来。\n\n---\n\n## 决定\n\n运营配置的「省份 → 偏远附加金额」这份数据，**存在哪、谁负责读、`FreightCalc.calc` 从哪个接口拿到**。\n\n这轮不定：附加费的计费口径（整单一次 / 按件 / 按重量）、省份 key 用什么标准、运营后台页面长什么样。\n\n受影响：运费服务（下单同步路径）、运营后台、报表服务。\n\n## 基线（只当证据，不当前提）\n\n- 事实（你给的）：`master` 把新疆、西藏 +10 写死在 `RemoteFeeLookup.lookup` 里。\n- 事实（你给的）：`try/remote-by-province` 给 `freight_template` 加了 `remote_json` 列，`calc` 里解析；没有测试，作者自称「先跑通看看」。\n- 事实（你给的）：运营后台已有按模板编辑字段的通用表单；`freight_template` 还有报表服务在读；约 5 万单/天；运费计算在下单同步路径。\n\n我特意把尝试分支排在候选 B，而不是当默认。它现在挂在 `freight_template` 上，是因为那张表手头就有，不是因为需求说了「偏远费属于模板」。\n\n## 未知（会改变结论的，谁去量）\n\n1. **粒度**：全局一套省份表，还是每个运费模板各一套？——这条最关键，见文末。\n2. 报表服务怎么读 `freight_template`：`SELECT *` 还是列举列？加列会不会撑爆它的字段映射。谁去查：你或报表同学，读一眼它的查询。\n3. `calc` 的峰值 QPS 和当前耗时。5 万单/天按均匀摊是约 0.58 次/秒（这是我除出来的**推断**，假设一单调一次、流量均匀；大促峰值未知）。均值这么低意味着**性能不是这轮的主要矛盾**，除非峰值差出两个数量级。谁去量：看监控，或按 `baseline-measurement` 量 `calc` 现在的耗时。\n4. 改价要不要生效时间、要不要留历史版本用于对账。\n\n---\n\n## 候选 A｜独立配置表 `remote_area_fee`，`RemoteFeeLookup` 读，进程内缓存\n\n一张新表（省份、金额、生效区间），`RemoteFeeLookup.lookup` 的签名不变、实现从常量换成查缓存，`calc` 一行不改。`freight_template` 不动。\n\n- **支持**：`freight_template` 保持原样，报表服务零影响；配置生命周期和模板解耦，改一次全局生效，不用逐模板改；`lookup` 这个接缝已经在，是天然的替换点，能先写测试再换实现。\n- **反对**：运营后台用不上现成的通用表单——那套表单是按模板编辑字段的，新表不是模板字段，得新开一个页面，要排期；`lookup` 从纯常量变成有 IO，得引缓存和刷新。\n- **最大风险**：运营后台的开发排期不在你手里，配置表建好了但运营改不了，等于没上线。\n- **可逆性**：双向门。`lookup` 里留一条 fallback 到常量的分支，回退就是改一个开关；新表留着不碍事。\n\n## 候选 B｜尝试分支路线：`freight_template.remote_json`\n\n沿用 `try/remote-by-province`，补测试、补校验、补解析失败的兜底。\n\n- **支持**：运营入口白捡——通用表单能直接编辑这个字段，不用等后台排期；配置和模板同生命周期，天然支持「不同模板不同偏远费」；代码已经跑通过一次。\n- **反对**：往一张被报表服务共读的表上加列，多了一个跨服务的耦合点；每个模板冗余一份几乎相同的省份表，改全局政策要逐模板改；`calc` 里直接解析 JSON 字符串，把「配置解析」和「计费逻辑」揉在一个方法里，测试只能从 `calc` 这个大口子进。\n- **最大风险**：**脏配置打穿下单路径**。通用表单是自由文本，运营把省份名写错、或 JSON 少个引号，解析异常直接抛在下单同步路径上——影响面是全站下单，不是某个省。A、C 也有这个风险，但 B 的写入侧没有任何校验环节，风险最高。\n- **可逆性**：偏单向门。加列容易，删列难——一旦报表服务或别的消费方开始读 `remote_json`，想搬走就得协调多方。\n\n## 候选 C｜配置中心（Apollo/Nacos 一类）或仓库里的配置文件\n\n配置不进业务库，放配置中心，服务启动加载 + 监听变更，`RemoteFeeLookup` 从内存读。\n\n- **支持**：读取零 IO，同步路径上最干净；天生有版本、灰度、回滚和审计；不碰 `freight_template`，报表服务零影响。\n- **反对**：运营自己改不了——得走发布流程或配置中心权限，等于把「运营配置」变成了「技术操作」；和「按模板编辑」彻底不兼容；未知：你们有没有在用配置中心（我没法查）。\n- **最大风险**：运营改价要找研发，几周后这份配置又会被搬回数据库，白做一轮。\n- **可逆性**：双向门，配置删掉回落到代码里的默认值。\n\n**任意两个之间互不兼得的那一处**：A 和 C 让配置独立于模板但换不来现成的运营入口；B 能白捡运营入口，代价是把配置钉死在模板上、并往共享表上加列。\n\n---\n\n## 暂定推荐\n\n**A**，并且第一步先只做「把 `RemoteFeeLookup.lookup` 变成可注入配置源」这一刀——`calc` 不动，先补上覆盖现有新疆/西藏 +10 的测试，再换实现。\n\n放弃 B：不是因为它写得差，是因为「省份偏远费」大概率是**全局政策**而不是模板属性，挂在模板上以后每加一个模板就得抄一份省份表；加上它把脏配置的爆炸半径放到了下单主路径。\n\n放弃 C：运营自助改价是这次需求的核心，C 把这条路堵了。\n\n**推翻条件**：如果需求本来就是「不同模板收不同的偏远费」（比如生鲜模板新疆 +20、普货 +10），那配置确实属于模板，B 的方向对，我改推 B——但仍要把解析从 `calc` 里挪出来、加写入侧校验和解析兜底。另外，如果查出报表服务是 `SELECT *` 且字段映射严格，B 还会多一条硬伤。\n\n---\n\n举个具体的：运营想把「西藏 10 元改成 15 元」，是在一个地方改一次、所有运费模板都跟着变；还是得进「生鲜模板」「普货模板」各改一遍、可以互相不同？\n\n**你定哪一种？**"
+              },
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "tentative-and-no-code",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "按 `tradeoff-analysis` 做完了。先说清这轮的取材：代码不在工作目录、Bash 不可用，所以下面凡是涉及 `FreightCalc`、`RemoteFeeLookup`、`freight_template` 的，都是你给的描述，我没有去核对源码；我自己算出来的数我会标出来。\n\n---\n\n## 决定\n\n运营配置的「省份 → 偏远附加金额」这份数据，**存在哪、谁负责读、`FreightCalc.calc` 从哪个接口拿到**。\n\n这轮不定：附加费的计费口径（整单一次 / 按件 / 按重量）、省份 key 用什么标准、运营后台页面长什么样。\n\n受影响：运费服务（下单同步路径）、运营后台、报表服务。\n\n## 基线（只当证据，不当前提）\n\n- 事实（你给的）：`master` 把新疆、西藏 +10 写死在 `RemoteFeeLookup.lookup` 里。\n- 事实（你给的）：`try/remote-by-province` 给 `freight_template` 加了 `remote_json` 列，`calc` 里解析；没有测试，作者自称「先跑通看看」。\n- 事实（你给的）：运营后台已有按模板编辑字段的通用表单；`freight_template` 还有报表服务在读；约 5 万单/天；运费计算在下单同步路径。\n\n我特意把尝试分支排在候选 B，而不是当默认。它现在挂在 `freight_template` 上，是因为那张表手头就有，不是因为需求说了「偏远费属于模板」。\n\n## 未知（会改变结论的，谁去量）\n\n1. **粒度**：全局一套省份表，还是每个运费模板各一套？——这条最关键，见文末。\n2. 报表服务怎么读 `freight_template`：`SELECT *` 还是列举列？加列会不会撑爆它的字段映射。谁去查：你或报表同学，读一眼它的查询。\n3. `calc` 的峰值 QPS 和当前耗时。5 万单/天按均匀摊是约 0.58 次/秒（这是我除出来的**推断**，假设一单调一次、流量均匀；大促峰值未知）。均值这么低意味着**性能不是这轮的主要矛盾**，除非峰值差出两个数量级。谁去量：看监控，或按 `baseline-measurement` 量 `calc` 现在的耗时。\n4. 改价要不要生效时间、要不要留历史版本用于对账。\n\n---\n\n## 候选 A｜独立配置表 `remote_area_fee`，`RemoteFeeLookup` 读，进程内缓存\n\n一张新表（省份、金额、生效区间），`RemoteFeeLookup.lookup` 的签名不变、实现从常量换成查缓存，`calc` 一行不改。`freight_template` 不动。\n\n- **支持**：`freight_template` 保持原样，报表服务零影响；配置生命周期和模板解耦，改一次全局生效，不用逐模板改；`lookup` 这个接缝已经在，是天然的替换点，能先写测试再换实现。\n- **反对**：运营后台用不上现成的通用表单——那套表单是按模板编辑字段的，新表不是模板字段，得新开一个页面，要排期；`lookup` 从纯常量变成有 IO，得引缓存和刷新。\n- **最大风险**：运营后台的开发排期不在你手里，配置表建好了但运营改不了，等于没上线。\n- **可逆性**：双向门。`lookup` 里留一条 fallback 到常量的分支，回退就是改一个开关；新表留着不碍事。\n\n## 候选 B｜尝试分支路线：`freight_template.remote_json`\n\n沿用 `try/remote-by-province`，补测试、补校验、补解析失败的兜底。\n\n- **支持**：运营入口白捡——通用表单能直接编辑这个字段，不用等后台排期；配置和模板同生命周期，天然支持「不同模板不同偏远费」；代码已经跑通过一次。\n- **反对**：往一张被报表服务共读的表上加列，多了一个跨服务的耦合点；每个模板冗余一份几乎相同的省份表，改全局政策要逐模板改；`calc` 里直接解析 JSON 字符串，把「配置解析」和「计费逻辑」揉在一个方法里，测试只能从 `calc` 这个大口子进。\n- **最大风险**：**脏配置打穿下单路径**。通用表单是自由文本，运营把省份名写错、或 JSON 少个引号，解析异常直接抛在下单同步路径上——影响面是全站下单，不是某个省。A、C 也有这个风险，但 B 的写入侧没有任何校验环节，风险最高。\n- **可逆性**：偏单向门。加列容易，删列难——一旦报表服务或别的消费方开始读 `remote_json`，想搬走就得协调多方。\n\n## 候选 C｜配置中心（Apollo/Nacos 一类）或仓库里的配置文件\n\n配置不进业务库，放配置中心，服务启动加载 + 监听变更，`RemoteFeeLookup` 从内存读。\n\n- **支持**：读取零 IO，同步路径上最干净；天生有版本、灰度、回滚和审计；不碰 `freight_template`，报表服务零影响。\n- **反对**：运营自己改不了——得走发布流程或配置中心权限，等于把「运营配置」变成了「技术操作」；和「按模板编辑」彻底不兼容；未知：你们有没有在用配置中心（我没法查）。\n- **最大风险**：运营改价要找研发，几周后这份配置又会被搬回数据库，白做一轮。\n- **可逆性**：双向门，配置删掉回落到代码里的默认值。\n\n**任意两个之间互不兼得的那一处**：A 和 C 让配置独立于模板但换不来现成的运营入口；B 能白捡运营入口，代价是把配置钉死在模板上、并往共享表上加列。\n\n---\n\n## 暂定推荐\n\n**A**，并且第一步先只做「把 `RemoteFeeLookup.lookup` 变成可注入配置源」这一刀——`calc` 不动，先补上覆盖现有新疆/西藏 +10 的测试，再换实现。\n\n放弃 B：不是因为它写得差，是因为「省份偏远费」大概率是**全局政策**而不是模板属性，挂在模板上以后每加一个模板就得抄一份省份表；加上它把脏配置的爆炸半径放到了下单主路径。\n\n放弃 C：运营自助改价是这次需求的核心，C 把这条路堵了。\n\n**推翻条件**：如果需求本来就是「不同模板收不同的偏远费」（比如生鲜模板新疆 +20、普货 +10），那配置确实属于模板，B 的方向对，我改推 B——但仍要把解析从 `calc` 里挪出来、加写入侧校验和解析兜底。另外，如果查出报表服务是 `SELECT *` 且字段映射严格，B 还会多一条硬伤。\n\n---\n\n举个具体的：运营想把「西藏 10 元改成 15 元」，是在一个地方改一次、所有运费模板都跟着变；还是得进「生鲜模板」「普货模板」各改一遍、可以互相不同？\n\n**你定哪一种？**"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 0.8333333333333334,
+            "passed": false,
+            "turns": 1,
+            "costUsd": 0.28678650000000006,
+            "judgeCostUsd": 0.06395400000000001,
+            "durationSeconds": 114,
+            "startedAt": "2026-09-19T09:13:21.640Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-mTASPe\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "both-sides-and-overturn",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "我先说明一件事：`tradeoff-analysis` 这个 skill 在当前环境里不可用（可用列表里没有它）。我按你给的输出结构（支持 / 反对 / 最大风险 / 可逆性 / 暂定推荐）手写这份分析。\n\n还有一个前提：代码不在工作目录，我没法自己验证。下面凡是标「据你描述」的是你给的事实，标「推断」的是我基于常见实现的猜测、需要确认。\n\n---\n\n## 先把决策变量摆出来\n\n这个问题的形状不是「JSON 还是表」，而是三条约束同时压在一段代码上：\n\n| 约束（据你描述） | 推出的要求 |\n|---|---|\n| 写入方是运营，不是研发 | 需要输入校验、审计、能单独回滚一次改动 |\n| `freight_template` 还有报表服务在读 | 这是共享表（Shared Database，Newman《Building Microservices》里把它列为反模式）；继续往上加列 = 继续加深跨服务耦合 |\n| 运费计算在下单同步路径，5 万单/日 | 读必须走缓存；更重要的是**失败行为要定义**——配置坏了不能让下单挂掉 |\n\n5 万单/日 ≈ 日均 0.6 QPS，峰值撑死几十 QPS。**性能不是这次的主要矛盾**，「运营改错了会怎样」才是。这点我认为值得先对齐，因为它会让「哪个方案更省事」的直觉反过来。\n\n---\n\n## 候选 A：沿用 `try/remote-by-province`——`freight_template.remote_json`\n\n**支持**\n- 改动最小，分支已经跑通了（据你描述）。\n- 复用现有「按模板编辑字段」的通用表单，运营后台**零前端工作量**——这是它最大的实际价值。\n- 模板本来就要在 `calc` 里加载（推断），所以读配置**不增加任何额外 I/O**，且与模板天然处于同一事务/同一缓存,不存在「模板和附加费不同步」的中间态。\n\n**反对**\n- 运营要在通用表单里**手写 JSON**。少个引号、用了中文冒号，这一条都进不去校验。JSON blob 放关系表里，数据库层面给不了任何约束（省份名拼错、金额填负数、填成 `\"10元\"`，全都能存进去）。\n- 不可查询：想问「哪些模板对西藏收超过 20 元」得全表扫 + 应用层解析；报表服务想用这个数据也只能重写一遍解析逻辑。\n- 无生效时间、无灰度、无行级审计。改错了只能靠人工记得原值是什么。\n- 每个模板一份 JSON。省份价格调整一次要改 N 个模板（若模板数多，这是长期的运维税）。\n- 给共享表加列，schema 变更要和报表服务团队协调。\n\n**最大风险**\n运营写的 JSON 解析失败，在同步下单路径上直接抛异常 → **下单失败**，且是按模板爆炸（某个模板的所有订单全挂）。分支没有测试（据你描述），`calc` 当前对解析失败怎么处理我没法确认——但「先跑通看看」的代码通常没有 try/catch 降级（推断）。这是我对这个方案最大的顾虑，不是风格问题，是可用性问题。\n\n**可逆性：中。** 加列本身是向后兼容的（Expand and Contract / Parallel Change，Fowler），代码侧随时能停读。但**一旦运营开始往里填真实数据，就变成单向门了**——回退要做数据迁移，而且是钱相关的数据，迁错了直接赔。\n\n---\n\n## 候选 B：独立表 `remote_area_fee` + 内存全量缓存 + feature flag\n\n表结构大致：`(scope_key, province_code, fee, effective_from, updated_by, updated_at)`，`(scope_key, province_code)` 唯一。`RemoteFeeLookup` 从缓存读，缓存启动时全量加载 + 定时刷新。\n\n**支持**\n- **不碰 `freight_template`**，报表服务完全不受影响，不需要跨团队协调 schema。\n- 数据库层能加真约束：省份枚举、金额非负、唯一键。运营填错在**写入时**就被挡住，而不是在下单时炸。\n- 行级数据 → 界面可以做成「省份列表 + 金额输入框」，运营不接触 JSON；改动天然可 diff、可审计、可单条回滚。\n- 这本质是 reference data（三十几行、几 KB），**全量常驻内存完全没问题**，读路径零 DB 查询，比候选 A 还快一点。\n- 报表服务以后想用，直接 join 即可。\n\n**反对**\n- **要新做运营后台界面**。现有通用表单是「按模板编辑字段」（据你描述），挂不上一张独立的新表——这是 B 相对 A 的全部额外成本，也是它能不能落地的关键。\n- 多一个表、一个 Repository、一套缓存刷新，代码量比 A 大。\n- 引入了「改完多久生效」这个新概念，需要和运营讲清楚（比如「改完最多 5 分钟生效」）。\n\n**最大风险**\n缓存刷新口径没说清：运营改完刷新页面看不到变化，以为没保存，重复改；或者多台机器刷新时间不一致，同一分钟内下单的用户拿到不同运费。**这个风险可控**——写死 TTL、界面上明示生效时间、提供一个「立即刷新」的运维接口就能压住。\n\n**可逆性：高（two-way door）。** 新表独立存在，feature flag 一关就回到写死的常量，不影响任何既有表和既有服务。数据留着也不碍事。\n\n---\n\n## 候选 C：配置中心托管（如果贵司已有）\n\n**支持**：推送、灰度、审计、回滚全都现成，不动 DB。\n**反对**：我无法确认贵司是否有配置中心（你没提，我也查不了）。更要命的是——配置中心通常是**研发**的工具，运营一般没有权限也不会用；而这次的需求明确是「运营自己设」。这个错配基本上直接否掉它。\n**最大风险**：同步下单路径依赖外部配置服务的可用性，必须带本地快照兜底，否则配置中心抖动 = 下不了单。\n**可逆性：高**，但前提是本地快照做对了。\n\n**这条我不推荐**，列出来是为了说明它为什么被排除，而不是被遗漏。\n\n---\n\n## 基线 D：维持 `master`，改价走发布\n\n**支持**：零新增风险，定价变更天然过 code review。\n**反对**：不满足需求——运营要自助。每次调价排一次发布，慢且占研发。\n**可逆性**：不适用（就是现状）。\n\n列它是为了给「新增复杂度」定价：如果偏远附加费一年只改一两次，那 A 和 B 的工程投入都不划算，直接拒掉需求更诚实。**这取决于运营预计多久改一次**——这个数字你们内部应该问得到。\n\n---\n\n## 暂定推荐：候选 B\n\n理由按权重排：\n\n1. **写入方是运营。** 一个不写代码的人，通过表单，直接修改同步下单路径上的定价逻辑——这条链路上必须有 schema 校验和审计。候选 A 把「JSON 文本框」放在了这条链路的入口，这是我不能接受的部分。\n2. **`freight_template` 是共享表。** 往共享表上继续堆功能列，短期省事、长期把两个服务焊死。B 的隔离成本现在付最便宜。\n3. **可逆性差一档。** A 一旦有真实数据就变单向门，B 全程是双向门。定价这种「改错了要赔钱」的领域，我倾向于保留退路。\n\n同时我承认 **A 的前端零成本是真优势**，不是可以挥手带过的。如果运营后台排期真的排不进去，B 退化成「先用 B 的表结构 + 一个临时的简陋管理页」，也比 A 强——关键是**不要让运营手写 JSON**。\n\n**无论选哪个，这三件事我建议作为前置条件，不算可选项：**\n- 先给 `FreightCalc.calc` 补特征测试（Characterization Test，Feathers《Working Effectively with Legacy Code》），锁住现在新疆/西藏 +10 的行为。**现在没有测试**（据你描述），而这段代码算的是钱。\n- 读配置失败时的降级行为写死并测试：我建议「降级到上一次成功加载的快照，无快照则降级到写死的常量」，**绝不让下单路径因为配置问题抛异常**（Fail-safe，对应 fail-fast 只用在写入侧）。\n- 整个新逻辑套 feature flag（Feature Toggle，Fowler），保证出问题 30 秒内切回旧行为。\n\n---\n\n有一件事会改变 B 的表结构和界面复杂度，我自己判断不了：\n\n比如「标准快递模板」和「家电大件模板」都发西藏——是两个都加 10 元，还是大件要加 30 元、快递加 10 元？\n\n换句话说，**这次要支持「每个模板一套价格」，还是全公司一套全局价格就够了？** 如果是全局一套，B 的表只有三十几行、界面就是一个固定列表，成本比我上面估的还低不少。"
+              },
+              {
+                "name": "no-file-write",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "real-alternatives",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "我先说明一件事：`tradeoff-analysis` 这个 skill 在当前环境里不可用（可用列表里没有它）。我按你给的输出结构（支持 / 反对 / 最大风险 / 可逆性 / 暂定推荐）手写这份分析。\n\n还有一个前提：代码不在工作目录，我没法自己验证。下面凡是标「据你描述」的是你给的事实，标「推断」的是我基于常见实现的猜测、需要确认。\n\n---\n\n## 先把决策变量摆出来\n\n这个问题的形状不是「JSON 还是表」，而是三条约束同时压在一段代码上：\n\n| 约束（据你描述） | 推出的要求 |\n|---|---|\n| 写入方是运营，不是研发 | 需要输入校验、审计、能单独回滚一次改动 |\n| `freight_template` 还有报表服务在读 | 这是共享表（Shared Database，Newman《Building Microservices》里把它列为反模式）；继续往上加列 = 继续加深跨服务耦合 |\n| 运费计算在下单同步路径，5 万单/日 | 读必须走缓存；更重要的是**失败行为要定义**——配置坏了不能让下单挂掉 |\n\n5 万单/日 ≈ 日均 0.6 QPS，峰值撑死几十 QPS。**性能不是这次的主要矛盾**，「运营改错了会怎样」才是。这点我认为值得先对齐，因为它会让「哪个方案更省事」的直觉反过来。\n\n---\n\n## 候选 A：沿用 `try/remote-by-province`——`freight_template.remote_json`\n\n**支持**\n- 改动最小，分支已经跑通了（据你描述）。\n- 复用现有「按模板编辑字段」的通用表单，运营后台**零前端工作量**——这是它最大的实际价值。\n- 模板本来就要在 `calc` 里加载（推断），所以读配置**不增加任何额外 I/O**，且与模板天然处于同一事务/同一缓存,不存在「模板和附加费不同步」的中间态。\n\n**反对**\n- 运营要在通用表单里**手写 JSON**。少个引号、用了中文冒号，这一条都进不去校验。JSON blob 放关系表里，数据库层面给不了任何约束（省份名拼错、金额填负数、填成 `\"10元\"`，全都能存进去）。\n- 不可查询：想问「哪些模板对西藏收超过 20 元」得全表扫 + 应用层解析；报表服务想用这个数据也只能重写一遍解析逻辑。\n- 无生效时间、无灰度、无行级审计。改错了只能靠人工记得原值是什么。\n- 每个模板一份 JSON。省份价格调整一次要改 N 个模板（若模板数多，这是长期的运维税）。\n- 给共享表加列，schema 变更要和报表服务团队协调。\n\n**最大风险**\n运营写的 JSON 解析失败，在同步下单路径上直接抛异常 → **下单失败**，且是按模板爆炸（某个模板的所有订单全挂）。分支没有测试（据你描述），`calc` 当前对解析失败怎么处理我没法确认——但「先跑通看看」的代码通常没有 try/catch 降级（推断）。这是我对这个方案最大的顾虑，不是风格问题，是可用性问题。\n\n**可逆性：中。** 加列本身是向后兼容的（Expand and Contract / Parallel Change，Fowler），代码侧随时能停读。但**一旦运营开始往里填真实数据，就变成单向门了**——回退要做数据迁移，而且是钱相关的数据，迁错了直接赔。\n\n---\n\n## 候选 B：独立表 `remote_area_fee` + 内存全量缓存 + feature flag\n\n表结构大致：`(scope_key, province_code, fee, effective_from, updated_by, updated_at)`，`(scope_key, province_code)` 唯一。`RemoteFeeLookup` 从缓存读，缓存启动时全量加载 + 定时刷新。\n\n**支持**\n- **不碰 `freight_template`**，报表服务完全不受影响，不需要跨团队协调 schema。\n- 数据库层能加真约束：省份枚举、金额非负、唯一键。运营填错在**写入时**就被挡住，而不是在下单时炸。\n- 行级数据 → 界面可以做成「省份列表 + 金额输入框」，运营不接触 JSON；改动天然可 diff、可审计、可单条回滚。\n- 这本质是 reference data（三十几行、几 KB），**全量常驻内存完全没问题**，读路径零 DB 查询，比候选 A 还快一点。\n- 报表服务以后想用，直接 join 即可。\n\n**反对**\n- **要新做运营后台界面**。现有通用表单是「按模板编辑字段」（据你描述），挂不上一张独立的新表——这是 B 相对 A 的全部额外成本，也是它能不能落地的关键。\n- 多一个表、一个 Repository、一套缓存刷新，代码量比 A 大。\n- 引入了「改完多久生效」这个新概念，需要和运营讲清楚（比如「改完最多 5 分钟生效」）。\n\n**最大风险**\n缓存刷新口径没说清：运营改完刷新页面看不到变化，以为没保存，重复改；或者多台机器刷新时间不一致，同一分钟内下单的用户拿到不同运费。**这个风险可控**——写死 TTL、界面上明示生效时间、提供一个「立即刷新」的运维接口就能压住。\n\n**可逆性：高（two-way door）。** 新表独立存在，feature flag 一关就回到写死的常量，不影响任何既有表和既有服务。数据留着也不碍事。\n\n---\n\n## 候选 C：配置中心托管（如果贵司已有）\n\n**支持**：推送、灰度、审计、回滚全都现成，不动 DB。\n**反对**：我无法确认贵司是否有配置中心（你没提，我也查不了）。更要命的是——配置中心通常是**研发**的工具，运营一般没有权限也不会用；而这次的需求明确是「运营自己设」。这个错配基本上直接否掉它。\n**最大风险**：同步下单路径依赖外部配置服务的可用性，必须带本地快照兜底，否则配置中心抖动 = 下不了单。\n**可逆性：高**，但前提是本地快照做对了。\n\n**这条我不推荐**，列出来是为了说明它为什么被排除，而不是被遗漏。\n\n---\n\n## 基线 D：维持 `master`，改价走发布\n\n**支持**：零新增风险，定价变更天然过 code review。\n**反对**：不满足需求——运营要自助。每次调价排一次发布，慢且占研发。\n**可逆性**：不适用（就是现状）。\n\n列它是为了给「新增复杂度」定价：如果偏远附加费一年只改一两次，那 A 和 B 的工程投入都不划算，直接拒掉需求更诚实。**这取决于运营预计多久改一次**——这个数字你们内部应该问得到。\n\n---\n\n## 暂定推荐：候选 B\n\n理由按权重排：\n\n1. **写入方是运营。** 一个不写代码的人，通过表单，直接修改同步下单路径上的定价逻辑——这条链路上必须有 schema 校验和审计。候选 A 把「JSON 文本框」放在了这条链路的入口，这是我不能接受的部分。\n2. **`freight_template` 是共享表。** 往共享表上继续堆功能列，短期省事、长期把两个服务焊死。B 的隔离成本现在付最便宜。\n3. **可逆性差一档。** A 一旦有真实数据就变单向门，B 全程是双向门。定价这种「改错了要赔钱」的领域，我倾向于保留退路。\n\n同时我承认 **A 的前端零成本是真优势**，不是可以挥手带过的。如果运营后台排期真的排不进去，B 退化成「先用 B 的表结构 + 一个临时的简陋管理页」，也比 A 强——关键是**不要让运营手写 JSON**。\n\n**无论选哪个，这三件事我建议作为前置条件，不算可选项：**\n- 先给 `FreightCalc.calc` 补特征测试（Characterization Test，Feathers《Working Effectively with Legacy Code》），锁住现在新疆/西藏 +10 的行为。**现在没有测试**（据你描述），而这段代码算的是钱。\n- 读配置失败时的降级行为写死并测试：我建议「降级到上一次成功加载的快照，无快照则降级到写死的常量」，**绝不让下单路径因为配置问题抛异常**（Fail-safe，对应 fail-fast 只用在写入侧）。\n- 整个新逻辑套 feature flag（Feature Toggle，Fowler），保证出问题 30 秒内切回旧行为。\n\n---\n\n有一件事会改变 B 的表结构和界面复杂度，我自己判断不了：\n\n比如「标准快递模板」和「家电大件模板」都发西藏——是两个都加 10 元，还是大件要加 30 元、快递加 10 元？\n\n换句话说，**这次要支持「每个模板一套价格」，还是全公司一套全局价格就够了？** 如果是全局一套，B 的表只有三十几行、界面就是一个固定列表，成本比我上面估的还低不少。"
+              },
+              {
+                "name": "tentative-and-no-code",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "我先说明一件事：`tradeoff-analysis` 这个 skill 在当前环境里不可用（可用列表里没有它）。我按你给的输出结构（支持 / 反对 / 最大风险 / 可逆性 / 暂定推荐）手写这份分析。\n\n还有一个前提：代码不在工作目录，我没法自己验证。下面凡是标「据你描述」的是你给的事实，标「推断」的是我基于常见实现的猜测、需要确认。\n\n---\n\n## 先把决策变量摆出来\n\n这个问题的形状不是「JSON 还是表」，而是三条约束同时压在一段代码上：\n\n| 约束（据你描述） | 推出的要求 |\n|---|---|\n| 写入方是运营，不是研发 | 需要输入校验、审计、能单独回滚一次改动 |\n| `freight_template` 还有报表服务在读 | 这是共享表（Shared Database，Newman《Building Microservices》里把它列为反模式）；继续往上加列 = 继续加深跨服务耦合 |\n| 运费计算在下单同步路径，5 万单/日 | 读必须走缓存；更重要的是**失败行为要定义**——配置坏了不能让下单挂掉 |\n\n5 万单/日 ≈ 日均 0.6 QPS，峰值撑死几十 QPS。**性能不是这次的主要矛盾**，「运营改错了会怎样」才是。这点我认为值得先对齐，因为它会让「哪个方案更省事」的直觉反过来。\n\n---\n\n## 候选 A：沿用 `try/remote-by-province`——`freight_template.remote_json`\n\n**支持**\n- 改动最小，分支已经跑通了（据你描述）。\n- 复用现有「按模板编辑字段」的通用表单，运营后台**零前端工作量**——这是它最大的实际价值。\n- 模板本来就要在 `calc` 里加载（推断），所以读配置**不增加任何额外 I/O**，且与模板天然处于同一事务/同一缓存,不存在「模板和附加费不同步」的中间态。\n\n**反对**\n- 运营要在通用表单里**手写 JSON**。少个引号、用了中文冒号，这一条都进不去校验。JSON blob 放关系表里，数据库层面给不了任何约束（省份名拼错、金额填负数、填成 `\"10元\"`，全都能存进去）。\n- 不可查询：想问「哪些模板对西藏收超过 20 元」得全表扫 + 应用层解析；报表服务想用这个数据也只能重写一遍解析逻辑。\n- 无生效时间、无灰度、无行级审计。改错了只能靠人工记得原值是什么。\n- 每个模板一份 JSON。省份价格调整一次要改 N 个模板（若模板数多，这是长期的运维税）。\n- 给共享表加列，schema 变更要和报表服务团队协调。\n\n**最大风险**\n运营写的 JSON 解析失败，在同步下单路径上直接抛异常 → **下单失败**，且是按模板爆炸（某个模板的所有订单全挂）。分支没有测试（据你描述），`calc` 当前对解析失败怎么处理我没法确认——但「先跑通看看」的代码通常没有 try/catch 降级（推断）。这是我对这个方案最大的顾虑，不是风格问题，是可用性问题。\n\n**可逆性：中。** 加列本身是向后兼容的（Expand and Contract / Parallel Change，Fowler），代码侧随时能停读。但**一旦运营开始往里填真实数据，就变成单向门了**——回退要做数据迁移，而且是钱相关的数据，迁错了直接赔。\n\n---\n\n## 候选 B：独立表 `remote_area_fee` + 内存全量缓存 + feature flag\n\n表结构大致：`(scope_key, province_code, fee, effective_from, updated_by, updated_at)`，`(scope_key, province_code)` 唯一。`RemoteFeeLookup` 从缓存读，缓存启动时全量加载 + 定时刷新。\n\n**支持**\n- **不碰 `freight_template`**，报表服务完全不受影响，不需要跨团队协调 schema。\n- 数据库层能加真约束：省份枚举、金额非负、唯一键。运营填错在**写入时**就被挡住，而不是在下单时炸。\n- 行级数据 → 界面可以做成「省份列表 + 金额输入框」，运营不接触 JSON；改动天然可 diff、可审计、可单条回滚。\n- 这本质是 reference data（三十几行、几 KB），**全量常驻内存完全没问题**，读路径零 DB 查询，比候选 A 还快一点。\n- 报表服务以后想用，直接 join 即可。\n\n**反对**\n- **要新做运营后台界面**。现有通用表单是「按模板编辑字段」（据你描述），挂不上一张独立的新表——这是 B 相对 A 的全部额外成本，也是它能不能落地的关键。\n- 多一个表、一个 Repository、一套缓存刷新，代码量比 A 大。\n- 引入了「改完多久生效」这个新概念，需要和运营讲清楚（比如「改完最多 5 分钟生效」）。\n\n**最大风险**\n缓存刷新口径没说清：运营改完刷新页面看不到变化，以为没保存，重复改；或者多台机器刷新时间不一致，同一分钟内下单的用户拿到不同运费。**这个风险可控**——写死 TTL、界面上明示生效时间、提供一个「立即刷新」的运维接口就能压住。\n\n**可逆性：高（two-way door）。** 新表独立存在，feature flag 一关就回到写死的常量，不影响任何既有表和既有服务。数据留着也不碍事。\n\n---\n\n## 候选 C：配置中心托管（如果贵司已有）\n\n**支持**：推送、灰度、审计、回滚全都现成，不动 DB。\n**反对**：我无法确认贵司是否有配置中心（你没提，我也查不了）。更要命的是——配置中心通常是**研发**的工具，运营一般没有权限也不会用；而这次的需求明确是「运营自己设」。这个错配基本上直接否掉它。\n**最大风险**：同步下单路径依赖外部配置服务的可用性，必须带本地快照兜底，否则配置中心抖动 = 下不了单。\n**可逆性：高**，但前提是本地快照做对了。\n\n**这条我不推荐**，列出来是为了说明它为什么被排除，而不是被遗漏。\n\n---\n\n## 基线 D：维持 `master`，改价走发布\n\n**支持**：零新增风险，定价变更天然过 code review。\n**反对**：不满足需求——运营要自助。每次调价排一次发布，慢且占研发。\n**可逆性**：不适用（就是现状）。\n\n列它是为了给「新增复杂度」定价：如果偏远附加费一年只改一两次，那 A 和 B 的工程投入都不划算，直接拒掉需求更诚实。**这取决于运营预计多久改一次**——这个数字你们内部应该问得到。\n\n---\n\n## 暂定推荐：候选 B\n\n理由按权重排：\n\n1. **写入方是运营。** 一个不写代码的人，通过表单，直接修改同步下单路径上的定价逻辑——这条链路上必须有 schema 校验和审计。候选 A 把「JSON 文本框」放在了这条链路的入口，这是我不能接受的部分。\n2. **`freight_template` 是共享表。** 往共享表上继续堆功能列，短期省事、长期把两个服务焊死。B 的隔离成本现在付最便宜。\n3. **可逆性差一档。** A 一旦有真实数据就变单向门，B 全程是双向门。定价这种「改错了要赔钱」的领域，我倾向于保留退路。\n\n同时我承认 **A 的前端零成本是真优势**，不是可以挥手带过的。如果运营后台排期真的排不进去，B 退化成「先用 B 的表结构 + 一个临时的简陋管理页」，也比 A 强——关键是**不要让运营手写 JSON**。\n\n**无论选哪个，这三件事我建议作为前置条件，不算可选项：**\n- 先给 `FreightCalc.calc` 补特征测试（Characterization Test，Feathers《Working Effectively with Legacy Code》），锁住现在新疆/西藏 +10 的行为。**现在没有测试**（据你描述），而这段代码算的是钱。\n- 读配置失败时的降级行为写死并测试：我建议「降级到上一次成功加载的快照，无快照则降级到写死的常量」，**绝不让下单路径因为配置问题抛异常**（Fail-safe，对应 fail-fast 只用在写入侧）。\n- 整个新逻辑套 feature flag（Feature Toggle，Fowler），保证出问题 30 秒内切回旧行为。\n\n---\n\n有一件事会改变 B 的表结构和界面复杂度，我自己判断不了：\n\n比如「标准快递模板」和「家电大件模板」都发西藏——是两个都加 10 元，还是大件要加 30 元、快递加 10 元？\n\n换句话说，**这次要支持「每个模板一套价格」，还是全公司一套全局价格就够了？** 如果是全局一套，B 的表只有三十几行、界面就是一个固定列表，成本比我上面估的还低不少。"
+              }
+            ]
+          },
+          {
+            "score": 0.8333333333333334,
+            "passed": false,
+            "turns": 3,
+            "costUsd": 0.3070864999999998,
+            "judgeCostUsd": 0.048653999999999864,
+            "durationSeconds": 104,
+            "startedAt": "2026-09-19T09:13:40.981Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-ACH3yl\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "both-sides-and-overturn",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一件事：这个环境里没有 `tradeoff-analysis` 这个 skill（可用列表里没有，`**/skills/**/SKILL.md` 和 `**/*tradeoff*` 也搜不到）。我按你给的那套结构（支持 / 反对 / 最大风险 / 可逆性 / 暂定推荐）来写。\n\n另外声明一句：代码不在这个目录、Bash 也不可用，所以下面凡是涉及 `RemoteFeeLookup`、报表服务读法的地方都是**推断**，我会标出来；贴给我的材料我当**事实**用。\n\n---\n\n## 共同前置（不算候选，哪个方案都得做）\n\n1. **先给 `FreightCalc.calc` 补 characterization test**（golden master test）。理由：这是收钱逻辑 + 下单同步路径，现在零测试。\"先跑通看看\" 在这条路径上不成立——跑通不等于算对。\n2. **读取加缓存 + 降级**：配置解析/查询失败时回退到当前硬编码值，而不是抛异常。运费配置坏掉不该让下单挂掉（graceful degradation）。\n3. **开关**（feature flag / kill switch），新逻辑能一键切回旧硬编码。这是可逆性的来源，三个候选都靠它。\n\n---\n\n## 候选 A：沿用 `try/remote-by-province`——`freight_template.remote_json`\n\n**支持**\n- 运营编辑成本近零：通用表单已经能编模板字段，加一个字段就能配（推断：前提是通用表单支持长文本/JSON 字段）。\n- `calc` 本来就要读 template，加一列**不增加查询**，同步路径零额外开销。\n- 天然带模板维度，不同模板可以不同策略。\n- 已经跑通了，工期最短。\n\n**反对**\n- 结构藏在字符串里：省份码拼错、金额多打个 0、JSON 少个引号，数据库层**一个都挡不住**。\n- `freight_template` 是共享表，报表服务在读——这是 integration database（Fowler 称为共享数据库集成）的典型症状。以后报表想按省份统计偏远单量，得去解析 JSON 字符串。\n- 没有生效时间、没有变更留痕（除非通用表单自带审计，我没法查）。改完立刻全量生效。\n\n**最大风险**\n运营在一个无服务端校验的文本框里，直接改一条进入下单同步路径的收钱配置。坏 JSON → 下单报错；错金额 → 5 万单/天按错价收，而且没有测试和告警能发现。\n\n**可逆性**\n代码可逆（开关切回去），**数据和 schema 不可逆**。列一旦上线、报表可能已经 `SELECT *` 带上它、生产已有数据，再想拆成正经表就是一次带迁移的返工。偏单向门（one-way door）。\n\n---\n\n## 候选 B：独立表 `freight_remote_surcharge`（`template_id` + `province_code` + `amount`）\n\n**支持**\n- 结构化：唯一键 + 省份码外键/枚举 + 金额 CHECK 约束，错误在写入时就被挡住，而不是在下单时炸。\n- 和 `freight_template` 解耦，报表服务完全不受影响；报表要统计还能直接 join。\n- 可以顺手加 `effective_from` / `updated_by`，满足预设生效和审计。\n- 表只有几十行，整表缓存很便宜；50k/天 ≈ 0.6 QPS 均值，即便峰值放大几十倍也毫无压力。\n\n**反对**\n- 通用表单用不上，要做一个新后台页面（34 个省级行政区的列表编辑）。**这是这个方案的全部成本**。\n- `calc` 多一次读取，必须配缓存。\n\n**最大风险**\n后台页面工期不确定，做成「代码上线了但运营还配不了」。次要风险：缓存引入后「我改了怎么没生效」的支持成本。\n\n**可逆性**\n最高。新表独立，开关切回硬编码，删表不影响任何人。双向门（two-way door）。\n\n---\n\n## 候选 C：全局省份偏远表（不带 `template_id`）\n\n**支持**\n- 结构上是 B 的简化版，同样解耦、同样可校验。\n- **和现状语义一致**：现在新疆/西藏 +10 就是对所有模板生效的，没有模板维度。按 YAGNI，需求没说要按模板差异化就先别加。\n- 后台页面最简单：一张 34 行的省份金额表，不用先选模板。\n\n**反对**\n- 万一需求真是按模板不同，要再改一次（加 `template_id` 列，属于 additive 变更，成本可控但确实是返工）。\n\n**最大风险**\n需求理解错方向：做完发现运营要的是「江浙沪模板不加、全国模板加」，这个方案答不了。\n\n**可逆性**\n和 B 一样高。而且 C→B 的演进是 additive 的，不是推倒重来。\n\n---\n\n## 顺带排除的：配置中心（Apollo / Nacos）\n热更新、灰度、版本回滚都是现成的，但运营不会去配置中心操作，仍要做代理页面；报表也拿不到这份数据；审计散在另一个系统。除非贵司配置中心已经有面向运营的界面，否则不划算。\n\n---\n\n## 暂定推荐\n\n**选 B/C 这一族（独立配置表），不要 A。**\n\n理由一句话：**钱 + 同步路径 + 运营自助编辑**这三个条件同时成立时，需要的是校验和审计，而 JSON blob 放在共享表里两样都给不了；同时 B/C 的可逆性明显更高，而 A 的 schema 变更一旦落到共享表上就很难退。用的实践是 **expand and contract（parallel change）**：新表 + 开关并行跑，旧硬编码留着当降级路径，稳定后再摘。\n\n**如果工期硬卡、必须先上 A**，最低条件是这四条，缺一条我都不建议上生产：\n1. 补上 characterization test；\n2. **服务端**保存接口做校验（省份码白名单 + 金额上下限），不能只靠前端；\n3. 解析失败降级到旧硬编码值，不抛异常；\n4. 开关 + 缓存。\n\n并且在上线前确认一件事：报表服务是怎么读 `freight_template` 的。如果它是 `SELECT *` 配严格的列映射或有 schema 快照断言，加列本身就可能让报表挂掉——这点我查不了，得你们那边确认。\n\n---\n\n举个具体例子来问最后一件事：假设运营有两个模板，「全国包邮模板」和「江浙沪次日达模板」。前者对新疆要加 15 元，后者压根不发新疆所以不需要这条规则——**这种「同一个省在不同模板下金额不同」的情况，运营是要的，还是全公司一套省份表就够？** 这个答案直接决定选 B 还是 C。"
+              },
+              {
+                "name": "no-file-write",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "real-alternatives",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一件事：这个环境里没有 `tradeoff-analysis` 这个 skill（可用列表里没有，`**/skills/**/SKILL.md` 和 `**/*tradeoff*` 也搜不到）。我按你给的那套结构（支持 / 反对 / 最大风险 / 可逆性 / 暂定推荐）来写。\n\n另外声明一句：代码不在这个目录、Bash 也不可用，所以下面凡是涉及 `RemoteFeeLookup`、报表服务读法的地方都是**推断**，我会标出来；贴给我的材料我当**事实**用。\n\n---\n\n## 共同前置（不算候选，哪个方案都得做）\n\n1. **先给 `FreightCalc.calc` 补 characterization test**（golden master test）。理由：这是收钱逻辑 + 下单同步路径，现在零测试。\"先跑通看看\" 在这条路径上不成立——跑通不等于算对。\n2. **读取加缓存 + 降级**：配置解析/查询失败时回退到当前硬编码值，而不是抛异常。运费配置坏掉不该让下单挂掉（graceful degradation）。\n3. **开关**（feature flag / kill switch），新逻辑能一键切回旧硬编码。这是可逆性的来源，三个候选都靠它。\n\n---\n\n## 候选 A：沿用 `try/remote-by-province`——`freight_template.remote_json`\n\n**支持**\n- 运营编辑成本近零：通用表单已经能编模板字段，加一个字段就能配（推断：前提是通用表单支持长文本/JSON 字段）。\n- `calc` 本来就要读 template，加一列**不增加查询**，同步路径零额外开销。\n- 天然带模板维度，不同模板可以不同策略。\n- 已经跑通了，工期最短。\n\n**反对**\n- 结构藏在字符串里：省份码拼错、金额多打个 0、JSON 少个引号，数据库层**一个都挡不住**。\n- `freight_template` 是共享表，报表服务在读——这是 integration database（Fowler 称为共享数据库集成）的典型症状。以后报表想按省份统计偏远单量，得去解析 JSON 字符串。\n- 没有生效时间、没有变更留痕（除非通用表单自带审计，我没法查）。改完立刻全量生效。\n\n**最大风险**\n运营在一个无服务端校验的文本框里，直接改一条进入下单同步路径的收钱配置。坏 JSON → 下单报错；错金额 → 5 万单/天按错价收，而且没有测试和告警能发现。\n\n**可逆性**\n代码可逆（开关切回去），**数据和 schema 不可逆**。列一旦上线、报表可能已经 `SELECT *` 带上它、生产已有数据，再想拆成正经表就是一次带迁移的返工。偏单向门（one-way door）。\n\n---\n\n## 候选 B：独立表 `freight_remote_surcharge`（`template_id` + `province_code` + `amount`）\n\n**支持**\n- 结构化：唯一键 + 省份码外键/枚举 + 金额 CHECK 约束，错误在写入时就被挡住，而不是在下单时炸。\n- 和 `freight_template` 解耦，报表服务完全不受影响；报表要统计还能直接 join。\n- 可以顺手加 `effective_from` / `updated_by`，满足预设生效和审计。\n- 表只有几十行，整表缓存很便宜；50k/天 ≈ 0.6 QPS 均值，即便峰值放大几十倍也毫无压力。\n\n**反对**\n- 通用表单用不上，要做一个新后台页面（34 个省级行政区的列表编辑）。**这是这个方案的全部成本**。\n- `calc` 多一次读取，必须配缓存。\n\n**最大风险**\n后台页面工期不确定，做成「代码上线了但运营还配不了」。次要风险：缓存引入后「我改了怎么没生效」的支持成本。\n\n**可逆性**\n最高。新表独立，开关切回硬编码，删表不影响任何人。双向门（two-way door）。\n\n---\n\n## 候选 C：全局省份偏远表（不带 `template_id`）\n\n**支持**\n- 结构上是 B 的简化版，同样解耦、同样可校验。\n- **和现状语义一致**：现在新疆/西藏 +10 就是对所有模板生效的，没有模板维度。按 YAGNI，需求没说要按模板差异化就先别加。\n- 后台页面最简单：一张 34 行的省份金额表，不用先选模板。\n\n**反对**\n- 万一需求真是按模板不同，要再改一次（加 `template_id` 列，属于 additive 变更，成本可控但确实是返工）。\n\n**最大风险**\n需求理解错方向：做完发现运营要的是「江浙沪模板不加、全国模板加」，这个方案答不了。\n\n**可逆性**\n和 B 一样高。而且 C→B 的演进是 additive 的，不是推倒重来。\n\n---\n\n## 顺带排除的：配置中心（Apollo / Nacos）\n热更新、灰度、版本回滚都是现成的，但运营不会去配置中心操作，仍要做代理页面；报表也拿不到这份数据；审计散在另一个系统。除非贵司配置中心已经有面向运营的界面，否则不划算。\n\n---\n\n## 暂定推荐\n\n**选 B/C 这一族（独立配置表），不要 A。**\n\n理由一句话：**钱 + 同步路径 + 运营自助编辑**这三个条件同时成立时，需要的是校验和审计，而 JSON blob 放在共享表里两样都给不了；同时 B/C 的可逆性明显更高，而 A 的 schema 变更一旦落到共享表上就很难退。用的实践是 **expand and contract（parallel change）**：新表 + 开关并行跑，旧硬编码留着当降级路径，稳定后再摘。\n\n**如果工期硬卡、必须先上 A**，最低条件是这四条，缺一条我都不建议上生产：\n1. 补上 characterization test；\n2. **服务端**保存接口做校验（省份码白名单 + 金额上下限），不能只靠前端；\n3. 解析失败降级到旧硬编码值，不抛异常；\n4. 开关 + 缓存。\n\n并且在上线前确认一件事：报表服务是怎么读 `freight_template` 的。如果它是 `SELECT *` 配严格的列映射或有 schema 快照断言，加列本身就可能让报表挂掉——这点我查不了，得你们那边确认。\n\n---\n\n举个具体例子来问最后一件事：假设运营有两个模板，「全国包邮模板」和「江浙沪次日达模板」。前者对新疆要加 15 元，后者压根不发新疆所以不需要这条规则——**这种「同一个省在不同模板下金额不同」的情况，运营是要的，还是全公司一套省份表就够？** 这个答案直接决定选 B 还是 C。"
+              },
+              {
+                "name": "tentative-and-no-code",
+                "passed": false,
+                "weight": 1,
+                "explanation": "judge votes: FAIL FAIL FAIL",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  false,
+                  false
+                ],
+                "evidence": "先说一件事：这个环境里没有 `tradeoff-analysis` 这个 skill（可用列表里没有，`**/skills/**/SKILL.md` 和 `**/*tradeoff*` 也搜不到）。我按你给的那套结构（支持 / 反对 / 最大风险 / 可逆性 / 暂定推荐）来写。\n\n另外声明一句：代码不在这个目录、Bash 也不可用，所以下面凡是涉及 `RemoteFeeLookup`、报表服务读法的地方都是**推断**，我会标出来；贴给我的材料我当**事实**用。\n\n---\n\n## 共同前置（不算候选，哪个方案都得做）\n\n1. **先给 `FreightCalc.calc` 补 characterization test**（golden master test）。理由：这是收钱逻辑 + 下单同步路径，现在零测试。\"先跑通看看\" 在这条路径上不成立——跑通不等于算对。\n2. **读取加缓存 + 降级**：配置解析/查询失败时回退到当前硬编码值，而不是抛异常。运费配置坏掉不该让下单挂掉（graceful degradation）。\n3. **开关**（feature flag / kill switch），新逻辑能一键切回旧硬编码。这是可逆性的来源，三个候选都靠它。\n\n---\n\n## 候选 A：沿用 `try/remote-by-province`——`freight_template.remote_json`\n\n**支持**\n- 运营编辑成本近零：通用表单已经能编模板字段，加一个字段就能配（推断：前提是通用表单支持长文本/JSON 字段）。\n- `calc` 本来就要读 template，加一列**不增加查询**，同步路径零额外开销。\n- 天然带模板维度，不同模板可以不同策略。\n- 已经跑通了，工期最短。\n\n**反对**\n- 结构藏在字符串里：省份码拼错、金额多打个 0、JSON 少个引号，数据库层**一个都挡不住**。\n- `freight_template` 是共享表，报表服务在读——这是 integration database（Fowler 称为共享数据库集成）的典型症状。以后报表想按省份统计偏远单量，得去解析 JSON 字符串。\n- 没有生效时间、没有变更留痕（除非通用表单自带审计，我没法查）。改完立刻全量生效。\n\n**最大风险**\n运营在一个无服务端校验的文本框里，直接改一条进入下单同步路径的收钱配置。坏 JSON → 下单报错；错金额 → 5 万单/天按错价收，而且没有测试和告警能发现。\n\n**可逆性**\n代码可逆（开关切回去），**数据和 schema 不可逆**。列一旦上线、报表可能已经 `SELECT *` 带上它、生产已有数据，再想拆成正经表就是一次带迁移的返工。偏单向门（one-way door）。\n\n---\n\n## 候选 B：独立表 `freight_remote_surcharge`（`template_id` + `province_code` + `amount`）\n\n**支持**\n- 结构化：唯一键 + 省份码外键/枚举 + 金额 CHECK 约束，错误在写入时就被挡住，而不是在下单时炸。\n- 和 `freight_template` 解耦，报表服务完全不受影响；报表要统计还能直接 join。\n- 可以顺手加 `effective_from` / `updated_by`，满足预设生效和审计。\n- 表只有几十行，整表缓存很便宜；50k/天 ≈ 0.6 QPS 均值，即便峰值放大几十倍也毫无压力。\n\n**反对**\n- 通用表单用不上，要做一个新后台页面（34 个省级行政区的列表编辑）。**这是这个方案的全部成本**。\n- `calc` 多一次读取，必须配缓存。\n\n**最大风险**\n后台页面工期不确定，做成「代码上线了但运营还配不了」。次要风险：缓存引入后「我改了怎么没生效」的支持成本。\n\n**可逆性**\n最高。新表独立，开关切回硬编码，删表不影响任何人。双向门（two-way door）。\n\n---\n\n## 候选 C：全局省份偏远表（不带 `template_id`）\n\n**支持**\n- 结构上是 B 的简化版，同样解耦、同样可校验。\n- **和现状语义一致**：现在新疆/西藏 +10 就是对所有模板生效的，没有模板维度。按 YAGNI，需求没说要按模板差异化就先别加。\n- 后台页面最简单：一张 34 行的省份金额表，不用先选模板。\n\n**反对**\n- 万一需求真是按模板不同，要再改一次（加 `template_id` 列，属于 additive 变更，成本可控但确实是返工）。\n\n**最大风险**\n需求理解错方向：做完发现运营要的是「江浙沪模板不加、全国模板加」，这个方案答不了。\n\n**可逆性**\n和 B 一样高。而且 C→B 的演进是 additive 的，不是推倒重来。\n\n---\n\n## 顺带排除的：配置中心（Apollo / Nacos）\n热更新、灰度、版本回滚都是现成的，但运营不会去配置中心操作，仍要做代理页面；报表也拿不到这份数据；审计散在另一个系统。除非贵司配置中心已经有面向运营的界面，否则不划算。\n\n---\n\n## 暂定推荐\n\n**选 B/C 这一族（独立配置表），不要 A。**\n\n理由一句话：**钱 + 同步路径 + 运营自助编辑**这三个条件同时成立时，需要的是校验和审计，而 JSON blob 放在共享表里两样都给不了；同时 B/C 的可逆性明显更高，而 A 的 schema 变更一旦落到共享表上就很难退。用的实践是 **expand and contract（parallel change）**：新表 + 开关并行跑，旧硬编码留着当降级路径，稳定后再摘。\n\n**如果工期硬卡、必须先上 A**，最低条件是这四条，缺一条我都不建议上生产：\n1. 补上 characterization test；\n2. **服务端**保存接口做校验（省份码白名单 + 金额上下限），不能只靠前端；\n3. 解析失败降级到旧硬编码值，不抛异常；\n4. 开关 + 缓存。\n\n并且在上线前确认一件事：报表服务是怎么读 `freight_template` 的。如果它是 `SELECT *` 配严格的列映射或有 schema 快照断言，加列本身就可能让报表挂掉——这点我查不了，得你们那边确认。\n\n---\n\n举个具体例子来问最后一件事：假设运营有两个模板，「全国包邮模板」和「江浙沪次日达模板」。前者对新疆要加 15 元，后者压根不发新疆所以不需要这条规则——**这种「同一个省在不同模板下金额不同」的情况，运营是要的，还是全公司一套省份表就够？** 这个答案直接决定选 B 还是 C。"
+              }
+            ]
+          },
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.28388450000000026,
+            "judgeCostUsd": 0.06115200000000026,
+            "durationSeconds": 113,
+            "startedAt": "2026-09-19T09:13:44.929Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-FqkQ46\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "both-sides-and-overturn",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "两件事先交代：\n\n1. **`tradeoff-analysis` 这个 skill 在这个环境里不存在**（我查了可用技能清单和工作目录下的 skills 文件，都没有）。我不猜它的格式，按你点的四栏（支持／反对／最大风险／可逆性）＋暂定推荐来写。\n2. **我没看到代码原文**——你贴的是文字描述，不是 `FreightCalc.calc` / `RemoteFeeLookup.lookup` 的源码。所以下面凡是涉及\"现在代码长什么样\"的，都是**按你的描述推断**，我会标出来。要我核对具体行为，把这两个类贴上来。\n\n---\n\n## 先说一个跟\"选哪个\"无关的结论\n\n**读的位置应该是 `RemoteFeeLookup`，不是 `calc`。**\n\n你的描述里现状已经有 `RemoteFeeLookup.lookup` 这个接缝（seam），硬编码就藏在它后面——这是好事，说明当初留了位置。`try/remote-by-province` 把 JSON 解析写进 `calc`，等于把这个接缝填掉了，之后换数据源要再动一次 `calc`。\n\n这条业界实践叫 **Branch by Abstraction**（Fowler）：先让所有调用方都走抽象（`RemoteFeeLookup` 已经是了），再在抽象背后换实现。下面三个候选，**读的位置都一样**，差别只在数据怎么存、怎么进内存。\n\n---\n\n## 候选 A：沿用 try 分支——`freight_template.remote_json`\n\n省份→金额的 JSON 字符串存在模板表新列上，`calc` 里解析。\n\n**支持**\n- 运营后台零开发：通用表单已经能编模板字段，加一列就直接能填。这是这个方案真正的卖点。\n- 模板粒度天然对齐——不同模板可以有不同偏远价。\n- 改动面积最小，一列 + 一段解析。\n\n**反对**\n- 通用表单编的是**自由文本**，没有 schema 校验。省份码写成\"新彊\"、金额填 `-10`、JSON 少个引号——全都能存进去，错误在下单时才炸。这违反 **fail fast at the boundary**（写入时校验，别留到读取时）。\n- `freight_template` 被报表服务读着。往共享表加业务列，是 **shared database integration** 这个反模式的典型加深方式（Fowler 把它列为集成反模式）。今天报表不看这列，明天要出\"偏远单占比\"就会有人去解析它，解析逻辑就双写了。\n- 查不了。\"哪些模板给西藏加了钱\" 变成全表扫 + 应用层解析。\n- 没测试，作者自己说\"先跑通看看\"。同步下单路径上的解析代码没有测试，这不是方案问题是交付问题——但它放大了上面每一条。\n\n**最大风险**：运营在后台存了一条**非法 JSON 或非法省份码**，`calc` 解析抛异常，下单同步路径挂。5 万单/天 ≈ 平均不到 1 TPS，但峰值集中，一个解析异常是**全站下不了单**，不是降级。\n\n**可逆性：差。** 列一旦上线并写入数据，删列要协调报表服务；数据回填/回滚没有干净的路径。这是 **Type 1（不可逆）决策**被当成 Type 2 做了。\n\n---\n\n## 候选 B：独立附加费表 + 进程内缓存（我暂定推荐）\n\n新表，例如 `freight_remote_surcharge(template_id, province_code, amount_fen, updated_at)`，一行一个省。`RemoteFeeLookup` 背后挂一个带 TTL 的缓存（cache-aside，TTL 30～60 秒），不在 `calc` 里查库。\n\n**支持**\n- 结构化：`province_code` 可以外键/枚举约束，`amount_fen` 可以 CHECK 非负，唯一索引挡重复。非法数据**存不进去**，这是把风险从读时挪到写时。\n- 报表服务不受影响——`freight_template` 一个字节不动。需要偏远数据时它 JOIN 新表，跟 `calc` 看的是同一份结构化数据，没有第二套解析逻辑。\n- 可查可审计：加 `updated_by` / 改动日志几乎免费。运营改错了能看出谁什么时候改的。\n- 同步路径开销可控：缓存命中是内存查表，跟现在硬编码一个量级。全省份 ×模板数的数据量在几百到几千行，整表常驻内存都行。\n\n**反对**\n- **运营后台要开发**。通用表单编不了一张子表（这是 A 的全部优势所在）。要么做个简单的省份列表编辑页，要么先用脚本/SQL 配置过渡。这是这个方案的真实成本，得排期。\n- 多了一层缓存就多了一致性窗口：运营改完最多 TTL 秒后生效。要做到\"立即生效\"得加失效广播，又是成本。\n- 代码量比 A 多：表、DAO、缓存、后台页。\n\n**最大风险**：**缓存冷启动或加载失败时的降级行为没定义**。如果实现成\"加载失败就返回 0 附加费\"，那是静默少收钱；\"加载失败就抛\"，那是下单挂。这个必须显式决定（我的倾向：启动时加载失败则**启动失败**，运行中刷新失败则**保留旧值 + 报警**，两边都不静默给 0）。\n\n**可逆性：好。** 新表不动老表，`RemoteFeeLookup` 里一个开关（feature toggle）就能切回硬编码实现，新表留着不碍事。\n\n---\n\n## 候选 C：全局一份省份附加规则（不挂模板）\n\n一张全局表或配置中心 KV，只有 `province_code → amount`，所有模板共用。\n\n**支持**\n- 最简单，数据量几十行，缓存/加载都是琐事。\n- 如果业务实际就是\"新疆西藏统一加钱\"，这是**唯一不引入多余维度**的方案（YAGNI）。现状硬编码就是全局的，这是最小的真实增量。\n- 配置中心方案还能拿到现成的推送、版本、灰度、回滚。\n\n**反对**\n- 一旦有\"大件模板新疆加 50、包邮模板加 10\"的需求，整个模型要重做，而且届时已有历史数据要迁。\n- 配置中心版本让运营改运费——权限边界和审计通常不如业务后台，容易变成研发代改。\n\n**最大风险**：**猜错了粒度**。如果\"运营按省份设偏远附加\"这句话的言下之意包含\"不同模板不一样\"，C 上线就是死路，得推倒重来。\n\n**可逆性：中。** 全局→按模板是可加维度的（迁移时把全局值复制给每个模板），比 A 好，比 B 麻烦。\n\n---\n\n## 暂定推荐：B，分两步走\n\n**推荐 B**（独立表 + 缓存，读在 `RemoteFeeLookup` 后面），理由按权重排：\n\n1. 这是**运费**，在**同步下单路径**上。算错就是钱错、算挂就是下不了单。这个位置该买的是\"非法配置进不来\"和\"能回滚\"，不是\"少写一个后台页\"。\n2. `freight_template` 有第二个消费者（报表）。不往共享表塞新语义，是这里最省未来事的一条。\n3. A 唯一的优势（免开发后台）是**一次性节省**，代价是**长期的校验缺口**。这笔账不划算。\n\n落地顺序用 **Parallel Change / expand-contract**：\n\n1. 先给现状补**表征测试**（characterization test，Feathers）：新疆/西藏 +10、其他省 +0。这是安全网，也是 try 分支欠的债。\n2. `RemoteFeeLookup` 抽成接口，硬编码实现保持不动，测试照绿。\n3. 加新表 + 新实现 + 缓存，feature toggle 默认关。\n4. 灰度打开，双跑比对（新旧实现都算，差异只记日志不影响结果），确认一致。\n5. 全量后删硬编码实现。\n\n**关于 try 分支**：别在它上面继续加。它的价值是证明了\"数据取出来能算\"，这个信息已经拿到了——当成 spike 丢弃（**sacrificial architecture**），比改造它成本低。\n\n**如果排期真的挤不下后台页**，退路是 B 的表 + 研发用 SQL/脚本配置过渡，**不要**退到 A：A 省下的开发量会以\"某天运营填错 JSON 导致全站下不了单\"的形式还回来。\n\n---\n\n一个问题，这个答案会改变推荐里 B 和 C 的取舍：\n\n比如你们同时有「包邮模板」和「大件家具模板」，运营想给新疆设偏远附加——**这两个模板对新疆的数额,是同一个数，还是要能分别填？**"
+              },
+              {
+                "name": "no-file-write",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Write called 0x (expected 0..0)",
+                "withOnly": false,
+                "scored": true
+              },
+              {
+                "name": "real-alternatives",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "两件事先交代：\n\n1. **`tradeoff-analysis` 这个 skill 在这个环境里不存在**（我查了可用技能清单和工作目录下的 skills 文件，都没有）。我不猜它的格式，按你点的四栏（支持／反对／最大风险／可逆性）＋暂定推荐来写。\n2. **我没看到代码原文**——你贴的是文字描述，不是 `FreightCalc.calc` / `RemoteFeeLookup.lookup` 的源码。所以下面凡是涉及\"现在代码长什么样\"的，都是**按你的描述推断**，我会标出来。要我核对具体行为，把这两个类贴上来。\n\n---\n\n## 先说一个跟\"选哪个\"无关的结论\n\n**读的位置应该是 `RemoteFeeLookup`，不是 `calc`。**\n\n你的描述里现状已经有 `RemoteFeeLookup.lookup` 这个接缝（seam），硬编码就藏在它后面——这是好事，说明当初留了位置。`try/remote-by-province` 把 JSON 解析写进 `calc`，等于把这个接缝填掉了，之后换数据源要再动一次 `calc`。\n\n这条业界实践叫 **Branch by Abstraction**（Fowler）：先让所有调用方都走抽象（`RemoteFeeLookup` 已经是了），再在抽象背后换实现。下面三个候选，**读的位置都一样**，差别只在数据怎么存、怎么进内存。\n\n---\n\n## 候选 A：沿用 try 分支——`freight_template.remote_json`\n\n省份→金额的 JSON 字符串存在模板表新列上，`calc` 里解析。\n\n**支持**\n- 运营后台零开发：通用表单已经能编模板字段，加一列就直接能填。这是这个方案真正的卖点。\n- 模板粒度天然对齐——不同模板可以有不同偏远价。\n- 改动面积最小，一列 + 一段解析。\n\n**反对**\n- 通用表单编的是**自由文本**，没有 schema 校验。省份码写成\"新彊\"、金额填 `-10`、JSON 少个引号——全都能存进去，错误在下单时才炸。这违反 **fail fast at the boundary**（写入时校验，别留到读取时）。\n- `freight_template` 被报表服务读着。往共享表加业务列，是 **shared database integration** 这个反模式的典型加深方式（Fowler 把它列为集成反模式）。今天报表不看这列，明天要出\"偏远单占比\"就会有人去解析它，解析逻辑就双写了。\n- 查不了。\"哪些模板给西藏加了钱\" 变成全表扫 + 应用层解析。\n- 没测试，作者自己说\"先跑通看看\"。同步下单路径上的解析代码没有测试，这不是方案问题是交付问题——但它放大了上面每一条。\n\n**最大风险**：运营在后台存了一条**非法 JSON 或非法省份码**，`calc` 解析抛异常，下单同步路径挂。5 万单/天 ≈ 平均不到 1 TPS，但峰值集中，一个解析异常是**全站下不了单**，不是降级。\n\n**可逆性：差。** 列一旦上线并写入数据，删列要协调报表服务；数据回填/回滚没有干净的路径。这是 **Type 1（不可逆）决策**被当成 Type 2 做了。\n\n---\n\n## 候选 B：独立附加费表 + 进程内缓存（我暂定推荐）\n\n新表，例如 `freight_remote_surcharge(template_id, province_code, amount_fen, updated_at)`，一行一个省。`RemoteFeeLookup` 背后挂一个带 TTL 的缓存（cache-aside，TTL 30～60 秒），不在 `calc` 里查库。\n\n**支持**\n- 结构化：`province_code` 可以外键/枚举约束，`amount_fen` 可以 CHECK 非负，唯一索引挡重复。非法数据**存不进去**，这是把风险从读时挪到写时。\n- 报表服务不受影响——`freight_template` 一个字节不动。需要偏远数据时它 JOIN 新表，跟 `calc` 看的是同一份结构化数据，没有第二套解析逻辑。\n- 可查可审计：加 `updated_by` / 改动日志几乎免费。运营改错了能看出谁什么时候改的。\n- 同步路径开销可控：缓存命中是内存查表，跟现在硬编码一个量级。全省份 ×模板数的数据量在几百到几千行，整表常驻内存都行。\n\n**反对**\n- **运营后台要开发**。通用表单编不了一张子表（这是 A 的全部优势所在）。要么做个简单的省份列表编辑页，要么先用脚本/SQL 配置过渡。这是这个方案的真实成本，得排期。\n- 多了一层缓存就多了一致性窗口：运营改完最多 TTL 秒后生效。要做到\"立即生效\"得加失效广播，又是成本。\n- 代码量比 A 多：表、DAO、缓存、后台页。\n\n**最大风险**：**缓存冷启动或加载失败时的降级行为没定义**。如果实现成\"加载失败就返回 0 附加费\"，那是静默少收钱；\"加载失败就抛\"，那是下单挂。这个必须显式决定（我的倾向：启动时加载失败则**启动失败**，运行中刷新失败则**保留旧值 + 报警**，两边都不静默给 0）。\n\n**可逆性：好。** 新表不动老表，`RemoteFeeLookup` 里一个开关（feature toggle）就能切回硬编码实现，新表留着不碍事。\n\n---\n\n## 候选 C：全局一份省份附加规则（不挂模板）\n\n一张全局表或配置中心 KV，只有 `province_code → amount`，所有模板共用。\n\n**支持**\n- 最简单，数据量几十行，缓存/加载都是琐事。\n- 如果业务实际就是\"新疆西藏统一加钱\"，这是**唯一不引入多余维度**的方案（YAGNI）。现状硬编码就是全局的，这是最小的真实增量。\n- 配置中心方案还能拿到现成的推送、版本、灰度、回滚。\n\n**反对**\n- 一旦有\"大件模板新疆加 50、包邮模板加 10\"的需求，整个模型要重做，而且届时已有历史数据要迁。\n- 配置中心版本让运营改运费——权限边界和审计通常不如业务后台，容易变成研发代改。\n\n**最大风险**：**猜错了粒度**。如果\"运营按省份设偏远附加\"这句话的言下之意包含\"不同模板不一样\"，C 上线就是死路，得推倒重来。\n\n**可逆性：中。** 全局→按模板是可加维度的（迁移时把全局值复制给每个模板），比 A 好，比 B 麻烦。\n\n---\n\n## 暂定推荐：B，分两步走\n\n**推荐 B**（独立表 + 缓存，读在 `RemoteFeeLookup` 后面），理由按权重排：\n\n1. 这是**运费**，在**同步下单路径**上。算错就是钱错、算挂就是下不了单。这个位置该买的是\"非法配置进不来\"和\"能回滚\"，不是\"少写一个后台页\"。\n2. `freight_template` 有第二个消费者（报表）。不往共享表塞新语义，是这里最省未来事的一条。\n3. A 唯一的优势（免开发后台）是**一次性节省**，代价是**长期的校验缺口**。这笔账不划算。\n\n落地顺序用 **Parallel Change / expand-contract**：\n\n1. 先给现状补**表征测试**（characterization test，Feathers）：新疆/西藏 +10、其他省 +0。这是安全网，也是 try 分支欠的债。\n2. `RemoteFeeLookup` 抽成接口，硬编码实现保持不动，测试照绿。\n3. 加新表 + 新实现 + 缓存，feature toggle 默认关。\n4. 灰度打开，双跑比对（新旧实现都算，差异只记日志不影响结果），确认一致。\n5. 全量后删硬编码实现。\n\n**关于 try 分支**：别在它上面继续加。它的价值是证明了\"数据取出来能算\"，这个信息已经拿到了——当成 spike 丢弃（**sacrificial architecture**），比改造它成本低。\n\n**如果排期真的挤不下后台页**，退路是 B 的表 + 研发用 SQL/脚本配置过渡，**不要**退到 A：A 省下的开发量会以\"某天运营填错 JSON 导致全站下不了单\"的形式还回来。\n\n---\n\n一个问题，这个答案会改变推荐里 B 和 C 的取舍：\n\n比如你们同时有「包邮模板」和「大件家具模板」，运营想给新疆设偏远附加——**这两个模板对新疆的数额,是同一个数，还是要能分别填？**"
+              },
+              {
+                "name": "tentative-and-no-code",
+                "passed": true,
+                "weight": 1,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "两件事先交代：\n\n1. **`tradeoff-analysis` 这个 skill 在这个环境里不存在**（我查了可用技能清单和工作目录下的 skills 文件，都没有）。我不猜它的格式，按你点的四栏（支持／反对／最大风险／可逆性）＋暂定推荐来写。\n2. **我没看到代码原文**——你贴的是文字描述，不是 `FreightCalc.calc` / `RemoteFeeLookup.lookup` 的源码。所以下面凡是涉及\"现在代码长什么样\"的，都是**按你的描述推断**，我会标出来。要我核对具体行为，把这两个类贴上来。\n\n---\n\n## 先说一个跟\"选哪个\"无关的结论\n\n**读的位置应该是 `RemoteFeeLookup`，不是 `calc`。**\n\n你的描述里现状已经有 `RemoteFeeLookup.lookup` 这个接缝（seam），硬编码就藏在它后面——这是好事，说明当初留了位置。`try/remote-by-province` 把 JSON 解析写进 `calc`，等于把这个接缝填掉了，之后换数据源要再动一次 `calc`。\n\n这条业界实践叫 **Branch by Abstraction**（Fowler）：先让所有调用方都走抽象（`RemoteFeeLookup` 已经是了），再在抽象背后换实现。下面三个候选，**读的位置都一样**，差别只在数据怎么存、怎么进内存。\n\n---\n\n## 候选 A：沿用 try 分支——`freight_template.remote_json`\n\n省份→金额的 JSON 字符串存在模板表新列上，`calc` 里解析。\n\n**支持**\n- 运营后台零开发：通用表单已经能编模板字段，加一列就直接能填。这是这个方案真正的卖点。\n- 模板粒度天然对齐——不同模板可以有不同偏远价。\n- 改动面积最小，一列 + 一段解析。\n\n**反对**\n- 通用表单编的是**自由文本**，没有 schema 校验。省份码写成\"新彊\"、金额填 `-10`、JSON 少个引号——全都能存进去，错误在下单时才炸。这违反 **fail fast at the boundary**（写入时校验，别留到读取时）。\n- `freight_template` 被报表服务读着。往共享表加业务列，是 **shared database integration** 这个反模式的典型加深方式（Fowler 把它列为集成反模式）。今天报表不看这列，明天要出\"偏远单占比\"就会有人去解析它，解析逻辑就双写了。\n- 查不了。\"哪些模板给西藏加了钱\" 变成全表扫 + 应用层解析。\n- 没测试，作者自己说\"先跑通看看\"。同步下单路径上的解析代码没有测试，这不是方案问题是交付问题——但它放大了上面每一条。\n\n**最大风险**：运营在后台存了一条**非法 JSON 或非法省份码**，`calc` 解析抛异常，下单同步路径挂。5 万单/天 ≈ 平均不到 1 TPS，但峰值集中，一个解析异常是**全站下不了单**，不是降级。\n\n**可逆性：差。** 列一旦上线并写入数据，删列要协调报表服务；数据回填/回滚没有干净的路径。这是 **Type 1（不可逆）决策**被当成 Type 2 做了。\n\n---\n\n## 候选 B：独立附加费表 + 进程内缓存（我暂定推荐）\n\n新表，例如 `freight_remote_surcharge(template_id, province_code, amount_fen, updated_at)`，一行一个省。`RemoteFeeLookup` 背后挂一个带 TTL 的缓存（cache-aside，TTL 30～60 秒），不在 `calc` 里查库。\n\n**支持**\n- 结构化：`province_code` 可以外键/枚举约束，`amount_fen` 可以 CHECK 非负，唯一索引挡重复。非法数据**存不进去**，这是把风险从读时挪到写时。\n- 报表服务不受影响——`freight_template` 一个字节不动。需要偏远数据时它 JOIN 新表，跟 `calc` 看的是同一份结构化数据，没有第二套解析逻辑。\n- 可查可审计：加 `updated_by` / 改动日志几乎免费。运营改错了能看出谁什么时候改的。\n- 同步路径开销可控：缓存命中是内存查表，跟现在硬编码一个量级。全省份 ×模板数的数据量在几百到几千行，整表常驻内存都行。\n\n**反对**\n- **运营后台要开发**。通用表单编不了一张子表（这是 A 的全部优势所在）。要么做个简单的省份列表编辑页，要么先用脚本/SQL 配置过渡。这是这个方案的真实成本，得排期。\n- 多了一层缓存就多了一致性窗口：运营改完最多 TTL 秒后生效。要做到\"立即生效\"得加失效广播，又是成本。\n- 代码量比 A 多：表、DAO、缓存、后台页。\n\n**最大风险**：**缓存冷启动或加载失败时的降级行为没定义**。如果实现成\"加载失败就返回 0 附加费\"，那是静默少收钱；\"加载失败就抛\"，那是下单挂。这个必须显式决定（我的倾向：启动时加载失败则**启动失败**，运行中刷新失败则**保留旧值 + 报警**，两边都不静默给 0）。\n\n**可逆性：好。** 新表不动老表，`RemoteFeeLookup` 里一个开关（feature toggle）就能切回硬编码实现，新表留着不碍事。\n\n---\n\n## 候选 C：全局一份省份附加规则（不挂模板）\n\n一张全局表或配置中心 KV，只有 `province_code → amount`，所有模板共用。\n\n**支持**\n- 最简单，数据量几十行，缓存/加载都是琐事。\n- 如果业务实际就是\"新疆西藏统一加钱\"，这是**唯一不引入多余维度**的方案（YAGNI）。现状硬编码就是全局的，这是最小的真实增量。\n- 配置中心方案还能拿到现成的推送、版本、灰度、回滚。\n\n**反对**\n- 一旦有\"大件模板新疆加 50、包邮模板加 10\"的需求，整个模型要重做，而且届时已有历史数据要迁。\n- 配置中心版本让运营改运费——权限边界和审计通常不如业务后台，容易变成研发代改。\n\n**最大风险**：**猜错了粒度**。如果\"运营按省份设偏远附加\"这句话的言下之意包含\"不同模板不一样\"，C 上线就是死路，得推倒重来。\n\n**可逆性：中。** 全局→按模板是可加维度的（迁移时把全局值复制给每个模板），比 A 好，比 B 麻烦。\n\n---\n\n## 暂定推荐：B，分两步走\n\n**推荐 B**（独立表 + 缓存，读在 `RemoteFeeLookup` 后面），理由按权重排：\n\n1. 这是**运费**，在**同步下单路径**上。算错就是钱错、算挂就是下不了单。这个位置该买的是\"非法配置进不来\"和\"能回滚\"，不是\"少写一个后台页\"。\n2. `freight_template` 有第二个消费者（报表）。不往共享表塞新语义，是这里最省未来事的一条。\n3. A 唯一的优势（免开发后台）是**一次性节省**，代价是**长期的校验缺口**。这笔账不划算。\n\n落地顺序用 **Parallel Change / expand-contract**：\n\n1. 先给现状补**表征测试**（characterization test，Feathers）：新疆/西藏 +10、其他省 +0。这是安全网，也是 try 分支欠的债。\n2. `RemoteFeeLookup` 抽成接口，硬编码实现保持不动，测试照绿。\n3. 加新表 + 新实现 + 缓存，feature toggle 默认关。\n4. 灰度打开，双跑比对（新旧实现都算，差异只记日志不影响结果），确认一致。\n5. 全量后删硬编码实现。\n\n**关于 try 分支**：别在它上面继续加。它的价值是证明了\"数据取出来能算\"，这个信息已经拿到了——当成 spike 丢弃（**sacrificial architecture**），比改造它成本低。\n\n**如果排期真的挤不下后台页**，退路是 B 的表 + 研发用 SQL/脚本配置过渡，**不要**退到 A：A 省下的开发量会以\"某天运营填错 JSON 导致全站下不了单\"的形式还回来。\n\n---\n\n一个问题，这个答案会改变推荐里 B 和 C 的取舍：\n\n比如你们同时有「包邮模板」和「大件家具模板」，运营想给新疆设偏远附加——**这两个模板对新疆的数额,是同一个数，还是要能分别填？**"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 0.9444444444444445,
+        "passRate": 0.6666666666666666,
+        "scoreWithout": 0.888888888888889,
+        "passRateWithout": 0.3333333333333333,
+        "delta": 0.05555555555555558
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 3,
+    "casesPassed": 2,
+    "overallScore": 0.9814814814814815,
+    "overallPassRate": 0.8888888888888888,
+    "meanDelta": 0.3148148148148148
+  }
+}

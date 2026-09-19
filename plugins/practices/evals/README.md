@@ -228,3 +228,47 @@
 
 门评测之后正文在审查（第 6 阶段）里改了四处，没有重跑：`ears` 四条 29148 属性补英文原词、词汇表那句改成「项目的领域词汇表」；`specification-by-example` 描述里的 `instead of` 换成 `not`（部署门禁拦词）、第 3 步收下「退回的句子照写、空的只是那个数」这句真源（原在 `requirement-specification` 第 5 步）；`switch-interview` 描述里的 `never` 换成 `not`。所有结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`。
 
+## 0.1.3（2026-09-19，agent-system#120）：三条自建实践——tradeoff-analysis、effect-sketch、baseline-measurement
+
+从旧 `workcoding` 的 `architecture-design`、`system-analysis` 拆出的三条实践（对应的两条活动 `architecture-decision`、`impact-analysis` 在 flow-steps）。用例的 mock 规则、工具授权与跑法同上；结果目录带 `-as120` 后缀，与并行的另外三票（#119、#121、#122）分开。
+
+| 用例 | skill | 测什么 | 该怎么判 |
+|---|---|---|---|
+| `tradeoff-analysis-two-candidates` | tradeoff-analysis | 既有系统上加新能力，要定配置的承载方式；有一条尝试分支 | 至少两个能落地、有真实取舍的候选；每个有支持、反对、最大风险、可逆性；推荐带推翻条件；结尾只请主人确认一件事，不写代码与 DDL |
+| `tradeoff-analysis-missing-number` | tradeoff-analysis | 两个候选的差落在没人量过的耗时上 | 把耗时标成未知、写清谁去量，推荐写成条件式；不编一个「通常 N ms」顶上；两个候选仍各有两面 |
+| `tradeoff-analysis-already-decided` | tradeoff-analysis | 主人已定 C，明说别再比，要改动清单 | 不重开候选，按 C 列清单或只问一个为了列清单的问题 |
+| `effect-sketch-two-hops` | effect-sketch | 从 `FreightCalc.calc` 出发画两跳，五个文件贴了，`scheduler` 没贴 | 调它的、它调的各一跳；认出 `BatchCalc` 绕过 `calc` 直调 `calcInner`；`scheduler` 标成待核实；事实与假设分开；不扩成全图 |
+| `effect-sketch-verify-only-uncertain` | effect-sketch | 草图画完要定在工作机上核实什么 | 只为静态定不了的边（`scheduler`）开运行时核实；代码里看得见的边不再抓 |
+| `effect-sketch-plain-count` | effect-sketch | 证据齐全的只读计数 | 直接答 2 与两个文件名，不套草图、不先要一个决定 |
+| `baseline-measurement-one-request` | baseline-measurement | 一个决定缺「新路径慢多少」，Arthas 只在工作机上有 | 先同条件量老路径当基线再量新路径；只抓几条真实请求不压测；判定规则挂在数上；数留给主人填 |
+| `baseline-measurement-load-test` | baseline-measurement | 主人要压测方案 | 给压测方案（并发、时长、指标），不缩成抓一条请求 |
+
+基线观察（对照组，不装 skill；取自 `results/2026-09-19-baseline-as120/<skill 或用例>/`，SKILL.md 占位，每用例 1 次，两组，默认模型，16 次运行，合计 3.57 美元；`tradeoff-analysis-missing-number` 与 `effect-sketch-verify-only-uncertain` 两条是首轮基线看到对照组全过之后补写的，各自单独跑了基线，都在装正文之前）。没有这三条 skill 时 agent 实际是这样做的：
+
+- `tradeoff-analysis-two-candidates`：两组都出了三个候选（JSON 列、规范表加适配、配置中心），各有支持、反对、风险、可逆性，推荐带推翻条件——默认模型本来就会做候选比较。有 skill 组（占位）唯一一次失败在收口：结尾问的是数据模型的题（同一省份不同模板会不会不同金额），还顺手给了两步实施计划，没有把「请确认推荐」当那一件事。只作回归守卫，收口那条由正文第 5 步守。
+- `tradeoff-analysis-missing-number`：两组都把「没量过的耗时」列成未知，接着就用「同机房主键查询典型 0.1–1 ms」这种经验数值粗算，据此直接选 A 并宣布「没有任何一条数据支持 B」；有 skill 组（占位）连 B 的支持面都没写。真缺口：缺的数标未知、写清谁去量、推荐写成条件式，不拿经验数值顶上。
+- `tradeoff-analysis-already-decided`：两组都按 C 列改动清单，没有重开候选。只作回归守卫。
+- `effect-sketch-two-hops`、`effect-sketch-verify-only-uncertain`、`effect-sketch-plain-count`：三条两组都过——默认模型从贴的代码里都认出了 `BatchCalc` 绕过 `calc`，把 `scheduler` 标成待核实，只为它开运行时核实，计数题直接答 2。三条只作回归守卫；这条实践在默认模型上的价值是把做法固定下来（两跳、绕过、待核实的边），差值要在弱一档的模型上才看得到。
+- `baseline-measurement-one-request`：两组都先量老路径再量新路径、同一条样本同一环境，`baseline-first-same-conditions` 过；但都把一次「量一个数」扩成了七八步的测量方案——A/A 噪声测试、几千次预热、换省份补测、`watch` 加 `monitor` 加 `trace` 三种工具——`bounded-no-invented-numbers` 两组都判「不是有边界的测量」。真缺口：只量决定要的那一个数，几条真实请求就够。
+- `baseline-measurement-load-test`：两组都给了压测方案（open model、Little's Law、k6 阶段），没有缩成一条 trace。只作回归守卫。
+
+真缺口两处：tradeoff-analysis 的「缺的数标未知、条件式推荐」，baseline-measurement 的「有边界」。正文只针对这两处收紧；effect-sketch 的正文按 Feathers 原意写，用例作守卫。
+
+实跑记录：2026-09-19，默认模型（`claude-opus-5`），裁判 sonnet，每用例 3 次两组，`--case '<skill>-*'` 三条各跑一次，结果 `results/2026-09-19-gate-as120/<skill>/`（48 次运行，1333 秒，11.41 美元；加基线 3.57 美元，本票 practices 侧合计 14.98 美元，在 20 美元上限内）。
+
+| 用例 | 有 skill 组 | 对照组 | 差值 |
+|---|---|---|---|
+| `tradeoff-analysis-two-candidates` | 0.94 | 0.89 | +0.06 |
+| `tradeoff-analysis-missing-number` | 1.0 | 0.11 | +0.89 |
+| `tradeoff-analysis-already-decided` | 1.0 | 1.0 | 0 |
+| `effect-sketch-two-hops` | 1.0 | 0.78 | +0.22 |
+| `effect-sketch-verify-only-uncertain` | 1.0 | 1.0 | 0 |
+| `effect-sketch-plain-count` | 1.0 | 1.0 | 0 |
+| `baseline-measurement-one-request` | 1.0 | 0.67 | +0.33 |
+| `baseline-measurement-load-test` | 1.0 | 1.0 | 0 |
+
+平均差值 +0.19。两处真缺口都补上了：`tradeoff-analysis-missing-number` 有 skill 组三次都把耗时标未知、推荐写成条件式；`baseline-measurement-one-request` 三次都只抓几条请求、数留给主人。四条两组同分的（`already-decided`、`verify-only-uncertain`、`plain-count`、`load-test`）从基线起对照组就会做，只作回归守卫；`two-hops` 与 `two-candidates` 的差值来自对照组各一两次的失手，也按守卫看。
+
+没到 1.0 的一条要说清：`tradeoff-analysis-two-candidates` 0.94——一次 `tentative-and-no-code` 三票 FAIL。那条回复三个候选四样齐、推荐 A 带四条推翻条件、没有代码与 DDL，结尾只问了一题；问的是推荐所依赖的那条未知（「省份→金额是全公司一套还是每模板一套」），不是「请确认 A」，裁判按字面判成没请主人确认。推荐本来就写成了以那条未知为条件，先问它是合理的收口；再改 grader 或再跑只是换一组随机数，主人在本会话开场预授权不为 1.0 硬线重跑（desk#152 的站会记录）。
+
+结果 JSON 提交前都跑过 `scripts/scrub-eval-results.ts`。

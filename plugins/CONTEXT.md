@@ -76,6 +76,29 @@ _旧名_: 硬问题
 **真源**（source of truth；出处：The Pragmatic Programmer 的 DRY 与 single source of truth）:
 一件事只在一处定义、其余处引用它的那一处。路线的真源现在是 `flow`。
 
+### 方案：候选与证据
+
+**架构决定**（architecture decision；出处：Nygard 的 Architecture Decision Record）:
+在既有系统上加一项新能力时要定的「系统成为什么样」那件事：决定什么、不决定什么、基线与未知、候选与推荐；flow-steps 里的活动 `architecture-decision`。
+_旧名_: 架构设计
+
+**权衡分析**（trade-off analysis；出处：SEI 的 ATAM，Clements、Kazman、Klein《Evaluating Software Architectures》）:
+对至少两个能落地的候选各写支持、反对、最大风险、可逆性，说出什么证据会推翻推荐；实践 `tradeoff-analysis`。
+_旧名_: 候选攻防、做攻防
+
+**可逆性**（reversibility；出处：Amazon 的单向门／双向门，Bezos 2015 年股东信）:
+一个候选上线后改回去要付多大代价：双向门随时能回，单向门回不去。
+
+**影响分析**（impact analysis；出处：IEEE 14764 软件维护的修改分析）:
+一个决定缺一个数或判断时查一次、出一行带置信度的结论；flow-steps 里的活动 `impact-analysis`。
+_旧名_: 系统分析
+
+**影响草图**（effect sketch；出处：Feathers《修改代码的艺术》第 11 章）:
+从改动点出发静态画两跳——谁调它、它调谁、谁绕过它——并标出拿不准的边；实践 `effect-sketch`。
+
+**基线测量**（baseline measurement；出处：Gregg《性能之巅》的 baseline statistics、ISO/IEC/IEEE 12207 的测量过程）:
+先在同样条件下量老路径，再量新路径，只量决定要的那一个数；实践 `baseline-measurement`。评测那节的「基线」是另一回事。
+
 ### 决定走多长的路线
 
 **路由 skill**（router skill；出处：Matt Pocock 的 writing-for-agents）:

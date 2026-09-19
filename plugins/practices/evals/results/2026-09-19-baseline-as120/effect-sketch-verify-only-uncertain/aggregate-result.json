@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "claudeVersion": "2.1.278",
+  "startedAt": "2026-09-19T09:03:23.137Z",
+  "durationSeconds": 101,
+  "costUsd": 0.471465,
+  "partial": false,
+  "suite": {
+    "root": "C:\\Workspace\\worktrees\\agent-system\\as120-split-design\\plugins\\practices",
+    "ablation": "with-without",
+    "judgeModel": "sonnet",
+    "caseFilter": "effect-sketch-verify-only-uncertain",
+    "threshold": 1,
+    "concurrency": 2,
+    "plugins": [
+      {
+        "name": "practices",
+        "version": "0.1.1",
+        "path": "C:\\Workspace\\worktrees\\agent-system\\as120-split-design\\plugins\\practices"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "effect-sketch-verify-only-uncertain",
+      "dir": "evals\\effect-sketch-verify-only-uncertain",
+      "source": "prose",
+      "promptMarkdown": "按 `effect-sketch` 画影响草图，然后告诉我要在工作机上核实什么、怎么核实。改动点：在 `FreightCalc.calc` 里加偏远附加的分流。\n\n工作机上装了 Arthas，预发环境可以重放线上请求，定时任务也能手动触发一次。本会话跑不了任何命令，代码不在这个工作目录里；能贴的五个文件贴给你，README 里写着「定时对账任务在 `scheduler` 模块，每晚重算一遍运费」，那个模块的代码我手头没有。\n\n```java\n// FreightCalc.java\npublic class FreightCalc {\n  private final RemoteFeeLookup remoteFee;\n  public Money calc(Order o) { Money base = calcInner(o); return base.plus(remoteFee.lookup(o.dest())); }\n  Money calcInner(Order o) { return Money.of(o.weightKg() * 8); }\n}\n// OrderService.java\nclass OrderService { Money quote(Order o) { return freightCalc.calc(o); } }\n// QuoteService.java\nclass QuoteService { Money preview(Order o) { return freightCalc.calc(o); } }\n// BatchCalc.java\nclass BatchCalc { void run(List<Order> os) { for (var o : os) sink.write(freightCalc.calcInner(o)); } }\n// RemoteFeeLookup.java\nclass RemoteFeeLookup { Money lookup(String dest) { return \"新疆\".equals(dest) || \"西藏\".equals(dest) ? Money.of(10) : Money.ZERO; } }\n```",
+      "runsPerCase": 3,
+      "timeoutSeconds": 600,
+      "maxTurns": 10,
+      "graders": [
+        {
+          "name": "skill-fired",
+          "type": "tool_used",
+          "weight": 1,
+          "config": {
+            "tool": "Skill",
+            "input_match": "effect-sketch",
+            "arm": "with-only"
+          }
+        },
+        {
+          "name": "verify-only-uncertain",
+          "type": "llm",
+          "weight": 2,
+          "graderMarkdown": "Judge what the agent chose to verify at runtime.\n\nPASS if runtime verification (an Arthas `stack`/`trace`/`watch` capture, triggering the scheduled job once, or an equivalent) is proposed only for the edges the pasted code cannot settle — the `scheduler` module, and reasonably any reflection/proxy path it names — while the edges visible in the code (`OrderService.quote`, `QuoteService.preview`, `BatchCalc.run` calling `calcInner`) are reported as settled by reading, without a runtime capture of their own.\n\nFAIL if it proposes tracing every caller or the whole call graph at runtime, if it omits the `scheduler` edge from what to verify, or if it asks the owner to confirm edges the code already shows.",
+          "config": {
+            "criteria": "Judge what the agent chose to verify at runtime.\n\nPASS if runtime verification (an Arthas `stack`/`trace`/`watch` capture, triggering the scheduled job once, or an equivalent) is proposed only for the edges the pasted code cannot settle — the `scheduler` module, and reasonably any reflection/proxy path it names — while the edges visible in the code (`OrderService.quote`, `QuoteService.preview`, `BatchCalc.run` calling `calcInner`) are reported as settled by reading, without a runtime capture of their own.\n\nFAIL if it proposes tracing every caller or the whole call graph at runtime, if it omits the `scheduler` edge from what to verify, or if it asks the owner to confirm edges the code already shows.",
+            "focus": "last_message"
+          }
+        }
+      ],
+      "arms": {
+        "with": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.23491700000000004,
+            "judgeCostUsd": 0.01768,
+            "durationSeconds": 101,
+            "startedAt": "2026-09-19T09:03:23.191Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-LHwrfB\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "skill-fired",
+                "passed": true,
+                "weight": 1,
+                "explanation": "Skill called 1x (expected 1..∞)",
+                "withOnly": true,
+                "scored": false
+              },
+              {
+                "name": "verify-only-uncertain",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: FAIL PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  false,
+                  true,
+                  true
+                ],
+                "evidence": "`practices:effect-sketch` 是占位技能,没有实际步骤,我按它的字面意思(影响草图 + 核实清单)手画一份。\n\n---\n\n# 影响草图:在 `FreightCalc.calc` 加偏远附加分流\n\n## 一、从贴的五个文件能直接读出的(事实)\n\n```\n                    ┌─ OrderService.quote ──┐\n                    ├─ QuoteService.preview ┤──→ FreightCalc.calc ──→ calcInner\n                    │                                    └─────────→ RemoteFeeLookup.lookup\nBatchCalc.run ──────┴──────────────────────────────────────────────→ calcInner   ✗ 绕过 calc\n```\n\n| 事实 | 出处 |\n|---|---|\n| `calc` 已经在加偏远费了,新分流是往一个**已有逻辑**上叠 | `FreightCalc.java` 第 4 行 |\n| `BatchCalc` 直接调 `calcInner`,完全不经过 `calc` | `BatchCalc.java` |\n| 所以 `BatchCalc` 写进 `sink` 的金额**今天就不含偏远费**,改完之后**依然不含** | 同上 |\n| `calcInner` 是 package-private,同包任何类都能绕开 `calc` | `FreightCalc.java` 第 5 行 |\n| 偏远判定是精确字符串等值:`\"新疆\".equals(dest)`,不是前缀/不是行政区划码 | `RemoteFeeLookup.java` |\n\n## 二、改动会波及的面(推断,需核实)\n\n**1. 报价与下单同源 —— 这是好事,也是风险。**\n`quote` 和 `preview` 走同一个 `calc`,口径天然一致。但也意味着改动一上线,**已经报给客户、还没下单的历史报价**和新算出来的下单价会对不上。有报价有效期就没事,没有就会出客诉。\n\n**2. `BatchCalc` 与在线口径的裂缝会被放大。**\n今天裂缝是固定的 10 元;加了分流(比如按重量/按距离阶梯),裂缝会变成**随单变化的金额**,原来能靠\"减 10\"对平的对账脚本会全线失效。\n\n**3. `scheduler` 每晚重算 —— 最大的未知,也是最危险的一条。**\nREADME 说它\"每晚重算一遍运费\"。两种情况后果差很远:\n\n- 它走 `calc`,且重算的是**历史订单** → 上线当晚,历史订单金额被新逻辑改写,对账全线报差异。这是不可回滚的数据污染。\n- 它走 `calcInner` → 它和 `BatchCalc` 一样本来就没算偏远费,改动对它无影响,但说明\"对账基准\"和\"实际收款\"本来就差着偏远费,是个存量问题。\n\n**4. 双重计费。**\n新分流如果自己判定\"是不是偏远\"并加钱,而 `remoteFee.lookup` 那一行还在,同一张单会被加两次。\n\n**5. 偏远判定变成两个真源。**\n`RemoteFeeLookup` 认两个精确字符串,新分流大概率会有自己的一套判定。两套规则一旦不一致,会出现\"加了新附加费但没加旧 10 元\"之类的组合。\n\n## 三、一个我高度怀疑的点\n\n`\"新疆\".equals(dest)` 要求 `o.dest()` 精确等于两个字。如果线上 `dest` 实际是\"新疆维吾尔自治区\"或\"830000\",那 **`lookup` 恒返回 `Money.ZERO`,线上从来没收到过偏远费**。若真如此,这次改动的性质就不是\"加分流\",而是\"偏远费第一次真正生效\",金额跳变和客诉量级完全不同。这条必须先查清。\n\n---\n\n# 在工作机上要核实什么、怎么核实\n\n按\"先钉住现状,再动代码\"的顺序。用到的实践是 **Characterization Test(Michael Feathers)**:改遗留代码前,先用真实流量把现有行为钉成基准。\n\n### 核实 1:`dest` 到底长什么样(最高优先级)\n\n预发重放线上请求,同时挂 Arthas:\n\n```bash\nwatch *RemoteFeeLookup lookup '{params[0], returnObj}' -x 2 -n 200\n```\n\n看 200 条里有几条 `returnObj` 不是 `ZERO`。**如果一条都没有,先停下来找我**,改动性质变了。\n\n### 核实 2:`scheduler` 走的是 `calc` 还是 `calcInner`\n\n手动触发一次定时任务前,先挂上:\n\n```bash\nstack *FreightCalc calc -n 20\nstack *FreightCalc calcInner -n 20\n```\n\n`stack` 直接打出完整调用栈,能一眼看出 `scheduler` 的类名和入口。这比翻代码快,而且不会漏掉反射/代理调用的路径。\n\n### 核实 3:`scheduler` 重算的是历史单还是当日单\n\n同一次手动触发,加上:\n\n```bash\nwatch *FreightCalc calc '{params[0]}' -x 3 -n 50\n```\n\n看 `Order` 里的下单时间。如果是历史单,**这次改动必须带开关上线**,否则第一晚就改写历史金额。\n\n### 核实 4:`calcInner` 还有没有第三个调用方\n\n我手上只有五个文件。IDE 里全局搜 `calcInner`,再用 Arthas 在预发跑一轮重放:\n\n```bash\nmonitor -c 60 *FreightCalc calcInner\nstack *FreightCalc calcInner -n 50\n```\n\n`monitor` 看调用量对不对得上 `BatchCalc` + `scheduler` 的预期,对不上就说明还有别人。\n\n### 核实 5:改完之后,新旧结果 diff\n\n预发重放同一批线上请求,新旧两套都算,只记差异不生效。这是 **Parallel Run / Dark Launching(Martin Fowler)**。重点看三件事:\n\n- 非偏远单金额是否**完全不变**(变了就是分流写漏了条件)\n- 偏远单是否只加了一次(排查双重计费)\n- 同一订单 `quote` 和 `preview` 是否**完全相等**\n\nArthas 的 `tt` 可以录下调用再重放单次,适合定位具体某张单:\n\n```bash\ntt -t *FreightCalc calc -n 50\ntt -i <index> -p\n```\n\n### 上线方式建议\n\n用 **Feature Toggle(Martin Fowler)** 把分流包起来,默认关。预发打开验证,生产先开 quote/preview、**`scheduler` 最后开**,给数据污染留一道闸。\n\n生产上 `watch`/`tt` 有开销,记得都带 `-n` 限次数,别裸跑。\n\n---\n\n## 一个问题\n\n举个具体的:一张发往新疆、3kg 的单,今天是 `3 × 8 = 24`,加 `lookup` 的 10 元,一共 34 元。\n\n这次加的分流,是要**替换**掉那 10 元(比如改成按重量算的偏远费 15 元,总价 39),还是在 34 元的基础上**再叠加**一笔(总价 34 + X)?\n\n这一条决定了 `remoteFee.lookup` 那行留不留、`RemoteFeeLookup` 要不要一起改,也决定核实 5 里\"加了几次\"该怎么判。"
+              }
+            ]
+          }
+        ],
+        "without": [
+          {
+            "score": 1,
+            "passed": true,
+            "turns": 3,
+            "costUsd": 0.23654799999999998,
+            "judgeCostUsd": 0.018054,
+            "durationSeconds": 83,
+            "startedAt": "2026-09-19T09:03:23.191Z",
+            "error": null,
+            "tracePath": "C:\\Users\\<user>\\AppData\\Local\\Temp\\claude-eval-DCyFz4\\out\\trace.jsonl",
+            "skippedPaidGraders": false,
+            "graders": [
+              {
+                "name": "verify-only-uncertain",
+                "passed": true,
+                "weight": 2,
+                "explanation": "judge votes: PASS PASS PASS",
+                "withOnly": false,
+                "scored": true,
+                "judgeVotes": [
+                  true,
+                  true,
+                  true
+                ],
+                "evidence": "先说一件事:**这台机器上没有 `effect-sketch` 这个 skill**。我查过了 —— 可用列表里没有,`**/effect-sketch*` 和 `.claude/skills/` 也都搜不到文件。所以下面是我按「影响草图」的字面意思手画的,不是照某个既定模板跑的。如果主人那边有这个 skill 的定义文件,贴给我我重跑一遍。\n\n---\n\n## 一、影响草图\n\n### 调用图(已贴的五个文件,事实)\n\n```\nOrderService.quote  ──┐\n                      ├──> FreightCalc.calc ──> calcInner\nQuoteService.preview ─┘           └──────────> RemoteFeeLookup.lookup(dest)\n\nBatchCalc.run ────────────────────> calcInner        ← 绕开 calc,拿不到偏远附加\nscheduler(每晚重算)  ──> ???        ← 代码没有,入口未知\n```\n\n### 三个受影响面\n\n**A. 直接受影响(确定)**\n`OrderService.quote` 和 `QuoteService.preview` 都走 `calc`,所以改动同时落到**下单口径**和**报价预览口径**。这俩同步变是好事——报价和实收不会分叉。\n\n**B. 已经存在的口径裂缝,会被这次改动放大(确定)**\n`BatchCalc.run` 调的是 `calcInner`,**现在就已经**比 `calc` 少一笔 `remoteFee`。也就是说偏远单在批处理里本来就算少 10 块。主人这次在 `calc` 里加分流,等于在这条裂缝上再加宽一层——`calc` 越复杂,`calcInner` 的输出离「真实运费」越远。\n\n这里的选择题是:`calcInner` 到底是「运费的一部分」还是「运费」?现在它被当两种用。\n\n**C. 最大的未知:scheduler(推断,待核实)**\nREADME 说「每晚重算一遍运费」。它可能调 `calc`、可能调 `calcInner`、也可能自己走 `BatchCalc`。三种情况后果完全不同:\n\n| scheduler 调的是 | 后果 |\n|---|---|\n| `calc` | 上线当晚,**历史订单**被按新规则重算 → 和已收款的金额对不上,产生一批对账差异 |\n| `calcInner` | 重算结果永远不含偏远附加 → 对账天天报偏远单差 10 块(这个现在就该在发生了) |\n| 自己一套 | 改动对它无影响,但说明还有第三套运费口径 |\n\n对定价这类改动,业界做法是**规则按生效时间取版本**(effective dating / temporal versioning):订单存下它成交时用的规则版本,重算时按订单的版本算,而不是按\"今天的代码\"算。如果 scheduler 现在是无条件用当前代码重算,那这次改动上线就是一次静默的历史数据改写。\n\n### 风险清单(按我判断的严重度排)\n\n1. **双重计费** — `calc` 里已经无条件 `plus(remoteFee.lookup(dest))`。新分流如果自己也加钱,偏远单会被收两次。\n2. **偏远判定两套口径** — `RemoteFeeLookup` 用的是 `\"新疆\".equals(dest)` 精确字符串匹配。新分流若用自己的判定(比如省份编码、`contains`、地址前缀),两套就会在边界上不一致:一套认、一套不认,结果是收了附加费但没走分流、或反过来。\n3. **历史重算** — 见上面 C。\n4. **`BatchCalc` 的 sink 数据被下游用作什么** — 如果对账/报表拿它当运费真值,裂缝就是真金白银的差。\n\n---\n\n## 二、工作机上要核实什么、怎么核实\n\n优先级从高到低。前三条不查清楚别动代码。\n\n### 1. scheduler 到底调哪个入口(最高优先)\n\n手动触发一次定时任务,同时用 Arthas 抓栈:\n\n```\nstack *FreightCalc calcInner -n 20\n```\n\n`calcInner` 是 `calc` 的下游,所以**挂 `calcInner` 一个点就够**,`calc` 和绕开 `calc` 的路径都会出现在同一份栈里,一次看清楚全部调用方。看栈里有没有 scheduler 的类名,以及它上面有没有夹着 `FreightCalc.calc`。\n\n### 2. `dest` 实际长什么样\n\n```\nwatch *RemoteFeeLookup lookup '{params[0],returnObj}' -n 50 -x 2\n```\n\n在预发重放线上请求时挂着。要看的是:传进来的到底是 `\"新疆\"` 还是 `\"新疆维吾尔自治区\"` / `\"650000\"` / 完整地址。**如果线上大量 dest 压根匹配不上,说明偏远附加现在其实基本没生效**——那这次改动的实际影响面比预期大得多,因为它会让一批本来免费的单突然开始收钱。\n\n这条最容易被跳过,也最容易出事。\n\n### 3. `calc` 的真实调用方全集\n\n静态搜索会漏掉反射、Spring AOP 代理、MQ consumer 里的调用。把第 1 条的 `stack` 在预发挂 10 分钟重放线上流量,收上来的调用方列表才是全集。拿它和主人手头这五个文件对一下,看多出谁。\n\n### 4. 影子比对(shadow run / golden master)\n\n这是回归保护的标准做法:新旧两版跑**同一批**重放请求,逐单对比 `quote` 输出。\n\n- 验收线:**非偏远单差异必须为 0 条**。有一条都说明分流条件写宽了。\n- 偏远单的差异金额分布拉出来看,确认是预期的档位,不是 10 的倍数叠加(那就是双重计费)。\n\n### 5. 定时任务幂等性\n\n预发手动触发**两次**,两次都对比目标表运费字段的变更行数:\n\n- 第一次:变更行数是多少?只有偏远单变了,还是全量都变了?\n- 第二次:变更行数应该是 **0**。不是 0 就说明重算不幂等,每晚都在刷数据。\n\n### 6. `BatchCalc` 的 sink 下游是谁\n\n这个 Arthas 查不了,得看代码/问人:`sink.write` 写出去的数据被谁消费?如果是财务对账,那 B 项裂缝就是需要单独立一个修复项的存量 bug,不该混在这次改动里。\n\n---\n\n## 我需要主人定一件事\n\n举个具体的例子。假设新规则是「新疆 15 块、西藏 20 块、其他偏远 12 块」。有两种写法:\n\n```java\n// 写法一:分流替代原来的 lookup\nMoney calc(Order o) {\n  Money base = calcInner(o);\n  return isRemote(o) ? base.plus(remoteSurcharge(o)) : base;   // 不再调 remoteFee.lookup\n}\n\n// 写法二:分流叠在原来的 lookup 之上\nMoney calc(Order o) {\n  Money base = calcInner(o).plus(remoteFee.lookup(o.dest()));  // 原来的 10 块还在\n  return isRemote(o) ? base.plus(extra(o)) : base;             // 再加一笔\n}\n```\n\n写法一是重构定价规则,写法二是在现有 10 块之外**再收一笔**(新疆变成 10+15=25)。\n\n主人要的是哪种——新分流是**接管** `RemoteFeeLookup` 现有的那 10 块,还是**叠加**在它上面?"
+              }
+            ]
+          }
+        ]
+      },
+      "aggregates": {
+        "score": 1,
+        "passRate": 1,
+        "scoreWithout": 1,
+        "passRateWithout": 1,
+        "delta": 0
+      }
+    }
+  ],
+  "aggregates": {
+    "casesTotal": 1,
+    "casesPassed": 1,
+    "overallScore": 1,
+    "overallPassRate": 1,
+    "meanDelta": 0
+  }
+}
