@@ -14,7 +14,7 @@
 - [ ] 正文与用例里没有本机路径、用户名、机器名。
 - [ ] PR 正文按仓的模板四节：做了什么、为什么、怎么验证的（贴评测差值与命令）、怎么回退。
 
-## 上线待办（出口的另一半）
+## 上线清单（出口的另一半）
 
 在使用方仓建 issue（现在是 agent-config），标签 `ready-for-agent`，正文写：
 
@@ -23,8 +23,8 @@
 <skill 名> 已在 agent-system#<PR> 落地，需要路由与投影跟上。
 
 ## 要做的
-1. 路由句：在当前路线真源（现在是共用提示词源的共用规则；流程 skill 落地后是它）的第 N 段加一句「<什么情况> → <skill 名>」（自动调用的 skill）或「请敲 /<skill 名>」（手动调用的 skill）。
-2. 可见档：自动调用的 skill 在 Claude 模板 skillOverrides 设 name-only；手动调用的 skill 不用设（frontmatter 已挡）。
+1. 路由句：在当前路线真源（`flow` 正文；请求分拣那几句在常驻规则）的第 N 阶段加一句「<什么情况> → <skill 名>」（模型可拿的 skill）或「请敲 /<skill 名>」（人敲的 skill）。
+2. 可见档：模型可拿的 skill 在 Claude 模板 skillOverrides 设 name-only；人敲的 skill 不用设（frontmatter 已挡）。
 3. 合并后：deploy.ts sync；check --scope=skill-descriptions 退出 0；三个客户端各敲一次确认能到。
 ```
 

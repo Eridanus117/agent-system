@@ -9,10 +9,6 @@
       "target": "plugins/flow-steps/skills/architecture-decision"
     },
     {
-      "name": "architecture-design",
-      "target": "plugins/workcoding/skills/architecture-design"
-    },
-    {
       "name": "baseline-measurement",
       "target": "plugins/practices/skills/baseline-measurement"
     },
@@ -45,10 +41,6 @@
       "target": "plugins/practices/skills/effect-sketch"
     },
     {
-      "name": "evidence-regression",
-      "target": "plugins/workcoding/skills/evidence-regression"
-    },
-    {
       "name": "feature-toggle",
       "target": "plugins/practices/skills/feature-toggle"
     },
@@ -73,20 +65,12 @@
       "target": "plugins/practices/skills/incremental-integration"
     },
     {
-      "name": "integration",
-      "target": "plugins/workcoding/skills/integration"
-    },
-    {
       "name": "interface-contract-checklist",
       "target": "plugins/practices/skills/interface-contract-checklist"
     },
     {
       "name": "knowledge-maintenance",
       "target": "plugins/knowledge-maintenance/skills/knowledge-maintenance"
-    },
-    {
-      "name": "legacy-change",
-      "target": "plugins/workcoding/skills/legacy-change"
     },
     {
       "name": "legacy-code-change",
@@ -109,24 +93,12 @@
       "target": "plugins/flow-steps/skills/regression-evidence"
     },
     {
-      "name": "release-observe",
-      "target": "plugins/workcoding/skills/release-observe"
-    },
-    {
       "name": "requirement-elicitation",
       "target": "plugins/flow-steps/skills/requirement-elicitation"
     },
     {
-      "name": "requirement-insight",
-      "target": "plugins/workcoding/skills/requirement-insight"
-    },
-    {
       "name": "requirement-specification",
       "target": "plugins/flow-steps/skills/requirement-specification"
-    },
-    {
-      "name": "requirement-translation",
-      "target": "plugins/workcoding/skills/requirement-translation"
     },
     {
       "name": "review-response",
@@ -165,10 +137,6 @@
       "target": "plugins/practices/skills/switch-interview"
     },
     {
-      "name": "system-analysis",
-      "target": "plugins/workcoding/skills/system-analysis"
-    },
-    {
       "name": "system-integration",
       "target": "plugins/flow-steps/skills/system-integration"
     },
@@ -183,10 +151,6 @@
     {
       "name": "verify-evidence",
       "target": "plugins/flow-steps/skills/verify-evidence"
-    },
-    {
-      "name": "workcoding",
-      "target": "plugins/workcoding/skills/workcoding"
     },
     {
       "name": "worktree-baseline",

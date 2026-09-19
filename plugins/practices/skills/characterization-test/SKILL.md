@@ -28,4 +28,4 @@ description: >-
 ## 为什么在哪
 
 - agent-system#121（从 `legacy-change` 拆出的第一条实践）、ADR-0006（实践与规程分层）、desk#152。
-- 走读产物「存储唯一、视图随意」的裁决（2026-09-02）与 Feathers 六步的对照在 `legacy-change` 旧正文，到 agent-system#123 归档为止。
+- 走读产物「存储唯一、视图随意」的裁决（2026-09-02）与 Feathers 六步的对照在旧 `legacy-change` 正文，已归档在 `_archive/plugins/workcoding/skills/legacy-change`（agent-system#123）。

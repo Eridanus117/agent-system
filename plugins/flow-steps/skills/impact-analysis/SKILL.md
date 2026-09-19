@@ -10,7 +10,7 @@ description: >-
 
 ## 什么时候用
 
-用：某个明确的决定缺一个数或一个判断——会波及哪些调用方、新路径慢多少、分流条件占多大比例；`architecture-decision`、`legacy-change` 卡在这样的缺口上。
+用：某个明确的决定缺一个数或一个判断——会波及哪些调用方、新路径慢多少、分流条件占多大比例；`architecture-decision`、`legacy-code-change` 卡在这样的缺口上。
 
 不用：来的是需求（「这需求到底要什么」），那是第 1、2 阶段的事，按需求处理；要的是压测或整张调用图，那是性能测试与另一次专门的梳理，另起；证据齐全的查数，直接答。
 
@@ -26,7 +26,7 @@ description: >-
 
 ## 产出
 
-六行：问、假设、草图、证据、结论、留。只出这六行，第二个问题另起一次。改法归 `legacy-change`，这里不改代码、不写方案；整张调用图与压测各自另起，这里不画全图、不做压测。
+六行：问、假设、草图、证据、结论、留。只出这六行，第二个问题另起一次。改法归 `legacy-code-change`，这里不改代码、不写方案；整张调用图与压测各自另起，这里不画全图、不做压测。
 
 ## 出口
 
@@ -34,5 +34,5 @@ description: >-
 
 ## 为什么在哪
 
-- desk#152、agent-system#115（实践与规程分层）、agent-system#120；旧 `system-analysis` 的正文归档在 agent-system#123。
+- desk#152、agent-system#115（实践与规程分层）、agent-system#120；旧 `system-analysis` 的正文已归档在 `_archive/plugins/workcoding/skills/system-analysis`（agent-system#123）。
 - 与 ISO 12207 6.4.6、IEEE 14764 的对照，备选与不选，两小时上限：wiki《系统分析》。

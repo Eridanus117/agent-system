@@ -33,4 +33,4 @@ description: >-
 ## 为什么在哪
 
 - desk#152（方案对齐）、agent-system#115（spec）、agent-system#119（拆分）。
-- 旧正文 `plugins/workcoding/skills/requirement-translation`（归档进度见 agent-system#123）。
+- 旧正文 `requirement-translation` 已归档在 `_archive/plugins/workcoding/skills/requirement-translation`（agent-system#123）。

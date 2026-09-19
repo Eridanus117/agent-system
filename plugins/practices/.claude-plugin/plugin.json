@@ -1,6 +1,6 @@
 {
   "name": "practices",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "实践 skill：Matt Pocock 的四条（grilling、domain-modeling、tdd、code-review，按 MIT 复制入库改成中文与本仓写法）加从 workcoding 拆出的自建实践；规程 skill 按活动点名它们。",
   "author": {
     "name": "Eridanus117"

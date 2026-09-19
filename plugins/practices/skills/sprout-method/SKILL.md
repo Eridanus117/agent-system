@@ -29,4 +29,4 @@ description: >-
 ## 为什么在哪
 
 - agent-system#121（从 `legacy-change` 拆出的第二条实践）、ADR-0006、desk#152。
-- 「零 diff 不等于回滚证据」与「分流先于兜底分支」两条来自 `legacy-change` 旧正文的评测纠偏（PR #33），旧正文到 agent-system#123 归档为止。
+- 「零 diff 不等于回滚证据」与「分流先于兜底分支」两条来自 `legacy-change` 旧正文的评测纠偏（PR #33），旧正文已归档在 `_archive/plugins/workcoding/skills/legacy-change`（agent-system#123）。

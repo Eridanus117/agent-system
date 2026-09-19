@@ -68,4 +68,4 @@ claude plugin eval plugins/<插件> -j 4 --allow-tools Write --judge-model sonne
 
 - 只读工具加 `Write` 的用例在原生 Windows 直接跑。
 - 授 `Bash` 的用例要求 OS 级沙箱。原生 Windows 的沙箱是灰度特性（环境变量 `CLAUDE_CODE_NANKEEN_KESTREL=1` 开门，`/sandbox install` 装），本机 2026-09-14 实测起不来（desk#145）；这类用例先写成 dry run：提示词里说明 Bash 不可用，让 agent 把要执行的命令按顺序写进 `commands.sh`，用 `file_exists` 加 `regex`（`target: {source: file, path: commands.sh}`）断言命令与参数。沙箱可用后再改回真跑。
-- 要真执行时的可选步：Codex 原生沙箱 `codex exec --json --ephemeral --ignore-user-config --ignore-rules -C <fixture> -s workspace-write -o 最后一条.md "<提示词>"`（skill 放在 fixture 的 `.agents/skills/<名>` 下，`$名` 调用）；OMP 借 Codex 沙箱 `codex sandbox -- omp -p --mode=json --no-session --no-rules --skills=<名> "/skill:<名> <提示词>" < /dev/null`。判分自己读记录。只在 skill 涉及客户端差异（调用语法、命名空间、可见档）时跑。
+- 要真执行时另可选的做法：Codex 原生沙箱 `codex exec --json --ephemeral --ignore-user-config --ignore-rules -C <fixture> -s workspace-write -o 最后一条.md "<提示词>"`（skill 放在 fixture 的 `.agents/skills/<名>` 下，`$名` 调用）；OMP 借 Codex 沙箱 `codex sandbox -- omp -p --mode=json --no-session --no-rules --skills=<名> "/skill:<名> <提示词>" < /dev/null`。判分自己读记录。只在 skill 涉及客户端差异（调用语法、命名空间、可见档）时跑。

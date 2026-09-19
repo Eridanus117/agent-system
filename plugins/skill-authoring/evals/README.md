@@ -6,9 +6,9 @@
 
 | 用例 | 测什么 | 该怎么判 |
 |---|---|---|
-| `thin-step-skill` | 一条薄的、自动调用的 skill 的机会 issue | 判不改路由、自动调用；计划里用例与基线排在正文之前 |
-| `gate-skill` | 手动调用的 skill 的机会 issue | 判手动调用；frontmatter 加 `disable-model-invocation: true`；仍是不改路由 |
-| `routing-skill-stops` | 路由 skill 的机会 issue | 判路由 skill；停下回第 2 段，不动手 |
+| `thin-step-skill` | 一条薄的、模型可拿的 skill 的机会 issue | 判不改路由、模型可拿的；计划里用例与基线排在正文之前 |
+| `gate-skill` | 人敲的 skill 的机会 issue | 判人敲的；frontmatter 加 `disable-model-invocation: true`；仍是不改路由 |
+| `routing-skill-stops` | 路由 skill 的机会 issue | 判路由 skill；停下回第 2 阶段，不动手 |
 | `retire-out-of-scope` | 易混淆：要求退役 | 范围外，另立事项，不执行 |
 | `feedback-modify` | 反馈 issue，主人已说改 | 修改路径：改前改后各跑一遍，patch 加一 |
 
@@ -18,9 +18,9 @@
 
 取自 `results/2026-09-15-gate/` 的对照组（每用例 3 次）。没有这条 skill 时 agent 实际是这样做的：
 
-- `thin-step-skill`：先争论载体（skill、hook 还是 subagent）、定文件布局和行数，直接进入怎么写正文；没有「是不是路由 skill」「手动还是自动调用」的判断，没有用例，没有基线。
+- `thin-step-skill`：先争论载体（skill、hook 还是 subagent）、定文件布局和行数，直接进入怎么写正文；没有「是不是路由 skill」「人敲的还是模型可拿的」的判断，没有用例，没有基线。
 - `gate-skill`：三次里两次知道该用 `disable-model-invocation: true`（这是 Claude Code 的通用知识，所以这条差值小），一次把它做成别的形态；都没有把「不改路由、走短路线」说出来。
-- `routing-skill-stops`：停下了，但理由是「环境里没有那几条 skill 和路线原文」，不是「这是路由 skill、要回第 2 段等主人」。
+- `routing-skill-stops`：停下了，但理由是「环境里没有那几条 skill 和路线原文」，不是「这是路由 skill、要回第 2 阶段等主人」。
 - `retire-out-of-scope`：停下了，理由是「文件不存在」；没有判退役在范围外，也没有另立事项。
 - `feedback-modify`：给出改法（把 merge 改成条件路径），但没有改前改后各跑一遍同一套用例，也没提 patch 版本。
 

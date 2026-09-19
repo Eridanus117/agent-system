@@ -1,6 +1,6 @@
 {
   "name": "note",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "把当前对话的探索结论沉淀进本地 Markdown 知识库。",
   "author": {
     "name": "Eridanus117"
