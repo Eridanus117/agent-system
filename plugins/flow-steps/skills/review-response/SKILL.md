@@ -1,12 +1,12 @@
 ---
 name: review-response
 description: >-
-  收到 code-review 的审查报告时用：逐条对照代码核实、给建议与理由，整份报给主人，主人定了再一条一改一测；不说客套话。Handle a code-review report: verify each finding against the code, recommend fix or not with reasons, report the whole list to the owner, then fix one item at a time after the owner decides; no flattery.
+  收到 code-review 的审查报告时用：逐条对照代码核实、给建议与理由并标违例或判断题，整份报给主人，主人定了再一条一改一测；只说事实与证据。Handle a code-review report: verify each finding against the code, recommend fix or not with reasons, label violation or judgement call, report the whole list to the owner, then fix one item at a time after the owner decides; facts and evidence only, no flattery.
 ---
 
 # 接审查意见
 
-第 6 段的步。输入是 `code-review` 的两轴报告（Standards、Spec），或主人转来的别人的意见。用词按 `plugins/CONTEXT.md`：硬问题、判断题。
+第 6 阶段的活动。输入是 `code-review` 的两轴报告（Standards、Spec），或主人转来的别人的意见。用词按 `plugins/CONTEXT.md`：违例（violation）、判断题（judgement call）。
 
 ## 什么时候用
 
@@ -16,15 +16,15 @@ description: >-
 
 ## 步骤
 
-1. 逐条复述：一条意见一行，用自己的话说它要什么；看不懂的标「不明」，不猜。
+1. 逐条复述：一条意见一行，用自己的话说它要什么；看不懂的标「不明」，留给主人。
 2. 逐条核实：对着代码看（读文件、跑命令），意见说的现象在不在，规则或 spec 的原文是什么。
-3. 逐条评估：对本仓成不成立，改了有什么副作用。给建议——修、不修、部分修——加一句理由；标硬问题还是判断题（定义见词汇表），只作参考。意见不成立就说不成立，引代码为证。
-4. 整份报主人：一条消息列完，结尾的「等你」只有一件事——逐条定修不修。某条有几种改法要选，把选项写在那一条里，不另起问题。不先动手；主人当场说「都修」再修。
-5. 主人定了再改：一条一改一测，改完把证据贴出来（`verify-evidence`）；不顺手改主人没点的地方。
+3. 逐条评估：对本仓成不成立，改了有什么副作用。给建议——修、不修、部分修——加一句理由；标违例还是判断题（定义见词汇表），只作参考。意见不成立就说不成立，引代码为证。
+4. 整份报主人：一条消息列完，结尾的「等你」只有一件事——逐条定修不修。某条有几种改法要选，把选项写在那一条里。改动等主人定了再动；主人当场说「都修」再修。
+5. 主人定了再改：一条一改一测，改完把证据贴出来（`verify-evidence`）；改动只落在主人点的那几条上。
 
-不说「你说得对」「好建议」这类客套；不在 PR 上回帖，主人要求才写。
+说话只说事实、证据与建议，「你说得对」「好建议」这类客套一句不加；对外的话（在 PR 上回帖）由主人定，主人要求才写。
 
-验收标准：每条意见都有复述、核实结果、建议与理由；改动只落在主人定过的那几条上。
+完成判据：每条意见都有复述、核实结果、建议与理由、违例或判断题的标签；改动只落在主人定过的那几条上。
 
 ## 产出
 
@@ -36,5 +36,5 @@ description: >-
 
 ## 为什么在哪
 
-- desk#140（Q2 = B：全部先报主人，主人定了再改）、agent-system#113。
+- desk#140（Q2 = B：全部先报主人，主人定了再改）、agent-system#113、agent-system#117（换词）。
 - 原版 Superpowers `receiving-code-review` 的六步（读、复述、核实、评估、回复、逐条实现）保留，去掉末尾用 `gh api` 回帖——对外的话由主人定。
